@@ -1,0 +1,23 @@
+@import 'tailwindcss/utilities';
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+
+.btn-primary {
+    @apply text-white rounded-lg px-4 py-3 bg-primary font-semibold
+}
+
+.tab {
+    @apply p-4 rounded-t-lg
+}
+
+.tab:hover {
+    @apply bg-gray-100
+}
+
+.tab-active {
+    @apply bg-primary text-white
+}
+
+.tab-active:hover {
+    @apply bg-primary
+}
