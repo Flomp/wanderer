@@ -1,6 +1,6 @@
-import { trails_show } from "$lib/stores/trail_store";
+import { categories_index } from "$lib/stores/category_store";
 import type { Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params }) => {
-    await trails_show(params.id!, true)
+    await categories_index()
 };

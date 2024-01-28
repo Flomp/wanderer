@@ -3,7 +3,15 @@
 @import 'tailwindcss/components';
 
 .btn-primary {
-    @apply text-white rounded-lg px-4 py-3 bg-primary font-semibold
+    @apply text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-gray-900 focus:ring-4 ring-gray-400
+}
+
+.btn-large {
+    @apply py-3
+}
+
+.btn-secondary {
+    @apply rounded-lg px-4 py-2 border border-primary font-medium transition-all hover:bg-gray-100 focus:ring-4 ring-gray-200
 }
 
 .tab {

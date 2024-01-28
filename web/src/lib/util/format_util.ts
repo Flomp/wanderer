@@ -1,4 +1,9 @@
-export function formatTimeHHMM(minutes: number) {
+import type { Waypoint } from "$lib/models/waypoint";
+
+export function formatTimeHHMM(minutes?: number) {
+    if(!minutes) {
+        return "-";
+    }
     const m = minutes % 60;
 
     const h = (minutes - m) / 60;
@@ -6,7 +11,10 @@ export function formatTimeHHMM(minutes: number) {
     return (h < 10 ? "0" : "") + h.toString() + "h " + (m < 10 ? "0" : "") + m.toString() + "m";
 }
 
-export function formatMeters(meters: number) {
+export function formatMeters(meters?: number) {
+    if(!meters) {
+        return "-";
+    }
     if (meters % 1 === 0) {
         return meters >= 1000 ? `${(meters / 1000)} km` : `${meters} m`;
     } else {
@@ -15,7 +23,10 @@ export function formatMeters(meters: number) {
 
 }
 
-export function formatISODate(isoTimestamp: string) {
+export function formatISODate(isoTimestamp?: string) {
+    if(!isoTimestamp) {
+        return "-"
+    }
     const date = new Date(isoTimestamp);
     
     const day = date.getDate().toString().padStart(2, '0');

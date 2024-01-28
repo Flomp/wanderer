@@ -1,10 +1,10 @@
 import { pb } from "$lib/constants";
-import type { Trail } from "$lib/models/trail";
+import { Trail } from "$lib/models/trail";
 import { getFileURL } from "$lib/util/file_util";
 import { writable, type Writable } from "svelte/store";
 
-export const trails: Writable<Trail[]> = writable()
-export const trail: Writable<Trail> = writable();
+export const trails: Writable<Trail[]> = writable([])
+export const trail: Writable<Trail> = writable(new Trail(""));
 
 export async function trails_index() {
     const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, 5, { expand: "category,waypoints,summit_logs" })).items

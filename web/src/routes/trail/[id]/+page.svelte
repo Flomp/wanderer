@@ -1,10 +1,11 @@
 <script lang="ts">
     import SummitLogCard from "$lib/components/summit_log_card.svelte";
     import Tabs from "$lib/components/tabs.svelte";
-    import WaypointCard from "$lib/components/waypoint_card.svelte";
+    import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import { trail } from "$lib/stores/trail_store";
     import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
+    import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import type { Icon, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
@@ -33,7 +34,7 @@
             attribution: "© OpenStreetMap contributors",
         }).addTo(map);
 
-        const gpxLayer = new L.GPX($trail.gpx, {
+        const gpxLayer = new L.GPX($trail.gpx!, {
             async: true,
             gpx_options: {
                 parseElements: ["track"] as any,
@@ -70,27 +71,8 @@
             .addTo(map);
 
         for (const waypoint of $trail.expand.waypoints) {
-            const fontAwesomeIcon = L.AwesomeMarkers.icon({
-                icon: waypoint.icon,
-                prefix: "fa",
-                markerColor: "cadetblue",
-                iconColor: "white",
-            }) as Icon;
-
-            const marker = L.marker([waypoint.lat, waypoint.lon], {
-                title: waypoint.name,
-                icon: fontAwesomeIcon,
-            })
-                .addTo(map)
-                .bindPopup(
-                    "<b>" +
-                        waypoint.name +
-                        "</b>" +
-                        (waypoint.description.length > 0
-                            ? "<br>" + waypoint.description
-                            : ""),
-                );
-
+            const marker = createMarkerFromWaypoint(L, waypoint);
+            marker.addTo(map);
             markers.push(marker);
         }
 

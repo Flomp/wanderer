@@ -12,9 +12,7 @@
         <a class="font-semibold" href="">Favorites</a>
     </menu>
     <div class="flex gap-6 items-center">
-        <button class="btn-primary"
-            ><i class="fa fa-plus mr-2"></i>New Trail</button
-        >
+        <a class="btn-primary btn-large" href="/new"><i class="fa fa-plus mr-2"></i>New Trail</a>
         <Avatar></Avatar>
     </div>
 </nav>
