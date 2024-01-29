@@ -2,11 +2,12 @@
     import { Waypoint, waypointSchema } from "$lib/models/waypoint";
     import { createEventDispatcher } from "svelte";
 
-    import { createForm } from "svelte-forms-lib";
+    import { createForm } from "$lib/vendor/svelte-form-lib/index";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
     import { waypoint } from "$lib/stores/waypoint_store";
+    import { util } from "$lib/vendor/svelte-form-lib/util";
 
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
@@ -21,7 +22,7 @@
             closeModal!();
         },
     });
-    $: form.set($waypoint);
+    $: form.set(util.cloneDeep($waypoint));
 </script>
 
 <Modal
@@ -41,6 +42,7 @@
         <div class="flex gap-4">
             <div class="basis-full">
                 <TextField
+                    name="name"
                     label="Name"
                     bind:value={$form.name}
                     error={$errors.name}
@@ -49,6 +51,7 @@
             </div>
 
             <TextField
+                name="icon"
                 label="Icon"
                 bind:value={$form.icon}
                 icon={$form.icon}
@@ -58,6 +61,7 @@
         </div>
 
         <Textarea
+            name="description"
             label="Description"
             bind:value={$form.description}
             error={$errors.description}
@@ -65,12 +69,14 @@
         ></Textarea>
         <div class="flex gap-4">
             <TextField
+                name="lat"
                 label="Latitude"
                 bind:value={$form.lat}
                 error={$errors.lat}
                 on:change={handleChange}
             ></TextField>
             <TextField
+                name="lon"
                 label="Longitude"
                 bind:value={$form.lon}
                 error={$errors.lat}

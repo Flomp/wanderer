@@ -25,8 +25,8 @@ const waypointSchema = object<Waypoint>({
     id: string().optional(),
     name: string().optional(),
     description: string().optional(),
-    lat: number().min(0).required('Required').typeError('Invalid latitude'),
-    lon: number().min(0).required('Required').typeError('Invalid longitude'),
+    lat: number().required('Required').typeError('Invalid latitude'),
+    lon: number().required('Required').typeError('Invalid longitude'),
     icon: string().optional()
   });
 

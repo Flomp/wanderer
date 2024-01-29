@@ -1,5 +1,5 @@
 <script lang="ts">
-    import SummitLogCard from "$lib/components/summit_log_card.svelte";
+    import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import Tabs from "$lib/components/tabs.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import { trail } from "$lib/stores/trail_store";

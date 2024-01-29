@@ -1,4 +1,5 @@
 <script lang="ts">
+    export let name: string = "";
     export let value: string | number = "";
     export let placeholder: string = "";
     export let rows: number = 3;
@@ -13,6 +14,7 @@
         </p>
     {/if}
     <textarea
+        {name}
         class="bg-gray-50 border rounded-md p-3 resize-none transition-colors focus:border-primary focus:outline-none focus:ring-0 w-full"
         {rows}
         {placeholder}

@@ -23,6 +23,31 @@ export async function trails_show(id: string, loadGPX?: boolean) {
     trail.set(response);
 }
 
+export async function trails_create(bodyParams?: { [key: string]: any; } | FormData) {
+    const model = await pb
+        .collection("trails")
+        .create<Trail>(bodyParams);
+
+    return model;
+}
+
+export async function trails_update(id: string, bodyParams?: { [key: string]: any; } | FormData) {
+    const model = await pb
+        .collection("trails")
+        .update<Trail>(id, bodyParams);
+
+    return model;
+}
+
+
+export async function trails_delete(id: string) {
+    const success = await pb
+        .collection("trails")
+        .delete(id);
+
+    return success;
+}
+
 async function fetchGPX(trail: Trail) {
     if (!trail.gpx) {
         return "";

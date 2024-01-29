@@ -1,8 +1,37 @@
 <script lang="ts">
     import CategoryCard from "$lib/components/category_card.svelte";
-    import TrailCard from "$lib/components/trail_card.svelte";
+    import TrailCard from "$lib/components/trail/trail_card.svelte";
+    import { pb } from "$lib/constants";
+    import type { Trail } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
-    import { trails } from "$lib/stores/trail_store";
+    import { summit_logs_delete } from "$lib/stores/summit_log_store";
+    import {
+        trails,
+        trails_delete,
+        trails_index,
+    } from "$lib/stores/trail_store";
+    import { waypoints_delete } from "$lib/stores/waypoint_store";
+
+    async function handleDropdownClick(
+        currentTrail: Trail,
+        item: { text: string; value: any },
+    ) {
+        if (item.value == "delete") {
+            if (currentTrail.expand.waypoints) {
+                for (const waypoint of currentTrail.expand.waypoints) {
+                    waypoints_delete(waypoint.id!);
+                }
+            }
+            if (currentTrail.expand.summit_logs) {
+                for (const summit_log of currentTrail.expand.summit_logs) {
+                    summit_logs_delete(summit_log.id!);
+                }
+            }
+
+            await trails_delete(currentTrail.id!);
+            await trails_index();
+        }
+    }
 </script>
 
 <section class="hero flex justify-center items-center" style="height: 50vh">
@@ -26,7 +55,12 @@
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 justify-items-center gap-8 py-8"
     >
         {#each $trails as trail}
-            <a href="/trail/{trail.id}"> <TrailCard {trail}></TrailCard></a>
+            <a href="/trail/{trail.id}">
+                <TrailCard
+                    {trail}
+                    on:change={(e) => handleDropdownClick(trail, e.detail)}
+                ></TrailCard></a
+            >
         {/each}
     </div>
 </section>

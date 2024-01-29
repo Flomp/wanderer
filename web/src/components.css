@@ -3,15 +3,19 @@
 @import 'tailwindcss/components';
 
 .btn-primary {
-    @apply text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-gray-900 focus:ring-4 ring-gray-400
+    @apply h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-gray-900 focus:ring-4 ring-gray-400
 }
 
 .btn-large {
-    @apply py-3
+    @apply h-12 leading-8
 }
 
 .btn-secondary {
     @apply rounded-lg px-4 py-2 border border-primary font-medium transition-all hover:bg-gray-100 focus:ring-4 ring-gray-200
+}
+
+.btn-disabled {
+    @apply bg-gray-500 hover:bg-gray-500
 }
 
 .tab {
@@ -28,4 +32,63 @@
 
 .tab-active:hover {
     @apply bg-primary
+}
+
+.tooltip {
+    position: relative;
+}
+
+.tooltip:before,
+.tooltip:after {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+
+    transform: translate3d(0, -10px, 0);
+    transition: all .15s ease-in-out;
+}
+
+.tooltip:before {
+    background: rgba(36, 39, 52, 0.75);
+    border-radius: 4px;
+    color: #fff;
+    content: attr(data-title);
+    font-size: 14px;
+    padding: 6px 10px;
+    top: 24px;
+    white-space: nowrap;
+}
+
+.tooltip:hover:after,
+.tooltip:hover:before {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+}
+
+.spinner {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+}
+
+.spinner:after {
+    content: " ";
+    display: block;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 6px solid #fff;
+    border-color: #fff transparent #fff transparent;
+    animation: spinner 1.2s linear infinite;
+}
+
+@keyframes spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }

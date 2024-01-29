@@ -1,7 +1,6 @@
-import type { Waypoint } from "$lib/models/waypoint";
 
 export function formatTimeHHMM(minutes?: number) {
-    if(!minutes) {
+    if (!minutes) {
         return "-";
     }
     const m = minutes % 60;
@@ -12,7 +11,7 @@ export function formatTimeHHMM(minutes?: number) {
 }
 
 export function formatMeters(meters?: number) {
-    if(!meters) {
+    if (!meters) {
         return "-";
     }
     if (meters % 1 === 0) {
@@ -21,17 +20,4 @@ export function formatMeters(meters?: number) {
         return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${meters.toFixed(2)} m`
     }
 
-}
-
-export function formatISODate(isoTimestamp?: string) {
-    if(!isoTimestamp) {
-        return "-"
-    }
-    const date = new Date(isoTimestamp);
-    
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Month is zero-based
-    const year = date.getFullYear();
-
-    return `${day}.${month}.${year}`;
 }

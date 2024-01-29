@@ -1,4 +1,5 @@
 <script lang="ts">
+    export let name: string = "";
     export let value: any;
     export let items: { text: string; value: any }[] = [];
     export let label: string = "";
@@ -11,6 +12,7 @@
         </p>
     {/if}
     <select
+        {name}
         class="bg-gray-50 h-10 w-full px-4 border-r-8 border-transparent outline outline-1 outline-gray-200 rounded-md focus:outline-primary transition-colors"
         bind:value
     >

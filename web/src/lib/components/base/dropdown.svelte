@@ -7,7 +7,9 @@
 
     let isOpen = false;
 
-    function toggleMenu() {
+    function toggleMenu(e: MouseEvent) {
+        e.stopPropagation();
+        e.preventDefault();
         isOpen = !isOpen;
     }
 
@@ -15,8 +17,8 @@
         isOpen = false;
     }
 
-    function handleItemClick(item: { text: string, value: any }) {
-        dispatch("change", item);       
+    function handleItemClick(item: { text: string; value: any }) {
+        dispatch("change", item);
         closeMenu();
     }
 </script>
@@ -27,6 +29,7 @@
     <button
         class="hover:bg-gray-100 w-8 h-8 rounded-full"
         on:click={toggleMenu}
+        type="button"
     >
         <i class="fa fa-ellipsis-vertical"></i>
     </button>
@@ -42,8 +45,8 @@
                 <li
                     class="menu-item p-4 cursor-pointer hover:bg-gray-100 focus:bg-gray-200 transition-colors"
                     tabindex="0"
-                    on:mouseup={() => handleItemClick(item)}
-                    on:keydown={() => handleItemClick(item)}
+                    on:mouseup|stopPropagation={() => handleItemClick(item)}
+                    on:keydown|stopPropagation={() => handleItemClick(item)}
                 >
                     {item.text}
                 </li>
