@@ -3,7 +3,6 @@
     import Tabs from "$lib/components/tabs.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import { trail } from "$lib/stores/trail_store";
-    import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import type { Icon, Marker } from "leaflet";
@@ -34,7 +33,7 @@
             attribution: "© OpenStreetMap contributors",
         }).addTo(map);
 
-        const gpxLayer = new L.GPX($trail.gpx!, {
+        const gpxLayer = new L.GPX($trail.expand.gpx_data!, {
             async: true,
             gpx_options: {
                 parseElements: ["track"] as any,
@@ -76,8 +75,8 @@
             markers.push(marker);
         }
 
-        lightboxDataSource = $trail.photos.map((v) => ({
-            src: getFileURL($trail, v),
+        lightboxDataSource = $trail.photos.map((p) => ({
+            src: p,
         }));
         lightbox = new PhotoSwipeLightbox({
             dataSource: lightboxDataSource,
@@ -118,7 +117,7 @@
     <section class="relative h-80">
         <img
             class="w-full h-80"
-            src={getFileURL($trail, $trail.thumbnail)}
+            src={$trail.thumbnail}
             alt=""
         />
         <div
@@ -182,7 +181,7 @@
                 {/if}
                 {#if activeTab == 1}
                     <ul>
-                        {#each $trail.expand.waypoints as waypoint, i}
+                        {#each $trail.expand.waypoints ?? [] as waypoint, i}
                             <li on:mouseenter={() => openMarkerPopup(i)}>
                                 <WaypointCard {waypoint}></WaypointCard>
                             </li>
@@ -194,20 +193,20 @@
                         id="photo-gallery"
                         class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                     >
-                        {#each $trail.photos as photo, i}
+                        {#each $trail.photos ?? [] as photo, i}
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                             <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                             <img
                                 class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
                                 on:click={() => openGallery(i)}
-                                src={getFileURL($trail, photo)}
+                                src={photo}
                                 alt=""
                             />
                         {/each}
                     </div>
                 {/if}
                 {#if activeTab == 3}
-                    {#each $trail.expand.summit_logs as log}
+                    {#each $trail.expand.summit_logs ?? [] as log}
                         <SummitLogCard {log}></SummitLogCard>
                     {/each}
                 {/if}

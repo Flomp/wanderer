@@ -8,14 +8,18 @@
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
-    import { pb } from "$lib/constants";
     import { SummitLog } from "$lib/models/summit_log";
     import { Trail, trailSchema } from "$lib/models/trail";
     import { Waypoint } from "$lib/models/waypoint";
     import { categories } from "$lib/stores/category_store";
-    import { summitLog, summit_logs_create } from "$lib/stores/summit_log_store";
-    import { trail, trails_create, trails_update } from "$lib/stores/trail_store";
-    import { waypoint, waypoints_create } from "$lib/stores/waypoint_store";
+    import { summitLog } from "$lib/stores/summit_log_store";
+    import { toast } from "$lib/stores/toast_store";
+    import {
+        trail,
+        trails_create,
+        trails_update,
+    } from "$lib/stores/trail_store";
+    import { waypoint } from "$lib/stores/waypoint_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import { createForm } from "$lib/vendor/svelte-form-lib";
@@ -26,6 +30,8 @@
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
 
+    export let data: { trail: Trail };
+
     let L: any;
     let map: Map;
 
@@ -35,46 +41,6 @@
     let openSummitLogModal: () => void;
 
     let loading = false;
-    const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
-        initialValues: new Trail("adsf", { category: $categories[0] }),
-        validationSchema: trailSchema,
-        onSubmit: async (trail) => {
-            loading = true;
-            try {
-                const form = document.getElementById(
-                    "trail-form",
-                ) as HTMLFormElement;
-                const formData = new FormData(form);
-                formData.set("category", trail.expand.category!.id);
-
-                for (const file of trail._photoFiles) {
-                    formData.append("photos", file);
-                }
-
-                for (const waypoint of trail.expand.waypoints) {
-                    const model = await waypoints_create({...waypoint, marker: undefined});
-                    formData.append("waypoints", model.id!);
-                }
-                for (const summitLog of trail.expand.summit_logs) {
-                    const model = await summit_logs_create(summitLog);
-                    formData.append("summit_logs", model.id!);
-                }
-                const model = await trails_create(formData);
-
-                const thumbnailIndex = trail.photos.findIndex(
-                    (p) => p == trail.thumbnail,
-                );
-                let thumbnail: string | undefined = "/imgs/thumbnail.jpg";
-                if (thumbnailIndex >= 0) {
-                    thumbnail = model.photos.at(thumbnailIndex);
-                }
-                await trails_update(model.id!, { thumbnail: thumbnail });
-            } catch (e) {
-            } finally {
-                loading = false;
-            }
-        },
-    });
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -86,7 +52,106 @@
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors",
         }).addTo(map);
+
+        if (
+            data.trail.expand.gpx_data &&
+            data.trail.expand.gpx_data.length > 0
+        ) {
+            addGPXLayer(data.trail.expand.gpx_data, false);
+        }
+
+        if (data.trail.expand.waypoints?.length > 0) {
+            for (const waypoint of data.trail.expand.waypoints) {
+                const marker = createMarkerFromWaypoint(L, waypoint);
+                marker.addTo(map);
+            }
+        }
     });
+
+    const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
+        initialValues: data.trail,
+        validationSchema: trailSchema,
+        onSubmit: async (submittedTrail) => {
+            loading = true;
+            try {
+                const form = document.getElementById(
+                    "trail-form",
+                ) as HTMLFormElement;
+                const formData = new FormData(form);
+                if (!submittedTrail.id) {
+                    await trails_create(submittedTrail, formData);
+                } else {
+                    await trails_update($trail, submittedTrail, formData);
+                }
+
+                toast.set({type: "success", "icon": "check", "text": "Trail saved successfully!"})
+            } catch (e) {
+                console.error(e);
+            } finally {
+                loading = false;
+            }
+        },
+    });
+
+    function addGPXLayer(gpx: string, addWaypoints: boolean = true) {
+        gpxLayer?.remove();
+        gpxLayer = new L.GPX(gpx, {
+            async: true,
+            gpx_options: {
+                parseElements: [
+                    "track",
+                    "route",
+                    ...(addWaypoints ? ["waypoint"] : []),
+                ],
+            },
+            marker_options: {
+                wptIcons: {
+                    "": L.AwesomeMarkers.icon({
+                        icon: "circle",
+                        prefix: "fa",
+                        markerColor: "cadetblue",
+                        iconColor: "white",
+                    }) as Icon,
+                },
+                startIcon: L.AwesomeMarkers.icon({
+                    icon: "circle-half-stroke",
+                    prefix: "fa",
+                    markerColor: "cadetblue",
+                    iconColor: "white",
+                }) as Icon,
+                endIcon: L.AwesomeMarkers.icon({
+                    icon: "flag-checkered",
+                    prefix: "fa",
+                    markerColor: "cadetblue",
+                    iconColor: "white",
+                }) as Icon,
+                startIconUrl: "",
+                endIconUrl: "",
+                shadowUrl: "",
+            },
+        })
+            .on("addpoint", function (e: any) {
+                if (e.point_type === "start") {
+                    e.point.setZIndexOffset(1000);
+                } else if (e.point_type === "waypoint") {
+                    const waypoint = new Waypoint(
+                        e.point._latlng.lat,
+                        e.point._latlng.lng,
+                        { name: e.point.options.title, marker: e.point },
+                    );
+                    if (!$form.expand.waypoints) {
+                    }
+                    $form.expand.waypoints.push(waypoint);
+                }
+            })
+            .on("loaded", function (e: LeafletEvent) {
+                map.fitBounds(e.target.getBounds());
+                $form.distance = e.target.get_distance();
+                $form.elevation_gain = e.target.get_elevation_gain();
+                $form.duration = e.target.get_total_time() / 1000 / 60;
+            })
+            .addTo(map);
+    }
 
     function openFileBrowser() {
         document.getElementById("fileInput")!.click();
@@ -110,54 +175,7 @@
 
         reader.onload = function (e) {
             trail.set(new Trail(""));
-            gpxLayer?.remove();
-            gpxLayer = new L.GPX(e.target?.result, {
-                async: true,
-                marker_options: {
-                    wptIcons: {
-                        "": L.AwesomeMarkers.icon({
-                            icon: "circle",
-                            prefix: "fa",
-                            markerColor: "cadetblue",
-                            iconColor: "white",
-                        }) as Icon,
-                    },
-                    startIcon: L.AwesomeMarkers.icon({
-                        icon: "circle-half-stroke",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
-                    endIcon: L.AwesomeMarkers.icon({
-                        icon: "flag-checkered",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
-                    startIconUrl: "",
-                    endIconUrl: "",
-                    shadowUrl: "",
-                },
-            })
-                .on("addpoint", function (e: any) {
-                    if (e.point_type === "start") {
-                        e.point.setZIndexOffset(1000);
-                    } else if (e.point_type === "waypoint") {
-                        const waypoint = new Waypoint(
-                            e.point._latlng.lat,
-                            e.point._latlng.lng,
-                            { name: e.point.options.title, marker: e.point },
-                        );
-                        $form.expand.waypoints.push(waypoint);
-                    }
-                })
-                .on("loaded", function (e: LeafletEvent) {
-                    map.fitBounds(e.target.getBounds());
-                    $form.distance = e.target.get_distance();
-                    $form.elevation_gain = e.target.get_elevation_gain();
-                    $form.duration = e.target.get_total_time() / 1000 / 60;
-                })
-                .addTo(map);
+            addGPXLayer(e.target?.result as string);
         };
     }
 
@@ -167,6 +185,7 @@
 
     function handleWaypointMenuClick(
         currentWaypoint: Waypoint,
+        index: number,
         e: CustomEvent<{ text: string; value: string }>,
     ) {
         if (e.detail.value === "edit") {
@@ -174,11 +193,8 @@
             openWaypointModal();
         } else if (e.detail.value === "delete") {
             currentWaypoint.marker?.remove();
-            $form.expand.waypoints = $form.expand.waypoints.filter(
-                (w) =>
-                    w.lat !== currentWaypoint.lat &&
-                    w.lon !== currentWaypoint.lon,
-            );
+            $form.expand.waypoints.splice(index, 1);
+            $form.expand.waypoints = $form.expand.waypoints;
         }
     }
 
@@ -260,7 +276,7 @@
     }
 
     function beforeSummitLogModalOpen() {
-        summitLog.set(new SummitLog(new Date().toISOString()));
+        summitLog.set(new SummitLog(format(new Date(), "yyyy-MM-dd")));
         openSummitLogModal();
     }
 
@@ -344,8 +360,15 @@
         <TextField
             name="name"
             label="Name"
+            on:change={handleChange}
             error={$errors.name}
             bind:value={$form.name}
+        ></TextField>
+        <TextField
+            name="location"
+            label="Location"
+            error={$errors.location}
+            bind:value={$form.location}
         ></TextField>
         <Textarea
             name="description"
@@ -361,12 +384,13 @@
         <hr />
         <h3 class="text-xl font-semibold">Waypoints</h3>
         <ul>
-            {#each $form.expand.waypoints as waypoint, i}
+            {#each $form.expand.waypoints ?? [] as waypoint, i}
                 <li on:mouseenter={() => openMarkerPopup(waypoint)}>
                     <WaypointCard
                         {waypoint}
                         mode="edit"
-                        on:change={(e) => handleWaypointMenuClick(waypoint, e)}
+                        on:change={(e) =>
+                            handleWaypointMenuClick(waypoint, i, e)}
                     ></WaypointCard>
                 </li>
             {/each}
@@ -393,7 +417,7 @@
                 style="display: none;"
                 on:change={handlePhotoSelection}
             />
-            {#each $form.photos as photo, i}
+            {#each $form.photos ?? [] as photo, i}
                 <div class="shrink-0 grow-0 basis-auto">
                     <PhotoCard
                         src={photo}
@@ -407,7 +431,7 @@
         <hr />
         <h3 class="text-xl font-semibold">Summit Book</h3>
         <ul>
-            {#each $form.expand.summit_logs as log, i}
+            {#each $form.expand.summit_logs ?? [] as log, i}
                 <li>
                     <SummitLogCard
                         {log}

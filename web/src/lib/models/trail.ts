@@ -17,6 +17,7 @@ class Trail {
         category?: Category;
         waypoints: Waypoint[]
         summit_logs: SummitLog[]
+        gpx_data?: string
     }
     tags?: string[];
     description?: string;

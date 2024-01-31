@@ -8,4 +8,6 @@ export async function categories_index() {
     const response: Category[] = (await pb.collection('categories').getFullList<Category>())
 
     categories.set(response);
+
+    return response;
 }

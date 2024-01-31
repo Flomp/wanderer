@@ -17,7 +17,7 @@
     const { form, errors, handleChange, handleSubmit } = createForm<SummitLog>({
         initialValues: $summitLog,
         validationSchema: summitLogSchema,
-        onSubmit: async (submittedValues) => {
+        onSubmit: async (submittedValues) => {           
             dispatch("save", submittedValues);
             closeModal!();
         },

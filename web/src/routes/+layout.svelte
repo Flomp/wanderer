@@ -1,4 +1,5 @@
 <script>
+    import Toast from "$lib/components/base/toast.svelte";
     import Footer from "$lib/components/footer.svelte";
 import NavBar from "$lib/components/nav_bar.svelte";
     import "../app.css";
@@ -7,5 +8,6 @@ import NavBar from "$lib/components/nav_bar.svelte";
 </script>
 
 <NavBar></NavBar>
+<Toast></Toast>
 <slot />
 <Footer></Footer>

@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
-    import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import Dropdown from "../base/dropdown.svelte";
 
@@ -14,7 +13,7 @@
 
 <div class="trail-card rounded-2xl shadow-md w-72 cursor-pointer">
     <div class="w-full h-48 overflow-hidden rounded-t-2xl">
-        <img src={getFileURL(trail, trail.thumbnail)} alt="" />
+        <img src={trail.thumbnail} alt="" />
     </div>
     <div class="p-4">
         <div>
