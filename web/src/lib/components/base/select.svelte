@@ -7,9 +7,9 @@
 
 <div>
     {#if label.length}
-        <p class="text-sm font-medium pb-1">
+        <label for={name} class="text-sm font-medium pb-1">
             {label}
-        </p>
+        </label>
     {/if}
     <select
         {name}

@@ -7,6 +7,7 @@ class Trail {
     id?: string;
     name: string;
     location?: string;
+    public: boolean;
     distance?: number;
     elevation_gain?: number;
     duration?: number;
@@ -28,6 +29,7 @@ class Trail {
         params?: {
             id?: string,
             location?: string,
+            public?: boolean,
             distance?: number,
             elevation_gain?: number,
             duration?: number,
@@ -45,6 +47,7 @@ class Trail {
         this.id = params?.id;
         this.name = name;
         this.location = params?.location;
+        this.public = params?.public ?? false
         this.distance = params?.distance;
         this.elevation_gain = params?.elevation_gain;
         this.duration = params?.duration;

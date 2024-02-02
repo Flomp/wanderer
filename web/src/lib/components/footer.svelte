@@ -1,5 +1,5 @@
 <script>
-    import LogoTextLight from "./logo_text_light.svelte";
+    import LogoTextLight from "./logo/logo_text_light.svelte";
 </script>
 
 <footer class="bg-primary text-white w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-8 p-12 mt-12 rounded-t-3xl">

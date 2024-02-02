@@ -22,7 +22,7 @@
             closeModal!();
         },
     });
-    $: form.set(util.cloneDeep($summitLog));
+    $: form.set(util.cloneDeep($summitLog));    
 </script>
 
 <Modal

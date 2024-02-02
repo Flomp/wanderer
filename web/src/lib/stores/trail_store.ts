@@ -1,11 +1,12 @@
-import { pb } from "$lib/constants";
-import { Trail } from "$lib/models/trail";
-import { getFileURL } from "$lib/util/file_util";
-import { writable, type Writable } from "svelte/store";
-import { waypoints_create, waypoints_delete } from "./waypoint_store";
-import { summit_logs_create, summit_logs_delete } from "./summit_log_store";
-import type { Waypoint } from "$lib/models/waypoint";
 import type { SummitLog } from "$lib/models/summit_log";
+import { Trail } from "$lib/models/trail";
+import type { Waypoint } from "$lib/models/waypoint";
+import { pb } from "$lib/pocketbase";
+import { getFileURL } from "$lib/util/file_util";
+import { util } from "$lib/vendor/svelte-form-lib/util";
+import { writable, type Writable } from "svelte/store";
+import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
+import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
 
 export const trails: Writable<Trail[]> = writable([])
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -25,7 +26,7 @@ export async function trails_index() {
 }
 
 export async function trails_show(id: string, loadGPX?: boolean) {
-    const response: Trail = await pb.collection('trails').getOne<Trail>(id, { expand: "category,waypoints,summit_logs" })
+    const response: Trail = await pb.collection('trails').getOne<Trail>(id, { expand: "category,waypoints,summit_logs" })  
 
     if (loadGPX) {
         const gpxData: string = await fetchGPX(response);
@@ -45,6 +46,11 @@ export async function trails_show(id: string, loadGPX?: boolean) {
 }
 
 export async function trails_create(trail: Trail, formData: { [key: string]: any; } | FormData) {
+
+    if (!pb.authStore.model) {
+        throw new Error("Unauthenticated");
+        ;
+    }
     formData.set("category", trail.expand.category!.id);
 
     for (const file of trail._photoFiles) {
@@ -62,6 +68,13 @@ export async function trails_create(trail: Trail, formData: { [key: string]: any
         const model = await summit_logs_create(summitLog);
         formData.append("summit_logs", model.id!);
     }
+
+    if (!formData.get("public")) {
+        formData.set("public", 0);
+    }
+
+    formData.append("author", pb.authStore.model!.id);
+
     let model = await pb
         .collection("trails")
         .create<Trail>(formData);
@@ -93,6 +106,13 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
         formData.append("waypoints+", model.id!);
     }
 
+    for (const updatedWaypoint of waypointUpdates.updated) {
+        const model = await waypoints_update({
+            ...updatedWaypoint,
+            marker: undefined,
+        });
+    }
+
     for (const deletedWaypoint of waypointUpdates.deleted) {
         const success = await waypoints_delete(deletedWaypoint.id!);
     }
@@ -102,6 +122,10 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
     for (const summitLog of summitLogUpdates.added) {
         const model = await summit_logs_create(summitLog);
         formData.append("summit_logs+", model.id!);
+    }
+
+    for (const updatedSummitLog of summitLogUpdates.updated) {
+        const model = await summit_logs_update(updatedSummitLog);
     }
 
     for (const deletedSummitLog of summitLogUpdates.deleted) {
@@ -122,6 +146,10 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
         formData.delete("gpx");
     }
 
+    if (!formData.get("public")) {
+        formData.set("public", 0);
+    }
+
     const thumbnailIndex = newTrail.photos.findIndex(
         (p) => p == newTrail.thumbnail,
     );
@@ -137,7 +165,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
 
     model = await pb
         .collection("trails")
-        .update<Trail>(model.id!, { thumbnail: thumbnail });
+        .update<Trail>(model.id!, { thumbnail: thumbnail }, { expand: "category,waypoints,summit_logs" });
 
     trail.set(model);
 
@@ -145,10 +173,21 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
 }
 
 
-export async function trails_delete(id: string) {
+export async function trails_delete(trail: Trail) {
+    if (trail.expand.waypoints) {
+        for (const waypoint of trail.expand.waypoints) {
+            waypoints_delete(waypoint.id!);
+        }
+    }
+    if (trail.expand.summit_logs) {
+        for (const summit_log of trail.expand.summit_logs) {
+            summit_logs_delete(summit_log.id!);
+        }
+    }
+
     const success = await pb
         .collection("trails")
-        .delete(id);
+        .delete(trail.id!);
 
     return success;
 }
@@ -173,12 +212,22 @@ function setFileURLs(trail: Trail) {
 }
 
 function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray: T[]) {
-    const newObjects = newArray.filter(newObj => !oldArray.find(oldObj => oldObj.id === newObj.id));
+    const newObjects = [];
+    const updatedObjects = [];
+    for (const newObj of newArray) {
+        const oldObj = oldArray.find(oldObj => oldObj.id === newObj.id)
+        if (!oldObj) {
+            newObjects.push(newObj);
+        } else if (!util.deepEqual(newObj, oldObj)) {
+            updatedObjects.push(newObj);
+        }
+    }
     const deletedObjects = oldArray.filter(oldObj => !newArray.find(newObj => newObj.id === oldObj.id));
 
     return {
         added: newObjects,
-        deleted: deletedObjects
+        deleted: deletedObjects,
+        updated: updatedObjects
     };
 }
 

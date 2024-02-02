@@ -10,6 +10,7 @@
         trails_delete,
         trails_index,
     } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { waypoints_delete } from "$lib/stores/waypoint_store";
 
     async function handleDropdownClick(
@@ -19,18 +20,7 @@
         if (item.value == "edit") {
             goto(`/trail/edit/${currentTrail.id}`);
         } else if (item.value == "delete") {
-            if (currentTrail.expand.waypoints) {
-                for (const waypoint of currentTrail.expand.waypoints) {
-                    waypoints_delete(waypoint.id!);
-                }
-            }
-            if (currentTrail.expand.summit_logs) {
-                for (const summit_log of currentTrail.expand.summit_logs) {
-                    summit_logs_delete(summit_log.id!);
-                }
-            }
-
-            await trails_delete(currentTrail.id!);
+            await trails_delete(currentTrail);
             await trails_index();
         }
     }
@@ -51,7 +41,7 @@
     </div>
 </section>
 <section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-5xl md:text-6xl font-bold text-primary">Your trails</h2>
+    <h2 class="text-5xl md:text-6xl font-bold text-primary">{$currentUser ? 'Your' : 'Explore'} trails</h2>
     <div
         id="trails"
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 justify-items-center gap-8 py-8"

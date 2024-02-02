@@ -7,4 +7,11 @@ export type Toast = {
 }
 
 
-export const toast: Writable<Toast> = writable();
+export const toast: Writable<Toast | null> = writable();
+
+
+export function show_toast(newToast: Toast, duration: number = 3000) {
+    toast.set(newToast);
+
+    setTimeout(() => toast.set(null), duration);
+}

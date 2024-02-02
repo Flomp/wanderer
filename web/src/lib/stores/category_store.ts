@@ -1,4 +1,4 @@
-import { pb } from "$lib/constants";
+import { pb } from "$lib/pocketbase";
 import type { Category } from "$lib/models/category";
 import { writable, type Writable } from "svelte/store";
 

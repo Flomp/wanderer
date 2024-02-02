@@ -3,6 +3,7 @@
     import Select from "$lib/components/base/select.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
+    import Toggle from "$lib/components/base/toggle.svelte";
     import PhotoCard from "$lib/components/photo_card.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
@@ -13,7 +14,7 @@
     import { Waypoint } from "$lib/models/waypoint";
     import { categories } from "$lib/stores/category_store";
     import { summitLog } from "$lib/stores/summit_log_store";
-    import { toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store";
     import {
         trail,
         trails_create,
@@ -84,9 +85,19 @@
                     await trails_update($trail, submittedTrail, formData);
                 }
 
-                toast.set({type: "success", "icon": "check", "text": "Trail saved successfully!"})
+                show_toast({
+                    type: "success",
+                    icon: "check",
+                    text: "Trail saved successfully.",
+                });
             } catch (e) {
                 console.error(e);
+
+                show_toast({
+                    type: "error",
+                    icon: "close",
+                    text: "Error saving trail.",
+                });
             } finally {
                 loading = false;
             }
@@ -304,6 +315,7 @@
         e: CustomEvent<{ text: string; value: string }>,
     ) {
         if (e.detail.value === "edit") {
+            currentSummitLog.date = format(currentSummitLog.date, "yyyy-MM-dd");
             summitLog.set(currentSummitLog);
             openSummitLogModal();
         } else if (e.detail.value === "delete") {
@@ -375,12 +387,15 @@
             label="Describe your trail"
             bind:value={$form.description}
         ></Textarea>
-        <Select
-            name="category"
-            label="Category"
-            bind:value={$form.expand.category}
-            items={$categories.map((c) => ({ text: c.name, value: c }))}
-        ></Select>
+        {#if $form.expand.category}
+            <Select
+                name="category"
+                label="Category"
+                bind:value={$form.expand.category.id}
+                items={$categories.map((c) => ({ text: c.name, value: c.id }))}
+            ></Select>
+        {/if}
+        <Toggle name="public" label="Public" bind:value={$form.public}></Toggle>
         <hr />
         <h3 class="text-xl font-semibold">Waypoints</h3>
         <ul>

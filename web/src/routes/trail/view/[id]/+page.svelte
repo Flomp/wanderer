@@ -1,8 +1,14 @@
 <script lang="ts">
+    import { goto } from "$app/navigation";
+    import Dropdown from "$lib/components/base/dropdown.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import Tabs from "$lib/components/tabs.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
-    import { trail } from "$lib/stores/trail_store";
+    import {
+        trail,
+        trails_delete,
+        trails_index,
+    } from "$lib/stores/trail_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import type { Icon, Marker } from "leaflet";
@@ -12,6 +18,7 @@
     import PhotoSwipeLightbox from "photoswipe/lightbox";
     import "photoswipe/style.css";
     import { onMount } from "svelte";
+    import { fade } from "svelte/transition";
 
     const tabs = ["Description", "Waypoints", "Photos", "Summit book"];
 
@@ -21,6 +28,11 @@
 
     let lightbox: PhotoSwipeLightbox;
     let lightboxDataSource: DataSource;
+
+    const dropdownItems = [
+        { text: "Edit", value: "edit" },
+        { text: "Delete", value: "delete" },
+    ];
 
     onMount(async () => {
         const L = (await import("leaflet")).default;
@@ -109,17 +121,23 @@
     function openGallery(idx: number) {
         lightbox?.loadAndOpen(idx, lightboxDataSource);
     }
+
+    async function handleDropdownClick(item: { text: string; value: any }) {
+        if (item.value == "edit") {
+            goto(`/trail/edit/${$trail.id}`);
+        } else if (item.value == "delete") {
+            await trails_delete($trail);
+            await trails_index();
+            goto(`/`);
+        }
+    }
 </script>
 
 <div
     class="trail-panel max-w-5xl mx-auto shadow-2xl rounded-3xl overflow-hidden"
 >
     <section class="relative h-80">
-        <img
-            class="w-full h-80"
-            src={$trail.thumbnail}
-            alt=""
-        />
+        <img class="w-full h-80" src={$trail.thumbnail} alt="" />
         <div
             class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
         ></div>
@@ -131,6 +149,13 @@
                 <i class="fa fa-location-dot mr-3"></i>
                 {$trail.location}
             </h3>
+        </div>
+        <div class="absolute text-white bottom-8 right-8">
+            <Dropdown
+                size="2xl"
+                items={dropdownItems}
+                on:change={(e) => handleDropdownClick(e.detail)}
+            ></Dropdown>
         </div>
     </section>
     <section
@@ -154,12 +179,14 @@
                 >{formatTimeHHMM($trail.duration)}</span
             >
         </div>
-        <div class="flex flex-col items-center">
-            <span>Category</span>
-            <span class="font-semibold text-lg"
-                >{$trail.expand.category.name}</span
-            >
-        </div>
+        {#if $trail.expand.category}
+            <div class="flex flex-col items-center">
+                <span>Category</span>
+                <span class="font-semibold text-lg"
+                    >{$trail.expand.category.name}</span
+                >
+            </div>
+        {/if}
     </section>
     {#if $trail.tags && $trail.tags.length > 0}
         <hr />
@@ -206,9 +233,11 @@
                     </div>
                 {/if}
                 {#if activeTab == 3}
-                    {#each $trail.expand.summit_logs ?? [] as log}
-                        <SummitLogCard {log}></SummitLogCard>
-                    {/each}
+                    <ul>
+                        {#each $trail.expand.summit_logs ?? [] as log}
+                            <li><SummitLogCard {log}></SummitLogCard></li>
+                        {/each}
+                    </ul>
                 {/if}
             </div>
             <div

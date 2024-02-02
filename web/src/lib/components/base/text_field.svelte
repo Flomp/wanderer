@@ -5,13 +5,19 @@
     export let label: string = "";
     export let error: string = "";
     export let icon: string = "";
+    export let extraClasses: string = "";
+    export let type: "text" | "password" = "text";
+
+    function typeAction(node: HTMLInputElement) {
+        node.type = type;
+    }
 </script>
 
 <div>
     {#if label.length}
-        <p class="text-sm font-medium pb-1">
+        <label for={name} class="text-sm font-medium pb-1">
             {label}
-        </p>
+        </label>
     {/if}
     <div class="flex items-center gap-2">
         {#if icon.length > 0}
@@ -19,10 +25,10 @@
         {/if}
         <input
             {name}
-            class="bg-gray-50 border rounded-md p-3 transition-colors focus:border-primary focus:outline-none focus:ring-0 w-full"
+            class="bg-gray-50 border rounded-md p-3 transition-colors focus:border-primary focus:outline-none focus:ring-0 w-full {extraClasses}"
             class:border-red-400={error.length > 0}
             class:bg-red-50={error.length > 0}
-            type="text"
+            use:typeAction
             bind:value
             on:change
             {placeholder}
