@@ -9,6 +9,7 @@
         trails_delete,
         trails_index,
     } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import type { Icon, Marker } from "leaflet";
@@ -150,13 +151,15 @@
                 {$trail.location}
             </h3>
         </div>
-        <div class="absolute text-white bottom-8 right-8">
-            <Dropdown
-                size="2xl"
-                items={dropdownItems}
-                on:change={(e) => handleDropdownClick(e.detail)}
-            ></Dropdown>
-        </div>
+        {#if $currentUser && $currentUser.id == $trail.author}
+            <div class="absolute text-white bottom-8 right-8">
+                <Dropdown
+                    size="2xl"
+                    items={dropdownItems}
+                    on:change={(e) => handleDropdownClick(e.detail)}
+                ></Dropdown>
+            </div>
+        {/if}
     </section>
     <section
         class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8"

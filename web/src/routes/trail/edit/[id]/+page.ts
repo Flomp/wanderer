@@ -11,7 +11,7 @@ export const load: Load = async ({ params }) => {
 
     let trail: Trail;
     if (params.id === "new") {
-        trail = new Trail("", { category: categories[0] });
+        trail = new Trail("", {category: categories[0]});
     } else {
         trail = await trails_show(params.id, true);
     }

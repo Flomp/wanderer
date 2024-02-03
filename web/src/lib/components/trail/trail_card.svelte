@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
+    import { currentUser } from "$lib/stores/user_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import Dropdown from "../base/dropdown.svelte";
 
@@ -19,7 +20,9 @@
         <div>
             <div class="flex justify-between items-center">
                 <h4 class="font-semibold text-lg">{trail.name}</h4>
-                <Dropdown on:change items={dropdownItems}></Dropdown>
+                {#if $currentUser && $currentUser.id == trail.author}
+                    <Dropdown on:change items={dropdownItems}></Dropdown>
+                {/if}
             </div>
             <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
         </div>

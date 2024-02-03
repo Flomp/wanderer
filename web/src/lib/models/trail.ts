@@ -11,6 +11,8 @@ class Trail {
     distance?: number;
     elevation_gain?: number;
     duration?: number;
+    lat?: number;
+    lon?: number;
     thumbnail?: string;
     photos: string[];
     gpx?: string;
@@ -22,6 +24,7 @@ class Trail {
     }
     tags?: string[];
     description?: string;
+    author?: string;
 
     _photoFiles: File[]
 
@@ -33,6 +36,8 @@ class Trail {
             distance?: number,
             elevation_gain?: number,
             duration?: number,
+            lat?:number,
+            lon?: number,
             thumbnail?: string,
             photos?: string[],
             gpx?: string,
@@ -51,6 +56,8 @@ class Trail {
         this.distance = params?.distance;
         this.elevation_gain = params?.elevation_gain;
         this.duration = params?.duration;
+        this.lat = params?.lat;
+        this.lon = params?.lon;
         this.thumbnail = params?.thumbnail;
         this.photos = params?.photos ?? [];
         this.gpx = params?.gpx;

@@ -7,6 +7,7 @@ import { util } from "$lib/vendor/svelte-form-lib/util";
 import { writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
+import { ms } from "$lib/meilisearch";
 
 export const trails: Writable<Trail[]> = writable([])
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -26,7 +27,7 @@ export async function trails_index() {
 }
 
 export async function trails_show(id: string, loadGPX?: boolean) {
-    const response: Trail = await pb.collection('trails').getOne<Trail>(id, { expand: "category,waypoints,summit_logs" })  
+    const response: Trail = await pb.collection('trails').getOne<Trail>(id, { expand: "category,waypoints,summit_logs" })
 
     if (loadGPX) {
         const gpxData: string = await fetchGPX(response);
@@ -90,6 +91,8 @@ export async function trails_create(trail: Trail, formData: { [key: string]: any
     model = await pb
         .collection("trails")
         .update<Trail>(model.id!, { thumbnail: thumbnail });
+
+    index_trail(model);
 
     return model;
 }
@@ -169,7 +172,9 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
 
     trail.set(model);
 
-    // return model;
+    index_trail(model);
+
+    return model;
 }
 
 
@@ -229,5 +234,23 @@ function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray:
         deleted: deletedObjects,
         updated: updatedObjects
     };
+}
+
+function index_trail(trail: Trail) {
+    ms.index('trails').addDocuments([
+        {
+            "id": trail.id,
+            "name": trail.name,
+            "description": trail.description,
+            "location": trail.location,
+            "distance": trail.distance,
+            "elevation_gain": trail.elevation_gain,
+            "duration": trail.duration,
+            "category": trail.expand.category?.name,
+            "_geo": {
+                "lat": trail.lat,
+                "lng": trail.lon,
+            }
+        }]);
 }
 

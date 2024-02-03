@@ -27,14 +27,14 @@
 </script>
 
 <section class="hero flex justify-center items-center" style="height: 50vh">
-    <div class="relative text-gray-600">
+    <div class="relative text-gray-600  mx-4">
         <span class="absolute inset-y-0 left-0 flex items-center pl-4">
             <i class="fa fa-search text-2xl"></i>
         </span>
         <input
             type="search"
             name="q"
-            class="py-4 rounded-2xl pl-14 focus:outline-none text-2xl text-primary"
+            class="w-80 sm:w-96 md:w-[32rem] py-4 rounded-2xl pl-14 focus:outline-none text-xl text-primary  "
             placeholder="Search trails..."
             autocomplete="off"
         />

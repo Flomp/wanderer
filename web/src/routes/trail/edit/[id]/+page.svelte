@@ -9,6 +9,7 @@
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
+    import { ms } from "$lib/meilisearch";
     import { SummitLog } from "$lib/models/summit_log";
     import { Trail, trailSchema } from "$lib/models/trail";
     import { Waypoint } from "$lib/models/waypoint";
@@ -105,63 +106,69 @@
     });
 
     function addGPXLayer(gpx: string, addWaypoints: boolean = true) {
-        gpxLayer?.remove();
-        gpxLayer = new L.GPX(gpx, {
-            async: true,
-            gpx_options: {
-                parseElements: [
-                    "track",
-                    "route",
-                    ...(addWaypoints ? ["waypoint"] : []),
-                ],
-            },
-            marker_options: {
-                wptIcons: {
-                    "": L.AwesomeMarkers.icon({
-                        icon: "circle",
+        return new Promise<void>(function (resolve, reject) {
+            gpxLayer?.remove();
+            gpxLayer = new L.GPX(gpx, {
+                async: true,
+                gpx_options: {
+                    parseElements: [
+                        "track",
+                        "route",
+                        ...(addWaypoints ? ["waypoint"] : []),
+                    ],
+                },
+                marker_options: {
+                    wptIcons: {
+                        "": L.AwesomeMarkers.icon({
+                            icon: "circle",
+                            prefix: "fa",
+                            markerColor: "cadetblue",
+                            iconColor: "white",
+                        }) as Icon,
+                    },
+                    startIcon: L.AwesomeMarkers.icon({
+                        icon: "circle-half-stroke",
                         prefix: "fa",
                         markerColor: "cadetblue",
                         iconColor: "white",
                     }) as Icon,
+                    endIcon: L.AwesomeMarkers.icon({
+                        icon: "flag-checkered",
+                        prefix: "fa",
+                        markerColor: "cadetblue",
+                        iconColor: "white",
+                    }) as Icon,
+                    startIconUrl: "",
+                    endIconUrl: "",
+                    shadowUrl: "",
                 },
-                startIcon: L.AwesomeMarkers.icon({
-                    icon: "circle-half-stroke",
-                    prefix: "fa",
-                    markerColor: "cadetblue",
-                    iconColor: "white",
-                }) as Icon,
-                endIcon: L.AwesomeMarkers.icon({
-                    icon: "flag-checkered",
-                    prefix: "fa",
-                    markerColor: "cadetblue",
-                    iconColor: "white",
-                }) as Icon,
-                startIconUrl: "",
-                endIconUrl: "",
-                shadowUrl: "",
-            },
-        })
-            .on("addpoint", function (e: any) {
-                if (e.point_type === "start") {
-                    e.point.setZIndexOffset(1000);
-                } else if (e.point_type === "waypoint") {
-                    const waypoint = new Waypoint(
-                        e.point._latlng.lat,
-                        e.point._latlng.lng,
-                        { name: e.point.options.title, marker: e.point },
-                    );
-                    if (!$form.expand.waypoints) {
+            })
+                .on("addpoint", function (e: any) {
+                    if (e.point_type === "start") {
+                        e.point.setZIndexOffset(1000);
+                        $form.lat = e.point._latlng.lat;
+                        $form.lon = e.point._latlng.lng;
+                    } else if (e.point_type === "waypoint") {
+                        const waypoint = new Waypoint(
+                            e.point._latlng.lat,
+                            e.point._latlng.lng,
+                            { name: e.point.options.title, marker: e.point },
+                        );
+                        if (!$form.expand.waypoints) {
+                        }
+                        $form.expand.waypoints.push(waypoint);
                     }
-                    $form.expand.waypoints.push(waypoint);
-                }
-            })
-            .on("loaded", function (e: LeafletEvent) {
-                map.fitBounds(e.target.getBounds());
-                $form.distance = e.target.get_distance();
-                $form.elevation_gain = e.target.get_elevation_gain();
-                $form.duration = e.target.get_total_time() / 1000 / 60;
-            })
-            .addTo(map);
+                })
+                .on("loaded", function (e: LeafletEvent) {
+                    map.fitBounds(e.target.getBounds());
+                    $form.distance = e.target.get_distance();
+                    $form.elevation_gain = e.target.get_elevation_gain();
+                    $form.duration = e.target.get_total_time() / 1000 / 60;
+                    resolve();
+                })
+                .on("error", reject)
+                .addTo(map);
+        });
     }
 
     function openFileBrowser() {
@@ -184,9 +191,14 @@
 
         reader.readAsText(selectedFile);
 
-        reader.onload = function (e) {
+        reader.onload = async function (e) {
             trail.set(new Trail(""));
-            addGPXLayer(e.target?.result as string);
+            await addGPXLayer(e.target?.result as string);
+            console.log(await 
+                ms.index("cities500").search("", {
+                    filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 100000000000)`],
+                }),
+            );
         };
     }
 
@@ -368,6 +380,8 @@
                 >
                 <input type="hidden" name="duration" value={$form.duration} />
             </div>
+            <input type="hidden" name="lat" value={$form.lat} />
+            <input type="hidden" name="lon" value={$form.lon} />
         </div>
         <TextField
             name="name"
