@@ -21,7 +21,7 @@
     <a href="/"><LogoText></LogoText></a>
     {#if $currentUser}
         <menu class="flex gap-8">
-            <a class="font-semibold" href="">Trails</a>
+            <a class="font-semibold" href="/trails">Trails</a>
             <a class="font-semibold" href="">Map</a>
             <a class="font-semibold" href="">Categories</a>
             <a class="font-semibold" href="">Favorites</a>

@@ -11,7 +11,7 @@ export function formatTimeHHMM(minutes?: number) {
 }
 
 export function formatMeters(meters?: number) {
-    if (!meters) {
+    if (meters === undefined) {
         return "-";
     }
     if (meters % 1 === 0) {

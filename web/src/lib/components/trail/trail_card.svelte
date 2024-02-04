@@ -5,6 +5,7 @@
     import Dropdown from "../base/dropdown.svelte";
 
     export let trail: Trail;
+    export let mode: "show" | "edit" = "show";
 
     const dropdownItems = [
         { text: "Edit", value: "edit" },
@@ -12,15 +13,15 @@
     ];
 </script>
 
-<div class="trail-card rounded-2xl shadow-md w-72 cursor-pointer">
-    <div class="w-full h-48 overflow-hidden rounded-t-2xl">
+<div class="trail-card rounded-2xl shadow-md sm:w-72 cursor-pointer">
+    <div class="w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl">
         <img src={trail.thumbnail} alt="" />
     </div>
     <div class="p-4">
         <div>
             <div class="flex justify-between items-center">
                 <h4 class="font-semibold text-lg">{trail.name}</h4>
-                {#if $currentUser && $currentUser.id == trail.author}
+                {#if $currentUser && $currentUser.id == trail.author && mode == "edit"}
                     <Dropdown on:change items={dropdownItems}></Dropdown>
                 {/if}
             </div>

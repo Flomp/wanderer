@@ -1,17 +1,22 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import Search, {
+        type SearchItem,
+    } from "$lib/components/base/search.svelte";
     import CategoryCard from "$lib/components/category_card.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
+    import { ms } from "$lib/meilisearch";
     import type { Trail } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
-    import { summit_logs_delete } from "$lib/stores/summit_log_store";
     import {
         trails,
         trails_delete,
         trails_index,
     } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
-    import { waypoints_delete } from "$lib/stores/waypoint_store";
+    import { country_codes } from "$lib/util/country_code_util";
+
+    let searchDropdownItems: SearchItem[] = [];
 
     async function handleDropdownClick(
         currentTrail: Trail,
@@ -24,24 +29,61 @@
             await trails_index();
         }
     }
+
+    async function search(q: string) {
+        const response = await ms.multiSearch({
+            queries: [
+                {
+                    indexUid: "trails",
+                    q: q,
+                    limit: 5,
+                },
+                {
+                    indexUid: "cities500",
+                    q: q,
+                    limit: 5,
+                },
+            ],
+        });
+
+        const trailItems = response.results[0].hits.map((t) => ({
+            text: t.name,
+            description: `Trail | ${t.location}`,
+            value: t.id,
+            icon: "route",
+        }));
+        const cityItems = response.results[1].hits.map((t) => ({
+            text: t.name,
+            description: `City | ${
+                country_codes[t["country code"] as keyof typeof country_codes]
+            }`,
+            value: t.id,
+            icon: "city",
+        }));
+
+        searchDropdownItems = [...trailItems, ...cityItems];
+    }
+
+    function handleSearchClick(item: SearchItem) {
+        if (item.icon == "route") {
+            goto(`/trail/view/${item.value}`);
+        }
+    }
 </script>
 
 <section class="hero flex justify-center items-center" style="height: 50vh">
-    <div class="relative text-gray-600  mx-4">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-4">
-            <i class="fa fa-search text-2xl"></i>
-        </span>
-        <input
-            type="search"
-            name="q"
-            class="w-80 sm:w-96 md:w-[32rem] py-4 rounded-2xl pl-14 focus:outline-none text-xl text-primary  "
-            placeholder="Search trails..."
-            autocomplete="off"
-        />
-    </div>
+    <Search
+        on:update={(e) => search(e.detail)}
+        on:click={(e) => handleSearchClick(e.detail)}
+        large={true}
+        placeholder="Search trails..."
+        items={searchDropdownItems}
+    ></Search>
 </section>
 <section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-5xl md:text-6xl font-bold text-primary">{$currentUser ? 'Your' : 'Explore'} trails</h2>
+    <h2 class="text-5xl md:text-6xl font-bold text-primary">
+        {$currentUser ? "Your" : "Explore"} trails
+    </h2>
     <div
         id="trails"
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 justify-items-center gap-8 py-8"
@@ -50,6 +92,7 @@
             <a href="/trail/view/{trail.id}">
                 <TrailCard
                     {trail}
+                    mode="edit"
                     on:change={(e) => handleDropdownClick(trail, e.detail)}
                 ></TrailCard></a
             >

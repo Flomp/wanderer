@@ -30,7 +30,7 @@
     <button class="flex items-center justify-center" on:click={toggleMenu} type="button">
         <slot>
             <i
-                class="fa fa-ellipsis-vertical text-{size} hover:bg-gray-300 px-[14px] py-2 rounded-full hover:bg-opacity-50"
+                class="fa fa-ellipsis-vertical text-{size} hover:bg-gray-300 hover:bg-opacity-50 px-[14px] py-2 rounded-full "
             ></i>
         </slot>
     </button>

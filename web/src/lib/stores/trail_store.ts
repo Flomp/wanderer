@@ -90,7 +90,7 @@ export async function trails_create(trail: Trail, formData: { [key: string]: any
 
     model = await pb
         .collection("trails")
-        .update<Trail>(model.id!, { thumbnail: thumbnail });
+        .update<Trail>(model.id!, { thumbnail: thumbnail }, { expand: "category" });
 
     index_trail(model);
 
@@ -189,6 +189,8 @@ export async function trails_delete(trail: Trail) {
             summit_logs_delete(summit_log.id!);
         }
     }
+
+    ms.index('trails').deleteDocument(trail.id!)
 
     const success = await pb
         .collection("trails")

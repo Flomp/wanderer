@@ -194,11 +194,13 @@
         reader.onload = async function (e) {
             trail.set(new Trail(""));
             await addGPXLayer(e.target?.result as string);
-            console.log(await 
-                ms.index("cities500").search("", {
-                    filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 100000000000)`],
-                }),
-            );
+            const closestCity = (await ms.index("cities500").search("", {
+                filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
+                sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
+                limit: 1,
+            })).hits[0];
+
+            $form.location = closestCity.name;
         };
     }
 

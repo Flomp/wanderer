@@ -85,4 +85,22 @@ const trailSchema = object<SummitLog>({
     description: string().optional()
 });
 
-export { Trail, trailSchema };
+interface TrailFilter {
+    q: string,
+    category: string[],
+    near: {
+        lat?: number,
+        lon?: number,
+        distance: number
+    }
+    distanceMin: number,
+    distanceMax: number,
+    eleavationGainMin: number;
+    elevationGainMax: number;
+    completed?: boolean;
+}
+
+export { Trail, trailSchema };    
+
+export type { TrailFilter };
+

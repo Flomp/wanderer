@@ -6,8 +6,8 @@
     export let error: string = "";
     export let icon: string = "";
     export let extraClasses: string = "";
-    export let type: "text" | "password" = "text";
-
+    export let type: "text" | "password" | "search" = "text";
+    export let autocomplete: "on" | "off" = "on"
     function typeAction(node: HTMLInputElement) {
         node.type = type;
     }
@@ -28,9 +28,13 @@
             class="bg-gray-50 border rounded-md p-3 transition-colors focus:border-primary focus:outline-none focus:ring-0 w-full {extraClasses}"
             class:border-red-400={error.length > 0}
             class:bg-red-50={error.length > 0}
+            {autocomplete}
             use:typeAction
             bind:value
             on:change
+            on:input
+            on:focusin
+            on:focusout
             {placeholder}
         />
     </div>
