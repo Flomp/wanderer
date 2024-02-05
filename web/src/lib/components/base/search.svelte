@@ -71,7 +71,7 @@
         type="search"
         name="q"
         autocomplete="off"
-        extraClasses="{large ? 'pl-14 text-2xl min-w-80 w-[33vw] max-w-[532px]' : 'pl-10'}"
+        extraClasses="{large ? 'pl-14 text-2xl min-w-80 w-[33vw] max-w-[532px] rounded-xl' : 'pl-10'}"
         {placeholder}
         bind:value
         on:input={onSearchType}

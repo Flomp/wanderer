@@ -1,8 +1,24 @@
+<script context="module" lang="ts">
+    export type SelectItem = {
+        text: string;
+        value: any;
+    };
+</script>
+
 <script lang="ts">
+    import { createEventDispatcher } from "svelte";
+
     export let name: string = "";
     export let value: any;
-    export let items: { text: string; value: any }[] = [];
+    export let items: SelectItem[] = [];
     export let label: string = "";
+
+    const dispatch = createEventDispatcher();
+
+    function onChange(target: any) {
+        dispatch("change", target?.value)
+    }
+
 </script>
 
 <div>
@@ -15,6 +31,7 @@
         {name}
         class="bg-gray-50 h-10 w-full px-4 border-r-8 border-transparent outline outline-1 outline-gray-200 rounded-md focus:outline-primary transition-colors"
         bind:value
+        on:change={(e) => onChange(e.target)}
     >
         {#each items as item}
             <option value={item.value}>{item.text}</option>

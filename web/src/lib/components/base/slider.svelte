@@ -1,7 +1,7 @@
 <script lang="ts">
     import noUiSlider from "noUiSlider";
     import "nouislider/dist/nouislider.css";
-    import { onMount } from "svelte";
+    import { createEventDispatcher, onMount } from "svelte";
 
     export let minValue = 0;
     export let maxValue = 100;
@@ -9,6 +9,8 @@
     export let currentValue = maxValue / 2;
 
     let sliderContainer: any;
+
+    const dispatch = createEventDispatcher();
 
     onMount(() => {
         const updateValues = (values: string[]) => {
@@ -25,6 +27,10 @@
         });
 
         sliderContainer.noUiSlider.on("update", updateValues);
+
+        sliderContainer.noUiSlider.on("set", () => {
+            dispatch("set", currentValue);
+        });
     });
 </script>
 

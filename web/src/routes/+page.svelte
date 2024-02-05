@@ -6,29 +6,14 @@
     import CategoryCard from "$lib/components/category_card.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import { ms } from "$lib/meilisearch";
-    import type { Trail } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
     import {
-        trails,
-        trails_delete,
-        trails_index,
+        trails
     } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { country_codes } from "$lib/util/country_code_util";
 
     let searchDropdownItems: SearchItem[] = [];
-
-    async function handleDropdownClick(
-        currentTrail: Trail,
-        item: { text: string; value: any },
-    ) {
-        if (item.value == "edit") {
-            goto(`/trail/edit/${currentTrail.id}`);
-        } else if (item.value == "delete") {
-            await trails_delete(currentTrail);
-            await trails_index();
-        }
-    }
 
     async function search(q: string) {
         const response = await ms.multiSearch({
@@ -93,7 +78,6 @@
                 <TrailCard
                     {trail}
                     mode="edit"
-                    on:change={(e) => handleDropdownClick(trail, e.detail)}
                 ></TrailCard></a
             >
         {/each}

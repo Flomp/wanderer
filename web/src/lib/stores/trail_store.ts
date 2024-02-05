@@ -1,5 +1,5 @@
 import type { SummitLog } from "$lib/models/summit_log";
-import { Trail } from "$lib/models/trail";
+import { Trail, type TrailFilter } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { getFileURL } from "$lib/util/file_util";
@@ -15,7 +15,7 @@ export const trail: Writable<Trail> = writable(new Trail(""));
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
 export async function trails_index() {
-    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, 5, { expand: "category,waypoints,summit_logs" })).items
+    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, 5, {expand: "category,waypoints,summit_logs" })).items
 
     for (const trail of response) {
         setFileURLs(trail);
@@ -24,6 +24,42 @@ export async function trails_index() {
     trails.set(response);
 
     return response;
+}
+
+export async function trails_search(filter: TrailFilter) {
+    let filterText: string = `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.eleavationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
+
+    if (filter.category.length > 0) {
+        filterText += ` AND category IN [${filter.category.join(",")}]`;
+    }
+    if (filter.completed !== undefined) {
+        filterText += ` AND completed = ${filter.completed}`;
+    }
+    if (filter.near.lat && filter.near.lon) {
+        filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
+    }
+    const indexResponse = await ms
+        .index("trails")
+        .search(filter.q, { filter: filterText });
+    const trailIds = indexResponse.hits.map((h) => h.id);
+
+    if (trailIds.length == 0) {
+        trails.set([]);
+        return [];
+    }
+
+    const dbResponse: Trail[] = (await pb.collection('trails').getList<Trail>(1, 5, {
+        filter: trailIds.map((id) => `id="${id}"`).join('||'), expand: "category,waypoints,summit_logs",
+        sort: `${filter.sortOrder}${filter.sort}`
+    })).items
+
+    for (const trail of dbResponse) {
+        setFileURLs(trail);
+    }
+
+    trails.set(dbResponse);
+
+    return dbResponse;
 }
 
 export async function trails_show(id: string, loadGPX?: boolean) {
@@ -248,7 +284,9 @@ function index_trail(trail: Trail) {
             "distance": trail.distance,
             "elevation_gain": trail.elevation_gain,
             "duration": trail.duration,
-            "category": trail.expand.category?.name,
+            "category": trail.expand.category?.id,
+            "completed": trail.expand.summit_logs?.length > 0,
+            "created": trail.created,
             "_geo": {
                 "lat": trail.lat,
                 "lng": trail.lon,

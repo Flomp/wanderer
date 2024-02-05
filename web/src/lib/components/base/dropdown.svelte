@@ -1,7 +1,15 @@
+<script context="module" lang="ts">
+    export type DropdownItem = {
+        text: string;
+        value: any;
+        icon?: string;
+    };
+</script>
+
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
 
-    export let items: { text: string; value: any; icon?: string }[] = [];
+    export let items: DropdownItem[] = [];
     export let size: string = "regular";
 
     const dispatch = createEventDispatcher();
@@ -27,10 +35,14 @@
 <svelte:window on:mouseup={() => (isOpen = false)} />
 
 <div class="dropdown relative">
-    <button class="flex items-center justify-center" on:click={toggleMenu} type="button">
+    <button
+        class="flex items-center justify-center"
+        on:click={toggleMenu}
+        type="button"
+    >
         <slot>
             <i
-                class="fa fa-ellipsis-vertical text-{size} hover:bg-gray-300 hover:bg-opacity-50 px-[14px] py-2 rounded-full "
+                class="fa fa-ellipsis-vertical text-{size} hover:bg-gray-300 hover:bg-opacity-50 px-[14px] py-2 rounded-full"
             ></i>
         </slot>
     </button>

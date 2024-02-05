@@ -6,31 +6,46 @@
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
+    import Select, {
+        type SelectItem,
+    } from "$lib/components/base/select.svelte";
     import Slider from "$lib/components/base/slider.svelte";
-    import TextField from "$lib/components/base/text_field.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
+    import TrailListItem from "$lib/components/trail/trail_list_item.svelte";
     import { ms } from "$lib/meilisearch";
+    import type { Category } from "$lib/models/category";
     import type { TrailFilter } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
-    import { trails } from "$lib/stores/trail_store";
+    import { trails, trails_search } from "$lib/stores/trail_store";
     import { country_codes } from "$lib/util/country_code_util";
     import { formatMeters } from "$lib/util/format_util";
+    import { onMount } from "svelte";
 
-    $: maxDistance = Math.max(...$trails.map((t) => t.distance ?? 0));
-    $: maxElevationGain = Math.max(
-        ...$trails.map((t) => t.elevation_gain ?? 0),
+    $: minDistance = Math.floor(
+        Math.min(...$trails.map((t) => t.distance ?? 0)),
+    );
+    $: maxDistance = Math.ceil(
+        Math.max(...$trails.map((t) => t.distance ?? 0)),
+    );
+    $: minElevationGain = Math.floor(
+        Math.min(...$trails.map((t) => t.elevation_gain ?? 0)),
+    );
+    $: maxElevationGain = Math.ceil(
+        Math.max(...$trails.map((t) => t.elevation_gain ?? 0)),
     );
 
     const filter: TrailFilter = {
         q: "",
         category: [],
         near: {
-            distance: 2000,
+            radius: 2000,
         },
-        distanceMin: 0,
+        distanceMin: minDistance,
         distanceMax: maxDistance,
-        eleavationGainMin: 0,
+        eleavationGainMin: minElevationGain,
         elevationGainMax: maxElevationGain,
+        sort: "created",
+        sortOrder: "+",
     };
 
     const radioGroupItems: RadioItem[] = [
@@ -39,9 +54,46 @@
         { text: "No preference", value: "no_preference" },
     ];
 
+    const displayOptions: SelectItem[] = [
+        { text: "Cards", value: "cards" },
+        { text: "List", value: "list" },
+    ];
+    let selectedDisplayOption = displayOptions[0].value;
+
+    const sortOptions: SelectItem[] = [
+        { text: "Alphabetical", value: "name" },
+        { text: "Creation date", value: "created" },
+        { text: "Distance", value: "distance" },
+        { text: "Elevation gain", value: "elevation_gain" },
+    ];
+
     let searchDropdownItems: SearchItem[] = [];
 
     let citySearchQuery: string = "";
+
+    onMount(() => {
+        const storedDisplayOption = localStorage.getItem("displayOption")
+        if(storedDisplayOption) {
+            selectedDisplayOption = storedDisplayOption;
+        }
+    })
+
+    async function searchTrails() {
+        await trails_search(filter);
+    }
+
+    function setCategoryFilter(category: Category) {
+        const categoryIndex = filter.category.findIndex(
+            (c) => c == category.id,
+        );
+        if (categoryIndex !== -1) {
+            filter.category.splice(categoryIndex, 1);
+        } else {
+            filter.category.push(category.id);
+        }
+
+        searchTrails();
+    }
 
     function setCompletedFilter(item: RadioItem) {
         switch (item.value) {
@@ -58,14 +110,16 @@
                 filter.completed = undefined;
                 break;
         }
+
+        searchTrails();
     }
 
-    async function searchCities(q: string) {        
+    async function searchCities(q: string) {
         if (q.length == 0) {
             filter.near.lat = undefined;
             filter.near.lon = undefined;
-            console.log(filter.near);
-            
+            searchTrails();
+
             return;
         }
         const result = await ms.index("cities500").search(q, { limit: 5 });
@@ -82,21 +136,50 @@
         citySearchQuery = item.text;
         filter.near.lat = item.value.lat;
         filter.near.lon = item.value.lon;
+
+        searchTrails();
+    }
+
+    function setSort() {
+        searchTrails();
+    }
+
+    function setSortOrder() {
+        if (filter.sortOrder === "+") {
+            filter.sortOrder = "-";
+        } else {
+            filter.sortOrder = "+";
+        }
+        const sortOrderButton = document.getElementById("sort-order-btn");
+        sortOrderButton?.classList.toggle("rotated");
+
+        searchTrails();
+    }
+
+    function setDisplayOption() {
+        localStorage.setItem("displayOption", selectedDisplayOption);       
     }
 </script>
 
-<main class="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 max-w-7xl mx-6 md:mx-auto">
+<main
+    class="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 max-w-7xl mx-6 md:mx-auto"
+>
     <div class="trail-filters p-8 border rounded-xl">
-        <TextField placeholder="Search..."></TextField>
+        <Search
+            bind:value={filter.q}
+            on:update={searchTrails}
+            placeholder="Search trails..."
+        ></Search>
         <hr class="my-4" />
         <p class="text-sm font-medium pb-4">Category</p>
-        {#each $categories as category}
+        {#each $categories as category, i}
             <div class="flex items-center mb-4">
                 <input
                     id="{category.name}-checkbox"
                     type="checkbox"
-                    value=""
+                    value={category.id}
                     class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
+                    on:change={() => setCategoryFilter(category)}
                 />
                 <label
                     for="{category.name}-checkbox"
@@ -110,23 +193,29 @@
         <div class="mb-8">
             <Search
                 items={searchDropdownItems}
+                placeholder="Search cities..."
                 bind:value={citySearchQuery}
                 on:update={(e) => searchCities(e.detail)}
                 on:click={(e) => handleSearchClick(e.detail)}
             ></Search>
         </div>
-        <Slider maxValue={10000} bind:currentValue={filter.near.distance}
+        <Slider
+            maxValue={10000}
+            bind:currentValue={filter.near.radius}
+            on:set={() => searchTrails()}
         ></Slider>
         <p>
             <span class="text-gray-500 text-sm">Radius:</span>
-            {formatMeters(filter.near.distance)}
+            {formatMeters(filter.near.radius)}
         </p>
         <hr class="my-4" />
         <p class="text-sm font-medium pb-4">Distance</p>
         <DoubleSlider
+            minValue={minDistance}
             maxValue={maxDistance}
             bind:currentMin={filter.distanceMin}
             bind:currentMax={filter.distanceMax}
+            on:set={() => searchTrails()}
         ></DoubleSlider>
         <div class="flex justify-between">
             <span>{formatMeters(filter.distanceMin)}</span>
@@ -135,9 +224,11 @@
         <hr class="my-4" />
         <p class="text-sm font-medium pb-4">Elevation Gain</p>
         <DoubleSlider
+            minValue={minElevationGain}
             maxValue={maxElevationGain}
             bind:currentMin={filter.eleavationGainMin}
             bind:currentMax={filter.elevationGainMax}
+            on:set={() => searchTrails()}
         ></DoubleSlider>
         <div class="flex justify-between">
             <span>{formatMeters(filter.eleavationGainMin)}</span>
@@ -152,11 +243,54 @@
             on:change={(e) => setCompletedFilter(e.detail)}
         ></RadioGroup>
     </div>
-    <div id="trails" class="flex items-start flex-wrap gap-8 py-8">
-        {#each $trails as trail}
-            <a href="/trail/view/{trail.id}">
-                <TrailCard {trail}></TrailCard></a
-            >
-        {/each}
+    <div class="min-w-0">
+        <div class="flex items-start gap-8 justify-end">
+            <div>
+                <p class="text-sm text-gray-500 pb-2">Sort</p>
+                <div class="flex items-center gap-2">
+                    <Select
+                        bind:value={filter.sort}
+                        items={sortOptions}
+                        on:change={setSort}
+                    ></Select>
+                    <button
+                        id="sort-order-btn"
+                        class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200"
+                        on:click={() => setSortOrder()}
+                        ><i class="fa fa-arrow-up"></i></button
+                    >
+                </div>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500 pb-2">Display as</p>
+
+                <Select
+                    bind:value={selectedDisplayOption}
+                    items={displayOptions}
+                    on:change={() => setDisplayOption()}
+                ></Select>
+            </div>
+        </div>
+
+        <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
+            {#each $trails as trail}
+                <a class="max-w-full" href="/trail/view/{trail.id}">
+                    {#if selectedDisplayOption === "cards"}
+                        <TrailCard {trail} mode="edit"></TrailCard>
+                    {:else}
+                        <TrailListItem {trail}></TrailListItem>
+                    {/if}
+                </a>
+            {/each}
+        </div>
     </div>
 </main>
+
+<style>
+    #sort-order-btn {
+        transition: transform 0.5s ease;
+    }
+    :global(.rotated) {
+        transform: rotate(180deg);
+    }
+</style>

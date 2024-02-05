@@ -15,7 +15,7 @@ export function formatMeters(meters?: number) {
         return "-";
     }
     if (meters % 1 === 0) {
-        return meters >= 1000 ? `${(meters / 1000)} km` : `${meters} m`;
+        return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${meters} m`;
     } else {
         return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${meters.toFixed(2)} m`
     }

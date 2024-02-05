@@ -16,6 +16,7 @@ class Trail {
     thumbnail?: string;
     photos: string[];
     gpx?: string;
+    created?: string;
     expand: {
         category?: Category;
         waypoints: Waypoint[]
@@ -46,6 +47,7 @@ class Trail {
             summit_logs?: SummitLog[],
             tags?: string[],
             description?: string
+            created?: string
         }
 
     ) {
@@ -68,6 +70,7 @@ class Trail {
         }
         this.tags = params?.tags ?? []
         this.description = params?.description ?? "";
+        this.created = params?.created;
         this._photoFiles = [];
     }
 }
@@ -91,13 +94,15 @@ interface TrailFilter {
     near: {
         lat?: number,
         lon?: number,
-        distance: number
+        radius: number
     }
     distanceMin: number,
     distanceMax: number,
     eleavationGainMin: number;
     elevationGainMax: number;
     completed?: boolean;
+    sort: "name" | "distance" | "elevation_gain" | "created";
+    sortOrder: "+" | "-" 
 }
 
 export { Trail, trailSchema };    
