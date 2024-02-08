@@ -4,10 +4,11 @@ import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { getFileURL } from "$lib/util/file_util";
 import { util } from "$lib/vendor/svelte-form-lib/util";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
 import { ms } from "$lib/meilisearch";
+import type { LatLng } from "leaflet";
 
 export const trails: Writable<Trail[]> = writable([])
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -15,7 +16,7 @@ export const trail: Writable<Trail> = writable(new Trail(""));
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
 export async function trails_index() {
-    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, 5, {expand: "category,waypoints,summit_logs" })).items
+    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, 5, { expand: "category,waypoints,summit_logs" })).items
 
     for (const trail of response) {
         setFileURLs(trail);
@@ -26,7 +27,7 @@ export async function trails_index() {
     return response;
 }
 
-export async function trails_search(filter: TrailFilter) {
+export async function trails_search_filter(filter: TrailFilter) {
     let filterText: string = `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.eleavationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
 
     if (filter.category.length > 0) {
@@ -60,6 +61,40 @@ export async function trails_search(filter: TrailFilter) {
     trails.set(dbResponse);
 
     return dbResponse;
+}
+
+export async function trails_search_bounding_box(northEast: LatLng, southWest: LatLng) {
+    const response = await ms.index("trails").search("", {
+        filter: [
+            `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
+        ],
+    });
+    const trailIds = response.hits.map((h) => h.id);
+
+    if (trailIds.length == 0) {
+        trails.set([]);
+        return compareObjectArrays<Trail>(get(trails), []);
+    }
+
+    const dbResponse: Trail[] = (
+        await pb.collection("trails").getList<Trail>(1, 5, {
+            filter: trailIds.map((id) => `id="${id}"`).join("||"),
+            expand: "category,waypoints,summit_logs",
+            sort: `+name`,
+        })
+    ).items;
+
+    for (const trail of dbResponse) {
+        setFileURLs(trail);
+        const gpxData: string = await fetchGPX(trail);
+        trail.expand.gpx_data = gpxData;
+    }
+    
+    const comparison = compareObjectArrays<Trail>(get(trails), dbResponse)
+
+    trails.set(dbResponse);
+
+    return comparison;
 }
 
 export async function trails_show(id: string, loadGPX?: boolean) {

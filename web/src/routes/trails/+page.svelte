@@ -16,7 +16,7 @@
     import type { Category } from "$lib/models/category";
     import type { TrailFilter } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
-    import { trails, trails_search } from "$lib/stores/trail_store";
+    import { trails, trails_search_filter } from "$lib/stores/trail_store";
     import { country_codes } from "$lib/util/country_code_util";
     import { formatMeters } from "$lib/util/format_util";
     import { onMount } from "svelte";
@@ -71,15 +71,21 @@
 
     let citySearchQuery: string = "";
 
+    let filterExpanded: boolean = true;
+
     onMount(() => {
-        const storedDisplayOption = localStorage.getItem("displayOption")
-        if(storedDisplayOption) {
+        const storedDisplayOption = localStorage.getItem("displayOption");
+        if (storedDisplayOption) {
             selectedDisplayOption = storedDisplayOption;
         }
-    })
+
+        if (window.innerWidth < 768) {
+            filterExpanded = false;
+        }
+    });
 
     async function searchTrails() {
-        await trails_search(filter);
+        await trails_search_filter(filter);
     }
 
     function setCategoryFilter(category: Category) {
@@ -157,7 +163,7 @@
     }
 
     function setDisplayOption() {
-        localStorage.setItem("displayOption", selectedDisplayOption);       
+        localStorage.setItem("displayOption", selectedDisplayOption);
     }
 </script>
 
@@ -165,86 +171,99 @@
     class="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 max-w-7xl mx-6 md:mx-auto"
 >
     <div class="trail-filters p-8 border rounded-xl">
-        <Search
-            bind:value={filter.q}
-            on:update={searchTrails}
-            placeholder="Search trails..."
-        ></Search>
-        <hr class="my-4" />
-        <p class="text-sm font-medium pb-4">Category</p>
-        {#each $categories as category, i}
-            <div class="flex items-center mb-4">
-                <input
-                    id="{category.name}-checkbox"
-                    type="checkbox"
-                    value={category.id}
-                    class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
-                    on:change={() => setCategoryFilter(category)}
-                />
-                <label
-                    for="{category.name}-checkbox"
-                    class="ms-2 text-sm text-gray-900 dark:text-gray-300"
-                    >{category.name}</label
-                >
+        <div class="flex gap-2 items-center">
+            <div class="basis-full">
+                <Search
+                    bind:value={filter.q}
+                    on:update={searchTrails}
+                    placeholder="Search trails..."
+                ></Search>
             </div>
-        {/each}
-        <hr class="my-4" />
-        <p class="text-sm font-medium pb-4">Near</p>
-        <div class="mb-8">
-            <Search
-                items={searchDropdownItems}
-                placeholder="Search cities..."
-                bind:value={citySearchQuery}
-                on:update={(e) => searchCities(e.detail)}
-                on:click={(e) => handleSearchClick(e.detail)}
-            ></Search>
+            <button
+                id="sort-order-btn"
+                class="rounded-full py-1 px-2 hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors md:hidden"
+                on:click={() => (filterExpanded = !filterExpanded)}
+                ><i class="fa fa-sliders"></i></button
+            >
         </div>
-        <Slider
-            maxValue={10000}
-            bind:currentValue={filter.near.radius}
-            on:set={() => searchTrails()}
-        ></Slider>
-        <p>
-            <span class="text-gray-500 text-sm">Radius:</span>
-            {formatMeters(filter.near.radius)}
-        </p>
-        <hr class="my-4" />
-        <p class="text-sm font-medium pb-4">Distance</p>
-        <DoubleSlider
-            minValue={minDistance}
-            maxValue={maxDistance}
-            bind:currentMin={filter.distanceMin}
-            bind:currentMax={filter.distanceMax}
-            on:set={() => searchTrails()}
-        ></DoubleSlider>
-        <div class="flex justify-between">
-            <span>{formatMeters(filter.distanceMin)}</span>
-            <span>{formatMeters(filter.distanceMax)}</span>
-        </div>
-        <hr class="my-4" />
-        <p class="text-sm font-medium pb-4">Elevation Gain</p>
-        <DoubleSlider
-            minValue={minElevationGain}
-            maxValue={maxElevationGain}
-            bind:currentMin={filter.eleavationGainMin}
-            bind:currentMax={filter.elevationGainMax}
-            on:set={() => searchTrails()}
-        ></DoubleSlider>
-        <div class="flex justify-between">
-            <span>{formatMeters(filter.eleavationGainMin)}</span>
-            <span>{formatMeters(filter.elevationGainMax)}</span>
-        </div>
-        <hr class="my-4" />
-        <p class="text-sm font-medium pb-4">Completed</p>
-        <RadioGroup
-            name="completed"
-            items={radioGroupItems}
-            selected={2}
-            on:change={(e) => setCompletedFilter(e.detail)}
-        ></RadioGroup>
+
+        {#if filterExpanded}
+            <hr class="my-4" />
+            <p class="text-sm font-medium pb-4">Category</p>
+            {#each $categories as category, i}
+                <div class="flex items-center mb-4">
+                    <input
+                        id="{category.name}-checkbox"
+                        type="checkbox"
+                        value={category.id}
+                        class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
+                        on:change={() => setCategoryFilter(category)}
+                    />
+                    <label
+                        for="{category.name}-checkbox"
+                        class="ms-2 text-sm text-gray-900 dark:text-gray-300"
+                        >{category.name}</label
+                    >
+                </div>
+            {/each}
+            <hr class="my-4" />
+            <p class="text-sm font-medium pb-4">Near</p>
+            <div class="mb-8">
+                <Search
+                    items={searchDropdownItems}
+                    placeholder="Search cities..."
+                    bind:value={citySearchQuery}
+                    on:update={(e) => searchCities(e.detail)}
+                    on:click={(e) => handleSearchClick(e.detail)}
+                ></Search>
+            </div>
+            <Slider
+                maxValue={10000}
+                bind:currentValue={filter.near.radius}
+                on:set={() => searchTrails()}
+            ></Slider>
+            <p>
+                <span class="text-gray-500 text-sm">Radius:</span>
+                {formatMeters(filter.near.radius)}
+            </p>
+            <hr class="my-4" />
+            <p class="text-sm font-medium pb-4">Distance</p>
+            <DoubleSlider
+                minValue={minDistance}
+                maxValue={maxDistance}
+                bind:currentMin={filter.distanceMin}
+                bind:currentMax={filter.distanceMax}
+                on:set={() => searchTrails()}
+            ></DoubleSlider>
+            <div class="flex justify-between">
+                <span>{formatMeters(filter.distanceMin)}</span>
+                <span>{formatMeters(filter.distanceMax)}</span>
+            </div>
+            <hr class="my-4" />
+            <p class="text-sm font-medium pb-4">Elevation Gain</p>
+            <DoubleSlider
+                minValue={minElevationGain}
+                maxValue={maxElevationGain}
+                bind:currentMin={filter.eleavationGainMin}
+                bind:currentMax={filter.elevationGainMax}
+                on:set={() => searchTrails()}
+            ></DoubleSlider>
+            <div class="flex justify-between">
+                <span>{formatMeters(filter.eleavationGainMin)}</span>
+                <span>{formatMeters(filter.elevationGainMax)}</span>
+            </div>
+            <hr class="my-4" />
+            <p class="text-sm font-medium pb-4">Completed</p>
+            <RadioGroup
+                name="completed"
+                items={radioGroupItems}
+                selected={2}
+                on:change={(e) => setCompletedFilter(e.detail)}
+            ></RadioGroup>
+        {/if}
     </div>
     <div class="min-w-0">
-        <div class="flex items-start gap-8 justify-end">
+        <div class="flex items-start gap-8 justify-end mx-4">
             <div>
                 <p class="text-sm text-gray-500 pb-2">Sort</p>
                 <div class="flex items-center gap-2">
@@ -255,7 +274,7 @@
                     ></Select>
                     <button
                         id="sort-order-btn"
-                        class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200"
+                        class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors"
                         on:click={() => setSortOrder()}
                         ><i class="fa fa-arrow-up"></i></button
                     >
@@ -272,7 +291,10 @@
             </div>
         </div>
 
-        <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
+        <div
+            id="trails"
+            class="flex items-start flex-wrap gap-8 py-8 max-w-full"
+        >
             {#each $trails as trail}
                 <a class="max-w-full" href="/trail/view/{trail.id}">
                     {#if selectedDisplayOption === "cards"}
