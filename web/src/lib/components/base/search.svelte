@@ -55,11 +55,11 @@
 
 <div class="relative text-gray-600">
     <span class="absolute top-1/2 -translate-y-1/2 left-0 pl-4">
-        <i class="fa fa-search" class:text-2xl={large}></i>
+        <i class="fa fa-search" class:text-xl={large}></i>
     </span>
     {#if value.length > 0}
         <button
-            class="absolute top-1/2 -translate-y-1/2 right-0 h-6 w-6 mr-4 hover:bg-gray-300 hover:bg-opacity-50 rounded-full"
+            class="absolute top-1/2 -translate-y-1/2 right-12 h-6 w-6 mr-4 hover:bg-gray-300 hover:bg-opacity-50 rounded-full"
             on:click={clear}
             in:fade={{ duration: 150 }}
             out:fade={{ duration: 150 }}
@@ -71,7 +71,9 @@
         type="search"
         name="q"
         autocomplete="off"
-        extraClasses="{large ? 'pl-14 text-2xl min-w-80 w-[33vw] max-w-[532px] rounded-xl' : 'pl-10'}"
+        extraClasses="{large
+            ? 'pl-12 text-xl min-w-80 w-[33vw] max-w-[532px] rounded-xl'
+            : 'pl-10'}"
         {placeholder}
         bind:value
         on:input={onSearchType}
