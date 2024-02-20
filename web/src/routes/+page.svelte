@@ -11,23 +11,22 @@
     import { trails } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { country_codes } from "$lib/util/country_code_util";
-    import { Canvas, } from "@threlte/core";
-
+    import { Canvas } from "@threlte/core";
 
     let searchDropdownItems: SearchItem[] = [];
 
-    async function search(q: string) {
+    async function search(q: string) {        
         const response = await ms.multiSearch({
             queries: [
                 {
                     indexUid: "trails",
                     q: q,
-                    limit: 5,
+                    limit: 3,
                 },
                 {
                     indexUid: "cities500",
                     q: q,
-                    limit: 5,
+                    limit: 3,
                 },
             ],
         });
@@ -57,31 +56,34 @@
     }
 </script>
 
-<section class="hero grid grid-cols-2" style="height: calc(100vh - 112px)">
-    <div class="flex flex-col justify-center gap-8 max-w-md mx-auto -mt-24">
+<section
+    class="hero grid grid-cols-1 md:grid-cols-2"
+    style="height: calc(100vh - 112px)"
+>
+    <div class="flex flex-col justify-center gap-8 max-w-md mx-8 md:mx-auto -mt-24">
         <h2 class="text-7xl font-bold">
             Welcome to <span class="-tracking-[0.075em]">wanderer</span>
         </h2>
         <h5>
-            Explore diverse trails, save your favorites, and experience the
+            Explore exciting trails, save your favorites, and experience the
             beauty of nature. Find your next adventure!
         </h5>
         <Search
             on:update={(e) => search(e.detail)}
             on:click={(e) => handleSearchClick(e.detail)}
             large={true}
-            placeholder="Search trails..."
+            placeholder="Search for trails, places..."
             items={searchDropdownItems}
         ></Search>
     </div>
-    <div>
+    <div class="hidden md:block">
         <Canvas>
             <Scene></Scene>
         </Canvas>
     </div>
 </section>
 <section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-5xl md:text-6xl font-bold text-primary">
+    <h2 class="text-4xl md:text-5xl font-bold text-primary">
         {$currentUser ? "Your" : "Explore"} trails
     </h2>
     <div
@@ -96,7 +98,7 @@
     </div>
 </section>
 <section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-5xl md:text-6xl font-bold text-primary">By category</h2>
+    <h2 class="text-4xl md:text-5xl font-bold text-primary">By category</h2>
     <div
         id="categories"
         class="grid grid-cols- sm:grid-cols-2 lg:grid-cols-4 justify-items-center gap-8 py-8"

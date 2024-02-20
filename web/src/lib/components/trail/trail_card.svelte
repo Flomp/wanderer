@@ -27,7 +27,7 @@
     }
 </script>
 
-<div class="trail-card rounded-2xl shadow-md sm:w-72 cursor-pointer">
+<div class="trail-card rounded-2xl border sm:w-72 cursor-pointer" on:mouseenter on:mouseleave role="listitem">
     <div class="w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl">
         <img src={trail.thumbnail} alt="" />
     </div>
@@ -36,7 +36,10 @@
             <div class="flex justify-between items-center">
                 <h4 class="font-semibold text-lg">{trail.name}</h4>
                 {#if $currentUser && $currentUser.id == trail.author && mode == "edit"}
-                    <Dropdown on:change={(e) => handleDropdownClick(trail, e.detail)} items={dropdownItems}></Dropdown>
+                    <Dropdown
+                        on:change={(e) => handleDropdownClick(trail, e.detail)}
+                        items={dropdownItems}
+                    ></Dropdown>
                 {/if}
             </div>
             <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>

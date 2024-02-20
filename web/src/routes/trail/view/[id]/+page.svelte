@@ -205,7 +205,7 @@
         <div class="flex flex-wrap md:flex-nowrap mt-6 gap-8">
             <div class="basis-full">
                 {#if activeTab == 0}
-                    <article class="text-justify whitespace-pre-line">
+                    <article class="text-justify whitespace-pre-line text-sm">
                         {$trail.description}
                     </article>
                 {/if}

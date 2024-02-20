@@ -17,6 +17,7 @@
     export let items: SearchItem[] = [];
     export let placeholder: string = "Search...";
     export let large: boolean = false;
+    export let extraClasses: string = "";
 
     const dispatch = createEventDispatcher();
 
@@ -53,13 +54,13 @@
     }
 </script>
 
-<div class="relative text-gray-600">
+<div class="relative text-gray-600 {extraClasses}">
     <span class="absolute top-1/2 -translate-y-1/2 left-0 pl-4">
         <i class="fa fa-search" class:text-xl={large}></i>
     </span>
     {#if value.length > 0}
         <button
-            class="absolute top-1/2 -translate-y-1/2 right-12 h-6 w-6 mr-4 hover:bg-gray-300 hover:bg-opacity-50 rounded-full"
+            class="absolute top-1/2 -translate-y-1/2 right-0 h-6 w-6 mr-4 hover:bg-gray-300 hover:bg-opacity-50 rounded-full"
             on:click={clear}
             in:fade={{ duration: 150 }}
             out:fade={{ duration: 150 }}
@@ -72,12 +73,13 @@
         name="q"
         autocomplete="off"
         extraClasses="{large
-            ? 'pl-12 text-xl min-w-80 w-[33vw] max-w-[532px] rounded-xl'
+            ? 'pl-12 py-4 text-xl min-w-80 w-[33vw] max-w-[532px] rounded-xl'
             : 'pl-10'}"
         {placeholder}
         bind:value
         on:input={onSearchType}
         on:focusin={() => (searching = true)}
+        on:focusout={() => (searching = false)}
     ></TextField>
 
     {#if dropDownOpen}
@@ -92,7 +94,7 @@
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-gray-100 focus:bg-gray-200 transition-colors"
                     tabindex="0"
-                    on:mouseup|stopPropagation={() => handleItemClick(item)}
+                    on:mousedown|stopPropagation={() => handleItemClick(item)}
                     on:keydown|stopPropagation={() => handleItemClick(item)}
                 >
                     <i class="fa fa-{item.icon} mr-6"></i>

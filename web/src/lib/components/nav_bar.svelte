@@ -1,7 +1,8 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import LogoText from "$lib/components/logo/logo_text.svelte";
-    import { logout, currentUser } from "$lib/stores/user_store";
+    import { ms } from "$lib/meilisearch";
+    import { currentUser, logout } from "$lib/stores/user_store";
     import Dropdown from "./base/dropdown.svelte";
 
     const dropdownItems = [

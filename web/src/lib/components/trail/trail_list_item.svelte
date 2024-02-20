@@ -27,7 +27,7 @@
 </script>
 
 <li
-    class="flex gap-8 p-4 rounded-xl shadow-md cursor-pointer hover:bg-gray-100 transition-colors"
+    class="flex gap-8 p-4 rounded-xl border cursor-pointer hover:bg-gray-100 transition-colors"
 >
     <div class="shrink-0">
         <img
@@ -36,7 +36,7 @@
             alt=""
         />
     </div>
-    <div class="min-w-0">
+    <div class="min-w-0 basis-full">
         <div class="flex items-center justify-between">
             <h4 class="font-semibold text-lg">{trail.name}</h4>
 

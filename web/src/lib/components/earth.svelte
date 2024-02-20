@@ -22,7 +22,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
     <slot name="fallback" />
   {:then gltf}
     <!-- Clouds -->
-    <T.Group rotation={[-rotation / 2, rotation / 2, 0]}>
+    <T.Group rotation={[-rotation / 4, rotation / 4, 0]}>
       <T.Mesh
         geometry={gltf.nodes.Icosphere002.geometry}
         material={gltf.materials.Material}
@@ -94,7 +94,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
       position={[0.5, 2, -0.5]}
       scale={0.88}
     >
-      <T.PointLight position={[2, 0, 0]} color="#f4de51" intensity={4.5}
+      <T.PointLight position={[2, 0, 0]} color="#ffffff" intensity={4.5}
       ></T.PointLight>
 
       <T.DirectionalLight color="#f4de51" intensity={2.5} castShadow

@@ -163,8 +163,6 @@ export async function trails_create(trail: Trail, formData: { [key: string]: any
         .collection("trails")
         .update<Trail>(model.id!, { thumbnail: thumbnail }, { expand: "category" });
 
-    index_trail(model);
-
     return model;
 }
 
@@ -243,8 +241,6 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
 
     trail.set(model);
 
-    index_trail(model);
-
     return model;
 }
 
@@ -260,8 +256,6 @@ export async function trails_delete(trail: Trail) {
             summit_logs_delete(summit_log.id!);
         }
     }
-
-    ms.index('trails').deleteDocument(trail.id!)
 
     const success = await pb
         .collection("trails")
@@ -313,6 +307,7 @@ function index_trail(trail: Trail) {
     ms.index('trails').addDocuments([
         {
             "id": trail.id,
+            "author": trail.author,
             "name": trail.name,
             "description": trail.description,
             "location": trail.location,
@@ -322,6 +317,7 @@ function index_trail(trail: Trail) {
             "category": trail.expand.category?.id,
             "completed": trail.expand.summit_logs?.length > 0,
             "created": trail.created,
+            "public": trail.public,
             "_geo": {
                 "lat": trail.lat,
                 "lng": trail.lon,

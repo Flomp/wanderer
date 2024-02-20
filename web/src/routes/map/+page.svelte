@@ -1,20 +1,18 @@
 <script lang="ts">
+    import { goto } from "$app/navigation";
+    import Search, {
+        type SearchItem,
+    } from "$lib/components/base/search.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
+    import { ms } from "$lib/meilisearch";
     import type { Trail } from "$lib/models/trail";
     import {
         trails,
         trails_search_bounding_box,
     } from "$lib/stores/trail_store";
+    import { country_codes } from "$lib/util/country_code_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
-    import type {
-        GPX,
-        Icon,
-        LatLng,
-        LayerGroup,
-        LeafletEvent,
-        Map,
-        Marker,
-    } from "leaflet";
+    import type { GPX, Icon, LatLng, LeafletEvent, Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
@@ -22,6 +20,9 @@
     let L: any;
     let map: Map;
     let gpxLayers: Record<string, GPX> = {};
+    let startMarkers: Record<string, Marker> = {};
+
+    let searchDropdownItems: SearchItem[] = [];
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -52,6 +53,44 @@
         );
     });
 
+    async function search(q: string) {
+        const response = await ms.multiSearch({
+            queries: [
+                {
+                    indexUid: "trails",
+                    q: q,
+                    limit: 3,
+                },
+                {
+                    indexUid: "cities500",
+                    q: q,
+                    limit: 3,
+                },
+            ],
+        });
+
+        const trailItems = response.results[0].hits.map((t) => ({
+            text: t.name,
+            description: `Trail | ${t.location}`,
+            value: t,
+            icon: "route",
+        }));
+        const cityItems = response.results[1].hits.map((c) => ({
+            text: c.name,
+            description: `City | ${
+                country_codes[c["country code"] as keyof typeof country_codes]
+            }`,
+            value: c,
+            icon: "city",
+        }));
+
+        searchDropdownItems = [...trailItems, ...cityItems];
+    }
+
+    function handleSearchClick(item: SearchItem) {
+        map.setView([item.value._geo.lat, item.value._geo.lng], 12);
+    }
+
     async function searchTrails(northEast: LatLng, southWest: LatLng) {
         const changes = await trails_search_bounding_box(northEast, southWest);
 
@@ -66,6 +105,7 @@
         for (const deletedTrail of changes.deleted) {
             map.removeLayer(gpxLayers[deletedTrail.id!]);
             delete gpxLayers[deletedTrail.id!];
+            delete startMarkers[deletedTrail.id!];
         }
     }
 
@@ -94,6 +134,7 @@
                 .on("addpoint", function (e: any) {
                     if (e.point_type === "start") {
                         const marker: Marker = e.point as Marker;
+                        startMarkers[trail.id!] = marker;
                         marker.bindPopup(
                             `<a href="/trail/view/${trail.id}">
     <li class="flex items-center gap-4 cursor-pointer text-black">
@@ -116,13 +157,6 @@
     </li>
 </a>`,
                         );
-
-                        // marker.on("mouseover", (e) => {
-                        //     marker.openPopup();
-                        // });
-                        // marker.on("mouseout", (e) => {
-                        //     marker.closePopup();
-                        // });
                     }
                 })
                 .on("loaded", function (e: LeafletEvent) {
@@ -132,14 +166,36 @@
                 .addTo(map);
         });
     }
+
+    function handleTrailCardMouseEnter(trail: Trail) {
+        const marker: Marker = startMarkers[trail.id!];
+        marker?.openPopup();
+    }
+
+    function handleTrailCardMouseLeave(trail: Trail) {
+        const marker: Marker = startMarkers[trail.id!];
+        marker?.closePopup();
+    }
 </script>
 
 <main class="grid grid-cols-[400px_1fr]">
     <div
         class="overflow-y-scroll overflow-x-hidden flex flex-col items-center gap-4 px-8"
     >
+        <Search
+            extraClasses="w-full"
+            on:update={(e) => search(e.detail)}
+            on:click={(e) => handleSearchClick(e.detail)}
+            placeholder="Search for trails, places..."
+            items={searchDropdownItems}
+        ></Search>
         {#each $trails as trail}
-            <TrailCard {trail} mode="edit"></TrailCard>
+            <TrailCard
+                {trail}
+                mode="edit"
+                on:mouseenter={() => handleTrailCardMouseEnter(trail)}
+                on:mouseleave={() => handleTrailCardMouseLeave(trail)}
+            ></TrailCard>
         {/each}
     </div>
     <div class="rounded-xl" id="map"></div>

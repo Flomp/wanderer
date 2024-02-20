@@ -1,3 +1,4 @@
+import { regenerateInstance } from "$lib/meilisearch";
 import { pb } from "$lib/pocketbase";
 import { type AuthModel } from 'pocketbase';
 import { writable, type Writable } from "svelte/store";
@@ -18,8 +19,10 @@ export async function users_create(user: User) {
 
 export async function login(user: User) {
     const authData = await pb.collection('users').authWithPassword(user.email ?? user.username!, user.password);
+    regenerateInstance()
 }
 
 export async function logout() {
     pb.authStore.clear();
+    regenerateInstance()
 }

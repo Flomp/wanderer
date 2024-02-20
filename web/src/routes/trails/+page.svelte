@@ -296,7 +296,7 @@
             class="flex items-start flex-wrap gap-8 py-8 max-w-full"
         >
             {#each $trails as trail}
-                <a class="max-w-full" href="/trail/view/{trail.id}">
+                <a class="max-w-full" class:basis-full={selectedDisplayOption === "list"} href="/trail/view/{trail.id}">
                     {#if selectedDisplayOption === "cards"}
                         <TrailCard {trail} mode="edit"></TrailCard>
                     {:else}

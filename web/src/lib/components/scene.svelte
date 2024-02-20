@@ -16,6 +16,6 @@
     }}
 />
 
-<T.AmbientLight color="0xffffff" intensity={1.1} />
+<T.AmbientLight color="#ffffff" intensity={1.1} />
 
 <Earth rotation={rotation}></Earth>
