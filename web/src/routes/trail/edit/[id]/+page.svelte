@@ -76,12 +76,13 @@
         onSubmit: async (submittedTrail) => {
             loading = true;
             try {
-                const form = document.getElementById(
+                const htmlForm = document.getElementById(
                     "trail-form",
                 ) as HTMLFormElement;
-                const formData = new FormData(form);
+                const formData = new FormData(htmlForm);
                 if (!submittedTrail.id) {
-                    await trails_create(submittedTrail, formData);
+                    const createdTrail = await trails_create(submittedTrail, formData);
+                    $form.id = createdTrail.id;
                 } else {
                     await trails_update($trail, submittedTrail, formData);
                 }

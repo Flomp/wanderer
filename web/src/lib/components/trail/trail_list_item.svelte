@@ -4,24 +4,26 @@
     import { trails_delete, trails_index } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
-    import Dropdown from "../base/dropdown.svelte";
+    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
     export let trail: Trail;
 
-    const dropdownItems = [
-        { text: "Edit", value: "edit" },
-        { text: "Delete", value: "delete" },
+    const dropdownItems: DropdownItem[] = [
+        { text: "Open", value: "open", icon: "up-right-from-square" },
+        { text: "Show on map", value: "map", icon: "map" },
+        { text: "Edit", value: "edit", icon: "pen" },
     ];
 
     async function handleDropdownClick(
         currentTrail: Trail,
         item: { text: string; value: any },
     ) {
-        if (item.value == "edit") {
+        if (item.value == "open") {
+            goto(`/trail/view/${currentTrail.id}`);
+        } else if (item.value == "map") {
+            goto(`/map/?lat=${currentTrail.lat}&lon=${currentTrail.lon}`);
+        } else if (item.value == "edit") {
             goto(`/trail/edit/${currentTrail.id}`);
-        } else if (item.value == "delete") {
-            await trails_delete(currentTrail);
-            await trails_index();
         }
     }
 </script>

@@ -29,7 +29,7 @@
             type="radio"
             checked={i == selected}
             value={item.value}
-            class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
+            class="w-4 h-4 text-primary accent-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
             on:change={() => handleRadioChange(i)}
         />
         <label

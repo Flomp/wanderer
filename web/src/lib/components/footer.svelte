@@ -10,7 +10,7 @@
     </div>
     <div>
         <h5 class="font-semibold">wanderer</h5>
-        <ul class="mt-4">
+        <ul class="mt-4 text-sm">
             <li>About</li>
             <li>Features</li>
             <li>Changelog</li>
@@ -19,7 +19,7 @@
     </div>
     <div>
         <h5 class="font-semibold">Community</h5>
-        <ul class="mt-4">
+        <ul class="mt-4 text-sm">
             <li>GitHub</li>
             <li>Issues</li>
             <li>Contribute</li>

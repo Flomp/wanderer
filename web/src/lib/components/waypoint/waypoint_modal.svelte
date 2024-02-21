@@ -2,12 +2,12 @@
     import { Waypoint, waypointSchema } from "$lib/models/waypoint";
     import { createEventDispatcher } from "svelte";
 
+    import { waypoint } from "$lib/stores/waypoint_store";
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
+    import { util } from "$lib/vendor/svelte-form-lib/util";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
-    import { waypoint } from "$lib/stores/waypoint_store";
-    import { util } from "$lib/vendor/svelte-form-lib/util";
 
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;

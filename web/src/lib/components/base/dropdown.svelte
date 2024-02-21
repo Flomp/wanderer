@@ -48,7 +48,7 @@
     </button>
     {#if isOpen}
         <ul
-            class="menu absolute bg-white border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-hidden text-black"
+            class="menu absolute bg-white border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-hidden text-black mt-1"
             class:none={isOpen}
             style="z-index: 1001"
         >
@@ -56,15 +56,15 @@
                 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                 <li
-                    class="menu-item flex items-center p-4 cursor-pointer hover:bg-gray-100 focus:bg-gray-200 transition-colors"
+                    class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-gray-100 focus:bg-gray-200 transition-colors"
                     tabindex="0"
                     on:mouseup|stopPropagation={() => handleItemClick(item)}
                     on:keydown|stopPropagation={() => handleItemClick(item)}
                 >
                     {#if item.icon}
-                        <i class="fa fa-{item.icon} mr-6"></i>
+                        <i class="fa fa-{item.icon} mr-3"></i>
                     {/if}
-                    {item.text}
+                    <span class="whitespace-nowrap">{item.text}</span>
                 </li>
             {/each}
         </ul>

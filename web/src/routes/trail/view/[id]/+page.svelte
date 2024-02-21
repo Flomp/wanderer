@@ -1,14 +1,11 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import Dropdown from "$lib/components/base/dropdown.svelte";
+    import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import Tabs from "$lib/components/tabs.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
-    import {
-        trail,
-        trails_delete,
-        trails_index,
-    } from "$lib/stores/trail_store";
+    import { trail, trails_delete } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
@@ -19,7 +16,6 @@
     import PhotoSwipeLightbox from "photoswipe/lightbox";
     import "photoswipe/style.css";
     import { onMount } from "svelte";
-    import { fade } from "svelte/transition";
 
     const tabs = ["Description", "Waypoints", "Photos", "Summit book"];
 
@@ -30,9 +26,12 @@
     let lightbox: PhotoSwipeLightbox;
     let lightboxDataSource: DataSource;
 
-    const dropdownItems = [
-        { text: "Edit", value: "edit" },
-        { text: "Delete", value: "delete" },
+    let openConfirmModal: () => void;
+
+    const dropdownItems: DropdownItem[] = [
+        { text: "Show on map", value: "map", icon: "map" },
+        { text: "Edit", value: "edit", icon: "pen" },
+        { text: "Delete", value: "delete", icon: "trash" },
     ];
 
     onMount(async () => {
@@ -124,13 +123,17 @@
     }
 
     async function handleDropdownClick(item: { text: string; value: any }) {
-        if (item.value == "edit") {
+        if (item.value == "map") {
+            goto(`/map/?lat=${$trail.lat}&lon=${$trail.lon}`);
+        } else if (item.value == "edit") {
             goto(`/trail/edit/${$trail.id}`);
         } else if (item.value == "delete") {
-            await trails_delete($trail);
-            await trails_index();
-            goto(`/`);
+            openConfirmModal();
         }
+    }
+
+    async function deleteTrail() {
+        trails_delete($trail).then(() => history.back());
     }
 </script>
 
@@ -142,24 +145,30 @@
         <div
             class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
         ></div>
-        <div class="absolute text-white bottom-8 left-8">
-            <h4 class="text-4xl font-bold">
-                {$trail.name}
-            </h4>
-            <h3 class="text-xl mt-4">
-                <i class="fa fa-location-dot mr-3"></i>
-                {$trail.location}
-            </h3>
-        </div>
-        {#if $currentUser && $currentUser.id == $trail.author}
-            <div class="absolute text-white bottom-8 right-8">
-                <Dropdown
-                    size="2xl"
-                    items={dropdownItems}
-                    on:change={(e) => handleDropdownClick(e.detail)}
-                ></Dropdown>
+        <div
+            class="flex absolute flex-wrap justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
+        >
+            <div class="text-white">
+                <h4 class="text-4xl font-bold">
+                    {$trail.name}
+                </h4>
+                <h3 class="text-xl mt-4">
+                    <i class="fa fa-location-dot mr-3"></i>
+                    {$trail.location}
+                </h3>
             </div>
-        {/if}
+            {#if $currentUser && $currentUser.id == $trail.author}
+                <div class="px-4 py-2 bg-white rounded-full space-x-2">
+                    {#each dropdownItems as item}
+                        <button
+                            class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors"
+                            on:click={() => handleDropdownClick(item)}
+                            ><i class="fa fa-{item.icon}"></i></button
+                        >
+                    {/each}
+                </div>
+            {/if}
+        </div>
     </section>
     <section
         class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8"
@@ -249,6 +258,11 @@
             ></div>
         </div>
     </section>
+    <ConfirmModal
+        text="Do you really want to delete this trail? This action cannot be undone."
+        bind:openModal={openConfirmModal}
+        on:confirm={deleteTrail}
+    ></ConfirmModal>
 </div>
 
 <style>

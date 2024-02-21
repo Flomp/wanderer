@@ -1,9 +1,11 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
+    import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import { ms } from "$lib/meilisearch";
     import type { Trail } from "$lib/models/trail";
     import {
@@ -12,7 +14,15 @@
     } from "$lib/stores/trail_store";
     import { country_codes } from "$lib/util/country_code_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
-    import type { GPX, Icon, LatLng, LeafletEvent, Map, Marker } from "leaflet";
+    import type {
+        GPX,
+        Icon,
+        LatLng,
+        LatLngBoundsExpression,
+        LeafletEvent,
+        Map,
+        Marker,
+    } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
@@ -38,19 +48,45 @@
         map.on("moveend", async (e) => {
             const bounds = map.getBounds();
             await searchTrails(bounds.getNorthEast(), bounds.getSouthWest());
+
+            $page.url.searchParams.set("tl_lat", bounds.getNorth().toString());
+            $page.url.searchParams.set("tl_lon", bounds.getEast().toString());
+            $page.url.searchParams.set("br_lat", bounds.getSouth().toString());
+            $page.url.searchParams.set("br_lon", bounds.getWest().toString());
+
+            goto(`?${$page.url.searchParams.toString()}`);
         });
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
+        const lat = $page.url.searchParams.get("lat");
+        const lon = $page.url.searchParams.get("lon");
 
-                // map.setView([lat, lon], 15);
-            },
-            (error) => {
-                console.error("Error getting user location:", error);
-            },
-        );
+        const tl_lat = $page.url.searchParams.get("tl_lat");
+        const tl_lon = $page.url.searchParams.get("tl_lon");
+        const br_lat = $page.url.searchParams.get("br_lat");
+        const br_lon = $page.url.searchParams.get("br_lon");
+
+        if (lat && lon) {
+            map.setView([parseFloat(lat), parseFloat(lon)], 12);
+        } else if (tl_lat && tl_lon && br_lat && br_lon) {
+            const boundingBox: LatLngBoundsExpression = [
+                [parseFloat(tl_lat), parseFloat(tl_lon)],
+                [parseFloat(br_lat), parseFloat(br_lon)],
+            ];
+
+            map.fitBounds(boundingBox);
+        } else {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    map.setView([lat, lon], 13);
+                },
+                (error) => {
+                    console.error("Error getting user location:", error);
+                },
+            );
+        }
     });
 
     async function search(q: string) {
@@ -189,13 +225,25 @@
             placeholder="Search for trails, places..."
             items={searchDropdownItems}
         ></Search>
+        {#if $trails.length == 0}
+            <div>
+                <div class="w-56 my-4">
+                    <EmptyStateSearch></EmptyStateSearch>
+                </div>
+                <h3 class="text-xl font-semibold text-center">
+                    No results found
+                </h3>
+            </div>
+        {/if}
         {#each $trails as trail}
-            <TrailCard
-                {trail}
-                mode="edit"
-                on:mouseenter={() => handleTrailCardMouseEnter(trail)}
-                on:mouseleave={() => handleTrailCardMouseLeave(trail)}
-            ></TrailCard>
+            <a href="/trail/view/{trail.id}">
+                <TrailCard
+                    {trail}
+                    mode="edit"
+                    on:mouseenter={() => handleTrailCardMouseEnter(trail)}
+                    on:mouseleave={() => handleTrailCardMouseLeave(trail)}
+                ></TrailCard>
+            </a>
         {/each}
     </div>
     <div class="rounded-xl" id="map"></div>

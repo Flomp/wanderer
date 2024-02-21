@@ -10,6 +10,7 @@
         type SelectItem,
     } from "$lib/components/base/select.svelte";
     import Slider from "$lib/components/base/slider.svelte";
+    import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import TrailListItem from "$lib/components/trail/trail_list_item.svelte";
     import { ms } from "$lib/meilisearch";
@@ -156,8 +157,6 @@
         } else {
             filter.sortOrder = "+";
         }
-        const sortOrderButton = document.getElementById("sort-order-btn");
-        sortOrderButton?.classList.toggle("rotated");
 
         searchTrails();
     }
@@ -196,7 +195,7 @@
                         id="{category.name}-checkbox"
                         type="checkbox"
                         value={category.id}
-                        class="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
+                        class="w-4 h-4 text-primary accent-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
                         on:change={() => setCategoryFilter(category)}
                     />
                     <label
@@ -275,6 +274,7 @@
                     <button
                         id="sort-order-btn"
                         class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors"
+                        class:rotated={filter.sortOrder == "-"}
                         on:click={() => setSortOrder()}
                         ><i class="fa fa-arrow-up"></i></button
                     >
@@ -295,8 +295,22 @@
             id="trails"
             class="flex items-start flex-wrap gap-8 py-8 max-w-full"
         >
+            {#if $trails.length == 0}
+                <div class="flex flex-col basis-full items-center">
+                    <div class="w-72 md:w-96 my-4">
+                        <EmptyStateSearch></EmptyStateSearch>
+                    </div>
+                    <h3 class="text-xl md:text-3xl font-semibold text-center">
+                        No results found
+                    </h3>
+                </div>
+            {/if}
             {#each $trails as trail}
-                <a class="max-w-full" class:basis-full={selectedDisplayOption === "list"} href="/trail/view/{trail.id}">
+                <a
+                    class="max-w-full"
+                    class:basis-full={selectedDisplayOption === "list"}
+                    href="/trail/view/{trail.id}"
+                >
                     {#if selectedDisplayOption === "cards"}
                         <TrailCard {trail} mode="edit"></TrailCard>
                     {:else}
