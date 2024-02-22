@@ -1,22 +1,25 @@
 <script lang="ts">
     import { theme } from "$lib/stores/theme_store";
-    import { T, useTask } from "@threlte/core";
-    import { tweened } from "svelte/motion";
-    import Earth from "./earth.svelte";
+    import { T, useTask, useThrelte } from "@threlte/core";
     import { onMount } from "svelte";
+    import { tweened } from "svelte/motion";
     import * as THREE from "three";
+    import Earth from "./earth.svelte";
 
     let rotation = 0;
     useTask((delta) => {
         rotation += delta / 4;
     });
 
-    const ambientIntensitiy = tweened($theme == "light" ? 1.2 : 0, {
+    const { toneMapping } = useThrelte();
+    toneMapping.set(THREE.NoToneMapping);
+
+    const ambientIntensitiy = tweened($theme == "light" ? 3 : 0, {
         duration: 500,
     });
 
     $: ambientColor = $theme == "light" ? "#ffffff" : "#4c7fe6";
-    $: ambientIntensitiy.set($theme == "light" ? 1.2 : 0);
+    $: ambientIntensitiy.set($theme == "light" ? 3 : 0.1);
 
     let starsGeometry!: THREE.BufferGeometry;
     let starsMaterial!: THREE.PointsMaterial;
@@ -49,6 +52,10 @@
     <T.Points geometry={starsGeometry} material={starsMaterial}></T.Points>
 {/if}
 
-<T.AmbientLight color={ambientColor} intensity={$ambientIntensitiy} />
-
 <Earth {rotation}></Earth>
+
+<T.HemisphereLight
+    skyColor={ambientColor}
+    groundColor="#242734"
+    intensity={$ambientIntensitiy}
+/>

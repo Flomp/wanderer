@@ -21,17 +21,17 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
 
   const sunXRotation = tweened($theme == "light" ? 0 : -Math.PI, {
     duration: 1000,
-    easing: backInOut
+    easing: backInOut,
   });
 
-  const sunLightIntensitiy = tweened($theme == "light" ? 2.5 : 0.1, {
+  const sunLightIntensitiy = tweened($theme == "light" ? 1.5 : 0, {
     duration: 500,
   });
-  const moonLightIntensitiy = tweened($theme == "dark" ? 2.5 : 0.1, {
+  const moonLightIntensitiy = tweened($theme == "dark" ? 3.0 : 0, {
     duration: 500,
   });
-  $: sunLightIntensitiy.set($theme == "light" ? 2.5 : 0.1);
-  $: moonLightIntensitiy.set($theme == "dark" ? 2.5 : 0.1);
+  $: sunLightIntensitiy.set($theme == "light" ? 1.5 : 0);
+  $: moonLightIntensitiy.set($theme == "dark" ? 3.0 : 0);
   $: sunXRotation.set($theme == "light" ? 0 : -Math.PI);
 </script>
 
@@ -113,14 +113,10 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
         position={[0, 2, 0]}
         scale={0.88}
       >
-        <T.PointLight position={[0, 0.4, 0]} color="#fff4ab" intensity={0.15}
-        ></T.PointLight>
-        <T.PointLight position={[0, 0, 0.4]} color="#fff4ab" intensity={0.15}
-        ></T.PointLight>
-        <T.PointLight position={[0, -0.4, 0]} color="#fff4ab" intensity={0.15}
+        <T.PointLight position={[0.7, -0.2, 0]} color="#ffffff" intensity={0.5}
         ></T.PointLight>
         <T.DirectionalLight
-          position={[0, -0.5, 0]}
+          position={[0, 0, 0]}
           color="#ffffff"
           intensity={$sunLightIntensitiy}
           castShadow
@@ -133,11 +129,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
         rotation={[Math.PI / 2, 0, Math.PI]}
         scale={0.045}
       >
-        <T.PointLight position={[0, 0.4, 0]} color="#a2cbf5" intensity={0.15}
-        ></T.PointLight>
-        <T.PointLight position={[-3, 0, 0.4]} color="#a2cbf5" intensity={0.05}
-        ></T.PointLight>
-        <T.PointLight position={[0, -0.4, 0]} color="#a2cbf5" intensity={0.15}
+        <T.PointLight position={[-4, 0, 0]} color="#a2cbf5" intensity={0.1}
         ></T.PointLight>
         <T.DirectionalLight
           position={[0, -0.5, 0]}

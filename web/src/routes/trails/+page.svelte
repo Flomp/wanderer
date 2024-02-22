@@ -297,12 +297,8 @@
         >
             {#if $trails.length == 0}
                 <div class="flex flex-col basis-full items-center">
-                    <div class="w-72 md:w-96 my-4">
                         <EmptyStateSearch></EmptyStateSearch>
-                    </div>
-                    <h3 class="text-xl md:text-3xl font-semibold text-center">
-                        No results found
-                    </h3>
+                    
                 </div>
             {/if}
             {#each $trails as trail}

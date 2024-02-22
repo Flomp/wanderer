@@ -226,14 +226,7 @@
             items={searchDropdownItems}
         ></Search>
         {#if $trails.length == 0}
-            <div>
-                <div class="w-56 my-4">
-                    <EmptyStateSearch></EmptyStateSearch>
-                </div>
-                <h3 class="text-xl font-semibold text-center">
-                    No results found
-                </h3>
-            </div>
+            <EmptyStateSearch></EmptyStateSearch>
         {/if}
         {#each $trails as trail}
             <a href="/trail/view/{trail.id}">
