@@ -42,7 +42,7 @@
             description: `City | ${
                 country_codes[t["country code"] as keyof typeof country_codes]
             }`,
-            value: t.id,
+            value: t,
             icon: "city",
         }));
 
@@ -50,7 +50,10 @@
     }
 
     function handleSearchClick(item: SearchItem) {
-        if (item.icon == "route") {
+
+        if(item.icon == "city") {
+            goto(`/map/?lat=${item.value._geo.lat}&lon=${item.value._geo.lng}`);
+        } if (item.icon == "route") {
             goto(`/trail/view/${item.value}`);
         }
     }

@@ -216,7 +216,7 @@
 
 <main class="grid grid-cols-[400px_1fr]">
     <div
-        class="overflow-y-scroll overflow-x-hidden flex flex-col items-center gap-4 px-8"
+        class="overflow-y-auto overflow-x-hidden flex flex-col items-center gap-4 px-8"
     >
         <Search
             extraClasses="w-full"

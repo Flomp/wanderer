@@ -11,7 +11,7 @@
     ];
 </script>
 
-<div class="p-4 border rounded-md my-2 hover:bg-gray-50">
+<div class="p-4 border border-input-border rounded-md my-2 hover:bg-menu-item-background-hover">
     <div class="flex justify-between items-center mb-2">
         <h5>
             <i class="fa fa-{waypoint.icon} mr-2"></i>{waypoint.name}

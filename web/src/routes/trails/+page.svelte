@@ -195,7 +195,7 @@
                         id="{category.name}-checkbox"
                         type="checkbox"
                         value={category.id}
-                        class="w-4 h-4 accent-input-background border-input-border focus:ring-input-border-focus focus:ring-2"
+                        class="w-4 h-4 accent-input-background border-input-border focus:ring-input-ring focus:ring-2"
                         on:change={() => setCategoryFilter(category)}
                     />
                     <label

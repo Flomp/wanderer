@@ -343,7 +343,7 @@
 <main class="grid grid-cols-[400px_1fr]">
     <form
         id="trail-form"
-        class="overflow-y-scroll overflow-x-hidden flex flex-col gap-4 px-8"
+        class="overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-8"
         on:submit={handleSubmit}
     >
         <h3 class="text-xl font-semibold">Pick a trail</h3>
@@ -435,9 +435,9 @@
         >
         <hr class="border-separator"/>
         <h3 class="text-xl font-semibold">Photos</h3>
-        <div class="flex gap-4 max-w-full overflow-x-scroll shrink-0">
+        <div class="flex gap-4 max-w-full overflow-x-auto shrink-0">
             <button
-                class="btn-secondary h-32 w-32 shrink-0 grow-0 basis-auto"
+                class="btn-secondary h-32 w-32 m-2 shrink-0 grow-0 basis-auto"
                 type="button"
                 on:click={openPhotoBrowser}><i class="fa fa-plus"></i></button
             >

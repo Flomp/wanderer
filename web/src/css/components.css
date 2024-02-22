@@ -3,7 +3,7 @@
 @import 'tailwindcss/components';
 
 .btn-primary {
-    @apply h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-border-focus
+    @apply h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-ring
 }
 
 .btn-large {
@@ -11,7 +11,7 @@
 }
 
 .btn-secondary {
-    @apply rounded-lg px-4 py-2 border border-input-border-focus font-medium transition-all hover:bg-secondary-hover focus:ring-4 ring-input-border-focus
+    @apply rounded-lg px-4 py-2 border border-input-border-focus font-medium transition-all hover:bg-secondary-hover focus:ring-4 ring-input-ring
 }
 
 .btn-danger {
@@ -23,7 +23,7 @@
 }
 
 .btn-icon {
-    @apply rounded-full aspect-square h-7 hover:bg-secondary-hover focus:ring-4 ring-input-border-focus transition-colors;
+    @apply rounded-full aspect-square h-7 hover:bg-secondary-hover focus:ring-4 ring-input-ring transition-colors;
 }
 
 .tab {
@@ -31,7 +31,7 @@
 }
 
 .tab:hover {
-    @apply bg-gray-100
+    @apply bg-menu-item-background-hover
 }
 
 .tab-active {

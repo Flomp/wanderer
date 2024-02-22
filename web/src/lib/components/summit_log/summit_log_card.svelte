@@ -12,7 +12,7 @@
     ];
 </script>
 
-<div class="p-4 my-2 border rounded-xl">
+<div class="p-4 my-2 border border-input-border rounded-xl">
     <div class="flex justify-between items-center mb-2">
         <h5 class="font-medium mr-2">{format(log.date, 'dd.MM.yyyy')}</h5>
 

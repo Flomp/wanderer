@@ -9,6 +9,7 @@
     --input-background: 249, 250, 251;
     --input-border: 209, 213, 219;
     --input-border-focus: 36, 39, 52;
+    --input-ring: 148, 163, 184;
 
     --menu-background: 255, 255, 255;
     --menu-item-background-hover: 243, 244, 246;
@@ -16,7 +17,7 @@
 
     --footer-background: 36, 39, 52;
 
-    --separator: 17, 24, 39;
+    --separator: 148, 163, 184;
 
     background: rgba(var(--background));
     color: rgba(var(--content));
@@ -33,6 +34,7 @@
     --input-background: 36, 39, 52;
     --input-border: 43, 46, 61;
     --input-border-focus: 108, 115, 150;
+    --input-ring: 108, 115, 150;
 
     --menu-background: 33, 36, 54;
     --menu-item-background-hover: 43, 46, 69;

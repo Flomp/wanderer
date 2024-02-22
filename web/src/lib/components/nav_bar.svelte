@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
+    import { afterNavigate, goto } from "$app/navigation";
     import LogoText from "$lib/components/logo/logo_text.svelte";
+    import { theme, toggleTheme } from "$lib/stores/theme_store";
     import { currentUser, logout } from "$lib/stores/user_store";
+    import { backInOut, cubicOut } from "svelte/easing";
     import { tweened } from "svelte/motion";
     import Dropdown from "./base/dropdown.svelte";
-    import { cubicOut } from "svelte/easing";
-    import { theme, toggleTheme } from "$lib/stores/theme_store";
     import LogoTextLight from "./logo/logo_text_light.svelte";
 
     const navBarItems = [
@@ -31,22 +31,49 @@
         easing: cubicOut,
     });
 
+    const indicatorScale = tweened(0, {
+        duration: 600,
+        easing: backInOut,
+    });
+
+    afterNavigate((e) => {
+        const routeId = e.to?.route.id;
+        const navBarLinks = document.getElementById("nav-bar-links");
+        let childPosition = -1;
+        switch (routeId) {
+            case "/":
+                childPosition = 1;
+                break;
+            case "/trails":
+                childPosition = 2;
+                break;
+            case "/map":
+                childPosition = 3;
+                break;
+            default:
+                break;
+        }
+
+        if (childPosition !== -1) {
+            const childElement = navBarLinks?.children[
+                childPosition
+            ] as HTMLElement;
+            const newWidth = childElement?.getBoundingClientRect().width ?? 0;
+            const newPosition = childElement.offsetLeft;
+            const padding = 16;
+            indicatorScale.set(1);
+            indicatorWidth.set(newWidth + padding);
+            indicatorPosition.set(newPosition - padding / 2);
+        } else {
+            indicatorScale.set(0);
+        }
+    });
+
     function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "logout") {
             logout();
             goto("/login");
         }
-    }
-
-    function setActiveItem(target: EventTarget | null) {
-        if (!target) {
-            return;
-        }
-        const element = target as HTMLElement;
-        const rect = element.getBoundingClientRect();
-        const padding = 16;
-        indicatorWidth.set(rect.width + padding);
-        indicatorPosition.set(element.offsetLeft - padding / 2);
     }
 </script>
 
@@ -59,15 +86,14 @@
         {/if}
     </a>
     {#if $currentUser}
-        <menu class="flex gap-8 relative py-1 px-2">
+        <menu id="nav-bar-links" class="flex gap-8 relative py-1 px-2">
             <div
-                class="absolute h-full w-16 bg-menu-background rounded-xl top-0 z-0"
-                style="width: {$indicatorWidth}px; left: {$indicatorPosition}px"
+                class="absolute h-full w-16 bg-menu-item-background-hover rounded-xl top-0 z-0"
+                style="width: {$indicatorWidth}px; left: {$indicatorPosition}px; scale: {$indicatorScale}"
             ></div>
             {#each navBarItems as item}
                 <a
                     class="font-semibold z-10"
-                    on:click={(e) => setActiveItem(e.target)}
                     href={item.value}
                     data-sveltekit-preload-data="tap">{item.text}</a
                 >

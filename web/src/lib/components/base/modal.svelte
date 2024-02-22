@@ -15,15 +15,15 @@
     {id}
     tabindex="-1"
     aria-hidden="true"
-    class="relative w-full max-w-2xl max-h-full rounded-xl"
+    class="relative w-full max-w-2xl max-h-full rounded-xl text-content"
 >
     <!-- Modal content -->
-    <div class="relative bg-white shadow dark:bg-gray-700">
+    <div class="relative bg-background shadow">
         <!-- Modal header -->
         <div
-            class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600"
+            class="flex items-center justify-between p-4 md:p-5 border-b border-separator rounded-t"
         >
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+            <h3 class="text-xl font-semibold">
                 {title}
             </h3>
             <button
@@ -41,7 +41,7 @@
         </div>
         <!-- Modal footer -->
         <div
-            class="p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600"
+            class="p-4 md:p-5 border-t border-separator rounded-b"
         >
             <slot name="footer" {closeModal} />
         </div>

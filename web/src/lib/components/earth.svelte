@@ -7,7 +7,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
   import { theme } from "$lib/stores/theme_store";
   import { T, forwardEventHandlers } from "@threlte/core";
   import { useGltf } from "@threlte/extras";
-  import { backIn, backInOut, backOut, cubicInOut } from "svelte/easing";
+  import { backInOut } from "svelte/easing";
   import { tweened } from "svelte/motion";
   import { Group } from "three";
 
@@ -19,15 +19,15 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
 
   const component = forwardEventHandlers();
 
-  const sunXRotation = tweened(0, {
-    duration: 1500,
+  const sunXRotation = tweened($theme == "light" ? 0 : -Math.PI, {
+    duration: 1000,
     easing: backInOut
   });
 
-  const sunLightIntensitiy = tweened(2.5, {
+  const sunLightIntensitiy = tweened($theme == "light" ? 2.5 : 0.1, {
     duration: 500,
   });
-  const moonLightIntensitiy = tweened(2.5, {
+  const moonLightIntensitiy = tweened($theme == "dark" ? 2.5 : 0.1, {
     duration: 500,
   });
   $: sunLightIntensitiy.set($theme == "light" ? 2.5 : 0.1);
@@ -105,7 +105,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
     </T.Group>
 
     <!-- /Airplane -->
-    <!-- Sun -->
+    <!-- Sun & Moon -->
     <T.Group rotation={[$sunXRotation, 0, 0]}>
       <T.Mesh
         geometry={gltf.nodes.Icosphere007.geometry}
@@ -131,7 +131,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
         material={gltf.materials["Material.011"]}
         position={[0, -2, 0]}
         rotation={[Math.PI / 2, 0, Math.PI]}
-        scale={0.055}
+        scale={0.045}
       >
         <T.PointLight position={[0, 0.4, 0]} color="#a2cbf5" intensity={0.15}
         ></T.PointLight>

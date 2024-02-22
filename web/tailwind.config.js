@@ -4,6 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        'background': 'rgba(var(--background))',
+        'content': 'rgba(var(--content))',
+
         'primary': 'rgba(var(--primary))',
         'primary-hover': 'rgba(var(--primary-hover))',
         'secondary-hover': 'rgba(var(--secondary-hover))',
@@ -11,6 +14,7 @@ export default {
         'input-background': 'rgba(var(--input-background))',
         'input-border': 'rgba(var(--input-border))',
         'input-border-focus': 'rgba(var(--input-border-focus))',
+        'input-ring': 'rgba(var(--input-ring))',
 
         'menu-background': 'rgba(var(--menu-background))',
         'menu-item-background-hover': 'rgba(var(--menu-item-background-hover))',
