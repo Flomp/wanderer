@@ -169,7 +169,7 @@
 <main
     class="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 max-w-7xl mx-6 md:mx-auto"
 >
-    <div class="trail-filters p-8 border rounded-xl">
+    <div class="trail-filters p-8 border border-input-border rounded-xl">
         <div class="flex gap-2 items-center">
             <div class="basis-full">
                 <Search
@@ -180,14 +180,14 @@
             </div>
             <button
                 id="sort-order-btn"
-                class="rounded-full py-1 px-2 hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors md:hidden"
+                class="btn-icon md:hidden"
                 on:click={() => (filterExpanded = !filterExpanded)}
                 ><i class="fa fa-sliders"></i></button
             >
         </div>
 
         {#if filterExpanded}
-            <hr class="my-4" />
+            <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">Category</p>
             {#each $categories as category, i}
                 <div class="flex items-center mb-4">
@@ -195,17 +195,17 @@
                         id="{category.name}-checkbox"
                         type="checkbox"
                         value={category.id}
-                        class="w-4 h-4 text-primary accent-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
+                        class="w-4 h-4 accent-input-background border-input-border focus:ring-input-border-focus focus:ring-2"
                         on:change={() => setCategoryFilter(category)}
                     />
                     <label
                         for="{category.name}-checkbox"
-                        class="ms-2 text-sm text-gray-900 dark:text-gray-300"
+                        class="ms-2 text-sm"
                         >{category.name}</label
                     >
                 </div>
             {/each}
-            <hr class="my-4" />
+            <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">Near</p>
             <div class="mb-8">
                 <Search
@@ -225,7 +225,7 @@
                 <span class="text-gray-500 text-sm">Radius:</span>
                 {formatMeters(filter.near.radius)}
             </p>
-            <hr class="my-4" />
+            <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">Distance</p>
             <DoubleSlider
                 minValue={minDistance}
@@ -238,7 +238,7 @@
                 <span>{formatMeters(filter.distanceMin)}</span>
                 <span>{formatMeters(filter.distanceMax)}</span>
             </div>
-            <hr class="my-4" />
+            <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">Elevation Gain</p>
             <DoubleSlider
                 minValue={minElevationGain}
@@ -251,7 +251,7 @@
                 <span>{formatMeters(filter.eleavationGainMin)}</span>
                 <span>{formatMeters(filter.elevationGainMax)}</span>
             </div>
-            <hr class="my-4" />
+            <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">Completed</p>
             <RadioGroup
                 name="completed"
@@ -273,7 +273,7 @@
                     ></Select>
                     <button
                         id="sort-order-btn"
-                        class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors"
+                        class="btn-icon"
                         class:rotated={filter.sortOrder == "-"}
                         on:click={() => setSortOrder()}
                         ><i class="fa fa-arrow-up"></i></button

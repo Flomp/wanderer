@@ -358,7 +358,7 @@
             style="display: none;"
             on:change={handleFileSelection}
         />
-        <hr />
+        <hr class="border-separator" />
         <h3 class="text-xl font-semibold">Basic Info</h3>
         <div class="flex gap-4 justify-around">
             <div class="flex flex-col items-center">
@@ -413,7 +413,7 @@
             ></Select>
         {/if}
         <Toggle name="public" label="Public" bind:value={$form.public}></Toggle>
-        <hr />
+        <hr class="border-separator"/>
         <h3 class="text-xl font-semibold">Waypoints</h3>
         <ul>
             {#each $form.expand.waypoints ?? [] as waypoint, i}
@@ -433,7 +433,7 @@
             on:click={beforeWaypointModalOpen}
             ><i class="fa fa-plus mr-2"></i>Add Waypoint</button
         >
-        <hr />
+        <hr class="border-separator"/>
         <h3 class="text-xl font-semibold">Photos</h3>
         <div class="flex gap-4 max-w-full overflow-x-scroll shrink-0">
             <button
@@ -460,7 +460,7 @@
                 </div>
             {/each}
         </div>
-        <hr />
+        <hr class="border-separator"/>
         <h3 class="text-xl font-semibold">Summit Book</h3>
         <ul>
             {#each $form.expand.summit_logs ?? [] as log, i}
@@ -479,7 +479,7 @@
             on:click={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>Add Entry</button
         >
-        <hr />
+        <hr class="border-separator"/>
         <Button
             primary={true}
             large={true}

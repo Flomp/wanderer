@@ -35,7 +35,7 @@
 </script>
 
 <div
-    class="trail-card rounded-2xl border sm:w-72 cursor-pointer"
+    class="trail-card rounded-2xl border border-input-border sm:w-72 cursor-pointer"
     on:mouseenter
     on:mouseleave
     role="listitem"

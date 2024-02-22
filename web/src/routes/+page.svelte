@@ -83,7 +83,7 @@
     </div>
 </section>
 <section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-4xl md:text-5xl font-bold text-primary">
+    <h2 class="text-4xl md:text-5xl font-bold">
         {$currentUser ? "Your" : "Explore"} trails
     </h2>
     <div
@@ -98,7 +98,7 @@
     </div>
 </section>
 <section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-4xl md:text-5xl font-bold text-primary">By category</h2>
+    <h2 class="text-4xl md:text-5xl font-bold">By category</h2>
     <div
         id="categories"
         class="grid grid-cols- sm:grid-cols-2 lg:grid-cols-4 justify-items-center gap-8 py-8"

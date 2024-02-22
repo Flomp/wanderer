@@ -17,7 +17,7 @@
 
     function handleRadioChange(radioIndex: number) {
         selected = radioIndex;
-        dispatch('change', items[selected])
+        dispatch("change", items[selected]);
     }
 </script>
 
@@ -29,13 +29,9 @@
             type="radio"
             checked={i == selected}
             value={item.value}
-            class="w-4 h-4 text-primary accent-primary bg-gray-100 border-gray-300 focus:ring-gray-400 focus:ring-2"
+            class="w-4 h-4 accent-input-background border-input-border focus:ring-input-border-focus focus:ring-2"
             on:change={() => handleRadioChange(i)}
         />
-        <label
-            for="{name}-radio-{i}"
-            class="ms-2 text-sm text-gray-900 dark:text-gray-300"
-            >{item.text}</label
-        >
+        <label for="{name}-radio-{i}" class="ms-2 text-sm">{item.text}</label>
     </div>
 {/each}

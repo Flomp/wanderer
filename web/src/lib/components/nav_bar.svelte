@@ -5,6 +5,8 @@
     import { tweened } from "svelte/motion";
     import Dropdown from "./base/dropdown.svelte";
     import { cubicOut } from "svelte/easing";
+    import { theme, toggleTheme } from "$lib/stores/theme_store";
+    import LogoTextLight from "./logo/logo_text_light.svelte";
 
     const navBarItems = [
         { text: "Home", value: "/" },
@@ -49,16 +51,22 @@
 </script>
 
 <nav class="flex justify-between items-center p-6">
-    <a href="/" data-sveltekit-preload-data="tap"><LogoText></LogoText></a>
+    <a href="/" data-sveltekit-preload-data="tap">
+        {#if $theme == "light"}
+            <LogoText></LogoText>
+        {:else}
+            <LogoTextLight></LogoTextLight>
+        {/if}
+    </a>
     {#if $currentUser}
         <menu class="flex gap-8 relative py-1 px-2">
             <div
-                class="absolute h-full w-16 bg-slate-400 rounded-xl opacity-20 top-0"
+                class="absolute h-full w-16 bg-menu-background rounded-xl top-0 z-0"
                 style="width: {$indicatorWidth}px; left: {$indicatorPosition}px"
             ></div>
             {#each navBarItems as item}
                 <a
-                    class="font-semibold"
+                    class="font-semibold z-10"
                     on:click={(e) => setActiveItem(e.target)}
                     href={item.value}
                     data-sveltekit-preload-data="tap">{item.text}</a
@@ -66,6 +74,12 @@
             {/each}
         </menu>
         <div class="flex gap-6 items-center">
+            <button
+                class="btn-icon fa-regular fa-{$theme === 'light'
+                    ? 'sun'
+                    : 'moon'}"
+                on:click={() => toggleTheme()}
+            ></button>
             <a class="btn-primary btn-large" href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>New Trail</a
             >
@@ -74,7 +88,7 @@
                 on:change={(e) => handleDropdownClick(e.detail)}
             >
                 <img
-                    class="w-12 h-h12 rounded-full"
+                    class="rounded-full"
                     src="https://api.dicebear.com/7.x/initials/svg?seed={$currentUser.username}&backgroundType=gradientLinear"
                     alt=""
                 />

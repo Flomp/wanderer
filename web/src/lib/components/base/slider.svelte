@@ -37,6 +37,9 @@
 <div class="my-4" id="slider" bind:this={sliderContainer}></div>
 
 <style>
+    :global(.noUi-target) {
+        @apply border border-input-border shadow-none;
+    }
     :global(.noUi-horizontal) {
         height: 6px;
     }

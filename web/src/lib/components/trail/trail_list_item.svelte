@@ -1,7 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import type { Trail } from "$lib/models/trail";
-    import { trails_delete, trails_index } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
@@ -29,7 +28,7 @@
 </script>
 
 <li
-    class="flex gap-8 p-4 rounded-xl border cursor-pointer hover:bg-gray-100 transition-colors"
+    class="flex gap-8 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
 >
     <div class="shrink-0">
         <img

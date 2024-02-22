@@ -1,0 +1,47 @@
+.light {
+    --primary: 36, 39, 52;
+    --primary-hover: 17, 24, 39;
+    --secondary-hover: 243, 244, 246;
+
+    --background: 255, 255, 255;
+    --content: 0, 0, 0;
+
+    --input-background: 249, 250, 251;
+    --input-border: 209, 213, 219;
+    --input-border-focus: 36, 39, 52;
+
+    --menu-background: 255, 255, 255;
+    --menu-item-background-hover: 243, 244, 246;
+    --menu-item-background-focus: 229, 231, 235;
+
+    --footer-background: 36, 39, 52;
+
+    --separator: 17, 24, 39;
+
+    background: rgba(var(--background));
+    color: rgba(var(--content));
+}
+
+.dark {
+    --primary: 36, 39, 52;
+    --primary-hover: 44, 48, 64;
+    --secondary-hover: 36, 39, 52;
+
+    --background: 7, 10, 36;
+    --content: 255, 255, 255;
+
+    --input-background: 36, 39, 52;
+    --input-border: 43, 46, 61;
+    --input-border-focus: 108, 115, 150;
+
+    --menu-background: 33, 36, 54;
+    --menu-item-background-hover: 43, 46, 69;
+    --menu-item-background-focus: 25, 26, 41;
+
+    --footer-background: 10, 14, 48;
+
+    --separator: 108, 115, 150;
+
+    background: rgba(var(--background));
+    color: rgba(var(--content));
+}

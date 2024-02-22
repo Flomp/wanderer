@@ -28,7 +28,7 @@
             </h3>
             <button
                 type="button"
-                class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors"
+                class="rounded-full btn-icon"
                 on:click={closeModal}
             >
                 <i class="fa fa-close"></i>

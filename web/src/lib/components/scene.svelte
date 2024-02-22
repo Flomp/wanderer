@@ -1,11 +1,20 @@
 <script lang="ts">
+    import { theme } from "$lib/stores/theme_store";
     import { T, useTask } from "@threlte/core";
+    import { tweened } from "svelte/motion";
     import Earth from "./earth.svelte";
 
     let rotation = 0;
     useTask((delta) => {
-        rotation += delta/4;
+        rotation += delta / 4;
     });
+
+    const ambientIntensitiy = tweened(1.2, {
+        duration: 500,
+    });
+
+    $: ambientColor = $theme == "light" ? "#ffffff" : "#4c7fe6";
+    $: ambientIntensitiy.set($theme == "light" ? 1.2 : 0);
 </script>
 
 <T.PerspectiveCamera
@@ -16,6 +25,6 @@
     }}
 />
 
-<T.AmbientLight color="#ffffff" intensity={1.1} />
+<T.AmbientLight color={ambientColor} intensity={$ambientIntensitiy} />
 
-<Earth rotation={rotation}></Earth>
+<Earth {rotation}></Earth>

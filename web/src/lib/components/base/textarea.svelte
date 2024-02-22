@@ -15,7 +15,7 @@
     {/if}
     <textarea
         {name}
-        class="bg-gray-50 border rounded-md p-3 resize-none transition-colors focus:border-primary focus:outline-none focus:ring-0 w-full"
+        class="bg-input-background border border-input-border rounded-md p-3 resize-none transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0 w-full"
         {rows}
         {placeholder}
         class:border-red-400={error.length > 0}

@@ -4,17 +4,35 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
 -->
 
 <script lang="ts">
-  import { DirectionalLight, Group, PointLight } from "three";
+  import { theme } from "$lib/stores/theme_store";
   import { T, forwardEventHandlers } from "@threlte/core";
   import { useGltf } from "@threlte/extras";
+  import { backIn, backInOut, backOut, cubicInOut } from "svelte/easing";
+  import { tweened } from "svelte/motion";
+  import { Group } from "three";
 
   export const ref = new Group();
 
   export let rotation: number = 0;
 
-  const gltf = useGltf("/models/earth.glb");
+  const gltf = useGltf("/models/earth2.glb");
 
   const component = forwardEventHandlers();
+
+  const sunXRotation = tweened(0, {
+    duration: 1500,
+    easing: backInOut
+  });
+
+  const sunLightIntensitiy = tweened(2.5, {
+    duration: 500,
+  });
+  const moonLightIntensitiy = tweened(2.5, {
+    duration: 500,
+  });
+  $: sunLightIntensitiy.set($theme == "light" ? 2.5 : 0.1);
+  $: moonLightIntensitiy.set($theme == "dark" ? 2.5 : 0.1);
+  $: sunXRotation.set($theme == "light" ? 0 : -Math.PI);
 </script>
 
 <T is={ref} dispose={false} {...$$restProps} bind:this={$component}>
@@ -88,18 +106,47 @@ Command: npx @threlte/gltf@2.0.1 static/models/earth.glb
 
     <!-- /Airplane -->
     <!-- Sun -->
-    <T.Mesh
-      geometry={gltf.nodes.Icosphere007.geometry}
-      material={gltf.materials["Material.009"]}
-      position={[0.5, 2, -0.5]}
-      scale={0.88}
-    >
-      <T.PointLight position={[2, 0, 0]} color="#ffffff" intensity={4.5}
-      ></T.PointLight>
-
-      <T.DirectionalLight color="#f4de51" intensity={2.5} castShadow
-      ></T.DirectionalLight>
-    </T.Mesh>
+    <T.Group rotation={[$sunXRotation, 0, 0]}>
+      <T.Mesh
+        geometry={gltf.nodes.Icosphere007.geometry}
+        material={gltf.materials["Material.009"]}
+        position={[0, 2, 0]}
+        scale={0.88}
+      >
+        <T.PointLight position={[0, 0.4, 0]} color="#fff4ab" intensity={0.15}
+        ></T.PointLight>
+        <T.PointLight position={[0, 0, 0.4]} color="#fff4ab" intensity={0.15}
+        ></T.PointLight>
+        <T.PointLight position={[0, -0.4, 0]} color="#fff4ab" intensity={0.15}
+        ></T.PointLight>
+        <T.DirectionalLight
+          position={[0, -0.5, 0]}
+          color="#ffffff"
+          intensity={$sunLightIntensitiy}
+          castShadow
+        ></T.DirectionalLight>
+      </T.Mesh>
+      <T.Mesh
+        geometry={gltf.nodes.Moon01.geometry}
+        material={gltf.materials["Material.011"]}
+        position={[0, -2, 0]}
+        rotation={[Math.PI / 2, 0, Math.PI]}
+        scale={0.055}
+      >
+        <T.PointLight position={[0, 0.4, 0]} color="#a2cbf5" intensity={0.15}
+        ></T.PointLight>
+        <T.PointLight position={[-3, 0, 0.4]} color="#a2cbf5" intensity={0.05}
+        ></T.PointLight>
+        <T.PointLight position={[0, -0.4, 0]} color="#a2cbf5" intensity={0.15}
+        ></T.PointLight>
+        <T.DirectionalLight
+          position={[0, -0.5, 0]}
+          color="#a2cbf5"
+          intensity={$moonLightIntensitiy}
+          castShadow
+        ></T.DirectionalLight>
+      </T.Mesh>
+    </T.Group>
     <!-- /Sun -->
     <T.Group scale={1} rotation.y={rotation}>
       <!-- Earth -->

@@ -158,10 +158,11 @@
                 </h3>
             </div>
             {#if $currentUser && $currentUser.id == $trail.author}
-                <div class="px-4 py-2 bg-white rounded-full space-x-2">
+                <div class="px-4 py-2 bg-menu-background rounded-full space-x-2">
                     {#each dropdownItems as item}
                         <button
-                            class="rounded-full py-1 px-[10px] hover:bg-gray-100 focus:ring-4 ring-gray-200 transition-colors"
+                            data-title={item.text}
+                            class="tooltip btn-icon"
                             on:click={() => handleDropdownClick(item)}
                             ><i class="fa fa-{item.icon}"></i></button
                         >
@@ -201,13 +202,13 @@
         {/if}
     </section>
     {#if $trail.tags && $trail.tags.length > 0}
-        <hr />
+        <hr class="border-separator"/>
         <section class="flex p-8 gap-4 text-gray-600">
             {#each $trail.tags as tag}
                 <span class="py-2 px-4 border rounded-full">{tag}</span>
             {/each}
         </section>
-        <hr />
+        <hr class="border-separator"/>
     {/if}
     <section class="p-8">
         <Tabs {tabs} bind:activeTab></Tabs>

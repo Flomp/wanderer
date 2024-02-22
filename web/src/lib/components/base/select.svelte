@@ -29,7 +29,7 @@
     {/if}
     <select
         {name}
-        class="bg-gray-50 h-10 w-full px-4 border-r-8 border-transparent outline outline-1 outline-gray-200 rounded-md focus:outline-primary transition-colors"
+        class="bg-input-background h-10 w-full px-4 border-r-8 border-transparent outline outline-1 outline-input-border rounded-md focus:outline-input-border-focus transition-colors"
         bind:value
         on:change={(e) => onChange(e.target)}
     >

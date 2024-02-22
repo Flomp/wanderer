@@ -54,13 +54,13 @@
     }
 </script>
 
-<div class="relative text-gray-600 {extraClasses}">
+<div class="relative {extraClasses}">
     <span class="absolute top-1/2 -translate-y-1/2 left-0 pl-4">
         <i class="fa fa-search" class:text-xl={large}></i>
     </span>
     {#if value.length > 0}
         <button
-            class="absolute top-1/2 -translate-y-1/2 right-0 h-6 w-6 mr-2 hover:bg-gray-300 hover:bg-opacity-50 rounded-full"
+            class="btn-icon absolute top-1/2 -translate-y-1/2 right-0 mr-2"
             on:click={clear}
             in:fade={{ duration: 150 }}
             out:fade={{ duration: 150 }}
@@ -84,7 +84,7 @@
 
     {#if dropDownOpen}
         <ul
-            class="menu absolute bg-white border rounded-xl shadow-md overflow-hidden text-black w-full"
+            class="menu absolute bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden w-full"
             class:none={!dropDownOpen}
             style="z-index: 1001"
         >
@@ -92,7 +92,7 @@
                 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                 <li
-                    class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-gray-100 focus:bg-gray-200 transition-colors"
+                    class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     tabindex="0"
                     on:mousedown|stopPropagation={() => handleItemClick(item)}
                     on:keydown|stopPropagation={() => handleItemClick(item)}
