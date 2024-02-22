@@ -15,7 +15,7 @@
 
     let searchDropdownItems: SearchItem[] = [];
 
-    async function search(q: string) {        
+    async function search(q: string) {
         const response = await ms.multiSearch({
             queries: [
                 {
@@ -50,10 +50,10 @@
     }
 
     function handleSearchClick(item: SearchItem) {
-
-        if(item.icon == "city") {
+        if (item.icon == "city") {
             goto(`/map/?lat=${item.value._geo.lat}&lon=${item.value._geo.lng}`);
-        } if (item.icon == "route") {
+        }
+        if (item.icon == "route") {
             goto(`/trail/view/${item.value}`);
         }
     }
@@ -63,7 +63,9 @@
     class="hero grid grid-cols-1 md:grid-cols-2"
     style="height: calc(100vh - 112px)"
 >
-    <div class="flex flex-col justify-center gap-8 max-w-md mx-8 md:mx-auto -mt-24">
+    <div
+        class="flex flex-col justify-center gap-8 max-w-md mx-8 md:mx-auto -mt-24"
+    >
         <h2 class="text-7xl font-bold">
             Welcome to <span class="-tracking-[0.075em]">wanderer</span>
         </h2>
@@ -85,27 +87,41 @@
         </Canvas>
     </div>
 </section>
-<section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-4xl md:text-5xl font-bold">
-        {$currentUser ? "Your" : "Explore"} trails
-    </h2>
-    <div
-        id="trails"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 justify-items-center gap-8 py-8"
-    >
+<section
+    class="max-w-7xl mx-auto mt-8 px-8 xl:px-0 grid grid-cols-1 md:grid-cols-2 items-center"
+>
+    <div id="trails" class="flex flex-wrap justify-items-center gap-8 py-8">
         {#each $trails as trail}
             <a href="/trail/view/{trail.id}">
                 <TrailCard {trail} mode="edit"></TrailCard></a
             >
         {/each}
     </div>
+    <div class="max-w-md md:mx-auto space-y-8">
+        <h2 class="text-4xl md:text-5xl font-bold">
+            {$currentUser ? "Trails for you" : "Explore some trails"}
+        </h2>
+        <h5>
+            Here are some trails you might like. Or you can just go to the full
+            list right now.
+        </h5>
+        <a
+            class="inline-block btn-primary btn-large"
+            href="/trails"
+            role="button">All Trails</a
+        >
+    </div>
 </section>
-<section class="max-w-7xl mx-auto mt-8 px-8 xl:px-0">
-    <h2 class="text-4xl md:text-5xl font-bold">By category</h2>
-    <div
-        id="categories"
-        class="grid grid-cols- sm:grid-cols-2 lg:grid-cols-4 justify-items-center gap-8 py-8"
-    >
+<section
+    class="max-w-7xl mx-auto mt-8 px-8 xl:px-0 grid grid-cols-1 md:grid-cols-2 items-center"
+>
+    <div class="max-w-md md:mx-auto space-y-8">
+        <h2 class="text-4xl md:text-5xl font-bold">Categories</h2>
+        <h5>
+            Did you know? You cannot only save you hiking trails. There are many categories for all your adventures.
+        </h5>
+    </div>
+    <div id="categories" class="flex flex-wrap justify-items-center gap-8 py-8">
         {#each $categories as category}
             <CategoryCard {category}></CategoryCard>
         {/each}
