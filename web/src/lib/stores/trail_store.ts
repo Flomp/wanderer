@@ -15,8 +15,8 @@ export const trail: Writable<Trail> = writable(new Trail(""));
 
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
-export async function trails_index() {
-    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, 5, { expand: "category,waypoints,summit_logs" })).items
+export async function trails_index(data: { perPage: number } = { perPage: 5 }) {
+    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, data.perPage, { expand: "category,waypoints,summit_logs" })).items
 
     for (const trail of response) {
         setFileURLs(trail);
@@ -28,7 +28,7 @@ export async function trails_index() {
 }
 
 export async function trails_search_filter(filter: TrailFilter) {
-    let filterText: string = `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.eleavationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
+    let filterText: string = `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.elevationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
 
     if (filter.category.length > 0) {
         filterText += ` AND category IN [${filter.category.join(",")}]`;
@@ -63,17 +63,33 @@ export async function trails_search_filter(filter: TrailFilter) {
     return dbResponse;
 }
 
-export async function trails_search_bounding_box(northEast: LatLng, southWest: LatLng) {
+export async function trails_search_bounding_box(northEast: LatLng, southWest: LatLng, filter?: TrailFilter) {
+
+    let filterText: string = "";
+
+    if (filter) {
+        filterText += `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.elevationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
+
+        if (filter.category.length > 0) {
+            filterText += ` AND category IN [${filter.category.join(",")}]`;
+        }
+        if (filter.completed !== undefined) {
+            filterText += ` AND completed = ${filter.completed}`;
+        }
+    }
+
     const response = await ms.index("trails").search("", {
         filter: [
             `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
+            filterText
         ],
     });
     const trailIds = response.hits.map((h) => h.id);
 
     if (trailIds.length == 0) {
+        const currentTrails : Trail[] = get(trails);
         trails.set([]);
-        return compareObjectArrays<Trail>(get(trails), []);
+        return compareObjectArrays<Trail>(currentTrails, []);
     }
 
     const dbResponse: Trail[] = (
@@ -89,7 +105,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
         const gpxData: string = await fetchGPX(trail);
         trail.expand.gpx_data = gpxData;
     }
-    
+
     const comparison = compareObjectArrays<Trail>(get(trails), dbResponse)
 
     trails.set(dbResponse);
@@ -175,7 +191,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
             ...addedWaypoint,
             marker: undefined,
         });
-        formData.append("waypoints+", model.id!);
+        formData.append("waypoints", model.id!);
     }
 
     for (const updatedWaypoint of waypointUpdates.updated) {
@@ -183,25 +199,35 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
             ...updatedWaypoint,
             marker: undefined,
         });
+        formData.append("waypoints", model.id!);
     }
 
     for (const deletedWaypoint of waypointUpdates.deleted) {
         const success = await waypoints_delete(deletedWaypoint.id!);
     }
 
-    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand.summit_logs ?? [], newTrail.expand.summit_logs ?? []);
+    for (const unchangedWaypoint of waypointUpdates.unchanged) {
+        formData.append("waypoints", unchangedWaypoint.id!);
+    }
+
+    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand.summit_logs ?? [], newTrail.expand.summit_logs ?? []);    
 
     for (const summitLog of summitLogUpdates.added) {
         const model = await summit_logs_create(summitLog);
-        formData.append("summit_logs+", model.id!);
+        formData.append("summit_logs", model.id!);
     }
 
     for (const updatedSummitLog of summitLogUpdates.updated) {
         const model = await summit_logs_update(updatedSummitLog);
+        formData.append("summit_logs", model.id!);
     }
 
     for (const deletedSummitLog of summitLogUpdates.deleted) {
         const success = await summit_logs_delete(deletedSummitLog.id!);
+    }
+
+    for (const unchangedSummitLog of summitLogUpdates.unchanged) {
+        formData.append("summit_logs", unchangedSummitLog.id!);
     }
 
     for (const file of newTrail._photoFiles) {
@@ -283,15 +309,18 @@ function setFileURLs(trail: Trail) {
     }
 }
 
-function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray: T[]) {
+function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray: T[]) {    
     const newObjects = [];
     const updatedObjects = [];
+    const unchangedObjects = [];
     for (const newObj of newArray) {
         const oldObj = oldArray.find(oldObj => oldObj.id === newObj.id)
         if (!oldObj) {
             newObjects.push(newObj);
         } else if (!util.deepEqual(newObj, oldObj)) {
             updatedObjects.push(newObj);
+        } else {
+            unchangedObjects.push(newObj);
         }
     }
     const deletedObjects = oldArray.filter(oldObj => !newArray.find(newObj => newObj.id === oldObj.id));
@@ -299,29 +328,7 @@ function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray:
     return {
         added: newObjects,
         deleted: deletedObjects,
-        updated: updatedObjects
+        updated: updatedObjects,
+        unchanged: unchangedObjects,
     };
 }
-
-function index_trail(trail: Trail) {
-    ms.index('trails').addDocuments([
-        {
-            "id": trail.id,
-            "author": trail.author,
-            "name": trail.name,
-            "description": trail.description,
-            "location": trail.location,
-            "distance": trail.distance,
-            "elevation_gain": trail.elevation_gain,
-            "duration": trail.duration,
-            "category": trail.expand.category?.id,
-            "completed": trail.expand.summit_logs?.length > 0,
-            "created": trail.created,
-            "public": trail.public,
-            "_geo": {
-                "lat": trail.lat,
-                "lng": trail.lon,
-            }
-        }]);
-}
-

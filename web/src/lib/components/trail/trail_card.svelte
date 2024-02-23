@@ -1,37 +1,9 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
     import type { Trail } from "$lib/models/trail";
-    import { trails_delete, trails_index } from "$lib/stores/trail_store";
-    import { currentUser } from "$lib/stores/user_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
-    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
     export let trail: Trail;
-    export let mode: "show" | "edit" = "show";
 
-    const dropdownItems: DropdownItem[] = [
-        { text: "Open", value: "open", icon: "up-right-from-square" },
-        { text: "Show on map", value: "map", icon: "map" },
-        { text: "Edit", value: "edit", icon: "pen" },
-    ];
-
-    async function handleDropdownClick(
-        currentTrail: Trail,
-        item: { text: string; value: any },
-    ) {
-        if (item.value == "open") {
-            goto(`/trail/view/${currentTrail.id}`);
-        } else if (item.value == "map") {
-            goto(`/map/?lat=${currentTrail.lat}&lon=${currentTrail.lon}`);
-        } else if (item.value == "edit") {
-            goto(`/trail/edit/${currentTrail.id}`);
-        }
-    }
-
-    async function deleteTrail() {
-        await trails_delete(trail);
-        await trails_index();
-    }
 </script>
 
 <div
@@ -45,18 +17,10 @@
     </div>
     <div class="p-4">
         <div>
-            <div class="flex justify-between items-center">
-                <h4 class="font-semibold text-lg">{trail.name}</h4>
-                {#if $currentUser && $currentUser.id == trail.author && mode == "edit"}
-                    <Dropdown
-                        on:change={(e) => handleDropdownClick(trail, e.detail)}
-                        items={dropdownItems}
-                    ></Dropdown>
-                {/if}
-            </div>
+            <h4 class="font-semibold text-lg">{trail.name}</h4>
             <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
         </div>
-        <div class="flex mt-2 gap-4 text-sm text-gray-500">
+        <div class="flex mt-2 gap-4 text-sm text-gray-500 whitespace-nowrap">
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatMeters(
                     trail.distance,

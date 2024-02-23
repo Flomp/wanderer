@@ -193,7 +193,6 @@
         reader.readAsText(selectedFile);
 
         reader.onload = async function (e) {
-            trail.set(new Trail(""));
             await addGPXLayer(e.target?.result as string);
             const closestCity = (await ms.index("cities500").search("", {
                 filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
@@ -450,7 +449,7 @@
                 on:change={handlePhotoSelection}
             />
             {#each $form.photos ?? [] as photo, i}
-                <div class="shrink-0 grow-0 basis-auto">
+                <div class="shrink-0 grow-0 basis-auto m-2">
                     <PhotoCard
                         src={photo}
                         on:delete={() => handlePhotoDelete(i)}

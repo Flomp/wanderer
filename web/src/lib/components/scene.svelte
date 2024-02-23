@@ -44,7 +44,7 @@
     makeDefault
     position={[5, 2, 0]}
     on:create={({ ref }) => {
-        ref.lookAt(0, 0, -0.5);
+        ref.lookAt(0, 0, 0);
     }}
 />
 

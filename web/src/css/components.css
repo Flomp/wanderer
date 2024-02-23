@@ -27,19 +27,15 @@
 }
 
 .tab {
-    @apply p-4 rounded-t-lg
+    @apply p-4 rounded-t-lg border border-transparent
 }
 
 .tab:hover {
-    @apply bg-menu-item-background-hover
-}
-
-.tab-active {
-    @apply bg-primary text-white
+    @apply border-menu-item-background-hover
 }
 
 .tab-active:hover {
-    @apply bg-primary
+    @apply bg-transparent
 }
 
 .tooltip {

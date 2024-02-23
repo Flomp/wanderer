@@ -9,15 +9,17 @@
     import { currentUser } from "$lib/stores/user_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
-    import type { Icon, Marker } from "leaflet";
+    import type { Icon, Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import type { DataSource } from "photoswipe";
     import PhotoSwipeLightbox from "photoswipe/lightbox";
     import "photoswipe/style.css";
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
 
     const tabs = ["Description", "Waypoints", "Photos", "Summit book"];
+
+    let map: Map;
 
     let activeTab = 0;
 
@@ -27,6 +29,8 @@
     let lightboxDataSource: DataSource;
 
     let openConfirmModal: () => void;
+
+    let mapFullScreen: boolean = false;
 
     const dropdownItems: DropdownItem[] = [
         { text: "Show on map", value: "map", icon: "map" },
@@ -39,7 +43,7 @@
         await import("leaflet-gpx");
         await import("leaflet.awesome-markers");
 
-        const map = L.map("map").setView([0, 0], 2);
+        map = L.map("map").setView([0, 0], 2);
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors",
@@ -135,10 +139,16 @@
     async function deleteTrail() {
         trails_delete($trail).then(() => history.back());
     }
+
+    async function toggleMapFullScreen() {
+        mapFullScreen = !mapFullScreen;
+        await tick();
+        map.invalidateSize();
+    }
 </script>
 
 <div
-    class="trail-panel max-w-5xl mx-auto shadow-2xl rounded-3xl overflow-hidden"
+    class="trail-panel max-w-5xl mx-auto border border-input-border rounded-3xl overflow-hidden"
 >
     <section class="relative h-80">
         <img class="w-full h-80" src={$trail.thumbnail} alt="" />
@@ -158,7 +168,9 @@
                 </h3>
             </div>
             {#if $currentUser && $currentUser.id == $trail.author}
-                <div class="px-4 py-2 bg-menu-background rounded-full space-x-2">
+                <div
+                    class="px-4 py-2 bg-menu-background rounded-full space-x-2"
+                >
                     {#each dropdownItems as item}
                         <button
                             data-title={item.text}
@@ -172,7 +184,7 @@
         </div>
     </section>
     <section
-        class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8"
+        class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8 border-b border-input-border"
     >
         <div class="flex flex-col items-center">
             <span>Distance</span>
@@ -202,18 +214,21 @@
         {/if}
     </section>
     {#if $trail.tags && $trail.tags.length > 0}
-        <hr class="border-separator"/>
+        <hr class="border-separator" />
         <section class="flex p-8 gap-4 text-gray-600">
             {#each $trail.tags as tag}
                 <span class="py-2 px-4 border rounded-full">{tag}</span>
             {/each}
         </section>
-        <hr class="border-separator"/>
+        <hr class="border-separator" />
     {/if}
     <section class="p-8">
         <Tabs {tabs} bind:activeTab></Tabs>
-        <div class="flex flex-wrap md:flex-nowrap mt-6 gap-8">
-            <div class="basis-full">
+        <div
+            class="grid grid-cols-1 mt-6 gap-8"
+            class:md:grid-cols-[1fr_18rem]={!mapFullScreen}
+        >
+            <div>
                 {#if activeTab == 0}
                     <article class="text-justify whitespace-pre-line text-sm">
                         {$trail.description}
@@ -253,10 +268,19 @@
                     </ul>
                 {/if}
             </div>
-            <div
-                class="rounded-xl h-72 basis-full md:basis-72 shrink-0"
-                id="map"
-            ></div>
+            <div class="relative" class:-order-1={mapFullScreen}>
+                <div class="rounded-xl h-72" id="map">
+                    <div class="leaflet-top leaflet-right">
+                        <button
+                            class="leaflet-control fa fa-{mapFullScreen
+                                ? 'minimize'
+                                : 'maximize'} rounded-full text-lg bg-white px-[14px] py-2 hover:bg-gray-100"
+                            style="cursor: pointer !important"
+                            on:click={() => toggleMapFullScreen()}
+                        ></button>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
     <ConfirmModal

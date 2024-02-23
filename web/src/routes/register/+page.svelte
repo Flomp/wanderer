@@ -2,7 +2,9 @@
     import { goto } from "$app/navigation";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
-    import LogoTextTwoLine from "$lib/components/logo/logo_text_two_line.svelte";
+    import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
+    import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
+    import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { users_create, type User, login } from "$lib/stores/user_store";
     import { createForm } from "$lib/vendor/svelte-form-lib";
@@ -53,10 +55,14 @@
 
 <main class="flex justify-center">
     <form
-        class="login-panel max-w-md shadow-lg rounded-xl p-8 flex flex-col justify-center items-center gap-8 w-[28rem] mt-8"
+        class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-8 w-[28rem] mt-8"
         on:submit={handleSubmit}
     >
-        <LogoTextTwoLine></LogoTextTwoLine>
+        {#if $theme == "light"}
+            <LogoTextTwoLineDark></LogoTextTwoLineDark>
+        {:else}
+            <LogoTextTwoLineLight></LogoTextTwoLineLight>
+        {/if}
         <h4 class="text-xl font-semibold">Save your adventures!</h4>
         <div class="space-y-6 w-80">
             <TextField

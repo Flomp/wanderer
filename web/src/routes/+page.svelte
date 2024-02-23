@@ -60,7 +60,7 @@
 </script>
 
 <section
-    class="hero grid grid-cols-1 md:grid-cols-2"
+    class="hero grid grid-cols-1 md:grid-cols-2 md:px-8 md:gap-8"
     style="height: calc(100vh - 112px)"
 >
     <div
@@ -90,10 +90,10 @@
 <section
     class="max-w-7xl mx-auto mt-8 px-8 xl:px-0 grid grid-cols-1 md:grid-cols-2 items-center"
 >
-    <div id="trails" class="flex flex-wrap justify-items-center gap-8 py-8">
+    <div id="trails" class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none">
         {#each $trails as trail}
             <a href="/trail/view/{trail.id}">
-                <TrailCard {trail} mode="edit"></TrailCard></a
+                <TrailCard {trail}></TrailCard></a
             >
         {/each}
     </div>

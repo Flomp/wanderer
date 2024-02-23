@@ -29,7 +29,7 @@
             type="radio"
             checked={i == selected}
             value={item.value}
-            class="w-4 h-4 accent-input-background border-input-border focus:ring-input-ring focus:ring-2"
+            class="w-4 h-4 accent-primary border-input-border focus:ring-input-ring focus:ring-2"
             on:change={() => handleRadioChange(i)}
         />
         <label for="{name}-radio-{i}" class="ms-2 text-sm">{item.text}</label>

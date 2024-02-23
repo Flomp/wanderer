@@ -7,7 +7,7 @@
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import { ms } from "$lib/meilisearch";
-    import type { Trail } from "$lib/models/trail";
+    import type { Trail, TrailFilter } from "$lib/models/trail";
     import {
         trails,
         trails_search_bounding_box,
@@ -26,6 +26,9 @@
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
+    import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
+    import { categories } from "$lib/stores/category_store";
+    import { slide } from "svelte/transition";
 
     let L: any;
     let map: Map;
@@ -33,6 +36,10 @@
     let startMarkers: Record<string, Marker> = {};
 
     let searchDropdownItems: SearchItem[] = [];
+
+    let showFilter: boolean = false;
+
+    let filter: TrailFilter;
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -128,7 +135,11 @@
     }
 
     async function searchTrails(northEast: LatLng, southWest: LatLng) {
-        const changes = await trails_search_bounding_box(northEast, southWest);
+        const changes = await trails_search_bounding_box(
+            northEast,
+            southWest,
+            filter,
+        );
 
         for (const newTrail of changes.added) {
             const gpxLayer = await addGPXLayer(newTrail);
@@ -212,19 +223,46 @@
         const marker: Marker = startMarkers[trail.id!];
         marker?.closePopup();
     }
+
+    async function handleFilterUpdate(filter: TrailFilter) {
+        const bounds = map.getBounds();
+        await searchTrails(bounds.getNorthEast(), bounds.getSouthWest());
+    }
 </script>
 
-<main class="grid grid-cols-[400px_1fr]">
+<main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <div
-        class="overflow-y-auto overflow-x-hidden flex flex-col items-center gap-4 px-8"
+        class="overflow-y-auto overflow-x-hidden flex flex-col items-stretch gap-4 px-8"
+        style="height: calc(100vh - 124px)"
     >
-        <Search
-            extraClasses="w-full"
-            on:update={(e) => search(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
-            placeholder="Search for trails, places..."
-            items={searchDropdownItems}
-        ></Search>
+        <div class="sticky top-0 z-10 bg-background pb-4 space-y-4">
+            <div class="flex items-center gap-4">
+                <Search
+                    extraClasses="w-full"
+                    on:update={(e) => search(e.detail)}
+                    on:click={(e) => handleSearchClick(e.detail)}
+                    placeholder="Search for trails, places..."
+                    items={searchDropdownItems}
+                ></Search>
+                <button
+                    class="btn-icon"
+                    on:click={() => (showFilter = !showFilter)}
+                    ><i class="fa fa-sliders"></i></button
+                >
+            </div>
+            {#if showFilter}
+                <div in:slide out:slide>
+                    <TrailFilterPanel
+                        categories={$categories}
+                        showTrailSearch={false}
+                        showCitySearch={false}
+                        bind:filter
+                        on:update={(e) => handleFilterUpdate(e.detail)}
+                    ></TrailFilterPanel>
+                </div>
+            {/if}
+        </div>
+
         {#if $trails.length == 0}
             <EmptyStateSearch></EmptyStateSearch>
         {/if}
@@ -232,7 +270,6 @@
             <a href="/trail/view/{trail.id}">
                 <TrailCard
                     {trail}
-                    mode="edit"
                     on:mouseenter={() => handleTrailCardMouseEnter(trail)}
                     on:mouseleave={() => handleTrailCardMouseLeave(trail)}
                 ></TrailCard>

@@ -12,8 +12,7 @@
         { text: "Home", value: "/" },
         { text: "Trails", value: "/trails" },
         { text: "Map", value: "/map" },
-        { text: "Category", value: "/" },
-        { text: "Favorites", value: "/" },
+        { text: "Lists", value: "/lists" },
     ];
 
     const dropdownItems = [
@@ -72,7 +71,7 @@
     function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "logout") {
             logout();
-            goto("/login");
+            goto("/");
         }
     }
 </script>
@@ -85,21 +84,24 @@
             <LogoTextLight></LogoTextLight>
         {/if}
     </a>
+    <menu
+        id="nav-bar-links"
+        class="hidden md:flex gap-8 relative py-1 px-2 "
+    >
+        <div
+            class="absolute h-full w-16 bg-menu-item-background-hover rounded-xl top-0 z-0"
+            style="width: {$indicatorWidth}px; left: {$indicatorPosition}px; scale: {$indicatorScale}"
+        ></div>
+        {#each navBarItems as item}
+            <a
+                class="font-semibold z-10"
+                href={item.value}
+                data-sveltekit-preload-data="tap">{item.text}</a
+            >
+        {/each}
+    </menu>
     {#if $currentUser}
-        <menu id="nav-bar-links" class="flex gap-8 relative py-1 px-2">
-            <div
-                class="absolute h-full w-16 bg-menu-item-background-hover rounded-xl top-0 z-0"
-                style="width: {$indicatorWidth}px; left: {$indicatorPosition}px; scale: {$indicatorScale}"
-            ></div>
-            {#each navBarItems as item}
-                <a
-                    class="font-semibold z-10"
-                    href={item.value}
-                    data-sveltekit-preload-data="tap">{item.text}</a
-                >
-            {/each}
-        </menu>
-        <div class="flex gap-6 items-center">
+        <div class="hidden md:flex gap-6 items-center">
             <button
                 class="btn-icon fa-regular fa-{$theme === 'light'
                     ? 'sun'
@@ -121,6 +123,14 @@
             </Dropdown>
         </div>
     {:else}
-        <a class="btn-primary btn-large" href="/login">Login</a>
+        <div class="hidden md:flex items-center gap-8">
+            <button
+                class="btn-icon fa-regular fa-{$theme === 'light'
+                    ? 'sun'
+                    : 'moon'}"
+                on:click={() => toggleTheme()}
+            ></button>
+            <a class="btn-primary btn-large" href="/login">Login</a>
+        </div>
     {/if}
 </nav>
