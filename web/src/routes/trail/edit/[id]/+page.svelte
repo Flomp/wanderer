@@ -81,7 +81,10 @@
                 ) as HTMLFormElement;
                 const formData = new FormData(htmlForm);
                 if (!submittedTrail.id) {
-                    const createdTrail = await trails_create(submittedTrail, formData);
+                    const createdTrail = await trails_create(
+                        submittedTrail,
+                        formData,
+                    );
                     $form.id = createdTrail.id;
                 } else {
                     await trails_update($trail, submittedTrail, formData);
@@ -194,11 +197,13 @@
 
         reader.onload = async function (e) {
             await addGPXLayer(e.target?.result as string);
-            const closestCity = (await ms.index("cities500").search("", {
-                filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
-                sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
-                limit: 1,
-            })).hits[0];
+            const closestCity = (
+                await ms.index("cities500").search("", {
+                    filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
+                    sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
+                    limit: 1,
+                })
+            ).hits[0];
 
             $form.location = closestCity.name;
         };
@@ -339,10 +344,10 @@
     }
 </script>
 
-<main class="grid grid-cols-[400px_1fr]">
+<main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <form
         id="trail-form"
-        class="overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-8"
+        class="overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0"
         on:submit={handleSubmit}
     >
         <h3 class="text-xl font-semibold">Pick a trail</h3>
@@ -412,7 +417,7 @@
             ></Select>
         {/if}
         <Toggle name="public" label="Public" bind:value={$form.public}></Toggle>
-        <hr class="border-separator"/>
+        <hr class="border-separator" />
         <h3 class="text-xl font-semibold">Waypoints</h3>
         <ul>
             {#each $form.expand.waypoints ?? [] as waypoint, i}
@@ -432,7 +437,7 @@
             on:click={beforeWaypointModalOpen}
             ><i class="fa fa-plus mr-2"></i>Add Waypoint</button
         >
-        <hr class="border-separator"/>
+        <hr class="border-separator" />
         <h3 class="text-xl font-semibold">Photos</h3>
         <div class="flex gap-4 max-w-full overflow-x-auto shrink-0">
             <button
@@ -459,7 +464,7 @@
                 </div>
             {/each}
         </div>
-        <hr class="border-separator"/>
+        <hr class="border-separator" />
         <h3 class="text-xl font-semibold">Summit Book</h3>
         <ul>
             {#each $form.expand.summit_logs ?? [] as log, i}
@@ -478,7 +483,7 @@
             on:click={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>Add Entry</button
         >
-        <hr class="border-separator"/>
+        <hr class="border-separator" />
         <Button
             primary={true}
             large={true}
@@ -495,8 +500,13 @@
 ></SummitLogModal>
 
 <style>
-    #map,
-    form {
-        height: calc(100vh - 124px);
+    #map {
+        height: calc(400px);
+    }
+    @media only screen and (min-width: 768px) {
+        #map,
+        form {
+            height: calc(100vh - 124px);
+        }
     }
 </style>

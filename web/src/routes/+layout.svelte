@@ -7,9 +7,11 @@
     import "../css/app.css";
     import "../css/components.css";
     import "../css/theme.css";
-
 </script>
 
+<svelte:head>
+    <title> | wanderer</title>
+</svelte:head>
 <div class="theme {$theme}">
     <NavBar></NavBar>
     <Toast></Toast>

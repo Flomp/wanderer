@@ -2,10 +2,19 @@
     export let id: string;
     export let title: string;
     export function openModal() {
+        document.body.style.position = "fixed";
+        document.body.style.width = "100%";
+        document.body.style.top = `-${window.scrollY}px`;
+
         (document.getElementById(id) as HTMLDialogElement).showModal();
     }
 
     export function closeModal() {
+        const scrollY = document.body.style.top;
+        document.body.style.position = "";
+        document.body.style.top = "";
+        window.scrollTo(0, parseInt(scrollY || "0") * -1);
+
         (document.getElementById(id) as HTMLDialogElement).close();
     }
 </script>
@@ -40,13 +49,14 @@
             <slot name="content" />
         </div>
         <!-- Modal footer -->
-        <div
-            class="p-4 md:p-5 border-t border-separator rounded-b"
-        >
+        <div class="p-4 md:p-5 border-t border-separator rounded-b">
             <slot name="footer" {closeModal} />
         </div>
     </div>
 </dialog>
 
 <style>
+    dialog::backdrop {
+        @apply bg-gray-500/50;
+    }
 </style>

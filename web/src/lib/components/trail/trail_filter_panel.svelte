@@ -134,6 +134,7 @@
                     <input
                         id="{category.name}-checkbox"
                         type="checkbox"
+                        checked={filter.category.includes(category.id)}
                         value={category.id}
                         class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
                         on:change={() => setCategoryFilter(category)}

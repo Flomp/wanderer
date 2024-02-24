@@ -23,7 +23,7 @@
 }
 
 .btn-icon {
-    @apply rounded-full aspect-square h-7 hover:bg-secondary-hover focus:ring-4 ring-input-ring transition-colors;
+    @apply rounded-full aspect-square h-8 text-lg hover:bg-secondary-hover focus:ring-4 ring-input-ring transition-colors;
 }
 
 .tab {

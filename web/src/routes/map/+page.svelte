@@ -29,6 +29,7 @@
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import { categories } from "$lib/stores/category_store";
     import { slide } from "svelte/transition";
+    import { browser } from "$app/environment";
 
     let L: any;
     let map: Map;
@@ -38,6 +39,7 @@
     let searchDropdownItems: SearchItem[] = [];
 
     let showFilter: boolean = false;
+    let showMap: boolean = true;
 
     let filter: TrailFilter;
 
@@ -232,11 +234,11 @@
 
 <main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <div
-        class="overflow-y-auto overflow-x-hidden flex flex-col items-stretch gap-4 px-8"
-        style="height: calc(100vh - 124px)"
+        id="trail-list"
+        class="md:overflow-y-auto md:overflow-x-hidden flex flex-col items-stretch gap-4 px-8"
     >
         <div class="sticky top-0 z-10 bg-background pb-4 space-y-4">
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 md:gap-4">
                 <Search
                     extraClasses="w-full"
                     on:update={(e) => search(e.detail)}
@@ -248,6 +250,11 @@
                     class="btn-icon"
                     on:click={() => (showFilter = !showFilter)}
                     ><i class="fa fa-sliders"></i></button
+                >
+                <button
+                    class="btn-icon md:hidden"
+                    on:click={() => (showMap = !showMap)}
+                    ><i class="fa-regular fa-{showMap ? 'rectangle-list' : 'map'}"></i></button
                 >
             </div>
             {#if showFilter}
@@ -263,27 +270,34 @@
             {/if}
         </div>
 
-        {#if $trails.length == 0}
-            <EmptyStateSearch></EmptyStateSearch>
+        {#if !showMap || (browser && window.innerWidth >= 768)}
+            {#if $trails.length == 0}
+                <EmptyStateSearch></EmptyStateSearch>
+            {/if}
+            {#each $trails as trail}
+                <a href="/trail/view/{trail.id}">
+                    <TrailCard
+                        {trail}
+                        on:mouseenter={() => handleTrailCardMouseEnter(trail)}
+                        on:mouseleave={() => handleTrailCardMouseLeave(trail)}
+                    ></TrailCard>
+                </a>
+            {/each}
         {/if}
-        {#each $trails as trail}
-            <a href="/trail/view/{trail.id}">
-                <TrailCard
-                    {trail}
-                    on:mouseenter={() => handleTrailCardMouseEnter(trail)}
-                    on:mouseleave={() => handleTrailCardMouseLeave(trail)}
-                ></TrailCard>
-            </a>
-        {/each}
     </div>
-    <div class="rounded-xl" id="map"></div>
+    <div id="map" class="rounded-xl z-0" class:hidden={!showMap && browser && window.innerWidth < 768}></div>
 </main>
 
 <style>
     #map {
-        height: calc(100vh - 124px);
+        height: calc(100vh - 180px);
     }
-
+    @media only screen and (min-width: 768px) {
+        #map,
+        #trail-list {
+            height: calc(100vh - 124px);
+        }
+    }
     :global(.leaflet-popup-content) {
         width: max-content !important;
         max-width: 100%;

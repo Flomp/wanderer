@@ -6,7 +6,7 @@
 </script>
 
 <div
-    class="category-card relative rounded-2xl shadow-md w-48 h-48 overflow-hidden cursor-pointer"
+    class="category-card relative rounded-2xl shadow-md max-h-48 aspect-video overflow-hidden cursor-pointer"
 >
     <img
         class="w-full h-full"

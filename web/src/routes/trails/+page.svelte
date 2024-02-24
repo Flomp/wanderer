@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from "$app/stores";
     import Select, {
         type SelectItem,
     } from "$lib/components/base/select.svelte";
@@ -26,19 +27,7 @@
 
     let filterExpanded: boolean = true;
 
-    export const filter: TrailFilter = {
-        q: "",
-        category: [],
-        near: {
-            radius: 2000,
-        },
-        distanceMin: 0,
-        distanceMax: 20000,
-        elevationGainMin: 0,
-        elevationGainMax: 4000,
-        sort: "created",
-        sortOrder: "+",
-    };
+    const filter: TrailFilter = $page.data.filter;
 
     onMount(() => {
         const storedDisplayOption = localStorage.getItem("displayOption");

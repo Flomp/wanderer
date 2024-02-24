@@ -64,7 +64,7 @@
     style="height: calc(100vh - 112px)"
 >
     <div
-        class="flex flex-col justify-center gap-8 max-w-md mx-8 md:mx-auto -mt-24"
+        class="flex flex-col justify-center gap-8 max-w-md mx-8 md:mx-auto lg:-mt-24"
     >
         <h2 class="text-7xl font-bold">
             Welcome to <span class="-tracking-[0.075em]">wanderer</span>
@@ -90,7 +90,10 @@
 <section
     class="max-w-7xl mx-auto mt-8 px-8 xl:px-0 grid grid-cols-1 md:grid-cols-2 items-center"
 >
-    <div id="trails" class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none">
+    <div
+        id="trails"
+        class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none"
+    >
         {#each $trails as trail}
             <a href="/trail/view/{trail.id}">
                 <TrailCard {trail}></TrailCard></a
@@ -108,7 +111,7 @@
         <a
             class="inline-block btn-primary btn-large"
             href="/trails"
-            role="button">All Trails</a
+            role="button">Explore</a
         >
     </div>
 </section>
@@ -118,12 +121,18 @@
     <div class="max-w-md md:mx-auto space-y-8">
         <h2 class="text-4xl md:text-5xl font-bold">Categories</h2>
         <h5>
-            Did you know? You cannot only save you hiking trails. There are many categories for all your adventures.
+            Did you know? You cannot only save you hiking trails. There are many
+            categories for all your adventures.
         </h5>
     </div>
-    <div id="categories" class="flex flex-wrap justify-items-center gap-8 py-8">
+    <div
+        id="categories"
+        class="grid grid-cols-1 lg:grid-cols-2 justify-items-center gap-8 py-8"
+    >
         {#each $categories as category}
-            <CategoryCard {category}></CategoryCard>
+            <a href="/trails?category={category.id}">
+                <CategoryCard {category}></CategoryCard>
+            </a>
         {/each}
     </div>
 </section>
