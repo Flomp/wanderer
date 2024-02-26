@@ -274,7 +274,7 @@
                         <button
                             class="leaflet-control fa fa-{mapFullScreen
                                 ? 'minimize'
-                                : 'maximize'} rounded-full text-lg bg-white px-[14px] py-2 hover:bg-gray-100"
+                                : 'maximize'} rounded-full text-lg bg-white text-black px-[14px] py-2 hover:bg-gray-100"
                             style="cursor: pointer !important"
                             on:click={() => toggleMapFullScreen()}
                         ></button>

@@ -12,6 +12,7 @@ export default {
         'secondary-hover': 'rgba(var(--secondary-hover))',
 
         'input-background': 'rgba(var(--input-background))',
+        'input-background-error': 'rgba(var(--input-background-error))',
         'input-border': 'rgba(var(--input-border))',
         'input-border-focus': 'rgba(var(--input-border-focus))',
         'input-ring': 'rgba(var(--input-ring))',

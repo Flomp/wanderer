@@ -130,7 +130,7 @@
         class="grid grid-cols-1 lg:grid-cols-2 justify-items-center gap-8 py-8"
     >
         {#each $categories as category}
-            <a href="/trails?category={category.id}">
+            <a href="/trails?category={category.id}" data-sveltekit-preload-data="off">
                 <CategoryCard {category}></CategoryCard>
             </a>
         {/each}

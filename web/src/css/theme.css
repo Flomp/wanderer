@@ -7,6 +7,7 @@
     --content: 0, 0, 0;
 
     --input-background: 249, 250, 251;
+    --input-background-error: 254, 242, 242;
     --input-border: 209, 213, 219;
     --input-border-focus: 36, 39, 52;
     --input-ring: 148, 163, 184;
@@ -32,6 +33,7 @@
     --content: 255, 255, 255;
 
     --input-background: 36, 39, 52;
+    --input-background-error: 69, 10, 10;
     --input-border: 43, 46, 61;
     --input-border-focus: 108, 115, 150;
     --input-ring: 108, 115, 150;

@@ -1,6 +1,6 @@
 import { Trail } from "$lib/models/trail";
 import { categories_index } from "$lib/stores/category_store";
-import { trail, trails_show } from "$lib/stores/trail_store";
+import { trails_show } from "$lib/stores/trail_store";
 import { error, type Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params }) => {

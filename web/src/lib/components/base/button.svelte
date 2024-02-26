@@ -11,7 +11,7 @@
 </script>
 
 <button
-    class={extraClasses}
+    class="{extraClasses} flex items-center justify-center"
     class:btn-primary={primary}
     class:btn-secondary={secondary}
     class:btn-large={large}
