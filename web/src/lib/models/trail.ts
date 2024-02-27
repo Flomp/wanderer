@@ -75,7 +75,7 @@ class Trail {
     }
 }
 
-const trailSchema = object<SummitLog>({
+const trailSchema = object<Trail>({
     id: string().optional(),
     name: string().required("Required"),
     location: string().optional(),

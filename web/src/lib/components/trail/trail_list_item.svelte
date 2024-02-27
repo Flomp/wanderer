@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
+    import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
 
     export let trail: Trail;
@@ -11,7 +12,7 @@
     <div class="shrink-0">
         <img
             class="h-28 w-28 object-cover rounded-xl"
-            src={trail.thumbnail}
+            src={getFileURL(trail, trail.thumbnail)}
             alt=""
         />
     </div>

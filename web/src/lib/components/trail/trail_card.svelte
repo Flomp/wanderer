@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
+    import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
 
     export let trail: Trail;
@@ -13,7 +14,7 @@
     role="listitem"
 >
     <div class="w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl">
-        <img src={trail.thumbnail} alt="" />
+        <img src={getFileURL(trail, trail.thumbnail)} alt="" />
     </div>
     <div class="p-4">
         <div>

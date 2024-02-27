@@ -1,0 +1,22 @@
+import type { TrailFilter } from "$lib/models/trail";
+import { lists_index } from "$lib/stores/list_store";
+import type { Load } from "@sveltejs/kit";
+
+export const load: Load = async ({ params }) => {
+    const filter: TrailFilter = {
+        q: "",
+        category: [],
+        near: {
+            radius: 2000,
+        },
+        distanceMin: 0,
+        distanceMax: 20000,
+        elevationGainMin: 0,
+        elevationGainMax: 4000,
+        sort: "created",
+        sortOrder: "+",
+    };
+    await lists_index();
+
+    return {filter};
+};

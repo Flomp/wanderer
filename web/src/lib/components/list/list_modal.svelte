@@ -1,0 +1,114 @@
+<script lang="ts">
+    import { createEventDispatcher } from "svelte";
+
+    import { browser } from "$app/environment";
+    import { listSchema, type List } from "$lib/models/list";
+    import { list } from "$lib/stores/list_store";
+    import { createForm } from "$lib/vendor/svelte-form-lib/index";
+    import { util } from "$lib/vendor/svelte-form-lib/util";
+    import Modal from "../base/modal.svelte";
+    import TextField from "../base/text_field.svelte";
+    import Textarea from "../base/textarea.svelte";
+
+    export let openModal: (() => void) | undefined = undefined;
+    export let closeModal: (() => void) | undefined = undefined;
+
+    const dispatch = createEventDispatcher();
+
+    let previewURL = "";
+
+    const { form, errors, handleChange, handleSubmit } = createForm<List>({
+        initialValues: $list,
+        validationSchema: listSchema,
+        onSubmit: async (submittedList) => {
+            const htmlForm = document.getElementById(
+                "list-form",
+            ) as HTMLFormElement;
+            const formData = new FormData(htmlForm);
+
+            dispatch("save", { list: submittedList, formData: formData });
+            (document.getElementById("avatar") as HTMLInputElement).value = "";
+            closeModal!();
+        },
+    });
+
+    function openAvatarBrowser() {
+        document.getElementById("avatar")!.click();
+    }
+
+    function handleAvatarSelection() {
+        const files = (
+            document.getElementById("avatar") as HTMLInputElement
+        ).files;
+
+        if (!files) {
+            return;
+        }
+
+        previewURL = URL.createObjectURL(files[0]);
+    }
+    $: if (browser) {
+        form.set(util.cloneDeep($list));
+        previewURL = $list.avatar ?? "";
+    }
+</script>
+
+<Modal
+    id="list-modal"
+    title="New List"
+    let:openModal
+    bind:openModal
+    bind:closeModal
+>
+    <slot {openModal} />
+    <form
+        id="list-form"
+        slot="content"
+        class="modal-content space-y-4"
+        on:submit={handleSubmit}
+    >
+        <label for="avatar" class="text-sm font-medium block"> Avatar </label>
+        <input
+            name="avatar"
+            type="file"
+            id="avatar"
+            accept="image/*"
+            style="display: none;"
+            on:change={handleAvatarSelection}
+        />
+        <div class="flex items-center gap-4">
+            {#if previewURL.length > 0}
+                <img
+                    class="w-32 aspect-square rounded-full"
+                    alt="avatar"
+                    src={previewURL}
+                />
+            {/if}
+            <button
+                class="btn-secondary"
+                type="button"
+                on:click={openAvatarBrowser}>Change...</button
+            >
+        </div>
+
+        <TextField
+            name="name"
+            label="Name"
+            bind:value={$form.name}
+            error={$errors.name}
+            on:change={handleChange}
+        ></TextField>
+
+        <Textarea
+            name="description"
+            label="Description"
+            bind:value={$form.description}
+            error={$errors.description}
+            on:change={handleChange}
+        ></Textarea>
+    </form>
+    <div slot="footer" class="flex items-center gap-4">
+        <button class="btn-secondary" on:click={closeModal}>Cancel</button>
+        <button class="btn-primary" type="submit" form="list-form">Save</button>
+    </div>
+</Modal>

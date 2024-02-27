@@ -18,7 +18,7 @@
 
     --footer-background: 36, 39, 52;
 
-    --separator: 148, 163, 184;
+    --separator: 209, 213, 219;
 
     background: rgba(var(--background));
     color: rgba(var(--content));
@@ -44,7 +44,7 @@
 
     --footer-background: 26, 29, 51;
 
-    --separator: 108, 115, 150;
+    --separator: 43, 46, 61;
 
     background: rgba(var(--background));
     color: rgba(var(--content));

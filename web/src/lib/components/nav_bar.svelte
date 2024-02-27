@@ -52,6 +52,9 @@
             case "/map":
                 childPosition = 3;
                 break;
+            case "/lists":
+                childPosition = 4;
+                break;
             default:
                 break;
         }

@@ -1,9 +1,11 @@
-import { createInstance, pb } from '$lib/pocketbase'
+import { regenerateInstance } from '$lib/meilisearch'
+import { pb } from '$lib/pocketbase'
 import type { Handle } from '@sveltejs/kit'
 
 export const handle: Handle = async ({ event, resolve }) => {
   // load the store data from the request cookie string
   pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '')
+  regenerateInstance();
   try {
     // get an up-to-date auth store state by verifying and refreshing the loaded auth model (if any)
     if (pb.authStore.isValid) {
@@ -13,7 +15,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     // clear the auth store on failed refresh
     pb.authStore.clear()
   }
-  
+
   event.locals.pb = pb
   event.locals.user = pb.authStore.model
 

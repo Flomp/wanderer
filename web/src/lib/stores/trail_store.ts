@@ -137,7 +137,6 @@ export async function trails_create(trail: Trail, formData: { [key: string]: any
 
     if (!pb.authStore.model) {
         throw new Error("Unauthenticated");
-        ;
     }
     formData.set("category", trail.expand.category!.id);
 
@@ -302,7 +301,6 @@ async function fetchGPX(trail: Trail) {
 }
 
 function setFileURLs(trail: Trail) {
-    trail.thumbnail = getFileURL(trail, trail.thumbnail);
     for (let i = 0; i < trail.photos.length; i++) {
         const photo = trail.photos[i];
         trail.photos[i] = getFileURL(trail, photo)
