@@ -78,6 +78,8 @@
         if (item.value == "logout") {
             logout();
             goto("/");
+        } else if (item.value == "profile") {
+            goto("/profile");
         }
     }
 </script>
@@ -104,24 +106,25 @@
         {/each}
     </div>
     <hr class="my-6 border-input-border" />
-    <div class="flex flex-col basis-full gap-y-3">
+    <div class="flex flex-col basis-full">
         <a class="btn-primary btn-large text-center mx-4" href="/trail/edit/new"
             ><i class="fa fa-plus mr-2"></i>New Trail</a
         >
         {#if $currentUser}
             <div class="basis-full"></div>
             <hr class="border-input-border" />
-            <div class="flex gap-4 items-center mx-4">
+            <div class="flex gap-4 items-center m-4">
                 <img
                     class="rounded-full w-8 aspect-square"
-                    src="https://api.dicebear.com/7.x/initials/svg?seed={$currentUser.username}&backgroundType=gradientLinear"
+                    src={$currentUser.avatar ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
                     alt=""
                 />
                 <div>
                     <p class="text-sm">{$currentUser.username}</p>
                     <p class="text-sm text-gray-500">{$currentUser.email}</p>
                 </div>
-                <button class="btn-icon tooltip" data-title="Logout"
+                <button class="btn-icon"
                     ><i class="fa-solid fa-arrow-right-from-bracket"
                     ></i></button
                 >
@@ -165,12 +168,18 @@
             <Dropdown
                 items={dropdownItems}
                 on:change={(e) => handleDropdownClick(e.detail)}
+                let:toggleMenu={openDropdown}
             >
-                <img
-                    class="rounded-full"
-                    src="https://api.dicebear.com/7.x/initials/svg?seed={$currentUser.username}&backgroundType=gradientLinear"
-                    alt=""
-                />
+                <button
+                    class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 w-10"
+                    on:click={openDropdown}
+                >
+                    <img
+                        class="rounded-full"
+                        src="https://api.dicebear.com/7.x/initials/svg?seed={$currentUser.username}&backgroundType=gradientLinear"
+                        alt=""
+                    />
+                </button>
             </Dropdown>
         </div>
     {:else}

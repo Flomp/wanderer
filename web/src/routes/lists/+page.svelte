@@ -54,10 +54,11 @@
 </script>
 
 <main
-    class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-8 max-w-7xl mx-6 md:mx-auto min-h-screen"
+    class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-8 max-w-7xl mx-4 md:mx-auto"
+    style="min-height: calc(100vh - 124px)"
 >
     <ul
-        class="list-list max-w-xl mx-2 md:mx-auto mt-8 rounded-xl border border-input-border  p-4"
+        class="list-list max-w-xl mx-2 md:mx-auto mt-8 rounded-xl border border-input-border p-4"
     >
         <button
             class="flex w-full items-center gap-4 hover:bg-menu-item-background-hover transition-colors rounded-xl p-4 cursor-pointer"
@@ -67,17 +68,20 @@
             <h5 class="text-xl font-semibold">Create new list</h5>
         </button>
         <hr class="border-separator my-2" />
-        {#each $lists as item, i}
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-            <li on:click={() => list.set(item)}>
-                <ListCard list={item} on:change={(e) => handleDropdownClick(e, item)} active={item.id === $list.id}
-                ></ListCard>
-                {#if i != $lists.length - 1}
-                    <hr class="border-separator my-2" />
-                {/if}
-            </li>
-        {/each}
+        <div class="max-h-[512px] md:max-h-none overflow-y-auto">
+            {#each $lists as item, i}
+                <li on:click={() => list.set(item)} role="presentation">
+                    <ListCard
+                        list={item}
+                        on:change={(e) => handleDropdownClick(e, item)}
+                        active={item.id === $list.id}
+                    ></ListCard>
+                    {#if i != $lists.length - 1}
+                        <hr class="border-separator my-2" />
+                    {/if}
+                </li>
+            {/each}
+        </div>
     </ul>
     <TrailList
         bind:filter

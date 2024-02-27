@@ -30,6 +30,7 @@
     import { categories } from "$lib/stores/category_store";
     import { slide } from "svelte/transition";
     import { browser } from "$app/environment";
+    import { getFileURL } from "$lib/util/file_util";
 
     let L: any;
     let map: Map;
@@ -188,7 +189,7 @@
                             `<a href="/trail/view/${trail.id}">
     <li class="flex items-center gap-4 cursor-pointer text-black">
         <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${
-            trail.thumbnail
+            getFileURL(trail, trail.thumbnail)
         }" alt="">
         </div>
         <div>

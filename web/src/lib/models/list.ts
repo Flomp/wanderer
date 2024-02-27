@@ -6,6 +6,7 @@ export class List {
     name: string;
     description?: string;
     avatar?: string;
+    trails?: string[];
     expand?: {
         trails: Trail[]
     }

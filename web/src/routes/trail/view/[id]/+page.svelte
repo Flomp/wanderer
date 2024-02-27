@@ -1,12 +1,22 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import Dropdown from "$lib/components/base/dropdown.svelte";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
+    import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import Tabs from "$lib/components/tabs.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
+    import type { List } from "$lib/models/list";
+    import {
+        lists_add_trail,
+        lists_index,
+        lists_remove_trail,
+    } from "$lib/stores/list_store";
+    import { show_toast } from "$lib/stores/toast_store";
     import { trail, trails_delete } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
+    import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import type { Icon, Map, Marker } from "leaflet";
@@ -29,11 +39,15 @@
     let lightboxDataSource: DataSource;
 
     let openConfirmModal: () => void;
+    let openListSelectModal: () => void;
 
     let mapFullScreen: boolean = false;
 
     const dropdownItems: DropdownItem[] = [
         { text: "Show on map", value: "map", icon: "map" },
+        { text: "Directions", value: "direction", icon: "car" },
+        ...($trail.gpx ? [{ text: "Download GPX", value: "download", icon: "download" }] : []),
+        { text: "Add to list", value: "list", icon: "bookmark" },
         { text: "Edit", value: "edit", icon: "pen" },
         { text: "Delete", value: "delete", icon: "trash" },
     ];
@@ -129,11 +143,32 @@
     async function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "map") {
             goto(`/map/?lat=${$trail.lat}&lon=${$trail.lon}`);
+        } else if (item.value == "list") {
+            openListSelectModal();
+        } else if (item.value == "direction") {
+            window
+                .open(
+                    `https://www.google.com/maps/dir/Current+Location/${$trail.lat},${$trail.lon}`,
+                    "_blank",
+                )
+                ?.focus();
+        } else if (item.value == "download") {
+            downloadURI(getFileURL($trail, $trail.gpx), $trail.gpx!);
+            
         } else if (item.value == "edit") {
             goto(`/trail/edit/${$trail.id}`);
         } else if (item.value == "delete") {
             openConfirmModal();
         }
+    }
+
+    function downloadURI(uri: string, name: string) {
+        var link = document.createElement("a");
+        link.setAttribute("download", name);
+        link.href = uri;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
     }
 
     async function deleteTrail() {
@@ -145,13 +180,46 @@
         await tick();
         map.invalidateSize();
     }
+
+    async function handleListSelection(list: List) {
+        try {
+            if (list.trails?.includes($trail.id!)) {
+                await lists_remove_trail(list, $trail);
+                show_toast({
+                    type: "success",
+                    icon: "check",
+                    text: `Removed trail from "${list.name}"`,
+                });
+            } else {
+                await lists_add_trail(list, $trail);
+                show_toast({
+                    type: "success",
+                    icon: "check",
+                    text: `Added trail to "${list.name}"`,
+                });
+            }
+            await lists_index();
+        } catch (e) {
+            console.error(e);
+
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: "Error adding trail to list.",
+            });
+        }
+    }
 </script>
 
 <div
     class="trail-panel max-w-5xl mx-auto border border-input-border rounded-3xl overflow-hidden"
 >
     <section class="relative h-80">
-        <img class="w-full h-80" src={$trail.thumbnail} alt="" />
+        <img
+            class="w-full h-80"
+            src={getFileURL($trail, $trail.thumbnail)}
+            alt=""
+        />
         <div
             class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
         ></div>
@@ -168,18 +236,17 @@
                 </h3>
             </div>
             {#if $currentUser && $currentUser.id == $trail.author}
-                <div
-                    class="px-4 py-2 bg-menu-background rounded-full space-x-2"
+                <Dropdown
+                    items={dropdownItems}
+                    on:change={(e) => handleDropdownClick(e.detail)}
+                    let:toggleMenu={openDropdown}
+                    ><button
+                        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
+                        on:click={openDropdown}
+                    >
+                        <i class="fa fa-ellipsis-vertical"></i>
+                    </button></Dropdown
                 >
-                    {#each dropdownItems as item}
-                        <button
-                            data-title={item.text}
-                            class="tooltip btn-icon"
-                            on:click={() => handleDropdownClick(item)}
-                            ><i class="fa fa-{item.icon}"></i></button
-                        >
-                    {/each}
-                </div>
             {/if}
         </div>
     </section>
@@ -288,6 +355,10 @@
         bind:openModal={openConfirmModal}
         on:confirm={deleteTrail}
     ></ConfirmModal>
+    <ListSelectModal
+        bind:openModal={openListSelectModal}
+        on:change={(e) => handleListSelection(e.detail)}
+    ></ListSelectModal>
 </div>
 
 <style>

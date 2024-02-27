@@ -14,11 +14,17 @@
     class="flex items-center gap-6 p-4 hover:bg-menu-item-background-hover rounded-xl transition-colors cursor-pointer"
     class:bg-menu-item-background-hover={active}
 >
-    <img
-        class="w-24 aspect-square rounded-full"
-        src={list.avatar}
-        alt="avatar"
-    />
+    {#if list.avatar}
+        <img
+            class="w-16 md:w-24 aspect-square rounded-full"
+            src={list.avatar}
+            alt="avatar"
+        />
+    {:else}
+        <div class="flex w-16 md:w-24 aspect-square shrink-0 items-center justify-center">
+            <i class="fa fa-table-list text-5xl"></i>
+        </div>
+    {/if}
     <div class="basis-full self-start">
         <div class="flex justify-between items-center">
             <h5 class="text-xl font-semibold">{list.name}</h5>

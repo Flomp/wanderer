@@ -16,7 +16,7 @@
 
     let isOpen = false;
 
-    function toggleMenu(e: MouseEvent) {
+    export function toggleMenu(e: MouseEvent) {
         e.stopPropagation();
         e.preventDefault();
         isOpen = !isOpen;
@@ -35,15 +35,16 @@
 <svelte:window on:mouseup={() => (isOpen = false)} />
 
 <div class="dropdown relative">
-    <button
-        class="btn-icon flex items-center justify-center"
-        on:click={toggleMenu}
-        type="button"
-    >
-        <slot>
+    <slot {toggleMenu}>
+        <button
+            class="btn-icon flex items-center justify-center"
+            on:click={toggleMenu}
+            type="button"
+        >
             <i class="fa fa-ellipsis-vertical text-{size}"></i>
-        </slot>
-    </button>
+        </button>
+    </slot>
+
     {#if isOpen}
         <ul
             class="menu absolute bg-menu-background border border-input-border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-hidden mt-2"
@@ -51,13 +52,10 @@
             style="z-index: 1001"
         >
             {#each items as item}
-                <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
-                    tabindex="0"
+                    role="presentation"
                     on:mouseup|stopPropagation={() => handleItemClick(item)}
-                    on:keydown|stopPropagation={() => handleItemClick(item)}
                 >
                     {#if item.icon}
                         <i class="fa fa-{item.icon} mr-3"></i>
