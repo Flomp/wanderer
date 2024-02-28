@@ -1,19 +1,24 @@
 <script lang="ts">
+    import { browser } from "$app/environment";
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
-    import TrailCard from "$lib/components/trail/trail_card.svelte";
     import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
+    import TrailCard from "$lib/components/trail/trail_card.svelte";
+    import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import { ms } from "$lib/meilisearch";
     import type { Trail, TrailFilter } from "$lib/models/trail";
+    import { categories } from "$lib/stores/category_store";
     import {
         trails,
         trails_search_bounding_box,
     } from "$lib/stores/trail_store";
     import { country_codes } from "$lib/util/country_code_util";
+    import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
+    import "$lib/vendor/leaflet-elevation/src/index.css";
     import type {
         GPX,
         Icon,
@@ -26,11 +31,7 @@
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
-    import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
-    import { categories } from "$lib/stores/category_store";
     import { slide } from "svelte/transition";
-    import { browser } from "$app/environment";
-    import { getFileURL } from "$lib/util/file_util";
 
     let L: any;
     let map: Map;
@@ -166,6 +167,10 @@
             }
             const gpxLayer = new L.GPX(trail.expand.gpx_data!, {
                 async: true,
+                polyline_options: {
+                    className: "lightblue-theme elevation-polyline",
+                    weight: 5,
+                },
                 gpx_options: {
                     parseElements: ["track"],
                 },
@@ -186,11 +191,12 @@
                         const marker: Marker = e.point as Marker;
                         startMarkers[trail.id!] = marker;
                         marker.bindPopup(
-                            `<a href="/trail/view/${trail.id}">
+                            `<a href="map/trail/${trail.id}">
     <li class="flex items-center gap-4 cursor-pointer text-black">
-        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${
-            getFileURL(trail, trail.thumbnail)
-        }" alt="">
+        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${getFileURL(
+            trail,
+            trail.thumbnail,
+        )}" alt="">
         </div>
         <div>
             <h4 class="font-semibold text-lg">${trail.name}</h4>
@@ -255,7 +261,11 @@
                 <button
                     class="btn-icon md:hidden"
                     on:click={() => (showMap = !showMap)}
-                    ><i class="fa-regular fa-{showMap ? 'rectangle-list' : 'map'}"></i></button
+                    ><i
+                        class="fa-regular fa-{showMap
+                            ? 'rectangle-list'
+                            : 'map'}"
+                    ></i></button
                 >
             </div>
             {#if showFilter}
@@ -276,7 +286,7 @@
                 <EmptyStateSearch></EmptyStateSearch>
             {/if}
             {#each $trails as trail}
-                <a href="/trail/view/{trail.id}">
+                <a href="map/trail/{trail.id}">
                     <TrailCard
                         {trail}
                         on:mouseenter={() => handleTrailCardMouseEnter(trail)}
@@ -286,7 +296,11 @@
             {/each}
         {/if}
     </div>
-    <div id="map" class="rounded-xl z-0" class:hidden={!showMap && browser && window.innerWidth < 768}></div>
+    <div
+        id="map"
+        class="rounded-xl z-0"
+        class:hidden={!showMap && browser && window.innerWidth < 768}
+    ></div>
 </main>
 
 <style>

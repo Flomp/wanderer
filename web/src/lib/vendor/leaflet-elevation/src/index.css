@@ -1,0 +1,329 @@
+.leaflet-hidden {
+  visibility: hidden;
+}
+
+.legend {
+  cursor: pointer;
+}
+
+.leaflet-container {
+  z-index: 0;
+  /* prevent overlapping the .elevation-detached chart */
+}
+
+.elevation-control .background {
+  background-color: var(--ele-bg, rgba(70, 130, 180, 0.2));
+  border-radius: 5px;
+  overflow: visible;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  max-width: 100%;
+}
+
+.elevation-control .grid,
+.elevation-control .area > foreignObject,
+.elevation-control .axis,
+.elevation-control .tooltip,
+.height-focus.line {
+  pointer-events: none;
+}
+
+.elevation-control .axis line,
+.elevation-control .axis path {
+  stroke: var(--ele-axis, #2D1130);
+  stroke-width: 1;
+  fill: none;
+}
+
+.elevation-control .grid .tick line {
+  stroke: var(--ele-grid, #EEE);
+  stroke-width: 1px;
+  shape-rendering: crispEdges;
+}
+
+.elevation-control .grid path {
+  stroke-width: 0;
+}
+
+.elevation-control .axis text,
+.elevation-control .legend text,
+.elevation-control .point text {
+  fill: #000;
+  font-weight: 700;
+  paint-order: stroke fill;
+  stroke: #fff;
+  stroke-width: 2px
+}
+
+.elevation-control .y.axis text {
+  text-anchor: end;
+}
+
+.elevation-control .area {
+  fill: var(--ele-area, #4682B4);
+  stroke: var(--ele-stroke, #000);
+  stroke-width: 1.2;
+  paint-order: stroke fill;
+}
+
+.elevation-control .horizontal-drag-line {
+  cursor: row-resize;
+  stroke: transparent;
+  stroke-dasharray: 5;
+  stroke-width: 1.1;
+}
+
+.elevation-control .active .horizontal-drag-line {
+  stroke: #000;
+}
+
+.elevation-control .horizontal-drag-label {
+  fill: #000;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #FFF;
+  stroke-width: 2px;
+}
+
+.elevation-control .ruler {
+  color: #000;
+  cursor: row-resize;
+}
+
+.elevation-control .mouse-focus-line {
+  stroke: #000;
+  stroke-width: 1;
+}
+
+.elevation-control .mouse-focus-label-rect {
+  fill: #000;
+  fill-opacity: 0.75;
+  stroke-width: 1;
+  stroke: #444;
+}
+
+.elevation-control .mouse-focus-label-text {
+  fill: #FFF;
+  font-size: 10px;
+}
+
+.elevation-control .brush .overlay {
+  cursor: unset;
+}
+
+.elevation-control .brush .selection {
+  fill: var(--ele-brush, rgba(23, 74, 117, 0.4));
+  stroke: none;
+  fill-opacity: unset;
+}
+
+.elevation-summary {
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Verdana, Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  margin: var(--ele-sum-margin, 0 auto);
+  text-shadow: var(--ele-sum-shadow, 1px 0 0 #FFF, -1px 0 0 #FFF, 0 1px 0 #FFF, 0 -1px 0 #FFF, 1px 1px #FFF, -1px -1px 0 #FFF, 1px -1px 0 #FFF, -1px 1px 0 #FFF);
+}
+
+.elevation-summary>span:not(:last-child):after {
+  content: var(--ele-sum-sep, '');
+}
+
+.multiline-summary>span {
+  display: block;
+}
+
+.multiline-summary .download {
+  float: right;
+  margin-top: -3em;
+  margin-right: 2em;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.elevation-summary .summaryvalue {
+  font-weight: bold;
+}
+
+.elevation-toggle-icon {
+  background-color: #fff;
+  right: 5px;
+  top: 5px;
+  height: var(--ele-toggle-size, 36px);
+  width: var(--ele-toggle-size, 36px);
+  cursor: pointer;
+  box-shadow: 0 1px 7px rgba(0, 0, 0, 0.4);
+  border-radius: 5px;
+  display: inline-block;
+  position: var(--ele-toggle-pos, relative);
+}
+
+.elevation-toggle-icon:before {
+  content: '\2716';
+  display: var(--ele-close-btn, none);
+  color: #000;
+  width: 100%;
+  line-height: 20px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.leaflet-elevation-pane .height-focus,
+.leaflet-overlay-pane .height-focus {
+  stroke: #000;
+  fill: var(--ele-circle, var(--ele-area, #FFF));
+}
+
+.leaflet-elevation-pane .height-focus.line,
+.leaflet-overlay-pane .height-focus.line {
+  stroke-width: 2;
+}
+
+.leaflet-elevation-pane .height-focus-label,
+.leaflet-overlay-pane .height-focus-label {
+  font-size: 12px;
+  font-weight: 600;
+  fill: #000;
+  paint-order: stroke;
+  stroke: #FFF;
+  stroke-width: 2px;
+}
+
+.elevation-waypoint-icon:before,
+.elevation-position-icon:before {
+  content: "";
+  width: 100%;
+  height: 100%;
+  display: inline-block;
+  background: var(--ele-marker) no-repeat center center / contain;
+}
+
+.elevation-polyline {
+  stroke: var(--ele-poly, var(--ele-area, #000));
+  filter: drop-shadow(1px 1px 0 #FFF) drop-shadow(-1px -1px 0 #FFF) drop-shadow(1px -1px 0 #FFF) drop-shadow(-1px 1px 0 #FFF);
+}
+
+/* CHART STATES /////////////////////////////////////////////////// */
+
+.elevation-detached {
+  font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+  height: auto;
+  width: 100%;
+  position: relative;
+  z-index: 0;
+}
+
+.elevation-detached .area {
+  fill-opacity: var(--ele-alpha, 0.8);
+}
+
+.elevation-detached.elevation-collapsed .elevation-summary {
+  display: block;
+}
+
+.elevation-detached.elevation-collapsed .elevation-toggle-icon {
+  top: 5px;
+  right: 9px;
+  bottom: 5px;
+  margin: auto;
+}
+
+.elevation-control.elevation-collapsed > * {
+  display: none;
+}
+
+.elevation-control.elevation-collapsed > .elevation-toggle-icon {
+  display: inline-block;
+}
+
+.elevation-detached {
+  --ele-sum-margin: 12px 35px;
+  --ele-sum-shadow: none;
+  --ele-toggle-pos: absolute;
+}
+
+.elevation-expanded {
+  --ele-close-btn: inline-block;
+  --ele-toggle-bg: none;
+  --ele-toggle-pos: absolute;
+  --ele-toggle-size: 20px;
+}
+
+.inline-summary {
+  --ele-sum-sep: "\0020\2014\0020";
+}
+
+.elevation-waypoint-icon {
+  --ele-marker: url(../images/elevation-pushpin.svg);
+}
+
+.elevation-position-icon {
+  --ele-marker: url(../images/elevation-position.svg);
+}
+
+/* LIME THEME ///////////////////////////////////////////////////// */
+.lime-theme {
+  --ele-bg: rgba(156, 194, 34, 0.2);
+  --ele-axis: #566B13;
+  --ele-area: #9CC222;
+  --ele-grid: #CCC;
+  --ele-brush: rgba(99, 126, 11, 0.4);
+  --ele-poly: #566B13;
+  --ele-line: #70ab00;
+}
+
+/* STEELBLUE THEME //////////////////////////////////////////////// */
+.steelblue-theme {
+  --ele-axis: #0D1821;
+  --ele-area: #4682B4;
+  --ele-brush: rgba(23, 74, 117, 0.4);
+  --ele-line: #174A75;
+}
+
+/* PURPLE THEME /////////////////////////////////////////////////// */
+.purple-theme {
+  --ele-bg: rgba(115, 44, 123, 0.2);
+  --ele-area: #732C7B;
+  --ele-brush: rgba(74, 14, 80, 0.4);
+  --ele-line: #732c7b;
+}
+
+/* YELLOW THEME /////////////////////////////////////////////////// */
+.yellow-theme {
+  --ele-area: #FF0;
+}
+
+/* RED THEME ////////////////////////////////////////////////////// */
+.red-theme {
+  --ele-area: #F00;
+}
+
+/* MAGENTA THEME ////////////////////////////////////////////////// */
+.magenta-theme {
+  --ele-bg: rgba(255, 255, 255, 0.47);
+  --ele-area: #FF005E;
+}
+
+/* LIGHTBLUE THEME //////////////////////////////////////////////// */
+.lightblue-theme {
+  --ele-area: #3366CC;
+  --ele-alpha: 0.45;
+  --ele-stroke: #4682B4;
+  --ele-circle: #fff;
+  --ele-line: #000;
+}
+
+.elevation-detached.lightblue-theme .area {
+  stroke: #3366CC;
+}
+
+/* leaflet-distance-markers */
+.dist-marker {
+  font-size: 0.5rem;
+  border: 1px solid #777;
+  border-radius: 10px;
+  text-align: center;
+  color: #000;
+  background: #fff;
+}

@@ -24,6 +24,7 @@
     import { waypoint } from "$lib/stores/waypoint_store";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
+    import "$lib/vendor/leaflet-elevation/src/index.css";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
     import { format } from "date-fns";
@@ -114,6 +115,11 @@
             gpxLayer?.remove();
             gpxLayer = new L.GPX(gpx, {
                 async: true,
+                polyline_options: {
+                    className: "lightblue-theme elevation-polyline",
+                    opacity: 0.75,
+                    weight: 5,
+                },
                 gpx_options: {
                     parseElements: [
                         "track",

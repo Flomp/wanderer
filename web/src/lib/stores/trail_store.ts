@@ -128,7 +128,7 @@ export async function trails_show(id: string, loadGPX?: boolean) {
 
     response._photoFiles = [];
 
-    trail.set(response);
+    trail.set(response);    
 
     return response;
 }

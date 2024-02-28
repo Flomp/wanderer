@@ -5,6 +5,7 @@
 
     export let tabs: string[];
     export let activeTab: number;
+    export let extraClasses: string = "";
 
     const indicatorPosition = tweened(0, {
         duration: 300,
@@ -33,7 +34,7 @@
     }
 </script>
 
-<div id="tabs" class="flex gap-2 overflow-x-auto relative">
+<div id="tabs" class="flex gap-2 overflow-x-auto relative {extraClasses}">
     <div
         class="absolute h-full bg-menu-item-background-hover rounded-t-lg top-0 z-0"
         style="width: {$indicatorWidth}px; left: {$indicatorPosition}px;"

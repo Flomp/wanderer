@@ -1,9 +1,8 @@
-import { lists_index } from "$lib/stores/list_store";
-import { trails_show } from "$lib/stores/trail_store";
-import { error, type Load } from "@sveltejs/kit";
+import { trails, trails_show } from "$lib/stores/trail_store";
+import { error, type ServerLoad } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";
 
-export const load: Load = async ({ params }) => {
+export const load: ServerLoad = async ({ params, locals }) => {
     try {
         await trails_show(params.id!, true)
     } catch (e) {
@@ -13,5 +12,5 @@ export const load: Load = async ({ params }) => {
             });
         }
 
-    } await lists_index();
+    }
 };

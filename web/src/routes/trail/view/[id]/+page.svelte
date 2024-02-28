@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import Dropdown from "$lib/components/base/dropdown.svelte";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import Dropdown from "$lib/components/base/dropdown.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
@@ -19,6 +19,7 @@
     import { getFileURL } from "$lib/util/file_util";
     import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
+    import "$lib/vendor/leaflet-elevation/src/index.css";
     import type { Icon, Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
@@ -41,12 +42,12 @@
     let openConfirmModal: () => void;
     let openListSelectModal: () => void;
 
-    let mapFullScreen: boolean = false;
-
     const dropdownItems: DropdownItem[] = [
         { text: "Show on map", value: "map", icon: "map" },
         { text: "Directions", value: "direction", icon: "car" },
-        ...($trail.gpx ? [{ text: "Download GPX", value: "download", icon: "download" }] : []),
+        ...($trail.gpx
+            ? [{ text: "Download GPX", value: "download", icon: "download" }]
+            : []),
         { text: "Add to list", value: "list", icon: "bookmark" },
         { text: "Edit", value: "edit", icon: "pen" },
         { text: "Delete", value: "delete", icon: "trash" },
@@ -65,24 +66,15 @@
 
         const gpxLayer = new L.GPX($trail.expand.gpx_data!, {
             async: true,
+            polyline_options: {
+                className: "lightblue-theme elevation-polyline",
+                opacity: 0.75,
+                weight: 5,
+            },
             gpx_options: {
                 parseElements: ["track"] as any,
             },
             marker_options: {
-                wptIcons: {
-                    "": L.AwesomeMarkers.icon({
-                        icon: "circle",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
-                    Summit: L.AwesomeMarkers.icon({
-                        icon: "mountain",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
-                },
                 startIcon: L.AwesomeMarkers.icon({
                     icon: "circle-half-stroke",
                     prefix: "fa",
@@ -142,7 +134,7 @@
 
     async function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "map") {
-            goto(`/map/?lat=${$trail.lat}&lon=${$trail.lon}`);
+            goto(`/map/trail/${$trail.id!}`);
         } else if (item.value == "list") {
             openListSelectModal();
         } else if (item.value == "direction") {
@@ -154,7 +146,6 @@
                 ?.focus();
         } else if (item.value == "download") {
             downloadURI(getFileURL($trail, $trail.gpx), $trail.gpx!);
-            
         } else if (item.value == "edit") {
             goto(`/trail/edit/${$trail.id}`);
         } else if (item.value == "delete") {
@@ -176,9 +167,7 @@
     }
 
     async function toggleMapFullScreen() {
-        mapFullScreen = !mapFullScreen;
-        await tick();
-        map.invalidateSize();
+        goto(`/map/trail/${$trail.id!}`);
     }
 
     async function handleListSelection(list: List) {
@@ -291,10 +280,7 @@
     {/if}
     <section class="p-8">
         <Tabs {tabs} bind:activeTab></Tabs>
-        <div
-            class="grid grid-cols-1 mt-6 gap-8"
-            class:md:grid-cols-[1fr_18rem]={!mapFullScreen}
-        >
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_18rem] mt-6 gap-8">
             <div>
                 {#if activeTab == 0}
                     <article class="text-justify whitespace-pre-line text-sm">
@@ -335,13 +321,11 @@
                     </ul>
                 {/if}
             </div>
-            <div class="relative" class:-order-1={mapFullScreen}>
+            <div class="relative">
                 <div class="rounded-xl h-72" id="map">
                     <div class="leaflet-top leaflet-right">
                         <button
-                            class="leaflet-control fa fa-{mapFullScreen
-                                ? 'minimize'
-                                : 'maximize'} rounded-full text-lg bg-white text-black px-[14px] py-2 hover:bg-gray-100"
+                            class="leaflet-control fa fa-maximize rounded-full text-lg bg-white text-black px-[14px] py-2 hover:bg-gray-100"
                             style="cursor: pointer !important"
                             on:click={() => toggleMapFullScreen()}
                         ></button>
