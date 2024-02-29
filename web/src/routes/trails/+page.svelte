@@ -6,7 +6,7 @@
     import { categories } from "$lib/stores/category_store";
     import { trails, trails_search_filter } from "$lib/stores/trail_store";
     import { onMount } from "svelte";
-
+    import { _ } from "svelte-i18n";
 
     let filterExpanded: boolean = true;
 
@@ -22,6 +22,10 @@
         await trails_search_filter(filter);
     }
 </script>
+
+<svelte:head>
+    <title>{$_("trail", { values: { n: 2 } })} | wanderer</title>
+</svelte:head>
 
 <main
     class="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 max-w-7xl mx-6 md:mx-auto"

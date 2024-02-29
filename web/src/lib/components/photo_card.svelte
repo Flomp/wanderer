@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
+    import { _ } from "svelte-i18n";
 
     export let src: string;
     export let isThumbnail: boolean = false;
@@ -30,13 +31,13 @@
         <button
             type="button"
             class="tooltip"
-            data-title="Make thumbnail"
+            data-title={$_("make-thumbnail")}
             on:click={handleThumbnailClick}
             ><i class="fa fa-file-image text-primary"></i></button
         >
         <button
             class="tooltip"
-            data-title="Delete"
+            data-title={$_("delete")}
             on:click={handleDeleteClick}
             type="button"><i class="fa fa-trash text-red-500"></i></button
         >

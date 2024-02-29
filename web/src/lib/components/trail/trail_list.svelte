@@ -5,13 +5,14 @@
     import EmptyStateSearch from "../empty_states/empty_state_search.svelte";
     import TrailCard from "./trail_card.svelte";
     import TrailListItem from "./trail_list_item.svelte";
+    import { _ } from "svelte-i18n";
 
     export let filter: TrailFilter;
     export let trails: Trail[];
 
     const displayOptions: SelectItem[] = [
-        { text: "Cards", value: "cards" },
-        { text: "List", value: "list" },
+        { text: $_('card', {values: {n: 2}}), value: "cards" },
+        { text: $_('list', {values: {n: 1}}), value: "list" },
     ];
 
     let selectedDisplayOption = displayOptions[0].value;
@@ -19,10 +20,10 @@
     let dispatch = createEventDispatcher();
 
     const sortOptions: SelectItem[] = [
-        { text: "Alphabetical", value: "name" },
-        { text: "Creation date", value: "created" },
-        { text: "Distance", value: "distance" },
-        { text: "Elevation gain", value: "elevation_gain" },
+        { text: $_('alphabetical'), value: "name" },
+        { text: $_('creation-date'), value: "created" },
+        { text: $_('distance'), value: "distance" },
+        { text: $_('elevation-gain'), value: "elevation_gain" },
     ];
 
     onMount(() => {
@@ -53,7 +54,7 @@
 <div class="min-w-0">
     <div class="flex items-start gap-8 justify-end mx-4">
         <div>
-            <p class="text-sm text-gray-500 pb-2">Sort</p>
+            <p class="text-sm text-gray-500 pb-2">{$_('sort')}</p>
             <div class="flex items-center gap-2">
                 <Select
                     bind:value={filter.sort}
@@ -70,7 +71,7 @@
             </div>
         </div>
         <div>
-            <p class="text-sm text-gray-500 pb-2">Display as</p>
+            <p class="text-sm text-gray-500 pb-2">{$_('display-as')}</p>
 
             <Select
                 bind:value={selectedDisplayOption}
@@ -91,6 +92,7 @@
                 class="max-w-full"
                 class:basis-full={selectedDisplayOption === "list"}
                 href="/trail/view/{trail.id}"
+                data-sveltekit-preload-data="off"
             >
                 {#if selectedDisplayOption === "cards"}
                     <TrailCard {trail}></TrailCard>

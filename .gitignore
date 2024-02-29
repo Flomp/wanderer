@@ -1,3 +1,6 @@
 .DS_Store
 .vscode/
-search/
+
+search/meilisearch
+search/data.ms
+search/dumps

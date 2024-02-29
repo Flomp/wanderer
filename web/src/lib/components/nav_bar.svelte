@@ -3,22 +3,23 @@
     import LogoText from "$lib/components/logo/logo_text.svelte";
     import { theme, toggleTheme } from "$lib/stores/theme_store";
     import { currentUser, logout } from "$lib/stores/user_store";
+    import { getFileURL } from "$lib/util/file_util";
     import { backInOut, cubicOut } from "svelte/easing";
     import { tweened } from "svelte/motion";
+    import Drawer from "./base/drawer.svelte";
     import Dropdown from "./base/dropdown.svelte";
     import LogoTextLight from "./logo/logo_text_light.svelte";
-    import Drawer from "./base/drawer.svelte";
+    import { _, format } from "svelte-i18n";
 
-    const navBarItems = [
+    let navBarItems = [
         { text: "Home", value: "/" },
-        { text: "Trails", value: "/trails" },
-        { text: "Map", value: "/map" },
-        { text: "Lists", value: "/lists" },
+        { text: $_("trail", { values: { n: 2 } }), value: "/trails" },
+        { text: $_("map"), value: "/map" },
     ];
 
     const dropdownItems = [
-        { text: "Profile", value: "profile", icon: "user" },
-        { text: "Logout", value: "logout", icon: "right-from-bracket" },
+        { text: $_("profile"), value: "profile", icon: "user" },
+        { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
     ];
 
     const indicatorPosition = tweened(0, {
@@ -104,11 +105,19 @@
                 data-sveltekit-preload-data="off">{item.text}</a
             >
         {/each}
+        {#if $currentUser}
+            <a
+                class="font-semibold text-xl"
+                href="/lists"
+                data-sveltekit-preload-data="off"
+                >{$_("list", { values: { n: 2 } })}</a
+            >
+        {/if}
     </div>
     <hr class="my-6 border-input-border" />
     <div class="flex flex-col basis-full">
         <a class="btn-primary btn-large text-center mx-4" href="/trail/edit/new"
-            ><i class="fa fa-plus mr-2"></i>New Trail</a
+            ><i class="fa fa-plus mr-2"></i>{$_('new-trail')}</a
         >
         {#if $currentUser}
             <div class="basis-full"></div>
@@ -116,9 +125,9 @@
             <div class="flex gap-4 items-center m-4">
                 <img
                     class="rounded-full w-8 aspect-square"
-                    src={$currentUser.avatar ||
+                    src={getFileURL($currentUser, $currentUser.avatar) ||
                         `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
-                    alt=""
+                    alt="avatar"
                 />
                 <div>
                     <p class="text-sm">{$currentUser.username}</p>
@@ -153,6 +162,14 @@
                 data-sveltekit-preload-data="off">{item.text}</a
             >
         {/each}
+        {#if $currentUser}
+            <a
+                class="font-semibold z-10"
+                href="/lists"
+                data-sveltekit-preload-data="off"
+                >{$_("list", { values: { n: 2 } })}</a
+            >
+        {/if}
     </menu>
     {#if $currentUser}
         <div class="hidden md:flex gap-6 items-center">
@@ -163,7 +180,7 @@
                 on:click={() => toggleTheme()}
             ></button>
             <a class="btn-primary btn-large" href="/trail/edit/new"
-                ><i class="fa fa-plus mr-2"></i>New Trail</a
+                ><i class="fa fa-plus mr-2"></i>{$_('new-trail')}</a
             >
             <Dropdown
                 items={dropdownItems}
@@ -176,8 +193,9 @@
                 >
                     <img
                         class="rounded-full"
-                        src="https://api.dicebear.com/7.x/initials/svg?seed={$currentUser.username}&backgroundType=gradientLinear"
-                        alt=""
+                        src={getFileURL($currentUser, $currentUser.avatar) ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                        alt="avatar"
                     />
                 </button>
             </Dropdown>
@@ -190,7 +208,7 @@
                     : 'moon'}"
                 on:click={() => toggleTheme()}
             ></button>
-            <a class="btn-primary btn-large" href="/login">Login</a>
+            <a class="btn-primary btn-large" href="/login">{$_('login')}</a>
         </div>
     {/if}
     <button

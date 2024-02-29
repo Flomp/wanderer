@@ -1,12 +1,13 @@
 <script lang="ts">
     import type { List } from "$lib/models/list";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
+    import { _ } from "svelte-i18n";
     export let list: List;
     export let active: boolean = false;
 
     const dropdownItems: DropdownItem[] = [
-        { text: "Edit", value: "edit" },
-        { text: "Delete", value: "delete" },
+        { text: $_("edit"), value: "edit" },
+        { text: $_("delete"), value: "delete" },
     ];
 </script>
 
@@ -21,7 +22,9 @@
             alt="avatar"
         />
     {:else}
-        <div class="flex w-16 md:w-24 aspect-square shrink-0 items-center justify-center">
+        <div
+            class="flex w-16 md:w-24 aspect-square shrink-0 items-center justify-center"
+        >
             <i class="fa fa-table-list text-5xl"></i>
         </div>
     {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { _ } from "svelte-i18n";
     export let width: number = 256;
 </script>
 
@@ -10,5 +11,5 @@
         alt="Empty State showing a wanderer going into the distance"
     />
 
-    <h3 class="text-2xl font-semibold text-center">No results found</h3>
+    <h3 class="text-2xl font-semibold text-center">{$_("no-results")}</h3>
 </div>

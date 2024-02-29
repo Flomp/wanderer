@@ -1,3 +1,5 @@
+import { currentUser } from "$lib/stores/user_store";
+import { get } from "svelte/store";
 
 export function formatTimeHHMM(minutes?: number) {
     if (!minutes) {
@@ -10,14 +12,39 @@ export function formatTimeHHMM(minutes?: number) {
     return (h < 10 ? "0" : "") + h.toString() + "h " + (m < 10 ? "0" : "") + Math.round(m).toString() + "m";
 }
 
-export function formatMeters(meters?: number) {
+export function formatDistance(meters?: number) {
     if (meters === undefined) {
         return "-";
     }
-    if (meters % 1 === 0) {
-        return meters >= 1000 ? `${(meters / 1000)} km` : `${meters} m`;
+
+    const unit = get(currentUser)?.unit ?? "metric";
+
+    if (unit == "metric") {
+        if (meters % 1 === 0) {
+            return meters >= 1000 ? `${(meters / 1000)} km` : `${meters} m`;
+        } else {
+            return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`
+        }
     } else {
-        return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`
+        const miles = meters * 0.000621371;
+        const roundedMiles = miles.toFixed(2);
+
+        return `${roundedMiles} mi`;
+    }
+}
+
+export function formatElevation(meters?: number) {
+    if (meters === undefined) {
+        return "-";
     }
 
+    const unit = get(currentUser)?.unit ?? "metric";
+
+    if (unit == "metric") {
+        return `${Math.round(meters)} m`
+    } else {
+        const feet = meters * 3.28084;
+    
+        return `${Math.round(feet)} ft`;
+    }
 }

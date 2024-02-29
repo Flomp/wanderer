@@ -15,9 +15,14 @@
         trails,
         trails_search_bounding_box,
     } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { country_codes } from "$lib/util/country_code_util";
     import { getFileURL } from "$lib/util/file_util";
-    import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
+    import {
+        formatDistance,
+        formatElevation,
+        formatTimeHHMM,
+    } from "$lib/util/format_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import type {
         GPX,
@@ -31,8 +36,8 @@
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
+    import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
-
     let L: any;
     let map: Map;
     let gpxLayers: Record<string, GPX> = {};
@@ -85,6 +90,11 @@
             ];
 
             map.fitBounds(boundingBox);
+        } else if ($currentUser && $currentUser.location) {
+            map.setView(
+                [$currentUser.location.lat, $currentUser.location.lon],
+                12,
+            );
         } else {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -202,9 +212,9 @@
             <h4 class="font-semibold text-lg">${trail.name}</h4>
             <h5><i class="fa fa-location-dot mr-3"></i>${trail.location}</h5>
             <div class="flex mt-2 gap-4 text-sm text-gray-500"><span class="shrink-0"><i
-                        class="fa fa-left-right mr-2"></i>${formatMeters(
+                        class="fa fa-left-right mr-2"></i>${formatDistance(
                             trail.distance,
-                        )}</span> <span class="shrink-0"><i class="fa fa-up-down mr-2"></i>${formatMeters(
+                        )}</span> <span class="shrink-0"><i class="fa fa-up-down mr-2"></i>${formatElevation(
                             trail.elevation_gain,
                         )}</span> <span class="shrink-0"><i class="fa fa-clock mr-2"></i>${formatTimeHHMM(
                             trail.duration,
@@ -239,6 +249,9 @@
     }
 </script>
 
+<svelte:head>
+    <title>{$_("map")} | wanderer</title>
+</svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <div
         id="trail-list"
@@ -250,7 +263,7 @@
                     extraClasses="w-full"
                     on:update={(e) => search(e.detail)}
                     on:click={(e) => handleSearchClick(e.detail)}
-                    placeholder="Search for trails, places..."
+                    placeholder="{$_("search-for-trails-places")}..."
                     items={searchDropdownItems}
                 ></Search>
                 <button

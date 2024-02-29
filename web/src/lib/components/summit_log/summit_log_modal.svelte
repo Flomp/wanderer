@@ -4,11 +4,11 @@
     import { summitLogSchema, type SummitLog } from "$lib/models/summit_log";
     import { summitLog } from "$lib/stores/summit_log_store";
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
+    import { util } from "$lib/vendor/svelte-form-lib/util";
+    import { _ } from "svelte-i18n";
     import Datepicker from "../base/datepicker.svelte";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
-    import { util } from "$lib/vendor/svelte-form-lib/util";
-
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -17,17 +17,17 @@
     const { form, errors, handleChange, handleSubmit } = createForm<SummitLog>({
         initialValues: $summitLog,
         validationSchema: summitLogSchema,
-        onSubmit: async (submittedValues) => {           
+        onSubmit: async (submittedValues) => {
             dispatch("save", submittedValues);
             closeModal!();
         },
     });
-    $: form.set(util.cloneDeep($summitLog));    
+    $: form.set(util.cloneDeep($summitLog));
 </script>
 
 <Modal
     id="summit-log-modal"
-    title="Add Entry"
+    title={$form.id ? $_("edit-entry") : $_("add-entry")}
     let:openModal
     bind:openModal
     bind:closeModal
@@ -42,7 +42,7 @@
         <div class="flex gap-4">
             <Datepicker
                 name="date"
-                label="Date"
+                label={$_("date")}
                 bind:value={$form.date}
                 error={$errors.date}
                 on:change={handleChange}
@@ -50,7 +50,7 @@
             <div class="basis-full">
                 <TextField
                     name="text"
-                    label="Text"
+                    label={$_("text")}
                     bind:value={$form.text}
                     error={$errors.text}
                     on:change={handleChange}
@@ -59,9 +59,11 @@
         </div>
     </form>
     <div slot="footer" class="flex items-center gap-4">
-        <button class="btn-secondary" on:click={closeModal}>Cancel</button>
+        <button class="btn-secondary" on:click={closeModal}
+            >{$_("cancel")}</button
+        >
         <button class="btn-primary" type="submit" form="summit-log-form"
-            >Save</button
+            >{$_("save")}</button
         >
     </div>
 </Modal>

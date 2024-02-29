@@ -22,7 +22,7 @@
 }
 
 .elevation-control .grid,
-.elevation-control .area > foreignObject,
+.elevation-control .area>foreignObject,
 .elevation-control .axis,
 .elevation-control .tooltip,
 .height-focus.line {
@@ -49,11 +49,15 @@
 .elevation-control .axis text,
 .elevation-control .legend text,
 .elevation-control .point text {
-  fill: #000;
+  fill: #fff;
   font-weight: 700;
   paint-order: stroke fill;
-  stroke: #fff;
+  stroke: #000;
   stroke-width: 2px
+}
+
+.elevation-control .legend .legend-switcher-symbol {
+  fill: rgb(135, 135, 135);
 }
 
 .elevation-control .y.axis text {
@@ -229,11 +233,11 @@
   margin: auto;
 }
 
-.elevation-control.elevation-collapsed > * {
+.elevation-control.elevation-collapsed>* {
   display: none;
 }
 
-.elevation-control.elevation-collapsed > .elevation-toggle-icon {
+.elevation-control.elevation-collapsed>.elevation-toggle-icon {
   display: inline-block;
 }
 
@@ -312,6 +316,7 @@
   --ele-stroke: #4682B4;
   --ele-circle: #fff;
   --ele-line: #000;
+  --ele-grid: rgba(var(--input-border));
 }
 
 .elevation-detached.lightblue-theme .area {

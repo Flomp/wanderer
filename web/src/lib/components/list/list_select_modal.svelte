@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { createEventDispatcher, onMount } from "svelte";
+    import { createEventDispatcher } from "svelte";
 
-    import { lists, lists_index } from "$lib/stores/list_store";
-    import Modal from "../base/modal.svelte";
     import type { List } from "$lib/models/list";
+    import { lists } from "$lib/stores/list_store";
     import { trail } from "$lib/stores/trail_store";
+    import { _ } from "svelte-i18n";
+    import Modal from "../base/modal.svelte";
 
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
@@ -23,8 +24,8 @@
 
 <Modal
     id="list-modal"
-    title="Select List"
-    size="md"
+    title={$_("select-list")}
+    size="max-w-sm"
     let:openModal
     bind:openModal
     bind:closeModal

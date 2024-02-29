@@ -1,7 +1,7 @@
 <script lang="ts">
     export let id: string;
     export let title: string;
-    export let size: string = "2xl";
+    export let size: string = "max-w-2xl";
     export function openModal() {
         document.body.style.position = "fixed";
         document.body.style.width = "100%";
@@ -25,7 +25,7 @@
     {id}
     tabindex="-1"
     aria-hidden="true"
-    class="relative w-full max-w-{size} max-h-full rounded-xl text-content"
+    class="relative w-full {size} max-h-full rounded-xl text-content"
 >
     <!-- Modal content -->
     <div class="relative bg-background shadow">

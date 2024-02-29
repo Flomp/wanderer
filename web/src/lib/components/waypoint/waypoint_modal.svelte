@@ -5,10 +5,10 @@
     import { waypoint } from "$lib/stores/waypoint_store";
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
     import { util } from "$lib/vendor/svelte-form-lib/util";
+    import { _ } from "svelte-i18n";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
-
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -27,7 +27,7 @@
 
 <Modal
     id="waypoint-modal"
-    title="Add Waypoint"
+    title={$form.id ? $_("edit-waypoint") : $_("add-waypoint")}
     let:openModal
     bind:openModal
     bind:closeModal
@@ -43,7 +43,7 @@
             <div class="basis-full">
                 <TextField
                     name="name"
-                    label="Name"
+                    label={$_("name")}
                     bind:value={$form.name}
                     error={$errors.name}
                     on:change={handleChange}
@@ -52,7 +52,7 @@
 
             <TextField
                 name="icon"
-                label="Icon"
+                label={$_("icon")}
                 bind:value={$form.icon}
                 icon={$form.icon}
                 error={$errors.icon}
@@ -62,7 +62,7 @@
 
         <Textarea
             name="description"
-            label="Description"
+            label={$_("description")}
             bind:value={$form.description}
             error={$errors.description}
             on:change={handleChange}
@@ -70,14 +70,14 @@
         <div class="flex gap-4">
             <TextField
                 name="lat"
-                label="Latitude"
+                label={$_("latitude")}
                 bind:value={$form.lat}
                 error={$errors.lat}
                 on:change={handleChange}
             ></TextField>
             <TextField
                 name="lon"
-                label="Longitude"
+                label={$_("longitude")}
                 bind:value={$form.lon}
                 error={$errors.lat}
                 on:change={handleChange}
@@ -85,9 +85,11 @@
         </div>
     </form>
     <div slot="footer" class="flex items-center gap-4">
-        <button class="btn-secondary" on:click={closeModal}>Cancel</button>
+        <button class="btn-secondary" on:click={closeModal}
+            >{$_("cancel")}</button
+        >
         <button class="btn-primary" type="submit" form="waypoint-form"
-            >Save</button
+            >{$_("save")}</button
         >
     </div>
 </Modal>

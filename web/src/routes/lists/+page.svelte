@@ -1,6 +1,7 @@
 <script lang="ts">
     import { page } from "$app/stores";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import ListCard from "$lib/components/list/list_card.svelte";
     import ListModal from "$lib/components/list/list_modal.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
@@ -14,10 +15,14 @@
         lists_index,
         lists_update,
     } from "$lib/stores/list_store";
+    import { _ } from "svelte-i18n";
 
     let openListModal: () => void;
+    let openConfirmModal: () => void;
 
     let filter: TrailFilter = $page.data.filter;
+
+    let listToBeDeleted: List | null = null;
 
     function beforeListModalOpen() {
         list.set(new List("", []));
@@ -47,12 +52,24 @@
             list.set(currentList);
             openListModal();
         } else if (item.value == "delete") {
-            await lists_delete(currentList);
-            await lists_index();
+            openConfirmModal();
+            listToBeDeleted = currentList;
         }
+    }
+
+    async function deleteList() {
+        if (!listToBeDeleted) {
+            return;
+        }
+        await lists_delete(listToBeDeleted);
+        await lists_index();
+        listToBeDeleted = null;
     }
 </script>
 
+<svelte:head>
+    <title>{$_("list", { values: { n: 2 } })} | wanderer</title>
+</svelte:head>
 <main
     class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-8 max-w-7xl mx-4 md:mx-auto"
     style="min-height: calc(100vh - 124px)"
@@ -65,7 +82,7 @@
             on:click={beforeListModalOpen}
         >
             <i class="fa fa-plus text-xl aspect-square"></i>
-            <h5 class="text-xl font-semibold">Create new list</h5>
+            <h5 class="text-xl font-semibold">{$_("create-new-list")}</h5>
         </button>
         <hr class="border-separator my-2" />
         <div class="max-h-[512px] md:max-h-none overflow-y-auto">
@@ -89,4 +106,9 @@
         on:update={async () => await lists_index()}
     ></TrailList>
     <ListModal bind:openModal={openListModal} on:save={saveList}></ListModal>
+    <ConfirmModal
+        text={$_("delete-list-confirm")}
+        bind:openModal={openConfirmModal}
+        on:confirm={deleteList}
+    ></ConfirmModal>
 </main>

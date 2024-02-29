@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
     import { getFileURL } from "$lib/util/file_util";
-    import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
+    import { formatDistance, formatElevation, formatTimeHHMM } from "$lib/util/format_util";
 
     export let trail: Trail;
 </script>
@@ -21,12 +21,12 @@
         <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
         <div class="flex mt-2 gap-4 text-sm text-gray-500">
             <span
-                ><i class="fa fa-left-right mr-2"></i>{formatMeters(
+                ><i class="fa fa-left-right mr-2"></i>{formatDistance(
                     trail.distance,
                 )}</span
             >
             <span
-                ><i class="fa fa-up-down mr-2"></i>{formatMeters(
+                ><i class="fa fa-up-down mr-2"></i>{formatElevation(
                     trail.elevation_gain,
                 )}</span
             >

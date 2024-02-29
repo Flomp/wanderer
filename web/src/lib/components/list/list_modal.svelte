@@ -6,10 +6,10 @@
     import { list } from "$lib/stores/list_store";
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
     import { util } from "$lib/vendor/svelte-form-lib/util";
+    import { _ } from "svelte-i18n";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
-
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -37,9 +37,8 @@
     }
 
     function handleAvatarSelection() {
-        const files = (
-            document.getElementById("avatar") as HTMLInputElement
-        ).files;
+        const files = (document.getElementById("avatar") as HTMLInputElement)
+            .files;
 
         if (!files) {
             return;
@@ -55,7 +54,7 @@
 
 <Modal
     id="list-modal"
-    title="New List"
+    title={$form.id ? $_("edit-list") : $_("new-list")}
     let:openModal
     bind:openModal
     bind:closeModal
@@ -67,7 +66,7 @@
         class="modal-content space-y-4"
         on:submit={handleSubmit}
     >
-        <label for="avatar" class="text-sm font-medium block"> Avatar </label>
+        <label for="avatar" class="text-sm font-medium block"> {$_('avatar')} </label>
         <input
             name="avatar"
             type="file"
@@ -87,13 +86,13 @@
             <button
                 class="btn-secondary"
                 type="button"
-                on:click={openAvatarBrowser}>Change...</button
+                on:click={openAvatarBrowser}>{$_('change')}...</button
             >
         </div>
 
         <TextField
             name="name"
-            label="Name"
+            label={$_("name")}
             bind:value={$form.name}
             error={$errors.name}
             on:change={handleChange}
@@ -101,14 +100,18 @@
 
         <Textarea
             name="description"
-            label="Description"
+            label={$_("description")}
             bind:value={$form.description}
             error={$errors.description}
             on:change={handleChange}
         ></Textarea>
     </form>
     <div slot="footer" class="flex items-center gap-4">
-        <button class="btn-secondary" on:click={closeModal}>Cancel</button>
-        <button class="btn-primary" type="submit" form="list-form">Save</button>
+        <button class="btn-secondary" on:click={closeModal}
+            >{$_("cancel")}</button
+        >
+        <button class="btn-primary" type="submit" form="list-form"
+            >{$_("save")}</button
+        >
     </div>
 </Modal>

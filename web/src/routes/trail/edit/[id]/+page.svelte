@@ -22,7 +22,11 @@
         trails_update,
     } from "$lib/stores/trail_store";
     import { waypoint } from "$lib/stores/waypoint_store";
-    import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
+    import {
+        formatDistance,
+        formatElevation,
+        formatTimeHHMM,
+    } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import { createForm } from "$lib/vendor/svelte-form-lib";
@@ -32,6 +36,7 @@
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
+    import { _ } from "svelte-i18n";
 
     export let data: { trail: Trail };
 
@@ -350,15 +355,21 @@
     }
 </script>
 
+<svelte:head>
+    <title
+        >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-trail")} | wanderer</title
+    >
+</svelte:head>
+
 <main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <form
         id="trail-form"
         class="overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0"
         on:submit={handleSubmit}
     >
-        <h3 class="text-xl font-semibold">Pick a trail</h3>
+        <h3 class="text-xl font-semibold">{$_("pick-a-trail")}</h3>
         <button class="btn-primary" type="button" on:click={openFileBrowser}
-            >Upload GPX</button
+            >{$_("upload-gpx")}</button
         >
         <input
             type="file"
@@ -369,17 +380,18 @@
             on:change={handleFileSelection}
         />
         <hr class="border-separator" />
-        <h3 class="text-xl font-semibold">Basic Info</h3>
+        <h3 class="text-xl font-semibold">{$_("basic-info")}</h3>
         <div class="flex gap-4 justify-around">
             <div class="flex flex-col items-center">
-                <span>Distance</span>
-                <span class="font-medium">{formatMeters($form.distance)}</span>
+                <span>{$_('distance')}</span>
+                <span class="font-medium">{formatDistance($form.distance)}</span
+                >
                 <input type="hidden" name="distance" value={$form.distance} />
             </div>
             <div class="flex flex-col items-center">
-                <span>Elevation gain</span>
+                <span>{$_("elevation-gain")}</span>
                 <span class="font-medium"
-                    >{formatMeters($form.elevation_gain)}</span
+                    >{formatElevation($form.elevation_gain)}</span
                 >
                 <input
                     type="hidden"
@@ -388,7 +400,7 @@
                 />
             </div>
             <div class="flex flex-col items-center">
-                <span>Est. duration</span>
+                <span>{$_("est-duration")}</span>
                 <span class="font-medium">{formatTimeHHMM($form.duration)}</span
                 >
                 <input type="hidden" name="duration" value={$form.duration} />
@@ -398,33 +410,34 @@
         </div>
         <TextField
             name="name"
-            label="Name"
+            label={$_("name")}
             on:change={handleChange}
             error={$errors.name}
             bind:value={$form.name}
         ></TextField>
         <TextField
             name="location"
-            label="Location"
+            label={$_("location")}
             error={$errors.location}
             bind:value={$form.location}
         ></TextField>
         <Textarea
             name="description"
-            label="Describe your trail"
+            label={$_("describe-your-trail")}
             bind:value={$form.description}
         ></Textarea>
         {#if $form.expand.category}
             <Select
                 name="category"
-                label="Category"
+                label={$_("category")}
                 bind:value={$form.expand.category.id}
                 items={$categories.map((c) => ({ text: c.name, value: c.id }))}
             ></Select>
         {/if}
-        <Toggle name="public" label="Public" bind:value={$form.public}></Toggle>
+        <Toggle name="public" label={$_("public")} bind:value={$form.public}
+        ></Toggle>
         <hr class="border-separator" />
-        <h3 class="text-xl font-semibold">Waypoints</h3>
+        <h3 class="text-xl font-semibold">{$_("waypoints")}</h3>
         <ul>
             {#each $form.expand.waypoints ?? [] as waypoint, i}
                 <li on:mouseenter={() => openMarkerPopup(waypoint)}>
@@ -441,10 +454,10 @@
             class="btn-secondary"
             type="button"
             on:click={beforeWaypointModalOpen}
-            ><i class="fa fa-plus mr-2"></i>Add Waypoint</button
+            ><i class="fa fa-plus mr-2"></i>{$_("add-waypoint")}</button
         >
         <hr class="border-separator" />
-        <h3 class="text-xl font-semibold">Photos</h3>
+        <h3 class="text-xl font-semibold">{$_("photos")}</h3>
         <div class="flex gap-4 max-w-full overflow-x-auto shrink-0">
             <button
                 class="btn-secondary h-32 w-32 m-2 shrink-0 grow-0 basis-auto"
@@ -471,7 +484,7 @@
             {/each}
         </div>
         <hr class="border-separator" />
-        <h3 class="text-xl font-semibold">Summit Book</h3>
+        <h3 class="text-xl font-semibold">{$_('summit-book')}</h3>
         <ul>
             {#each $form.expand.summit_logs ?? [] as log, i}
                 <li>
@@ -487,7 +500,7 @@
             class="btn-secondary"
             type="button"
             on:click={beforeSummitLogModalOpen}
-            ><i class="fa fa-plus mr-2"></i>Add Entry</button
+            ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
         <hr class="border-separator" />
         <Button
@@ -495,7 +508,7 @@
             large={true}
             type="submit"
             extraClasses="mb-2"
-            {loading}>Save Trail</Button
+            {loading}>{$_("save-trail")}</Button
         >
     </form>
     <div class="rounded-xl" id="map"></div>

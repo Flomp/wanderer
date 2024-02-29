@@ -10,11 +10,12 @@
     import { ClientResponseError } from "pocketbase";
     import { object, string } from "yup";
     import { theme } from "$lib/stores/theme_store";
-
+    import { _ } from "svelte-i18n";
 
     let loading: boolean = false;
     const { form, errors, handleChange, handleSubmit } = createForm<User>({
         initialValues: {
+            id: "",
             username: "",
             password: "",
         },
@@ -51,6 +52,9 @@
     });
 </script>
 
+<svelte:head>
+    <title>{$_("login")} | wanderer</title>
+</svelte:head>
 <main class="flex justify-center">
     <form
         class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-8 w-[28rem] mt-8"
@@ -61,18 +65,18 @@
         {:else}
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
-        <h4 class="text-xl font-semibold">Save your adventures!</h4>
+        <h4 class="text-xl font-semibold">{$_("slogan")}</h4>
         <div class="space-y-6 w-80">
             <TextField
                 name="username"
-                label="Username/Email"
+                label="{$_('username')}/{$_('email')}"
                 bind:value={$form.username}
                 on:change={handleChange}
                 error={$errors.username}
             ></TextField>
             <TextField
                 name="password"
-                label="Password"
+                label={$_("password")}
                 type="password"
                 bind:value={$form.password}
                 on:change={handleChange}
@@ -86,9 +90,9 @@
             >
         </div>
         <span
-            >Don't have an account? <a
+            >{$_('no-account')} <a
                 class="text-blue-500 underline"
-                href="/register">Make one!</a
+                href="/register">{$_('make-one')}</a
             ></span
         >
     </form>

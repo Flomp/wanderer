@@ -3,7 +3,7 @@
     import type { Category } from "$lib/models/category";
     import type { TrailFilter } from "$lib/models/trail";
     import { country_codes } from "$lib/util/country_code_util";
-    import { formatMeters } from "$lib/util/format_util";
+    import { formatDistance, formatElevation } from "$lib/util/format_util";
     import { createEventDispatcher } from "svelte";
     import DoubleSlider from "../base/double_slider.svelte";
     import type { RadioItem } from "../base/radio_group.svelte";
@@ -11,6 +11,7 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import Slider from "../base/slider.svelte";
     import { slide } from "svelte/transition";
+    import { _ } from "svelte-i18n";
 
     export let categories: Category[];
     export let filterExpanded: boolean = true;
@@ -33,9 +34,9 @@
     const dispatch = createEventDispatcher();
 
     const radioGroupItems: RadioItem[] = [
-        { text: "Completed", value: "completed" },
-        { text: "Not completed", value: "not_completed" },
-        { text: "No preference", value: "no_preference" },
+        { text: $_("completed"), value: "completed" },
+        { text: $_("not-completed"), value: "not_completed" },
+        { text: $_("no-preference"), value: "no_preference" },
     ];
 
     let searchDropdownItems: SearchItem[] = [];
@@ -112,7 +113,7 @@
                 <Search
                     bind:value={filter.q}
                     on:update={update}
-                    placeholder="Search trails..."
+                    placeholder="{$_('search-trails')}..."
                 ></Search>
             </div>
             <button
@@ -128,7 +129,7 @@
             {#if showTrailSearch}
                 <hr class="my-4 border-separator" />
             {/if}
-            <p class="text-sm font-medium pb-4">Category</p>
+            <p class="text-sm font-medium pb-4">{$_("category")}</p>
             {#each categories as category, i}
                 <div class="flex items-center mb-4">
                     <input
@@ -146,11 +147,11 @@
             {/each}
             <hr class="my-4 border-separator" />
             {#if showCitySearch}
-                <p class="text-sm font-medium pb-4">Near</p>
+                <p class="text-sm font-medium pb-4">{$_("near")}</p>
                 <div class="mb-8">
                     <Search
                         items={searchDropdownItems}
-                        placeholder="Search cities..."
+                        placeholder="{$_('search-cities')}..."
                         bind:value={citySearchQuery}
                         on:update={(e) => searchCities(e.detail)}
                         on:click={(e) => handleSearchClick(e.detail)}
@@ -162,12 +163,12 @@
                     on:set={() => update()}
                 ></Slider>
                 <p>
-                    <span class="text-gray-500 text-sm">Radius:</span>
-                    {formatMeters(filter.near.radius)}
+                    <span class="text-gray-500 text-sm">{$_("radius")}:</span>
+                    {formatDistance(filter.near.radius)}
                 </p>
                 <hr class="my-4 border-separator" />
             {/if}
-            <p class="text-sm font-medium pb-4">Distance</p>
+            <p class="text-sm font-medium pb-4">{$_("distance")}</p>
             <DoubleSlider
                 minValue={filter.distanceMin}
                 maxValue={filter.distanceMax}
@@ -176,11 +177,11 @@
                 on:set={() => update()}
             ></DoubleSlider>
             <div class="flex justify-between">
-                <span>{formatMeters(filter.distanceMin)}</span>
-                <span>{formatMeters(filter.distanceMax)}</span>
+                <span>{formatDistance(filter.distanceMin)}</span>
+                <span>{formatDistance(filter.distanceMax)}</span>
             </div>
             <hr class="my-4 border-separator" />
-            <p class="text-sm font-medium pb-4">Elevation Gain</p>
+            <p class="text-sm font-medium pb-4">{$_("elevation-gain")}</p>
             <DoubleSlider
                 minValue={filter.elevationGainMin}
                 maxValue={filter.elevationGainMax}
@@ -189,11 +190,11 @@
                 on:set={() => update()}
             ></DoubleSlider>
             <div class="flex justify-between">
-                <span>{formatMeters(filter.elevationGainMin)}</span>
-                <span>{formatMeters(filter.elevationGainMax)}</span>
+                <span>{formatElevation(filter.elevationGainMin)}</span>
+                <span>{formatElevation(filter.elevationGainMax)}</span>
             </div>
             <hr class="my-4 border-separator" />
-            <p class="text-sm font-medium pb-4">Completed</p>
+            <p class="text-sm font-medium pb-4">{$_("completed")}</p>
             <RadioGroup
                 name="completed"
                 items={radioGroupItems}

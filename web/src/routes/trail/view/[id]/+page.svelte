@@ -1,23 +1,17 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
-    import Dropdown from "$lib/components/base/dropdown.svelte";
-    import ConfirmModal from "$lib/components/confirm_modal.svelte";
-    import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import Tabs from "$lib/components/tabs.svelte";
+    import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
-    import type { List } from "$lib/models/list";
-    import {
-        lists_add_trail,
-        lists_index,
-        lists_remove_trail,
-    } from "$lib/stores/list_store";
-    import { show_toast } from "$lib/stores/toast_store";
-    import { trail, trails_delete } from "$lib/stores/trail_store";
+    import { trail } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
-    import { formatMeters, formatTimeHHMM } from "$lib/util/format_util";
+    import {
+        formatDistance,
+        formatElevation,
+        formatTimeHHMM,
+    } from "$lib/util/format_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import type { Icon, Map, Marker } from "leaflet";
@@ -26,9 +20,15 @@
     import type { DataSource } from "photoswipe";
     import PhotoSwipeLightbox from "photoswipe/lightbox";
     import "photoswipe/style.css";
-    import { onMount, tick } from "svelte";
+    import { onMount } from "svelte";
+    import { _ } from "svelte-i18n";
 
-    const tabs = ["Description", "Waypoints", "Photos", "Summit book"];
+    const tabs = [
+        $_("description"),
+        $_("waypoints"),
+        $_("photos"),
+        $_("summit-book"),
+    ];
 
     let map: Map;
 
@@ -38,20 +38,6 @@
 
     let lightbox: PhotoSwipeLightbox;
     let lightboxDataSource: DataSource;
-
-    let openConfirmModal: () => void;
-    let openListSelectModal: () => void;
-
-    const dropdownItems: DropdownItem[] = [
-        { text: "Show on map", value: "map", icon: "map" },
-        { text: "Directions", value: "direction", icon: "car" },
-        ...($trail.gpx
-            ? [{ text: "Download GPX", value: "download", icon: "download" }]
-            : []),
-        { text: "Add to list", value: "list", icon: "bookmark" },
-        { text: "Edit", value: "edit", icon: "pen" },
-        { text: "Delete", value: "delete", icon: "trash" },
-    ];
 
     onMount(async () => {
         const L = (await import("leaflet")).default;
@@ -132,73 +118,15 @@
         lightbox?.loadAndOpen(idx, lightboxDataSource);
     }
 
-    async function handleDropdownClick(item: { text: string; value: any }) {
-        if (item.value == "map") {
-            goto(`/map/trail/${$trail.id!}`);
-        } else if (item.value == "list") {
-            openListSelectModal();
-        } else if (item.value == "direction") {
-            window
-                .open(
-                    `https://www.google.com/maps/dir/Current+Location/${$trail.lat},${$trail.lon}`,
-                    "_blank",
-                )
-                ?.focus();
-        } else if (item.value == "download") {
-            downloadURI(getFileURL($trail, $trail.gpx), $trail.gpx!);
-        } else if (item.value == "edit") {
-            goto(`/trail/edit/${$trail.id}`);
-        } else if (item.value == "delete") {
-            openConfirmModal();
-        }
-    }
-
-    function downloadURI(uri: string, name: string) {
-        var link = document.createElement("a");
-        link.setAttribute("download", name);
-        link.href = uri;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-    }
-
-    async function deleteTrail() {
-        trails_delete($trail).then(() => history.back());
-    }
-
     async function toggleMapFullScreen() {
         goto(`/map/trail/${$trail.id!}`);
     }
-
-    async function handleListSelection(list: List) {
-        try {
-            if (list.trails?.includes($trail.id!)) {
-                await lists_remove_trail(list, $trail);
-                show_toast({
-                    type: "success",
-                    icon: "check",
-                    text: `Removed trail from "${list.name}"`,
-                });
-            } else {
-                await lists_add_trail(list, $trail);
-                show_toast({
-                    type: "success",
-                    icon: "check",
-                    text: `Added trail to "${list.name}"`,
-                });
-            }
-            await lists_index();
-        } catch (e) {
-            console.error(e);
-
-            show_toast({
-                type: "error",
-                icon: "close",
-                text: "Error adding trail to list.",
-            });
-        }
-    }
 </script>
+
+<svelte:head>
+    <title>{$trail.name} | {$_("trail", { values: { n: 1 } })} | wanderer</title
+    >
+</svelte:head>
 
 <div
     class="trail-panel max-w-5xl mx-auto border border-input-border rounded-3xl overflow-hidden"
@@ -225,17 +153,7 @@
                 </h3>
             </div>
             {#if $currentUser && $currentUser.id == $trail.author}
-                <Dropdown
-                    items={dropdownItems}
-                    on:change={(e) => handleDropdownClick(e.detail)}
-                    let:toggleMenu={openDropdown}
-                    ><button
-                        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
-                        on:click={openDropdown}
-                    >
-                        <i class="fa fa-ellipsis-vertical"></i>
-                    </button></Dropdown
-                >
+                <TrailDropdown trail={$trail} mode="overview"></TrailDropdown>
             {/if}
         </div>
     </section>
@@ -243,26 +161,26 @@
         class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8 border-b border-input-border"
     >
         <div class="flex flex-col items-center">
-            <span>Distance</span>
+            <span>{$_("distance")}</span>
             <span class="font-semibold text-lg"
-                >{formatMeters($trail.distance)}</span
+                >{formatDistance($trail.distance)}</span
             >
         </div>
         <div class="flex flex-col items-center">
-            <span>Elevation gain</span>
+            <span>{$_("elevation-gain")}</span>
             <span class="font-semibold text-lg"
-                >{formatMeters($trail.elevation_gain)}</span
+                >{formatElevation($trail.elevation_gain)}</span
             >
         </div>
         <div class="flex flex-col items-center">
-            <span>Est. duration</span>
+            <span>{$_("est-duration")}</span>
             <span class="font-semibold text-lg"
                 >{formatTimeHHMM($trail.duration)}</span
             >
         </div>
         {#if $trail.expand.category}
             <div class="flex flex-col items-center">
-                <span>Category</span>
+                <span>{$_("category")}</span>
                 <span class="font-semibold text-lg"
                     >{$trail.expand.category.name}</span
                 >
@@ -334,15 +252,6 @@
             </div>
         </div>
     </section>
-    <ConfirmModal
-        text="Do you really want to delete this trail? This action cannot be undone."
-        bind:openModal={openConfirmModal}
-        on:confirm={deleteTrail}
-    ></ConfirmModal>
-    <ListSelectModal
-        bind:openModal={openListSelectModal}
-        on:change={(e) => handleListSelection(e.detail)}
-    ></ListSelectModal>
 </div>
 
 <style>
