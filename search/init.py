@@ -1,10 +1,11 @@
 from meilisearch import Client
 import json
+import os
 
-MEILISEARCH_URL='http://localhost:7700'
-MEILISEARCH_API_KEY='p2gYZAWODOrwTPr4AYoahCZ9CI8y9bUd0yQLGk-E3m8'
+PUBLIC_MEILISEARCH_URL=os.getenv('MEILISEARCH_URL')
+MEILISEARCH_MASTER_KEY=os.getenv('MEILISEARCH_MASTER_KEY')
 
-client = Client(MEILISEARCH_URL, MEILISEARCH_API_KEY)
+client = Client(MEILISEARCH_URL, MEILISEARCH_MASTER_KEY)
 
 def init():
     client.create_index('cities500', {'primaryKey': 'id'})
@@ -12,14 +13,14 @@ def init():
     client.index('cities500').update_settings({
         'sortableAttributes': ['_geo',],
         'filterableAttributes': ['_geo']
-        })
+    })
 
     client.create_index('trails', {'primaryKey': 'id'})
 
     client.index('trails').update_settings({
         'sortableAttributes': ['name', 'distance', 'elevation_gain', 'created',],
         'filterableAttributes': ['category', 'distance', 'elevation_gain', 'completed', '_geo', 'public', 'author']
-        })
+    })
 
 
     json_file = open('cities500.json', encoding='utf-8')

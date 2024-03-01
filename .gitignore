@@ -4,3 +4,5 @@
 search/meilisearch
 search/data.ms
 search/dumps
+
+run.sh

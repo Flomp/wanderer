@@ -32,6 +32,7 @@
 	"type": "module",
 	"dependencies": {
 		"@fortawesome/fontawesome-free": "^6.5.1",
+		"@sveltejs/adapter-node": "^4.0.1",
 		"@threlte/core": "^7.1.0",
 		"@threlte/extras": "^8.7.5",
 		"@types/leaflet.awesome-markers": "^2.0.28",

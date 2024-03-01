@@ -1,5 +1,5 @@
 <script lang="ts">
-    import noUiSlider from "noUiSlider";
+    import noUiSlider from "nouislider";
     import "nouislider/dist/nouislider.css";
     import { createEventDispatcher, onMount } from "svelte";
 

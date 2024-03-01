@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"log"
+	"os"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase"
@@ -42,16 +44,33 @@ func main() {
 	app := pocketbase.New()
 
 	client := meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   "http://localhost:7700",
-		APIKey: "p2gYZAWODOrwTPr4AYoahCZ9CI8y9bUd0yQLGk-E3m8",
+		Host:   os.Getenv("PUBLIC_MEILISEARCH_URL"),
+		APIKey: os.Getenv("MEILISEARCH_MASTER_KEY"),
 	})
 
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
 		userId := e.Record.GetId()
-		apiKeyUid := "f44e1493-9e9b-4013-ae0f-b6e2c366e93c"
-		apiKey := "adce85854ce63f0e7507e40d2280d374d7202b41890b0734d70fe4c711c793f0"
+
+		apiKeyUid := ""
+		apiKey := ""
+
+		if keys, err := client.GetKeys(nil); err != nil {
+			log.Fatal(err)
+		} else {
+			for _, k := range keys.Results {
+				if k.Name == "Default Search API Key" {
+					apiKeyUid = k.UID
+					apiKey = k.Key
+				}
+			}
+		}
+
+		if len(apiKey) == 0 || len(apiKeyUid) == 0 {
+			return errors.New("unable to locate meilisearch API key")
+		}
 
 		searchRules := map[string]interface{}{
+			"cities500": map[string]string{},
 			"trails": map[string]string{
 				"filter": "public = true OR author = " + userId,
 			},

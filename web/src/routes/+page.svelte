@@ -81,7 +81,7 @@
             on:update={(e) => search(e.detail)}
             on:click={(e) => handleSearchClick(e.detail)}
             large={true}
-            placeholder="{$_("search-for-trails-places")}..."
+            placeholder="{$_('search-for-trails-places')}..."
             items={searchDropdownItems}
         ></Search>
     </div>
@@ -98,7 +98,7 @@
         id="trails"
         class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none"
     >
-        {#each $trails as trail}
+        {#each $trails.splice(0, 5) as trail}
             <a href="/trail/view/{trail.id}">
                 <TrailCard {trail}></TrailCard></a
             >

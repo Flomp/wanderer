@@ -15,8 +15,8 @@ export const trail: Writable<Trail> = writable(new Trail(""));
 
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
-export async function trails_index(data: { perPage: number } = { perPage: 5 }) {
-    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, data.perPage, { expand: "category,waypoints,summit_logs" })).items
+export async function trails_index(data: { perPage: number, random?: boolean } = { perPage: 5, random: false }) {
+    const response: Trail[] = (await pb.collection('trails').getList<Trail>(1, data.perPage, { expand: "category,waypoints,summit_logs", sort: data.random ? "@random" : "" })).items
 
     for (const trail of response) {
         setFileURLs(trail);
@@ -87,7 +87,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     const trailIds = response.hits.map((h) => h.id);
 
     if (trailIds.length == 0) {
-        const currentTrails : Trail[] = get(trails);
+        const currentTrails: Trail[] = get(trails);
         trails.set([]);
         return compareObjectArrays<Trail>(currentTrails, []);
     }
@@ -128,7 +128,7 @@ export async function trails_show(id: string, loadGPX?: boolean) {
 
     response._photoFiles = [];
 
-    trail.set(response);    
+    trail.set(response);
 
     return response;
 }
@@ -209,7 +209,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, formData: 
         formData.append("waypoints", unchangedWaypoint.id!);
     }
 
-    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand.summit_logs ?? [], newTrail.expand.summit_logs ?? []);    
+    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand.summit_logs ?? [], newTrail.expand.summit_logs ?? []);
 
     for (const summitLog of summitLogUpdates.added) {
         const model = await summit_logs_create(summitLog);
@@ -307,7 +307,7 @@ function setFileURLs(trail: Trail) {
     }
 }
 
-function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray: T[]) {    
+function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray: T[]) {
     const newObjects = [];
     const updatedObjects = [];
     const unchangedObjects = [];
