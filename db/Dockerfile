@@ -5,7 +5,7 @@ WORKDIR /
 
 COPY go.mod ./
 COPY go.sum ./
-COPY pb_migrations ./pb_migrations
+COPY migrations ./migrations
 
 RUN go mod download
 
@@ -14,8 +14,8 @@ COPY *.go ./
 RUN go build -o /pocketbase
 RUN /pocketbase migrate
 
-ENV PUBLIC_MEILISEARCH_URL=http://localhost:7700
-ENV MEILISEARCH_MASTER_KEY=
+ENV MEILI_URL=http://localhost:7700
+ENV MEILI_MASTER_KEY=
 
 EXPOSE 8090
 

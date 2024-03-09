@@ -13,10 +13,13 @@ class Trail {
     duration?: number;
     lat?: number;
     lon?: number;
-    thumbnail?: string;
+    thumbnail: number;
     photos: string[];
     gpx?: string;
     created?: string;
+    category?: string;
+    waypoints: string[];
+    summit_logs: string[];
     expand: {
         category?: Category;
         waypoints: Waypoint[]
@@ -26,8 +29,6 @@ class Trail {
     tags?: string[];
     description?: string;
     author?: string;
-
-    _photoFiles: File[]
 
     constructor(name: string,
         params?: {
@@ -39,7 +40,7 @@ class Trail {
             duration?: number,
             lat?:number,
             lon?: number,
-            thumbnail?: string,
+            thumbnail?: number,
             photos?: string[],
             gpx?: string,
             category?: Category,
@@ -60,8 +61,10 @@ class Trail {
         this.duration = params?.duration;
         this.lat = params?.lat;
         this.lon = params?.lon;
-        this.thumbnail = params?.thumbnail;
+        this.thumbnail = params?.thumbnail ?? 0;
         this.photos = params?.photos ?? [];
+        this.waypoints =  [];
+        this.summit_logs = [];
         this.gpx = params?.gpx;
         this.expand = {
             category: params?.category,
@@ -71,7 +74,6 @@ class Trail {
         this.tags = params?.tags ?? []
         this.description = params?.description ?? "";
         this.created = params?.created;
-        this._photoFiles = [];
     }
 }
 

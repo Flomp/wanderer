@@ -12,7 +12,7 @@
     <div class="shrink-0">
         <img
             class="h-28 w-28 object-cover rounded-xl"
-            src={getFileURL(trail, trail.thumbnail)}
+            src={getFileURL(trail, trail.photos[trail.thumbnail])}
             alt=""
         />
     </div>

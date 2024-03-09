@@ -2,7 +2,7 @@ import type { TrailFilter } from "$lib/models/trail";
 import { lists_index } from "$lib/stores/list_store";
 import type { Load } from "@sveltejs/kit";
 
-export const load: Load = async ({ params }) => {
+export const load: Load = async ({ params, fetch }) => {
     const filter: TrailFilter = {
         q: "",
         category: [],
@@ -16,7 +16,7 @@ export const load: Load = async ({ params }) => {
         sort: "created",
         sortOrder: "+",
     };
-    await lists_index();
+    await lists_index(undefined, fetch);
 
     return {filter};
 };

@@ -9,6 +9,9 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/plugins/migratecmd"
+
+	_ "pocketbase/migrations"
 )
 
 func indexRecord(r *models.Record, client *meilisearch.Client) error {
@@ -43,9 +46,14 @@ func indexRecord(r *models.Record, client *meilisearch.Client) error {
 func main() {
 	app := pocketbase.New()
 
+	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
+		Dir:         "migrations",
+		Automigrate: true,
+	})
+
 	client := meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   os.Getenv("PUBLIC_MEILISEARCH_URL"),
-		APIKey: os.Getenv("MEILISEARCH_MASTER_KEY"),
+		Host:   os.Getenv("MEILI_URL"),
+		APIKey: os.Getenv("MEILI_MASTER_KEY"),
 	})
 
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {

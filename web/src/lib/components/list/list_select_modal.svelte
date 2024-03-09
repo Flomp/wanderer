@@ -6,6 +6,7 @@
     import { trail } from "$lib/stores/trail_store";
     import { _ } from "svelte-i18n";
     import Modal from "../base/modal.svelte";
+    import { getFileURL } from "$lib/util/file_util";
 
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
@@ -42,7 +43,7 @@
                 {#if list.avatar}
                     <img
                         class="w-12 aspect-square rounded-full"
-                        src={list.avatar}
+                        src={getFileURL(list, list.avatar)}
                         alt="avatar"
                     />
                 {:else}

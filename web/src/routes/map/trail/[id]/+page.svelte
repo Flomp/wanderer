@@ -37,7 +37,7 @@
 
     onMount(() => {
         lightboxDataSource = $trail.photos.map((p) => ({
-            src: p,
+            src: getFileURL($trail, p),
         }));
         lightbox = new PhotoSwipeLightbox({
             dataSource: lightboxDataSource,
@@ -83,7 +83,7 @@
         <section class="relative h-80">
             <img
                 class="w-full h-80 object-cover"
-                src={getFileURL($trail, $trail.thumbnail)}
+                src={getFileURL($trail, $trail.photos[$trail.thumbnail])}
                 alt=""
             />
             <div
@@ -152,14 +152,14 @@
                 </ul>
             {/if}
             {#if activeTab == 2}
-                <div id="photo-gallery" class="space-y-4">
+                <div id="photo-gallery" class="space-y-4 mx-4">
                     {#each $trail.photos ?? [] as photo, i}
                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                         <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                         <img
                             class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
                             on:click={() => openGallery(i)}
-                            src={photo}
+                            src={getFileURL($trail, photo)}
                             alt=""
                         />
                     {/each}

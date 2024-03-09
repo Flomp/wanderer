@@ -205,7 +205,7 @@
     <li class="flex items-center gap-4 cursor-pointer text-black">
         <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${getFileURL(
             trail,
-            trail.thumbnail,
+            trail.photos[trail.thumbnail],
         )}" alt="">
         </div>
         <div>
@@ -263,7 +263,7 @@
                     extraClasses="w-full"
                     on:update={(e) => search(e.detail)}
                     on:click={(e) => handleSearchClick(e.detail)}
-                    placeholder="{$_("search-for-trails-places")}..."
+                    placeholder="{$_('search-for-trails-places')}..."
                     items={searchDropdownItems}
                 ></Search>
                 <button

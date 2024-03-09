@@ -10,6 +10,7 @@
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
+    import { getFileURL } from "$lib/util/file_util";
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -21,12 +22,7 @@
         initialValues: $list,
         validationSchema: listSchema,
         onSubmit: async (submittedList) => {
-            const htmlForm = document.getElementById(
-                "list-form",
-            ) as HTMLFormElement;
-            const formData = new FormData(htmlForm);
-
-            dispatch("save", { list: submittedList, formData: formData });
+            dispatch("save", { list: submittedList, avatar: (document.getElementById("avatar") as HTMLInputElement).files![0] });
             (document.getElementById("avatar") as HTMLInputElement).value = "";
             closeModal!();
         },
@@ -48,7 +44,7 @@
     }
     $: if (browser) {
         form.set(util.cloneDeep($list));
-        previewURL = $list.avatar ?? "";
+        previewURL = getFileURL($list, $list.avatar) ?? "";
     }
 </script>
 
@@ -78,7 +74,7 @@
         <div class="flex items-center gap-4">
             {#if previewURL.length > 0}
                 <img
-                    class="w-32 aspect-square rounded-full"
+                    class="w-32 aspect-square rounded-full object-cover"
                     alt="avatar"
                     src={previewURL}
                 />

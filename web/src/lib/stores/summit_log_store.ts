@@ -1,29 +1,43 @@
-import { pb } from "$lib/pocketbase";
 import { SummitLog } from "$lib/models/summit_log";
+import { ClientResponseError } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString()));
 
-export async function summit_logs_create(bodyParams?: { [key: string]: any; } | FormData) {
-    const model = await pb
-        .collection("summit_logs")
-        .create<SummitLog>(bodyParams);
+export async function summit_logs_create(summitLog: SummitLog) {
+    const r = await fetch('/api/v1/summit-log', {
+        method: 'PUT',
+        body: JSON.stringify(summitLog),
+    })
 
-    return model;
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
 }
 
-export async function summit_logs_update(updatedSummitLog: SummitLog) {
-    const model = await pb
-        .collection("summit_logs")
-        .update(updatedSummitLog.id!, updatedSummitLog);
+export async function summit_logs_update(summitLog: SummitLog) {
+    const r = await fetch('/api/v1/summit-log/' + summitLog.id, {
+        method: 'POST',
+        body: JSON.stringify(summitLog),
+    })
 
-    return model;
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
 }
 
-export async function summit_logs_delete(id: string) {
-    const success = await pb
-        .collection("summit_logs")
-        .delete(id);
+export async function summit_logs_delete(summitLog: SummitLog) {
+    const r = await fetch('/api/v1/summit-log/' + summitLog.id, {
+        method: 'DELETE',
+    })
 
-    return success;
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
 }

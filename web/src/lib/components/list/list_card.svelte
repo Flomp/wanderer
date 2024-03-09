@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { List } from "$lib/models/list";
+    import { getFileURL } from "$lib/util/file_util";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import { _ } from "svelte-i18n";
     export let list: List;
@@ -17,8 +18,8 @@
 >
     {#if list.avatar}
         <img
-            class="w-16 md:w-24 aspect-square rounded-full"
-            src={list.avatar}
+            class="w-16 md:w-24 aspect-square rounded-full object-cover"
+            src={getFileURL(list, list.avatar)}
             alt="avatar"
         />
     {:else}

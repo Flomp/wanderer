@@ -22,6 +22,7 @@
         trails_update,
     } from "$lib/stores/trail_store";
     import { waypoint } from "$lib/stores/waypoint_store";
+    import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -49,6 +50,11 @@
     let openSummitLogModal: () => void;
 
     let loading = false;
+
+    const photoFiles: File[] = [];
+    let photoPreviews: string[] = [];
+
+    let gpxFile: File | null = null;
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -86,14 +92,21 @@
                     "trail-form",
                 ) as HTMLFormElement;
                 const formData = new FormData(htmlForm);
+                if (!formData.get("public")) {
+                    submittedTrail.public = false;
+                }
+                submittedTrail.photos = submittedTrail.photos.filter(
+                    (p) => !p.startsWith("data:image/svg+xml;base64"),
+                );
                 if (!submittedTrail.id) {
                     const createdTrail = await trails_create(
                         submittedTrail,
-                        formData,
+                        photoFiles,
+                        gpxFile,
                     );
                     $form.id = createdTrail.id;
                 } else {
-                    await trails_update($trail, submittedTrail, formData);
+                    await trails_update($trail, submittedTrail, photoFiles, gpxFile);
                 }
 
                 show_toast({
@@ -199,8 +212,9 @@
             return;
         }
 
-        $form.gpx = selectedFile?.name;
+        gpxFile = selectedFile;
         $form.expand.waypoints = [];
+        $form.waypoints = [];
 
         var reader = new FileReader();
 
@@ -235,6 +249,7 @@
         } else if (e.detail.value === "delete") {
             currentWaypoint.marker?.remove();
             $form.expand.waypoints.splice(index, 1);
+            $form.waypoints.splice(index, 1);
             $form.expand.waypoints = $form.expand.waypoints;
         }
     }
@@ -278,17 +293,14 @@
         }
 
         for (const file of files) {
-            $form._photoFiles.push(file);
+            photoFiles.push(file);
 
             (function (file) {
                 var reader = new FileReader();
                 reader.onload = function (e) {
                     if (e.target?.result) {
-                        if ($form.photos.length == 0) {
-                            $form.thumbnail = e.target.result as string;
-                        }
-                        $form.photos = [
-                            ...$form.photos,
+                        photoPreviews = [
+                            ...photoPreviews,
                             e.target.result as string,
                         ];
                     }
@@ -299,20 +311,23 @@
     }
 
     function makePhotoThumbnail(index: number) {
-        $form.thumbnail = $form.photos[index];
+        $form.thumbnail = index;
     }
 
     function handlePhotoDelete(index: number) {
-        const photoToDelete = $form.photos[index];
-        let reassignThumbnail: boolean = false;
-        if ($form.thumbnail == photoToDelete) {
-            reassignThumbnail = true;
+        if ($form.thumbnail == index) {
+            $form.thumbnail = 0;
+            console.log("huere");
+            
         }
-        $form.photos.splice(index, 1);
-        $form._photoFiles.splice(index, 1);
-        $form.photos = $form.photos;
-        if (reassignThumbnail) {
-            $form.thumbnail = $form.photos[0];
+
+        if (index >= $form.photos.length) {
+            const adjustedIndex = index - $form.photos.length;
+            photoFiles.splice(adjustedIndex, 1);
+            photoPreviews.splice(adjustedIndex, 1);
+        } else {
+            $form.photos.splice(index, 1);
+            $form.photos = $form.photos;
         }
     }
 
@@ -350,6 +365,7 @@
             openSummitLogModal();
         } else if (e.detail.value === "delete") {
             $form.expand.summit_logs.splice(index, 1);
+            $form.summit_logs.splice(index, 1);
             $form.expand.summit_logs = $form.expand.summit_logs;
         }
     }
@@ -383,7 +399,7 @@
         <h3 class="text-xl font-semibold">{$_("basic-info")}</h3>
         <div class="flex gap-4 justify-around">
             <div class="flex flex-col items-center">
-                <span>{$_('distance')}</span>
+                <span>{$_("distance")}</span>
                 <span class="font-medium">{formatDistance($form.distance)}</span
                 >
                 <input type="hidden" name="distance" value={$form.distance} />
@@ -430,7 +446,7 @@
             <Select
                 name="category"
                 label={$_("category")}
-                bind:value={$form.expand.category.id}
+                bind:value={$form.category}
                 items={$categories.map((c) => ({ text: c.name, value: c.id }))}
             ></Select>
         {/if}
@@ -472,19 +488,19 @@
                 style="display: none;"
                 on:change={handlePhotoSelection}
             />
-            {#each $form.photos ?? [] as photo, i}
+            {#each ($form.photos ?? []).concat(photoPreviews) as photo, i}
                 <div class="shrink-0 grow-0 basis-auto m-2">
                     <PhotoCard
-                        src={photo}
+                        src={i >= $form.photos.length ? photo : getFileURL($form, photo)}
                         on:delete={() => handlePhotoDelete(i)}
-                        isThumbnail={$form.thumbnail === photo}
+                        isThumbnail={$form.thumbnail === i}
                         on:thumbnail={() => makePhotoThumbnail(i)}
                     ></PhotoCard>
                 </div>
             {/each}
         </div>
         <hr class="border-separator" />
-        <h3 class="text-xl font-semibold">{$_('summit-book')}</h3>
+        <h3 class="text-xl font-semibold">{$_("summit-book")}</h3>
         <ul>
             {#each $form.expand.summit_logs ?? [] as log, i}
                 <li>

@@ -3,7 +3,7 @@ import { categories_index } from "$lib/stores/category_store";
 import { trails_show } from "$lib/stores/trail_store";
 import { error, type Load } from "@sveltejs/kit";
 
-export const load: Load = async ({ params }) => {
+export const load: Load = async ({ params, fetch }) => {
     if (!params.id) {
         return error(400, "Bad Request")
     }
@@ -11,9 +11,9 @@ export const load: Load = async ({ params }) => {
 
     let trail: Trail;
     if (params.id === "new") {
-        trail = new Trail("", {category: categories[0]});
+        trail = new Trail("", { category: categories[0] });
     } else {
-        trail = await trails_show(params.id, true);
+        trail = await trails_show(params.id, true, fetch);
     }
 
     return { trail: trail }

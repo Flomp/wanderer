@@ -30,16 +30,16 @@
     }
 
     async function saveList(
-        e: CustomEvent<{ list: List; formData: FormData }>,
+        e: CustomEvent<{ list: List; avatar?: File }>,
     ) {
         const result = e.detail;
         if (result.list.id) {
-            await lists_update(result.list, result.formData);
-            await lists_index();
+            await lists_update(result.list, result.avatar);
         } else {
-            await lists_create(result.formData);
-            await lists_index();
+            await lists_create(result.list, result.avatar);
         }
+        await lists_index();
+
     }
 
     async function handleDropdownClick(

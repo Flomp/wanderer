@@ -1,0 +1,57 @@
+version: '3'
+
+x-common-env: &cenv
+  MEILI_URL: http://search:7700
+  MEILI_MASTER_KEY: CHANGE_ME!
+
+services:
+  search:
+    image: getmeili/meilisearch:v1.6.2
+    environment:
+      <<: *cenv
+      MEILI_NO_ANALYTICS: true
+      MEILI_HTTP_PAYLOAD_SIZE_LIMIT: 150 Mb
+    ports:
+      - 7700:7700
+    networks:
+      - wanderer
+    volumes:
+      - ./data/data.ms:/meili_data/data.ms
+    restart: unless-stopped
+
+  bootstrap:
+    build: ./search
+    environment:
+      <<: *cenv
+    depends_on:
+      search:
+        condition: service_started
+    networks:
+      - wanderer
+  db:
+    build: ./db
+    environment:
+      <<: *cenv
+    ports:
+      - "8090:8090"
+    networks:
+      - wanderer
+    restart: unless-stopped
+    volumes:
+      - ./data/pb_data:/pb_data
+
+  web:
+    build: ./web
+    environment:
+      PUBLIC_MEILISEARCH_URL: http://localhost:7700
+      PUBLIC_MEILISEARCH_API_TOKEN:
+      PUBLIC_POCKETBASE_URL: http://127.0.0.1:8090
+    ports:
+      - "8080:3000"
+    networks:
+      - wanderer
+    restart: unless-stopped
+
+networks:
+  wanderer:
+    driver: bridge

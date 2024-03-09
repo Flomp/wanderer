@@ -1,30 +1,43 @@
-import { pb } from "$lib/pocketbase";
 import { Waypoint } from "$lib/models/waypoint";
+import { ClientResponseError } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const waypoint: Writable<Waypoint> = writable(new Waypoint(0, 0));
 
-export async function waypoints_create(bodyParams?: { [key: string]: any; } | FormData) {
+export async function waypoints_create(waypoint: Waypoint) {
+    const r = await fetch('/api/v1/waypoint', {
+        method: 'PUT',
+        body: JSON.stringify(waypoint),
+    })
 
-    const model = await pb
-        .collection("waypoints")
-        .create<Waypoint>(bodyParams);
-
-    return model;
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
 }
 
-export async function waypoints_update(updatedWaypoint: Waypoint) {
-    const model = await pb
-        .collection("waypoints")
-        .update(updatedWaypoint.id!, updatedWaypoint);
+export async function waypoints_update(waypoint: Waypoint) {
+    const r = await fetch('/api/v1/waypoint/' + waypoint.id, {
+        method: 'POST',
+        body: JSON.stringify(waypoint),
+    })
 
-    return model;
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
 }
 
-export async function waypoints_delete(id: string) {
-    const success = await pb
-        .collection("waypoints")
-        .delete(id);
+export async function waypoints_delete(waypoint: Waypoint) {
+    const r = await fetch('/api/v1/waypoint/' + waypoint.id, {
+        method: 'DELETE',
+    })
 
-    return success;
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
 }

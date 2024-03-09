@@ -13,9 +13,12 @@ export const handle: Handle = async ({ event, resolve }) => {
   // validate the user existence and if the path is acceesible
   if (!pb.authStore.model && isRouteProtected(url.pathname)) {
     throw redirect(302, '/login');
+  } else if (pb.authStore.model && url.pathname === "/login") {
+    throw redirect(302, '/');
   }
 
   regenerateInstance();
+
   try {
     // get an up-to-date auth store state by verifying and refreshing the loaded auth model (if any)
     if (pb.authStore.isValid) {
@@ -30,10 +33,10 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.user = pb.authStore.model
 
   const lang = pb.authStore.model?.language ?? event.request.headers.get('accept-language')?.split(',')[0]
-  
-	if (lang) {
-		locale.set(lang)
-	}
+
+  if (lang) {
+    locale.set(lang)
+  }
 
   const response = await resolve(event)
 

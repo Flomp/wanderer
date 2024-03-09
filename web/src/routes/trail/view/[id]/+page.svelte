@@ -84,7 +84,7 @@
         }
 
         lightboxDataSource = $trail.photos.map((p) => ({
-            src: p,
+            src: getFileURL($trail, p),
         }));
         lightbox = new PhotoSwipeLightbox({
             dataSource: lightboxDataSource,
@@ -134,7 +134,7 @@
     <section class="relative h-80">
         <img
             class="w-full h-80"
-            src={getFileURL($trail, $trail.thumbnail)}
+            src={getFileURL($trail, $trail.photos[$trail.thumbnail])}
             alt=""
         />
         <div
@@ -225,7 +225,7 @@
                             <img
                                 class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
                                 on:click={() => openGallery(i)}
-                                src={photo}
+                                src={getFileURL($trail, photo)}
                                 alt=""
                             />
                         {/each}
