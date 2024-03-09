@@ -90,14 +90,14 @@
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: `Removed trail from "${list.name}"`,
+                    text: `${$_("removed-trail-from")} "${list.name}"`,
                 });
             } else {
                 await lists_add_trail(list, trail);
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: `Added trail to "${list.name}"`,
+                    text: `${$_("added-trail-to")} "${list.name}"`,
                 });
             }
             await lists_index();

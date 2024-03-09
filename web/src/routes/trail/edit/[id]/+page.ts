@@ -7,7 +7,7 @@ export const load: Load = async ({ params, fetch }) => {
     if (!params.id) {
         return error(400, "Bad Request")
     }
-    const categories = await categories_index()
+    const categories = await categories_index(fetch)
 
     let trail: Trail;
     if (params.id === "new") {

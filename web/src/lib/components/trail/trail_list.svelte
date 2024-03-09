@@ -6,13 +6,19 @@
     import TrailCard from "./trail_card.svelte";
     import TrailListItem from "./trail_list_item.svelte";
     import { _ } from "svelte-i18n";
+    import Pagination from "../base/pagination.svelte";
+    import TextField from "../base/text_field.svelte";
 
     export let filter: TrailFilter;
     export let trails: Trail[];
+    export let pagination: { page: number; totalPages: number } = {
+        page: 1,
+        totalPages: 1,
+    };
 
     const displayOptions: SelectItem[] = [
-        { text: $_('card', {values: {n: 2}}), value: "cards" },
-        { text: $_('list', {values: {n: 1}}), value: "list" },
+        { text: $_("card", { values: { n: 2 } }), value: "cards" },
+        { text: $_("list", { values: { n: 1 } }), value: "list" },
     ];
 
     let selectedDisplayOption = displayOptions[0].value;
@@ -20,10 +26,10 @@
     let dispatch = createEventDispatcher();
 
     const sortOptions: SelectItem[] = [
-        { text: $_('alphabetical'), value: "name" },
-        { text: $_('creation-date'), value: "created" },
-        { text: $_('distance'), value: "distance" },
-        { text: $_('elevation-gain'), value: "elevation_gain" },
+        { text: $_("alphabetical"), value: "name" },
+        { text: $_("creation-date"), value: "created" },
+        { text: $_("distance"), value: "distance" },
+        { text: $_("elevation-gain"), value: "elevation_gain" },
     ];
 
     onMount(() => {
@@ -37,11 +43,11 @@
         localStorage.setItem("displayOption", selectedDisplayOption);
     }
 
-    async function setSort() {
+    function setSort() {
         dispatch("update", filter);
     }
 
-    async function setSortOrder() {
+    function setSortOrder() {
         if (filter.sortOrder === "+") {
             filter.sortOrder = "-";
         } else {
@@ -52,9 +58,16 @@
 </script>
 
 <div class="min-w-0">
-    <div class="flex items-start gap-8 justify-end mx-4">
-        <div>
-            <p class="text-sm text-gray-500 pb-2">{$_('sort')}</p>
+    <div class="flex items-end flex-wrap md:flex-nowrap gap-x-6 gap-y-2 mx-4">
+        <div class="basis-full order-1 md:order-none mt-6 md:mt-0">
+            <Pagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                on:pagination
+            ></Pagination>
+        </div>
+        <div class="lg:shrink-0">
+            <p class="text-sm text-gray-500 pb-2">{$_("sort")}</p>
             <div class="flex items-center gap-2">
                 <Select
                     bind:value={filter.sort}
@@ -70,8 +83,8 @@
                 >
             </div>
         </div>
-        <div>
-            <p class="text-sm text-gray-500 pb-2">{$_('display-as')}</p>
+        <div class="lg:shrink-0">
+            <p class="text-sm text-gray-500 pb-2">{$_("display-as")}</p>
 
             <Select
                 bind:value={selectedDisplayOption}

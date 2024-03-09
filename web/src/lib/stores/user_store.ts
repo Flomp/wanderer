@@ -51,9 +51,9 @@ export async function logout() {
 }
 
 export async function users_update(id: string, user: User | { [K in keyof User]?: User[K] } | FormData) {
-    const r = await fetch('/api/v1/user', {
+    const r = await fetch('/api/v1/user/' + id, {
         method: 'POST',
-        body: JSON.stringify({ id: id, user: user })
+        body: JSON.stringify(user)
     })
 
     if (r.ok) {
@@ -65,9 +65,8 @@ export async function users_update(id: string, user: User | { [K in keyof User]?
 }
 
 export async function users_delete(user: User) {
-    const r = await fetch('/api/v1/user', {
+    const r = await fetch('/api/v1/user/' + user.id, {
         method: 'DELETE',
-        body: JSON.stringify({ id: user.id })
     })
 
     if (!r.ok) {

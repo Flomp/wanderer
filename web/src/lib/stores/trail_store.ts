@@ -4,19 +4,20 @@ import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { getFileURL } from "$lib/util/file_util";
 import { util } from "$lib/vendor/svelte-form-lib/util";
+import type { LatLng } from "leaflet";
+import { ClientResponseError } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
-import type { LatLng } from "leaflet";
-import { ClientResponseError } from "pocketbase";
 
 export const trails: Writable<Trail[]> = writable([])
 export const trail: Writable<Trail> = writable(new Trail(""));
 
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
-export async function trails_index(data: { perPage: number, random?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> } = { perPage: 5, random: false, f: fetch }) {
+export async function trails_index(data: { perPage: number, random?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> } = { perPage: 30, random: false, f: fetch }) {
     const r = await data.f('/api/v1/trail?' + new URLSearchParams({
+        "per-page": data.perPage.toString(),
         expand: "category,waypoints,summit_logs",
         sort: data.random ? "@random" : ""
     }), {
@@ -32,7 +33,7 @@ export async function trails_index(data: { perPage: number, random?: boolean, f:
     }
 }
 
-export async function trails_search_filter(filter: TrailFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     let filterText: string = `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.elevationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
 
     if (filter.category.length > 0) {
@@ -46,7 +47,7 @@ export async function trails_search_filter(filter: TrailFilter, f: (url: Request
     }
     let r = await f("/api/v1/search/trails", {
         method: "POST",
-        body: JSON.stringify({ q: filter.q, options: { filter: filterText } }),
+        body: JSON.stringify({ q: filter.q, options: { filter: filterText, hitsPerPage: 20, page: page } }),
     });
     const result = await r.json();
 
@@ -68,7 +69,7 @@ export async function trails_search_filter(filter: TrailFilter, f: (url: Request
 
     if (r.ok) {
         trails.set(response.items);
-        return response.items;
+        return result;
     } else {
         throw new ClientResponseError(response)
     }
@@ -120,7 +121,6 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     const response = await r.json()
 
     if (r.ok) {
-
         for (const trail of response.items) {
             const gpxData: string = await fetchGPX(trail);
             trail.expand.gpx_data = gpxData;
@@ -150,7 +150,7 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     }
 
     if (loadGPX) {
-        const gpxData: string = await fetchGPX(response);
+        const gpxData: string = await fetchGPX(response, f);
         response.expand.gpx_data = gpxData;
     }
 
@@ -317,12 +317,12 @@ export async function trails_delete(trail: Trail) {
     }
 }
 
-async function fetchGPX(trail: Trail) {
+async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     if (!trail.gpx) {
         return "";
     }
     const gpxUrl = getFileURL(trail, trail.gpx);
-    const response: Response = await fetch(gpxUrl);
+    const response: Response = await f(gpxUrl);
     const gpxData = await response.text();
 
     return gpxData

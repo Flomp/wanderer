@@ -85,7 +85,7 @@
             <h5 class="text-xl font-semibold">{$_("create-new-list")}</h5>
         </button>
         <hr class="border-separator my-2" />
-        <div class="max-h-[512px] md:max-h-none overflow-y-auto">
+        <div>
             {#each $lists as item, i}
                 <li on:click={() => list.set(item)} role="presentation">
                     <ListCard

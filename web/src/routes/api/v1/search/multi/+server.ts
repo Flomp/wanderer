@@ -10,6 +10,6 @@ export async function POST(event: RequestEvent) {
         });
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw error(e.httpStatus, e)
     }
 }

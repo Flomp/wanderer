@@ -36,20 +36,26 @@
 
         const response = await r.json();
 
-        const trailItems = response.results[0].hits.map((t: Record<string, any>) => ({
-            text: t.name,
-            description: `Trail | ${t.location}`,
-            value: t.id,
-            icon: "route",
-        }));
-        const cityItems = response.results[1].hits.map((c: Record<string, any>) => ({
-            text: c.name,
-            description: `City | ${
-                country_codes[c["country code"] as keyof typeof country_codes]
-            }`,
-            value: c,
-            icon: "city",
-        }));
+        const trailItems = response.results[0].hits.map(
+            (t: Record<string, any>) => ({
+                text: t.name,
+                description: `Trail | ${t.location}`,
+                value: t.id,
+                icon: "route",
+            }),
+        );
+        const cityItems = response.results[1].hits.map(
+            (c: Record<string, any>) => ({
+                text: c.name,
+                description: `City | ${
+                    country_codes[
+                        c["country code"] as keyof typeof country_codes
+                    ]
+                }`,
+                value: c,
+                icon: "city",
+            }),
+        );
 
         searchDropdownItems = [...trailItems, ...cityItems];
     }
@@ -102,15 +108,15 @@
         id="trails"
         class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none"
     >
-        {#each $trails.splice(0, 5) as trail}
-            <a href="/trail/view/{trail.id}">
-                <TrailCard {trail}></TrailCard></a
+        {#each { length: Math.min($trails.length, 4) } as _, i}
+            <a href="/trail/view/{$trails[i].id}">
+                <TrailCard trail={$trails[i]}></TrailCard></a
             >
         {/each}
     </div>
     <div class="max-w-md md:mx-auto space-y-8">
         <h2 class="text-4xl md:text-5xl font-bold">
-            {$currentUser ? "Trails for you" : "Explore some trails"}
+            {$currentUser ? $_("trails-for-you") : $_("explore-some-trails")}
         </h2>
         <h5>
             {$_("hero_section_1_text")}
@@ -118,6 +124,7 @@
         <a
             class="inline-block btn-primary btn-large"
             href="/trails"
+            data-sveltekit-preload-data="off"
             role="button">{$_("explore")}</a
         >
     </div>

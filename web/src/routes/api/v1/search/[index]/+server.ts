@@ -8,6 +8,8 @@ export async function POST(event: RequestEvent) {
         const r = await ms.index(event.params.index as string).search(data.q, data.options);
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        console.log(e);
+        
+        throw error(e.httpStatus, e)
     }
 }
