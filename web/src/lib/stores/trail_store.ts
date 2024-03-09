@@ -7,7 +7,6 @@ import { util } from "$lib/vendor/svelte-form-lib/util";
 import { get, writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
-import { ms } from "$lib/meilisearch";
 import type { LatLng } from "leaflet";
 import { ClientResponseError } from "pocketbase";
 
@@ -45,19 +44,22 @@ export async function trails_search_filter(filter: TrailFilter, f: (url: Request
     if (filter.near.lat && filter.near.lon) {
         filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
     }
-    const indexResponse = await ms
-        .index("trails")
-        .search(filter.q, { filter: filterText });
-    const trailIds = indexResponse.hits.map((h) => h.id);
+    let r = await f("/api/v1/search/trails", {
+        method: "POST",
+        body: JSON.stringify({ q: filter.q, options: { filter: filterText } }),
+    });
+    const result = await r.json();
+
+    const trailIds = result.hits.map((h: Record<string, any>) => h.id);
 
     if (trailIds.length == 0) {
         trails.set([]);
         return [];
     }
 
-    const r = await f('/api/v1/trail?' + new URLSearchParams({
+    r = await f('/api/v1/trail?' + new URLSearchParams({
         expand: "category,waypoints,summit_logs",
-        filter: trailIds.map((id) => `id="${id}"`).join('||'),
+        filter: trailIds.map((id: Record<string, any>) => `id="${id}"`).join('||'),
         sort: `${filter.sortOrder}${filter.sort}`
     }), {
         method: 'GET',
@@ -87,13 +89,20 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
         }
     }
 
-    const indexResponse = await ms.index("trails").search("", {
-        filter: [
-            `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
-            filterText
-        ],
+    let r = await fetch("/api/v1/search/trails", {
+        method: "POST",
+        body: JSON.stringify({
+            q: "", options: {
+                filter: [
+                    `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
+                    filterText
+                ],
+            }
+        }),
     });
-    const trailIds = indexResponse.hits.map((h) => h.id);
+    const result = await r.json();
+
+    const trailIds = result.hits.map((h: Record<string, any>) => h.id);
 
     if (trailIds.length == 0) {
         const currentTrails: Trail[] = get(trails);
@@ -101,8 +110,8 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
         return compareObjectArrays<Trail>(currentTrails, []);
     }
 
-    const r = await fetch('/api/v1/trail?' + new URLSearchParams({
-        filter: trailIds.map((id) => `id="${id}"`).join("||"),
+    r = await fetch('/api/v1/trail?' + new URLSearchParams({
+        filter: trailIds.map((id: Record<string, any>) => `id="${id}"`).join("||"),
         expand: "category,waypoints,summit_logs",
         sort: `+name`,
     }), {

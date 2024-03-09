@@ -8,7 +8,6 @@
     import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
-    import { ms } from "$lib/meilisearch";
     import type { Trail, TrailFilter } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
     import {
@@ -111,28 +110,33 @@
     });
 
     async function search(q: string) {
-        const response = await ms.multiSearch({
-            queries: [
-                {
-                    indexUid: "trails",
-                    q: q,
-                    limit: 3,
-                },
-                {
-                    indexUid: "cities500",
-                    q: q,
-                    limit: 3,
-                },
-            ],
+        const r = await fetch("/api/v1/search/multi", {
+            method: "POST",
+            body: JSON.stringify({
+                queries: [
+                    {
+                        indexUid: "trails",
+                        q: q,
+                        limit: 3,
+                    },
+                    {
+                        indexUid: "cities500",
+                        q: q,
+                        limit: 3,
+                    },
+                ],
+            }),
         });
 
-        const trailItems = response.results[0].hits.map((t) => ({
+        const response = await r.json();
+
+        const trailItems = response.results[0].hits.map((t: Record<string, any>) => ({
             text: t.name,
             description: `Trail | ${t.location}`,
             value: t,
             icon: "route",
         }));
-        const cityItems = response.results[1].hits.map((c) => ({
+        const cityItems = response.results[1].hits.map((c: Record<string, any>) => ({
             text: c.name,
             description: `City | ${
                 country_codes[c["country code"] as keyof typeof country_codes]

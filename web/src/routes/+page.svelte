@@ -6,7 +6,6 @@
     import CategoryCard from "$lib/components/category_card.svelte";
     import Scene from "$lib/components/scene.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
-    import { ms } from "$lib/meilisearch";
     import { categories } from "$lib/stores/category_store";
     import { trails } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
@@ -17,33 +16,38 @@
     let searchDropdownItems: SearchItem[] = [];
 
     async function search(q: string) {
-        const response = await ms.multiSearch({
-            queries: [
-                {
-                    indexUid: "trails",
-                    q: q,
-                    limit: 3,
-                },
-                {
-                    indexUid: "cities500",
-                    q: q,
-                    limit: 3,
-                },
-            ],
+        const r = await fetch("/api/v1/search/multi", {
+            method: "POST",
+            body: JSON.stringify({
+                queries: [
+                    {
+                        indexUid: "trails",
+                        q: q,
+                        limit: 3,
+                    },
+                    {
+                        indexUid: "cities500",
+                        q: q,
+                        limit: 3,
+                    },
+                ],
+            }),
         });
 
-        const trailItems = response.results[0].hits.map((t) => ({
+        const response = await r.json();
+
+        const trailItems = response.results[0].hits.map((t: Record<string, any>) => ({
             text: t.name,
             description: `Trail | ${t.location}`,
             value: t.id,
             icon: "route",
         }));
-        const cityItems = response.results[1].hits.map((t) => ({
-            text: t.name,
+        const cityItems = response.results[1].hits.map((c: Record<string, any>) => ({
+            text: c.name,
             description: `City | ${
-                country_codes[t["country code"] as keyof typeof country_codes]
+                country_codes[c["country code"] as keyof typeof country_codes]
             }`,
-            value: t,
+            value: c,
             icon: "city",
         }));
 

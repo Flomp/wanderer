@@ -9,7 +9,6 @@
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
-    import { ms } from "$lib/meilisearch";
     import { SummitLog } from "$lib/models/summit_log";
     import { Trail, trailSchema } from "$lib/models/trail";
     import { Waypoint } from "$lib/models/waypoint";
@@ -106,7 +105,12 @@
                     );
                     $form.id = createdTrail.id;
                 } else {
-                    await trails_update($trail, submittedTrail, photoFiles, gpxFile);
+                    await trails_update(
+                        $trail,
+                        submittedTrail,
+                        photoFiles,
+                        gpxFile,
+                    );
                 }
 
                 show_toast({
@@ -222,13 +226,20 @@
 
         reader.onload = async function (e) {
             await addGPXLayer(e.target?.result as string);
-            const closestCity = (
-                await ms.index("cities500").search("", {
-                    filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
-                    sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
-                    limit: 1,
-                })
-            ).hits[0];
+            const r = await fetch("/api/v1/search/cities500", {
+                method: "POST",
+                body: JSON.stringify({
+                    q: "",
+                    options: {
+                        filter: [
+                            `_geoRadius(${$form.lat}, ${$form.lon}, 10000)`,
+                        ],
+                        sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
+                        limit: 1,
+                    },
+                }),
+            });
+            const closestCity = (await r.json()).hits[0];
 
             $form.location = closestCity.name;
         };
@@ -318,7 +329,6 @@
         if ($form.thumbnail == index) {
             $form.thumbnail = 0;
             console.log("huere");
-            
         }
 
         if (index >= $form.photos.length) {
@@ -491,7 +501,9 @@
             {#each ($form.photos ?? []).concat(photoPreviews) as photo, i}
                 <div class="shrink-0 grow-0 basis-auto m-2">
                     <PhotoCard
-                        src={i >= $form.photos.length ? photo : getFileURL($form, photo)}
+                        src={i >= $form.photos.length
+                            ? photo
+                            : getFileURL($form, photo)}
                         on:delete={() => handlePhotoDelete(i)}
                         isThumbnail={$form.thumbnail === i}
                         on:thumbnail={() => makePhotoThumbnail(i)}

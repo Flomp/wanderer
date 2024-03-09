@@ -10,7 +10,6 @@
         type SelectItem,
     } from "$lib/components/base/select.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
-    import { ms } from "$lib/meilisearch";
     import {
         currentUser,
         logout,
@@ -45,8 +44,12 @@
     });
 
     async function searchCities(q: string) {
-        const result = await ms.index("cities500").search(q, { limit: 5 });
-        searchDropdownItems = result.hits.map((h) => ({
+        const r = await fetch("/api/v1/search/cities500", {
+            method: "POST",
+            body: JSON.stringify({ q: q, options: { limit: 5 } }),
+        });
+        const result = await r.json();
+        searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
             text: h.name,
             description:
                 country_codes[h["country code"] as keyof typeof country_codes],

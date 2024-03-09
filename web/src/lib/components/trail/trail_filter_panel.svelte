@@ -1,17 +1,16 @@
 <script lang="ts">
-    import { ms } from "$lib/meilisearch";
     import type { Category } from "$lib/models/category";
     import type { TrailFilter } from "$lib/models/trail";
     import { country_codes } from "$lib/util/country_code_util";
     import { formatDistance, formatElevation } from "$lib/util/format_util";
     import { createEventDispatcher } from "svelte";
+    import { _ } from "svelte-i18n";
+    import { slide } from "svelte/transition";
     import DoubleSlider from "../base/double_slider.svelte";
     import type { RadioItem } from "../base/radio_group.svelte";
     import RadioGroup from "../base/radio_group.svelte";
     import Search, { type SearchItem } from "../base/search.svelte";
     import Slider from "../base/slider.svelte";
-    import { slide } from "svelte/transition";
-    import { _ } from "svelte-i18n";
 
     export let categories: Category[];
     export let filterExpanded: boolean = true;
@@ -87,8 +86,13 @@
 
             return;
         }
-        const result = await ms.index("cities500").search(q, { limit: 5 });
-        searchDropdownItems = result.hits.map((h) => ({
+        const r = await fetch("/api/v1/search/cities500", {
+            method: "POST",
+            body: JSON.stringify({ q: q, options: { limit: 5 } }),
+        });
+        const result = await r.json();
+
+        searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
             text: h.name,
             description:
                 country_codes[h["country code"] as keyof typeof country_codes],
