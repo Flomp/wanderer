@@ -60,7 +60,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     if (!r.ok) {
         throw new ClientResponseError(result)
     }
-    
+
     const trailIds = result.hits.map((h: Record<string, any>) => h.id);
 
     if (trailIds.length == 0) {
@@ -91,6 +91,8 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
 
     if (filter) {
         filterText += `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.elevationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
+
+        filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
 
         if (filter.category.length > 0) {
             filterText += ` AND category IN [${filter.category.join(",")}]`;

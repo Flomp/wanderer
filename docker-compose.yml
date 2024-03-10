@@ -46,7 +46,7 @@ services:
     build: ./web
     environment:
       <<: *cenv
-      MEILI_API_TOKEN: 
+      MEILI_API_TOKEN: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhcGlLZXlVaWQiOiIwZDA0YTAzYy1iNzBjLTQzZTctOGUzMC00NjNiODFhM2UwY2YiLCJzZWFyY2hSdWxlcyI6eyJ0cmFpbHMiOnsiZmlsdGVyIjoicHVibGljPXRydWUifSwiY2l0aWVzNTAwIjp7fX0sImV4cCI6bnVsbH0.XhHwyRqtKjij2-oPvcYAL3uIFmB4lxUBUgVzhQqL1To
       ORIGIN: http://localhost:8080
       PUBLIC_POCKETBASE_URL: http://db:8090
     ports:

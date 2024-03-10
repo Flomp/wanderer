@@ -43,8 +43,8 @@ def init_indices():
 
 
 def generate_public_token():
-    search_key = client.get_keys().results[0]
-
+    search_key = next(filter(lambda r: r.name == "Default Search API Key", client.get_keys().results))
+    
     search_rules = {
         'trails': {
             'filter': 'public=true'
@@ -60,6 +60,6 @@ init_indices()
 print("Indices initialized!")
 token = generate_public_token()
 print("Generating public token...")
-print(f"PUBLIC_MEILISEARCH_API_TOKEN:{token}")
+print(f"MEILI_API_TOKEN: {token}")
 
 print("Bootstrapping complete!")

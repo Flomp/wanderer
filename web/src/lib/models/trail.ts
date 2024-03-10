@@ -1,4 +1,3 @@
-import { array, number, object, string } from "yup";
 import type { Category } from "./category";
 import type { SummitLog } from "./summit_log";
 import type { Waypoint } from "./waypoint";
@@ -11,7 +10,7 @@ class Trail {
     distance?: number;
     elevation_gain?: number;
     duration?: number;
-    difficulty?: "easy"|"moderate"|"difficult"
+    difficulty?: "easy" | "moderate" | "difficult"
     lat?: number;
     lon?: number;
     thumbnail: number;
@@ -39,8 +38,8 @@ class Trail {
             distance?: number,
             elevation_gain?: number,
             duration?: number,
-            difficulty?: "easy"|"moderate"|"difficult",
-            lat?:number,
+            difficulty?: "easy" | "moderate" | "difficult",
+            lat?: number,
             lon?: number,
             thumbnail?: number,
             photos?: string[],
@@ -66,7 +65,7 @@ class Trail {
         this.lon = params?.lon;
         this.thumbnail = params?.thumbnail ?? 0;
         this.photos = params?.photos ?? [];
-        this.waypoints =  [];
+        this.waypoints = [];
         this.summit_logs = [];
         this.gpx = params?.gpx;
         this.expand = {
@@ -79,19 +78,6 @@ class Trail {
         this.created = params?.created;
     }
 }
-
-const trailSchema = object<Trail>({
-    id: string().optional(),
-    name: string().required("Required"),
-    location: string().optional(),
-    distance: number().optional(),
-    elevation_gain: number().optional(),
-    duration: number().optional(),
-    thumbnail: string().optional(),
-    photos: array(string()).optional(),
-    gpx: string().optional(),
-    description: string().optional()
-});
 
 interface TrailFilter {
     q: string,
@@ -108,10 +94,9 @@ interface TrailFilter {
     elevationGainMax: number;
     completed?: boolean;
     sort: "name" | "distance" | "elevation_gain" | "created";
-    sortOrder: "+" | "-" 
+    sortOrder: "+" | "-"
 }
 
-export { Trail, trailSchema };    
+export { Trail };
 
 export type { TrailFilter };
-

@@ -39,6 +39,10 @@
     let lightbox: PhotoSwipeLightbox;
     let lightboxDataSource: DataSource;
 
+    const thumbnail = $trail.photos.length
+        ? getFileURL(trail, $trail.photos[$trail.thumbnail])
+        : "/imgs/default_thumbnail.webp";
+
     onMount(async () => {
         const L = (await import("leaflet")).default;
         await import("leaflet-gpx");
@@ -134,7 +138,7 @@
     <section class="relative h-80">
         <img
             class="w-full h-80"
-            src={getFileURL($trail, $trail.photos[$trail.thumbnail])}
+            src={thumbnail}
             alt=""
         />
         <div

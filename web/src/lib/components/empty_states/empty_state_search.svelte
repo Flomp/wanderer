@@ -7,7 +7,7 @@
     <img
         style="width: {width}px"
         class="rounded-full aspect-square"
-        src="/imgs/empty_state.webp"
+        src="/imgs/empty_state.png"
         alt="Empty State showing a wanderer going into the distance"
     />
 

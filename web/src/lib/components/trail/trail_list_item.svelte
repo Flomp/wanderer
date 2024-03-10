@@ -1,20 +1,24 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
     import { getFileURL } from "$lib/util/file_util";
-    import { formatDistance, formatElevation, formatTimeHHMM } from "$lib/util/format_util";
+    import {
+        formatDistance,
+        formatElevation,
+        formatTimeHHMM,
+    } from "$lib/util/format_util";
 
     export let trail: Trail;
+
+    $: thumbnail = trail.photos.length
+        ? getFileURL(trail, trail.photos[trail.thumbnail])
+        : "/imgs/default_thumbnail.webp";
 </script>
 
 <li
     class="flex gap-8 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
 >
     <div class="shrink-0">
-        <img
-            class="h-28 w-28 object-cover rounded-xl"
-            src={getFileURL(trail, trail.photos[trail.thumbnail])}
-            alt=""
-        />
+        <img class="h-28 w-28 object-cover rounded-xl" src={thumbnail} alt="" />
     </div>
     <div class="min-w-0 basis-full">
         <h4 class="font-semibold text-lg">{trail.name}</h4>

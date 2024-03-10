@@ -8,6 +8,10 @@
     } from "$lib/util/format_util";
 
     export let trail: Trail;
+
+    $: thumbnail = trail.photos.length
+        ? getFileURL(trail, trail.photos[trail.thumbnail])
+        : "/imgs/default_thumbnail.webp";
 </script>
 
 <div
@@ -17,7 +21,7 @@
     role="listitem"
 >
     <div class="w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl">
-        <img src={getFileURL(trail, trail.photos[trail.thumbnail])} alt="" />
+        <img src={thumbnail} alt="" />
     </div>
     <div class="p-4">
         <div>

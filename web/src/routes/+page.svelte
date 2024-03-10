@@ -108,6 +108,16 @@
         id="trails"
         class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none"
     >
+        {#if $trails.length == 0}
+            <div>
+                <img
+                    style="max-width: 450px"
+                    class="rounded-full aspect-square"
+                    src="/imgs/default_thumbnail.webp"
+                    alt="Empty State showing a wanderer going into the distance"
+                />
+            </div>
+        {/if}
         {#each { length: Math.min($trails.length, 4) } as _, i}
             <a href="/trail/view/{$trails[i].id}">
                 <TrailCard trail={$trails[i]}></TrailCard></a
@@ -115,18 +125,33 @@
         {/each}
     </div>
     <div class="max-w-md md:mx-auto space-y-8">
-        <h2 class="text-4xl md:text-5xl font-bold">
-            {$currentUser ? $_("trails-for-you") : $_("explore-some-trails")}
-        </h2>
-        <h5>
-            {$_("hero_section_1_text")}
-        </h5>
-        <a
-            class="inline-block btn-primary btn-large"
-            href="/trails"
-            data-sveltekit-preload-data="off"
-            role="button">{$_("explore")}</a
-        >
+        {#if $trails.length == 0}
+            <h2 class="text-4xl md:text-5xl font-bold">
+                {$_("hero_section_1_heading")}
+            </h2>
+            <h5>{$_("hero_section_1_text_alternative")}</h5>
+            <a
+                class="inline-block btn-primary btn-large"
+                href="/trail/edit/new"
+                data-sveltekit-preload-data="off"
+                role="button">{$_("new-trail")}</a
+            >
+        {:else}
+            <h2 class="text-4xl md:text-5xl font-bold">
+                {$currentUser
+                    ? $_("trails-for-you")
+                    : $_("explore-some-trails")}
+            </h2>
+            <h5>
+                {$_("hero_section_1_text")}
+            </h5>
+            <a
+                class="inline-block btn-primary btn-large"
+                href="/trails"
+                data-sveltekit-preload-data="off"
+                role="button">{$_("explore")}</a
+            >
+        {/if}
     </div>
 </section>
 <section

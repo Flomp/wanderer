@@ -47,7 +47,7 @@
     let showFilter: boolean = false;
     let showMap: boolean = true;
 
-    let filter: TrailFilter;
+    const filter: TrailFilter = $page.data.filter;
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -130,20 +130,26 @@
 
         const response = await r.json();
 
-        const trailItems = response.results[0].hits.map((t: Record<string, any>) => ({
-            text: t.name,
-            description: `Trail | ${t.location}`,
-            value: t,
-            icon: "route",
-        }));
-        const cityItems = response.results[1].hits.map((c: Record<string, any>) => ({
-            text: c.name,
-            description: `City | ${
-                country_codes[c["country code"] as keyof typeof country_codes]
-            }`,
-            value: c,
-            icon: "city",
-        }));
+        const trailItems = response.results[0].hits.map(
+            (t: Record<string, any>) => ({
+                text: t.name,
+                description: `Trail | ${t.location}`,
+                value: t,
+                icon: "route",
+            }),
+        );
+        const cityItems = response.results[1].hits.map(
+            (c: Record<string, any>) => ({
+                text: c.name,
+                description: `City | ${
+                    country_codes[
+                        c["country code"] as keyof typeof country_codes
+                    ]
+                }`,
+                value: c,
+                icon: "city",
+            }),
+        );
 
         searchDropdownItems = [...trailItems, ...cityItems];
     }
@@ -291,7 +297,7 @@
                         categories={$categories}
                         showTrailSearch={false}
                         showCitySearch={false}
-                        bind:filter
+                        {filter}
                         on:update={(e) => handleFilterUpdate(e.detail)}
                     ></TrailFilterPanel>
                 </div>

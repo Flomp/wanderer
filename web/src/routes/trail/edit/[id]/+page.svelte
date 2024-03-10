@@ -10,7 +10,7 @@
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
     import { SummitLog } from "$lib/models/summit_log";
-    import { Trail, trailSchema } from "$lib/models/trail";
+    import { Trail } from "$lib/models/trail";
     import { Waypoint } from "$lib/models/waypoint";
     import { categories } from "$lib/stores/category_store";
     import { summitLog } from "$lib/stores/summit_log_store";
@@ -37,6 +37,7 @@
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import { array, number, object, string } from "yup";
 
     export let data: { trail: Trail };
 
@@ -54,6 +55,22 @@
     let photoPreviews: string[] = [];
 
     let gpxFile: File | null = null;
+
+    const trailSchema = object<Trail>({
+        id: string().optional(),
+        name: string().required($_("required")),
+        location: string().optional(),
+        distance: number().optional(),
+        difficulty: string()
+            .oneOf(["easy", "moderate", "difficult"])
+            .optional(),
+        elevation_gain: number().optional(),
+        duration: number().optional(),
+        thumbnail: string().optional(),
+        photos: array(string()).optional(),
+        gpx: string().optional(),
+        description: string().optional(),
+    });
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -457,9 +474,9 @@
             label={$_("difficulty")}
             bind:value={$form.difficulty}
             items={[
-                { text: $_('easy'), value: "easy" },
-                { text: $_('moderate'), value: "moderate" },
-                { text: $_('difficult'), value: "difficult" },
+                { text: $_("easy"), value: "easy" },
+                { text: $_("moderate"), value: "moderate" },
+                { text: $_("difficult"), value: "difficult" },
             ]}
         ></Select>
         {#if $form.expand.category}

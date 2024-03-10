@@ -78,7 +78,7 @@
     function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "logout") {
             logout();
-            goto("/");
+            window.location.href = "/";
         } else if (item.value == "profile") {
             goto("/profile");
         }
@@ -117,7 +117,7 @@
     <hr class="my-6 border-input-border" />
     <div class="flex flex-col basis-full">
         <a class="btn-primary btn-large text-center mx-4" href="/trail/edit/new"
-            ><i class="fa fa-plus mr-2"></i>{$_('new-trail')}</a
+            ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
         >
         {#if $currentUser}
             <div class="basis-full"></div>
@@ -180,7 +180,7 @@
                 on:click={() => toggleTheme()}
             ></button>
             <a class="btn-primary btn-large" href="/trail/edit/new"
-                ><i class="fa fa-plus mr-2"></i>{$_('new-trail')}</a
+                ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
             <Dropdown
                 items={dropdownItems}
@@ -208,7 +208,7 @@
                     : 'moon'}"
                 on:click={() => toggleTheme()}
             ></button>
-            <a class="btn-primary btn-large" href="/login">{$_('login')}</a>
+            <a class="btn-primary btn-large" href="/login">{$_("login")}</a>
         </div>
     {/if}
     <button

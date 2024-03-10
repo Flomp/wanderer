@@ -12,7 +12,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // validate the user existence and if the path is acceesible
   if (!pb.authStore.model && isRouteProtected(url.pathname)) {
-    throw redirect(302, '/login');
+    throw redirect(302, '/login?r='+url.pathname);
   } else if (pb.authStore.model && url.pathname === "/login") {
     throw redirect(302, '/');
   }

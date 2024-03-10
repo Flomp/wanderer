@@ -97,7 +97,7 @@
     <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
         {#if trails.length == 0}
             <div class="flex flex-col basis-full items-center">
-                <EmptyStateSearch></EmptyStateSearch>
+                <EmptyStateSearch width={356}></EmptyStateSearch>
             </div>
         {/if}
         {#each trails as trail}

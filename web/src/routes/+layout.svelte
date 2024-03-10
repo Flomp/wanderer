@@ -13,7 +13,7 @@
     beforeNavigate((n) => {
         if (!$currentUser && isRouteProtected(n.to?.url?.pathname ?? "")) {
             n.cancel();
-            goto("/login");
+            goto("/login?r="+n.to?.url?.pathname);
         }
     });
 </script>

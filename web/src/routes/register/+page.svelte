@@ -6,11 +6,10 @@
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
-    import { users_create, type User, login } from "$lib/stores/user_store";
+    import { login, users_create, type User } from "$lib/stores/user_store";
     import { createForm } from "$lib/vendor/svelte-form-lib";
-    import { object, string } from "yup";
     import { _ } from "svelte-i18n";
-
+    import { object, string } from "yup";
     let loading: boolean = false;
     const { form, errors, handleChange, handleSubmit } = createForm<User>({
         initialValues: {
@@ -20,11 +19,15 @@
             password: "",
         },
         validationSchema: object<User>({
-            username: string().required("Required"),
-            email: string().email().required("Required"),
+            username: string()
+                .required($_("required"))
+                .matches(/^[\w][\w\.]*$/, { message: $_("invalid-username") }),
+            email: string()
+                .email($_("not-a-valid-email-address"))
+                .required($_("required")),
             password: string()
-                .min(8, "Must be at least 8 characters long")
-                .required("Required"),
+                .min(8, $_("must-be-at-least-8-characters-long"))
+                .required($_("required")),
         }),
         onSubmit: async (newUser) => {
             loading = true;
@@ -34,8 +37,9 @@
                 show_toast({
                     icon: "close",
                     type: "error",
-                    text: "Error creating user.",
+                    text: $_("error-creating-user"),
                 });
+                return;
             } finally {
                 loading = false;
             }
@@ -46,7 +50,7 @@
                 show_toast({
                     icon: "close",
                     type: "error",
-                    text: "Error during login.",
+                    text: $_("error-during-login"),
                 });
             } finally {
                 loading = false;
@@ -56,7 +60,7 @@
 </script>
 
 <svelte:head>
-    <title>{$_('register')} | wanderer</title>
+    <title>{$_("register")} | wanderer</title>
 </svelte:head>
 <main class="flex justify-center">
     <form

@@ -11,6 +11,7 @@
     import { object, string } from "yup";
     import { theme } from "$lib/stores/theme_store";
     import { _ } from "svelte-i18n";
+    import { page } from "$app/stores";
 
     let loading: boolean = false;
     const { form, errors, handleChange, handleSubmit } = createForm<User>({
@@ -20,14 +21,14 @@
             password: "",
         },
         validationSchema: object<User>({
-            username: string().required("Required"),
-            password: string().required("Required"),
+            username: string().required($_("required")),
+            password: string().required($_("required")),
         }),
         onSubmit: async (newUser) => {
             loading = true;
             try {
                 await login(newUser);
-                goto(`/`);
+                goto($page.url.searchParams.get("r") ?? "/");
             } catch (e) {
                 if (
                     e instanceof ClientResponseError &&
@@ -36,13 +37,13 @@
                     show_toast({
                         icon: "close",
                         type: "error",
-                        text: "Wrong username or password.",
+                        text: $_('wrong-username-or-password'),
                     });
                 } else {
                     show_toast({
                         icon: "close",
                         type: "error",
-                        text: "Error during login.",
+                        text: $_('error-during-login'),
                     });
                 }
             } finally {
@@ -90,9 +91,9 @@
             >
         </div>
         <span
-            >{$_('no-account')} <a
-                class="text-blue-500 underline"
-                href="/register">{$_('make-one')}</a
+            >{$_("no-account")}
+            <a class="text-blue-500 underline" href="/register"
+                >{$_("make-one")}</a
             ></span
         >
     </form>

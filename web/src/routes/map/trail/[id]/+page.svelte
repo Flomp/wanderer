@@ -35,6 +35,10 @@
     ];
     let activeTab = 0;
 
+    const thumbnail = $trail.photos.length
+        ? getFileURL(trail, $trail.photos[$trail.thumbnail])
+        : "/imgs/default_thumbnail.webp";
+
     onMount(() => {
         lightboxDataSource = $trail.photos.map((p) => ({
             src: getFileURL($trail, p),
@@ -83,7 +87,7 @@
         <section class="relative h-80">
             <img
                 class="w-full h-80 object-cover"
-                src={getFileURL($trail, $trail.photos[$trail.thumbnail])}
+                src={thumbnail}
                 alt=""
             />
             <div
