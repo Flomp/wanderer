@@ -13,6 +13,7 @@ COPY *.go ./
 
 RUN go build -o /pocketbase
 RUN /pocketbase migrate
+RUN /pocketbase seed
 
 ENV MEILI_URL=http://localhost:7700
 ENV MEILI_MASTER_KEY=

@@ -4,12 +4,16 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/spf13/cobra"
 
 	_ "pocketbase/migrations"
 )
@@ -49,6 +53,26 @@ func main() {
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Dir:         "migrations",
 		Automigrate: true,
+	})
+
+	app.RootCmd.AddCommand(&cobra.Command{
+		Use: "seed",
+		Run: func(cmd *cobra.Command, args []string) {
+			collection, _ := app.Dao().FindCollectionByNameOrId("categories")
+
+			categories := []string{"Hiking", "Walking", "Climbing", "Skiing", "Canoeing", "Biking"}
+			for _, element := range categories {
+				record := models.NewRecord(collection)
+				form := forms.NewRecordUpsert(app, record)
+				form.LoadData(map[string]any{
+					"name": element,
+				})
+				f, _ := filesystem.NewFileFromPath("migrations/initial_data/" + strings.ToLower(element) + ".jpg")
+				form.AddFiles("img", f)
+				form.Submit()
+			}
+
+		},
 	})
 
 	client := meilisearch.NewClient(meilisearch.ClientConfig{

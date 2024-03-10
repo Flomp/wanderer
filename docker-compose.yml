@@ -43,9 +43,10 @@ services:
   web:
     build: ./web
     environment:
-      PUBLIC_MEILISEARCH_URL: http://localhost:7700
-      PUBLIC_MEILISEARCH_API_TOKEN:
-      PUBLIC_POCKETBASE_URL: http://127.0.0.1:8090
+      ORIGIN: http://localhost:8080
+      PUBLIC_MEILISEARCH_URL: http://search:7700
+      PUBLIC_MEILISEARCH_API_TOKEN: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhcGlLZXlVaWQiOiIyMjk3NDg3Yy0zMjFlLTQ5MmEtYmRiNS1iZmYwZGYzZjc2NTYiLCJzZWFyY2hSdWxlcyI6eyJ0cmFpbHMiOnsiZmlsdGVyIjoicHVibGljPXRydWUifSwiY2l0aWVzNTAwIjp7fX0sImV4cCI6bnVsbH0.CuIlkiWAec8TGyZI5X37JTjQvcnvFAFZAuA4xpbXJ8o
+      PUBLIC_POCKETBASE_URL: http://db:8090
     ports:
       - "8080:3000"
     networks:
