@@ -7,6 +7,7 @@ export const load: ServerLoad = async ({ params, locals, url, fetch }) => {
     const filter: TrailFilter = {
         q: "",
         category: [],
+        difficulty: ["easy", "moderate", "difficult"],
         near: {
             radius: 2000,
         },

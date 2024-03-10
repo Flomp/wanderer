@@ -452,6 +452,16 @@
             label={$_("describe-your-trail")}
             bind:value={$form.description}
         ></Textarea>
+        <Select
+            name="difficulty"
+            label={$_("difficulty")}
+            bind:value={$form.difficulty}
+            items={[
+                { text: $_('easy'), value: "easy" },
+                { text: $_('moderate'), value: "moderate" },
+                { text: $_('difficult'), value: "difficult" },
+            ]}
+        ></Select>
         {#if $form.expand.category}
             <Select
                 name="category"

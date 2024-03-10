@@ -36,6 +36,8 @@ export async function trails_index(data: { perPage: number, random?: boolean, f:
 export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     let filterText: string = `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.elevationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
 
+    filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
+
     if (filter.category.length > 0) {
         filterText += ` AND category IN [${filter.category.join(",")}]`;
     }
@@ -45,12 +47,20 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     if (filter.near.lat && filter.near.lon) {
         filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
     }
+    if (filter.near.lat && filter.near.lon) {
+        filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
+    }
     let r = await f("/api/v1/search/trails", {
         method: "POST",
         body: JSON.stringify({ q: filter.q, options: { filter: filterText, hitsPerPage: 20, page: page } }),
     });
+
     const result = await r.json();
 
+    if (!r.ok) {
+        throw new ClientResponseError(result)
+    }
+    
     const trailIds = result.hits.map((h: Record<string, any>) => h.id);
 
     if (trailIds.length == 0) {

@@ -1,4 +1,3 @@
-import { regenerateInstance } from "$lib/meilisearch";
 import { pb } from "$lib/pocketbase";
 import { ClientResponseError } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
@@ -38,7 +37,6 @@ export async function login(user: User) {
 
     if (r.ok) {
         pb.authStore.loadFromCookie(document.cookie)
-        regenerateInstance()
     } else {
         throw new ClientResponseError(await r.json())
     }
@@ -47,7 +45,6 @@ export async function login(user: User) {
 
 export async function logout() {
     pb.authStore.clear();
-    regenerateInstance()
 }
 
 export async function users_update(id: string, user: User | { [K in keyof User]?: User[K] } | FormData) {

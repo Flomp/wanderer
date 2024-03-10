@@ -11,6 +11,7 @@ class Trail {
     distance?: number;
     elevation_gain?: number;
     duration?: number;
+    difficulty?: "easy"|"moderate"|"difficult"
     lat?: number;
     lon?: number;
     thumbnail: number;
@@ -38,6 +39,7 @@ class Trail {
             distance?: number,
             elevation_gain?: number,
             duration?: number,
+            difficulty?: "easy"|"moderate"|"difficult",
             lat?:number,
             lon?: number,
             thumbnail?: number,
@@ -59,6 +61,7 @@ class Trail {
         this.distance = params?.distance;
         this.elevation_gain = params?.elevation_gain;
         this.duration = params?.duration;
+        this.difficulty = params?.difficulty ?? "easy";
         this.lat = params?.lat;
         this.lon = params?.lon;
         this.thumbnail = params?.thumbnail ?? 0;
@@ -93,6 +96,7 @@ const trailSchema = object<Trail>({
 interface TrailFilter {
     q: string,
     category: string[],
+    difficulty: ("easy" | "moderate" | "difficult")[]
     near: {
         lat?: number,
         lon?: number,

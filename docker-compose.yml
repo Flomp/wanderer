@@ -32,26 +32,35 @@ services:
     build: ./db
     environment:
       <<: *cenv
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
     ports:
       - "8090:8090"
     networks:
       - wanderer
     restart: unless-stopped
     volumes:
-      - ./data/pb_data:/pb_data
-
+      - wanderer-db:/pb_data
   web:
     build: ./web
     environment:
+      <<: *cenv
+      MEILI_API_TOKEN: 
       ORIGIN: http://localhost:8080
-      PUBLIC_MEILISEARCH_URL: http://search:7700
-      PUBLIC_MEILISEARCH_API_TOKEN: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhcGlLZXlVaWQiOiIyMjk3NDg3Yy0zMjFlLTQ5MmEtYmRiNS1iZmYwZGYzZjc2NTYiLCJzZWFyY2hSdWxlcyI6eyJ0cmFpbHMiOnsiZmlsdGVyIjoicHVibGljPXRydWUifSwiY2l0aWVzNTAwIjp7fX0sImV4cCI6bnVsbH0.CuIlkiWAec8TGyZI5X37JTjQvcnvFAFZAuA4xpbXJ8o
       PUBLIC_POCKETBASE_URL: http://db:8090
     ports:
       - "8080:3000"
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
     networks:
       - wanderer
     restart: unless-stopped
+
+volumes:
+  wanderer-db:
+
 
 networks:
   wanderer:

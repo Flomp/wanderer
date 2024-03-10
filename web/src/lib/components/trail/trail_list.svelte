@@ -1,13 +1,12 @@
 <script lang="ts">
     import type { Trail, TrailFilter } from "$lib/models/trail";
     import { createEventDispatcher, onMount } from "svelte";
+    import { _ } from "svelte-i18n";
+    import Pagination from "../base/pagination.svelte";
     import Select, { type SelectItem } from "../base/select.svelte";
     import EmptyStateSearch from "../empty_states/empty_state_search.svelte";
     import TrailCard from "./trail_card.svelte";
     import TrailListItem from "./trail_list_item.svelte";
-    import { _ } from "svelte-i18n";
-    import Pagination from "../base/pagination.svelte";
-    import TextField from "../base/text_field.svelte";
 
     export let filter: TrailFilter;
     export let trails: Trail[];
@@ -28,6 +27,7 @@
     const sortOptions: SelectItem[] = [
         { text: $_("alphabetical"), value: "name" },
         { text: $_("creation-date"), value: "created" },
+        { text: $_("difficulty"), value: "difficulty" },
         { text: $_("distance"), value: "distance" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
     ];

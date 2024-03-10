@@ -37,8 +37,8 @@ def init_indices():
         client.create_index('trails', {'primaryKey': 'id'})
 
         client.index('trails').update_settings({
-            'sortableAttributes': ['name', 'distance', 'elevation_gain', 'created',],
-            'filterableAttributes': ['category', 'distance', 'elevation_gain', 'completed', '_geo', 'public', 'author']
+            'sortableAttributes': ['name', 'distance', 'elevation_gain', 'difficulty', 'created',],
+            'filterableAttributes': ['category', 'difficulty', 'distance', 'elevation_gain', 'completed', '_geo', 'public', 'author']
         })
 
 

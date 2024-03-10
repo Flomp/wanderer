@@ -11,22 +11,11 @@
     import RadioGroup from "../base/radio_group.svelte";
     import Search, { type SearchItem } from "../base/search.svelte";
     import Slider from "../base/slider.svelte";
+    import type { SelectItem } from "../base/select.svelte";
 
     export let categories: Category[];
     export let filterExpanded: boolean = true;
-    export let filter: TrailFilter = {
-        q: "",
-        category: [],
-        near: {
-            radius: 2000,
-        },
-        distanceMin: 0,
-        distanceMax: 20000,
-        elevationGainMin: 0,
-        elevationGainMax: 4000,
-        sort: "created",
-        sortOrder: "+",
-    };
+    export let filter: TrailFilter;
     export let showTrailSearch: boolean = true;
     export let showCitySearch: boolean = true;
 
@@ -36,6 +25,12 @@
         { text: $_("completed"), value: "completed" },
         { text: $_("not-completed"), value: "not_completed" },
         { text: $_("no-preference"), value: "no_preference" },
+    ];
+
+    const difficultyItems: SelectItem[] = [
+        { text: $_("easy"), value: "easy" },
+        { text: $_("moderate"), value: "moderate" },
+        { text: $_("difficult"), value: "difficult" },
     ];
 
     let searchDropdownItems: SearchItem[] = [];
@@ -54,6 +49,19 @@
             filter.category.splice(categoryIndex, 1);
         } else {
             filter.category.push(category.id);
+        }
+
+        update();
+    }
+
+    function setDifficultyFilter(difficulty: "easy" | "moderate" | "difficult") {
+        const difficultyIndex = filter.difficulty.findIndex(
+            (d) => d == difficulty,
+        );        
+        if (difficultyIndex !== -1) {
+            filter.difficulty.splice(difficultyIndex, 1);
+        } else {
+            filter.difficulty.push(difficulty);
         }
 
         update();
@@ -146,6 +154,24 @@
                     />
                     <label for="{category.name}-checkbox" class="ms-2 text-sm"
                         >{category.name}</label
+                    >
+                </div>
+            {/each}
+            <hr class="my-4 border-separator" />
+            <p class="text-sm font-medium pb-4">{$_("difficulty")}</p>
+            {#each difficultyItems as difficulty, i}
+                <div class="flex items-center mb-4">
+                    <input
+                        id="{difficulty.value}-checkbox"
+                        type="checkbox"
+                        checked={filter.difficulty.includes(difficulty.value)}
+                        value={difficulty.value}
+                        class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                        on:change={() => setDifficultyFilter(difficulty.value)}
+                    />
+                    <label
+                        for="{difficulty.value}-checkbox"
+                        class="ms-2 text-sm">{difficulty.text}</label
                     >
                 </div>
             {/each}
