@@ -29,9 +29,7 @@
         openListModal();
     }
 
-    async function saveList(
-        e: CustomEvent<{ list: List; avatar?: File }>,
-    ) {
+    async function saveList(e: CustomEvent<{ list: List; avatar?: File }>) {
         const result = e.detail;
         if (result.list.id) {
             await lists_update(result.list, result.avatar);
@@ -39,7 +37,6 @@
             await lists_create(result.list, result.avatar);
         }
         await lists_index();
-
     }
 
     async function handleDropdownClick(
@@ -82,23 +79,23 @@
             on:click={beforeListModalOpen}
         >
             <i class="fa fa-plus text-xl aspect-square"></i>
-            <h5 class="text-xl font-semibold">{$_("create-new-list")}</h5>
+            <h5 id="create-list-button" class="text-xl font-semibold">
+                {$_("create-new-list")}
+            </h5>
         </button>
         <hr class="border-separator my-2" />
-        <div>
-            {#each $lists as item, i}
-                <li on:click={() => list.set(item)} role="presentation">
-                    <ListCard
-                        list={item}
-                        on:change={(e) => handleDropdownClick(e, item)}
-                        active={item.id === $list.id}
-                    ></ListCard>
-                    {#if i != $lists.length - 1}
-                        <hr class="border-separator my-2" />
-                    {/if}
-                </li>
-            {/each}
-        </div>
+        {#each $lists as item, i}
+            <li class="list-list-item" on:click={() => list.set(item)} role="presentation">
+                <ListCard
+                    list={item}
+                    on:change={(e) => handleDropdownClick(e, item)}
+                    active={item.id === $list.id}
+                ></ListCard>
+                {#if i != $lists.length - 1}
+                    <hr class="border-separator my-2" />
+                {/if}
+            </li>
+        {/each}
     </ul>
     <TrailList
         bind:filter

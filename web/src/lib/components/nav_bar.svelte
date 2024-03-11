@@ -116,10 +116,12 @@
     </div>
     <hr class="my-6 border-input-border" />
     <div class="flex flex-col basis-full">
-        <a class="btn-primary btn-large text-center mx-4" href="/trail/edit/new"
-            ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
-        >
         {#if $currentUser}
+            <a
+                class="btn-primary btn-large text-center mx-4"
+                href="/trail/edit/new"
+                ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
+            >
             <div class="basis-full"></div>
             <hr class="border-input-border" />
             <div class="flex gap-4 items-center m-4">
@@ -138,6 +140,10 @@
                     ></i></button
                 >
             </div>
+        {:else}
+            <a class="btn-primary btn-large text-center mx-4" href="/login"
+                >{$_("login")}</a
+            >
         {/if}
     </div>
 </Drawer>
@@ -179,7 +185,9 @@
                     : 'moon'}"
                 on:click={() => toggleTheme()}
             ></button>
-            <a class="btn-primary btn-large" href="/trail/edit/new"
+            <a
+                class="btn-primary btn-large"
+                href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
             <Dropdown

@@ -106,7 +106,7 @@
         <button class="btn-secondary" on:click={closeModal}
             >{$_("cancel")}</button
         >
-        <button class="btn-primary" type="submit" form="list-form"
+        <button class="btn-primary" type="submit" form="list-form" name="save"
             >{$_("save")}</button
         >
     </div>

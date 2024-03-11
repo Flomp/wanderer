@@ -23,7 +23,7 @@
         <button class="btn-secondary" on:click={closeModal}
             >{$_("cancel")}</button
         >
-        <button class="btn-danger" type="button" on:click={confirm}
+        <button class="btn-danger" type="button" on:click={confirm} name="delete"
             >{$_("delete")}</button
         >
     </div></Modal
