@@ -1,3 +1,4 @@
+import type MeiliSearch from 'meilisearch';
 import PocketBase from 'pocketbase';
 
 
@@ -12,6 +13,7 @@ declare global {
 		// interface Platform {}
 		interface Locals {
 			pb: PocketBase
+			ms: MeiliSearch
 			user: AuthModel | null
 		}
 	}

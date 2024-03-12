@@ -1,7 +1,8 @@
-import { regenerateInstance } from '$lib/meilisearch'
+import { env } from '$env/dynamic/private'
 import { pb } from '$lib/pocketbase'
 import { isRouteProtected } from '$lib/util/authorization_util'
 import { redirect, type Handle } from '@sveltejs/kit'
+import { MeiliSearch } from 'meilisearch'
 import { locale } from 'svelte-i18n'
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -12,12 +13,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // validate the user existence and if the path is acceesible
   if (!pb.authStore.model && isRouteProtected(url.pathname)) {
-    throw redirect(302, '/login?r='+url.pathname);
+    throw redirect(302, '/login?r=' + url.pathname);
   } else if (pb.authStore.model && url.pathname === "/login") {
     throw redirect(302, '/');
   }
-
-  regenerateInstance();
 
   try {
     // get an up-to-date auth store state by verifying and refreshing the loaded auth model (if any)
@@ -29,6 +28,17 @@ export const handle: Handle = async ({ event, resolve }) => {
     pb.authStore.clear()
   }
 
+  let meiliApiKey: string = "";
+  if (pb.authStore.model) {
+    meiliApiKey = pb.authStore.model.token
+  } else {
+    const r = await event.fetch(pb.buildUrl("/public/search/token"));
+    const response = await r.json();
+    meiliApiKey = response.token;    
+  }
+  const ms = new MeiliSearch({ host: env.MEILI_URL, apiKey: meiliApiKey });
+
+  event.locals.ms = ms
   event.locals.pb = pb
   event.locals.user = pb.authStore.model
 

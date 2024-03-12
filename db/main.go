@@ -1,11 +1,12 @@
 package main
 
 import (
-	"errors"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
+	"github.com/labstack/echo/v5"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
@@ -13,40 +14,9 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/spf13/cobra"
 
 	_ "pocketbase/migrations"
 )
-
-func indexRecord(r *models.Record, client *meilisearch.Client) error {
-	documents := []map[string]interface{}{
-		{
-			"id":             r.Id,
-			"author":         r.GetString("author"),
-			"name":           r.GetString("name"),
-			"description":    r.GetString("description"),
-			"location":       r.GetString("location"),
-			"distance":       r.GetFloat("distance"),
-			"elevation_gain": r.GetFloat("elevation_gain"),
-			"duration":       r.GetFloat("duration"),
-			"difficulty":     r.Get("difficulty"),
-			"category":       r.Get("category"),
-			"completed":      len(r.GetStringSlice("summit_logs")) > 0,
-			"created":        r.GetDateTime("created"),
-			"public":         r.GetBool("public"),
-			"_geo": map[string]float64{
-				"lat": r.GetFloat("lat"),
-				"lng": r.GetFloat("lon"),
-			},
-		},
-	}
-
-	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func main() {
 	app := pocketbase.New()
@@ -54,26 +24,6 @@ func main() {
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Dir:         "migrations",
 		Automigrate: true,
-	})
-
-	app.RootCmd.AddCommand(&cobra.Command{
-		Use: "seed",
-		Run: func(cmd *cobra.Command, args []string) {
-			collection, _ := app.Dao().FindCollectionByNameOrId("categories")
-
-			categories := []string{"Hiking", "Walking", "Climbing", "Skiing", "Canoeing", "Biking"}
-			for _, element := range categories {
-				record := models.NewRecord(collection)
-				form := forms.NewRecordUpsert(app, record)
-				form.LoadData(map[string]any{
-					"name": element,
-				})
-				f, _ := filesystem.NewFileFromPath("migrations/initial_data/" + strings.ToLower(element) + ".jpg")
-				form.AddFiles("img", f)
-				form.Submit()
-			}
-
-		},
 	})
 
 	client := meilisearch.NewClient(meilisearch.ClientConfig{
@@ -84,35 +34,14 @@ func main() {
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
 		userId := e.Record.GetId()
 
-		apiKeyUid := ""
-		apiKey := ""
-
-		if keys, err := client.GetKeys(nil); err != nil {
-			log.Fatal(err)
-		} else {
-			for _, k := range keys.Results {
-				if k.Name == "Default Search API Key" {
-					apiKeyUid = k.UID
-					apiKey = k.Key
-				}
-			}
-		}
-
-		if len(apiKey) == 0 || len(apiKeyUid) == 0 {
-			return errors.New("unable to locate meilisearch API key")
-		}
-
 		searchRules := map[string]interface{}{
 			"cities500": map[string]string{},
 			"trails": map[string]string{
 				"filter": "public = true OR author = " + userId,
 			},
 		}
-		options := &meilisearch.TenantTokenOptions{
-			APIKey: apiKey,
-		}
 
-		if token, err := client.GenerateTenantToken(apiKeyUid, searchRules, options); err != nil {
+		if token, err := generateMeilisearchToken(searchRules, client); err != nil {
 			return err
 		} else {
 			e.Record.Set("token", token)
@@ -143,6 +72,54 @@ func main() {
 		if _, err := client.Index("trails").DeleteDocument(e.Record.Id); err != nil {
 			return err
 		}
+		return nil
+	})
+
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		e.Router.GET("/public/search/token", func(c echo.Context) error {
+			searchRules := map[string]interface{}{
+				"cities500": map[string]string{},
+				"trails": map[string]string{
+					"filter": "public = true",
+				},
+			}
+
+			if token, err := generateMeilisearchToken(searchRules, client); err != nil {
+				return err
+			} else {
+				return c.JSON(http.StatusOK, map[string]string{"token": token})
+			}
+
+		})
+
+		// bootstrap pocketbase
+		query := app.Dao().RecordQuery("categories")
+		records := []*models.Record{}
+
+		if err := query.All(&records); err != nil {
+			return err
+		}
+		if len(records) == 0 {
+			collection, _ := app.Dao().FindCollectionByNameOrId("categories")
+
+			categories := []string{"Hiking", "Walking", "Climbing", "Skiing", "Canoeing", "Biking"}
+			for _, element := range categories {
+				record := models.NewRecord(collection)
+				form := forms.NewRecordUpsert(app, record)
+				form.LoadData(map[string]any{
+					"name": element,
+				})
+				f, _ := filesystem.NewFileFromPath("migrations/initial_data/" + strings.ToLower(element) + ".jpg")
+				form.AddFiles("img", f)
+				form.Submit()
+			}
+		}
+
+		// bootstrap meilisearch
+		if err := bootstrapMeilisearch(client); err != nil {
+			return err
+		}
+
 		return nil
 	})
 

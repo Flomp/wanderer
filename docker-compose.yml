@@ -6,6 +6,7 @@ x-common-env: &cenv
 
 services:
   search:
+    container_name: wanderer-search
     image: getmeili/meilisearch:v1.6.2
     environment:
       <<: *cenv
@@ -18,49 +19,30 @@ services:
     volumes:
       - ./data/data.ms:/meili_data/data.ms
     restart: unless-stopped
-
-  bootstrap:
-    build: ./search
-    environment:
-      <<: *cenv
-    depends_on:
-      search:
-        condition: service_started
-    networks:
-      - wanderer
   db:
+    container_name: wanderer-db
     build: ./db
     environment:
       <<: *cenv
-    depends_on:
-      bootstrap:
-        condition: service_completed_successfully
     ports:
       - "8090:8090"
     networks:
       - wanderer
     restart: unless-stopped
     volumes:
-      - wanderer-db:/pb_data
+      - ./data/pb_data:/pb_data
   web:
+    container_name: wanderer-web
     build: ./web
     environment:
       <<: *cenv
-      MEILI_API_TOKEN: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhcGlLZXlVaWQiOiIwZDA0YTAzYy1iNzBjLTQzZTctOGUzMC00NjNiODFhM2UwY2YiLCJzZWFyY2hSdWxlcyI6eyJ0cmFpbHMiOnsiZmlsdGVyIjoicHVibGljPXRydWUifSwiY2l0aWVzNTAwIjp7fX0sImV4cCI6bnVsbH0.XhHwyRqtKjij2-oPvcYAL3uIFmB4lxUBUgVzhQqL1To
-      ORIGIN: http://localhost:8080
+      ORIGIN: http://localhost:3000
       PUBLIC_POCKETBASE_URL: http://db:8090
     ports:
-      - "8080:3000"
-    depends_on:
-      bootstrap:
-        condition: service_completed_successfully
+      - "3000:3000"
     networks:
       - wanderer
     restart: unless-stopped
-
-volumes:
-  wanderer-db:
-
 
 networks:
   wanderer:
