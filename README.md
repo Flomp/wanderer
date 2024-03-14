@@ -1,9 +1,8 @@
-
-  <div style="text-align: center">
+<h4 align="center">
   <img src="web/static/svgs/logo_text_two_line_dark.svg" height="256" width="256">
-</div>
 
-<h4 align="center">The trail catalogue that makes your GPS data searchable</h4>
+  The trail catalogue that makes your GPS data searchable
+</h4>
 
 wanderer is a self-hosted trail database. You can upload your recorded tracks and add various metadata to create an easily searchable catalogue. 
 
