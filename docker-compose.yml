@@ -16,8 +16,9 @@ services:
       - 7700:7700
     networks:
       - wanderer
-    volumes:
-      - ./data/data.ms:/meili_data/data.ms
+    # volumes:
+    #   - ./data/data.ms:/meili_data/data.ms
+    
     restart: unless-stopped
   db:
     container_name: wanderer-db
