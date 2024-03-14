@@ -136,25 +136,27 @@
     class="trail-panel max-w-5xl mx-auto border border-input-border rounded-3xl overflow-hidden"
 >
     <section class="relative h-80">
-        <img
-            class="w-full h-80"
-            src={thumbnail}
-            alt=""
-        />
+        <img class="w-full h-80" src={thumbnail} alt="" />
         <div
             class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
         ></div>
         <div
-            class="flex absolute flex-wrap justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
+            class="flex absolute justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
         >
             <div class="text-white">
                 <h4 class="text-4xl font-bold">
                     {$trail.name}
                 </h4>
-                <h3 class="text-xl mt-4">
-                    <i class="fa fa-location-dot mr-3"></i>
-                    {$trail.location}
-                </h3>
+                <div class="flex flex-wrap gap-x-8 gap-y-2  mt-4 mr-8">
+                    <h3 class="text-lg">
+                        <i class="fa fa-location-dot mr-3"></i>
+                        {$trail.location}
+                    </h3>
+                    <h3 class="text-lg">
+                        <i class="fa fa-person-hiking mr-3"></i>
+                        {$_($trail.difficulty ?? "?")}
+                    </h3>
+                </div>
             </div>
             {#if $currentUser && $currentUser.id == $trail.author}
                 <TrailDropdown trail={$trail} mode="overview"></TrailDropdown>

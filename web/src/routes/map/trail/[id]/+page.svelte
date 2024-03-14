@@ -100,10 +100,16 @@
                     <h4 class="text-4xl font-bold">
                         {$trail.name}
                     </h4>
-                    <h3 class="text-xl mt-4">
-                        <i class="fa fa-location-dot mr-3"></i>
-                        {$trail.location}
-                    </h3>
+                    <div class="flex flex-wrap gap-x-8 gap-y-2  mt-4 mr-8">
+                        <h3 class="text-lg">
+                            <i class="fa fa-location-dot mr-3"></i>
+                            {$trail.location}
+                        </h3>
+                        <h3 class="text-lg">
+                            <i class="fa fa-person-hiking mr-3"></i>
+                            {$_($trail.difficulty ?? "?")}
+                        </h3>
+                    </div>
                 </div>
                 {#if $currentUser && $currentUser.id == $trail.author}
                     <TrailDropdown trail={$trail} mode="map"></TrailDropdown>

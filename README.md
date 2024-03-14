@@ -32,7 +32,11 @@ You can now access the frontend at localhost:3000.
 
 > Note: if you are using wanderer in a production environment make sure to change the MEILI_MASTER_KEY.
 
-You can also run wanderer on bare-metal. Check out the documentation for a detailed how-to guide.
+You can also run wanderer on bare-metal. Check out the [documentation](https://github.com/Flomp/wanderer/wiki/Installation#from-source) for a detailed how-to guide.
+
+## Documentation
+
+Please check the [wiki](https://](https://github.com/Flomp/wanderer/wiki)) for the complete documentation.
 
 ## License
 This project is licensed under the AGPLv3 License. See the [LICENSE](LICENSE) file for the full license text.

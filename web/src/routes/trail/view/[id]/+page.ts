@@ -12,7 +12,8 @@ export const load: Load = async ({ params, fetch }) => {
                 message: 'Not found'
             });
         }
-
+        console.log(e);
+        
     }
     await lists_index(undefined, fetch);
 };

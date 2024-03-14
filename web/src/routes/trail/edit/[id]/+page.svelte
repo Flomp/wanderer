@@ -345,7 +345,6 @@
     function handlePhotoDelete(index: number) {
         if ($form.thumbnail == index) {
             $form.thumbnail = 0;
-            console.log("huere");
         }
 
         if (index >= $form.photos.length) {
@@ -479,14 +478,12 @@
                 { text: $_("difficult"), value: "difficult" },
             ]}
         ></Select>
-        {#if $form.expand.category}
-            <Select
-                name="category"
-                label={$_("category")}
-                bind:value={$form.category}
-                items={$categories.map((c) => ({ text: c.name, value: c.id }))}
-            ></Select>
-        {/if}
+        <Select
+            name="category"
+            label={$_("category")}
+            bind:value={$form.category}
+            items={$categories.map((c) => ({ text: c.name, value: c.id }))}
+        ></Select>
         <Toggle name="public" label={$_("public")} bind:value={$form.public}
         ></Toggle>
         <hr class="border-separator" />

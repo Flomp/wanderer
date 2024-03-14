@@ -162,6 +162,9 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     }
 
     if (loadGPX) {
+        if(!response.expand) {
+            response.expand = {}
+        }
         const gpxData: string = await fetchGPX(response, f);
         response.expand.gpx_data = gpxData;
     }
