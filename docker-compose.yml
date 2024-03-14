@@ -18,14 +18,14 @@ services:
       - wanderer
     # volumes:
     #   - ./data/data.ms:/meili_data/data.ms
-    
+
     restart: unless-stopped
   db:
     container_name: wanderer-db
     build: ./db
     depends_on:
       search:
-        condition: service_healthy
+        condition: service_started
     environment:
       <<: *cenv
     ports:
@@ -40,7 +40,7 @@ services:
     build: ./web
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_started
     environment:
       <<: *cenv
       ORIGIN: http://localhost:3000
