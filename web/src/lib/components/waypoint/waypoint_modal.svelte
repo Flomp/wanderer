@@ -3,9 +3,11 @@
     import { createEventDispatcher } from "svelte";
 
     import { waypoint } from "$lib/stores/waypoint_store";
+    import { icons } from "$lib/util/icon_util";
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
     import { util } from "$lib/vendor/svelte-form-lib/util";
     import { _ } from "svelte-i18n";
+    import Combobox from "../base/combobox.svelte";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
@@ -23,6 +25,13 @@
         },
     });
     $: form.set(util.cloneDeep($waypoint));
+
+    $: filteredIcons =
+        ($form.icon?.length ?? 0) > 2
+            ? icons
+                  .filter((i) => i.includes($form.icon ?? ""))
+                  .map((i) => ({ text: i, value: i, icon: i }))
+            : [];
 </script>
 
 <Modal
@@ -40,7 +49,7 @@
         on:submit={handleSubmit}
     >
         <div class="flex gap-4">
-            <div class="basis-full">
+            <div class="basis-2/3">
                 <TextField
                     name="name"
                     label={$_("name")}
@@ -50,14 +59,14 @@
                 ></TextField>
             </div>
 
-            <TextField
+            <Combobox
                 name="icon"
-                label={$_("icon")}
                 bind:value={$form.icon}
                 icon={$form.icon}
-                error={$errors.icon}
+                items={filteredIcons}
+                label={$_("icon")}
                 on:change={handleChange}
-            ></TextField>
+            ></Combobox>
         </div>
 
         <Textarea

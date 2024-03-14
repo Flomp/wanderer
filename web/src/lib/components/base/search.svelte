@@ -72,9 +72,9 @@
         type="search"
         name="q"
         autocomplete="off"
-        extraClasses="{large
-            ? 'px-12 py-4 text-xl min-w-80 w-[33vw] max-w-[532px] rounded-xl'
-            : 'px-10'}"
+        extraClasses={large
+            ? "px-12 py-4 text-xl min-w-80 w-[33vw] max-w-[532px] rounded-xl"
+            : "px-10"}
         {placeholder}
         bind:value
         on:input={onSearchType}
