@@ -22,6 +22,9 @@ services:
   db:
     container_name: wanderer-db
     build: ./db
+    depends_on:
+      search:
+        condition: service_healthy
     environment:
       <<: *cenv
     ports:
@@ -34,6 +37,9 @@ services:
   web:
     container_name: wanderer-web
     build: ./web
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       <<: *cenv
       ORIGIN: http://localhost:3000

@@ -1,5 +1,5 @@
 import { pb } from "$lib/pocketbase";
-import { error, text, type RequestEvent } from "@sveltejs/kit";
+import { error, type RequestEvent } from "@sveltejs/kit";
 
 export async function GET(event: RequestEvent) {
     const parts = [];

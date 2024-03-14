@@ -40,7 +40,7 @@
     let lightboxDataSource: DataSource;
 
     const thumbnail = $trail.photos.length
-        ? getFileURL(trail, $trail.photos[$trail.thumbnail])
+        ? getFileURL($trail, $trail.photos[$trail.thumbnail])
         : "/imgs/default_thumbnail.webp";
 
     onMount(async () => {

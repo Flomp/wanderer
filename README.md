@@ -1,10 +1,7 @@
-<h1 align="center">
-  <br>
-  <img src="/web/static/favicon.png" height="256px" width="256px">
-  <br>
-  wanderer
-  <br>
-</h1>
+
+  <div style="text-align: center">
+  <img src="web/static/svgs/logo_text_two_line_dark.svg" height="256" width="256">
+</div>
 
 <h4 align="center">The trail catalogue that makes your GPS data searchable</h4>
 
@@ -12,9 +9,11 @@ wanderer is a self-hosted trail database. You can upload your recorded tracks an
 
 ## Core Features
 
+![Screenshot of wanderer](web/static/imgs/features.png)
+
 - Manage your trails
 - Extensive map integration and visualization
-- Share trails with other people and explore their's
+- Share trails with other people and explore theirs
 - Advanced filter and search functionality
 - Create custom lists to organize your trails further
 
@@ -26,6 +25,7 @@ The recommended and quickest way to install wanderer is using docker compose:
 # clone the git repository
 git clone https://github.com/Flomp/wanderer
 cd wanderer
+# build and launch via docker compose
 docker compose up -d --build
 ```
 

@@ -36,7 +36,7 @@
     let activeTab = 0;
 
     const thumbnail = $trail.photos.length
-        ? getFileURL(trail, $trail.photos[$trail.thumbnail])
+        ? getFileURL($trail, $trail.photos[$trail.thumbnail])
         : "/imgs/default_thumbnail.webp";
 
     onMount(() => {
