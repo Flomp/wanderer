@@ -1,10 +1,10 @@
 FROM getmeili/meilisearch:v1.6.2
 
 COPY ./migrations/migration.dump /meili_data/dumps/migration.dump
-COPY ./run.sh /run.sh
+COPY ./entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /run.sh
+RUN chmod +x /entrypoint.sh
 
-CMD [ "/run.sh" ]
+CMD [ "/entrypoint.sh" ]
 
 
