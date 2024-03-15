@@ -36,7 +36,7 @@ You can also run wanderer on bare-metal. Check out the [documentation](https://g
 
 ## Documentation
 
-Please check the [wiki](https://](https://github.com/Flomp/wanderer/wiki)) for the complete documentation.
+Please check the [wiki](https://(https://github.com/Flomp/wanderer/wiki)) for the complete documentation.
 
 ## License
 This project is licensed under the AGPLv3 License. See the [LICENSE](LICENSE) file for the full license text.
