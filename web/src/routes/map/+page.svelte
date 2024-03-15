@@ -55,7 +55,7 @@
         await import("leaflet.awesome-markers");
 
         map = L.map("map").setView([0, 0], 4);
-        map.attributionControl.setPrefix(false)
+        map.attributionControl.setPrefix(false);
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors",
@@ -186,6 +186,10 @@
             if (!trail.expand.gpx_data) {
                 reject();
             }
+
+            const thumbnail = trail.photos.length
+                ? getFileURL(trail, trail.photos[trail.thumbnail])
+                : "/imgs/default_thumbnail.webp";
             const gpxLayer = new L.GPX(trail.expand.gpx_data!, {
                 async: true,
                 polyline_options: {
@@ -214,10 +218,7 @@
                         marker.bindPopup(
                             `<a href="map/trail/${trail.id}">
     <li class="flex items-center gap-4 cursor-pointer text-black">
-        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${getFileURL(
-            trail,
-            trail.photos[trail.thumbnail],
-        )}" alt="">
+        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
         </div>
         <div>
             <h4 class="font-semibold text-lg">${trail.name}</h4>

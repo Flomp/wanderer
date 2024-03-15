@@ -8,7 +8,7 @@ wanderer is a self-hosted trail database. You can upload your recorded tracks an
 
 ## Core Features
 
-![Screenshot of wanderer](web/static/imgs/features.png)
+![Screenshot of wanderer](docs/imgs/features.png)
 
 - Manage your trails
 - Extensive map integration and visualization

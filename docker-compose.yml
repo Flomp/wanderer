@@ -11,7 +11,6 @@ services:
     environment:
       <<: *cenv
       MEILI_NO_ANALYTICS: true
-      MEILI_HTTP_PAYLOAD_SIZE_LIMIT: 150 Mb
     ports:
       - 7700:7700
     networks:
