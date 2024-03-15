@@ -29,9 +29,9 @@
             <i class="fa fa-table-list text-5xl"></i>
         </div>
     {/if}
-    <div class="basis-full self-start">
-        <div class="flex justify-between items-center">
-            <h5 class="text-xl font-semibold">{list.name}</h5>
+    <div class="self-start min-w-0 w-full">
+        <div class="flex justify-between items-center ">
+            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis">{list.name}</h5>
             <Dropdown items={dropdownItems} on:change></Dropdown>
         </div>
         <p class="text-gray-500 text-sm mr-8">{list.description}</p>

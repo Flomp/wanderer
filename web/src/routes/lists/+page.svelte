@@ -72,7 +72,7 @@
     style="min-height: calc(100vh - 124px)"
 >
     <ul
-        class="list-list max-w-xl mx-2 md:mx-auto mt-8 rounded-xl border border-input-border p-4"
+        class="list-list mx-2 md:mx-auto mt-8 rounded-xl border border-input-border p-4 max-w-full"
     >
         <button
             class="flex w-full items-center gap-4 hover:bg-menu-item-background-hover transition-colors rounded-xl p-4 cursor-pointer"

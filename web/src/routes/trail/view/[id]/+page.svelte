@@ -4,7 +4,7 @@
     import { _ } from "svelte-i18n";
 </script>
 
-<TrailInfoPanel trail={$trail} showMap={true}></TrailInfoPanel>
+<TrailInfoPanel trail={$trail} mode="overview"></TrailInfoPanel>
 
 <svelte:head>
     <title>{$trail.name} | {$_("trail", { values: { n: 1 } })} | wanderer</title

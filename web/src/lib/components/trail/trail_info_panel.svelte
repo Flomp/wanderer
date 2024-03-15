@@ -24,7 +24,7 @@
     import { _ } from "svelte-i18n";
 
     export let trail: Trail;
-    export let showMap: boolean = false;
+    export let mode: "overview" | "map" = "map";
     export let markers: Marker[] = [];
 
     const tabs = [
@@ -46,13 +46,13 @@
         : "/imgs/default_thumbnail.webp";
 
     onMount(async () => {
-        if (showMap) {
+        if (mode == "overview") {
             const L = (await import("leaflet")).default;
             await import("leaflet-gpx");
             await import("leaflet.awesome-markers");
 
             map = L.map("map").setView([0, 0], 2);
-            map.attributionControl.setPrefix(false)
+            map.attributionControl.setPrefix(false);
 
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 attribution: "© OpenStreetMap contributors",
@@ -162,11 +162,12 @@
                     </div>
                 </div>
                 {#if $currentUser && $currentUser.id == trail.author}
-                    <TrailDropdown {trail} mode="overview"></TrailDropdown>
+                    <TrailDropdown {trail} {mode}
+                    ></TrailDropdown>
                 {/if}
             </div>
         </section>
-        {#if showMap}
+        {#if mode == "overview"}
             <section
                 class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8 border-b border-input-border"
             >
@@ -214,7 +215,7 @@
     <section class="trail-info-panel-content px-8">
         <div
             class="grid grid-cols-1 mt-4 gap-8 overflow-scroll"
-            class:md:grid-cols-[1fr_18rem]={showMap}
+            class:md:grid-cols-[1fr_18rem]={mode == "overview"}
         >
             {#if activeTab == 0}
                 <article class="text-justify whitespace-pre-line text-sm">
@@ -233,7 +234,7 @@
             {#if activeTab == 2}
                 <div
                     id="photo-gallery"
-                    class="grid grid-cols-1 {showMap
+                    class="grid grid-cols-1 {mode == "overview"
                         ? 'sm:grid-cols-2 md:grid-cols-3'
                         : ''} gap-4"
                 >
@@ -256,7 +257,7 @@
                     {/each}
                 </ul>
             {/if}
-            {#if showMap}
+            {#if mode == "overview"}
                 <div class="relative">
                     <div class="rounded-xl h-72" id="map">
                         <div class="leaflet-top leaflet-right">
