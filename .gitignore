@@ -1,6 +1,8 @@
 .DS_Store
 .vscode/
 
+db/pocketbase
+
 search/meilisearch
 search/data.ms
 search/dumps
