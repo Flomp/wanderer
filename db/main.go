@@ -115,11 +115,6 @@ func main() {
 			}
 		}
 
-		// bootstrap meilisearch
-		if err := bootstrapMeilisearch(client); err != nil {
-			return err
-		}
-
 		return nil
 	})
 

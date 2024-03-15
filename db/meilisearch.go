@@ -1,101 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"log"
-	"os"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase/models"
 )
-
-func hasIndex(index string, client *meilisearch.Client) (resp bool, err error) {
-
-	if _, err := client.GetIndex(index); err != nil {
-		if err.(*meilisearch.Error).StatusCode == 404 {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func bootstrapMeilisearch(client *meilisearch.Client) error {
-	indexExists, err := hasIndex("cities500", client)
-	if err != nil {
-		return err
-	}
-	if !indexExists {
-
-		jsonFile, err := os.Open("migrations/initial_data/cities500.json")
-
-		if err != nil {
-			return err
-		}
-		defer jsonFile.Close()
-
-		byteValue, err := io.ReadAll(jsonFile)
-
-		if err != nil {
-			return err
-		}
-		var cities []map[string]interface{}
-		json.Unmarshal(byteValue, &cities)
-
-		_, err = client.CreateIndex(&meilisearch.IndexConfig{
-			Uid:        "cities500",
-			PrimaryKey: "id",
-		})
-		if err != nil {
-			return err
-		}
-		settings := meilisearch.Settings{
-			SortableAttributes: []string{
-				"_geo",
-			},
-			FilterableAttributes: []string{
-				"_geo",
-			},
-		}
-		_, err = client.Index("cities500").UpdateSettings(&settings)
-		if err != nil {
-			return err
-		}
-		_, err = client.Index("cities500").AddDocuments(cities)
-		if err != nil {
-			return (err)
-		}
-	}
-
-	indexExists, err = hasIndex("trails", client)
-	if err != nil {
-		return err
-	}
-	if !indexExists {
-		_, err = client.CreateIndex(&meilisearch.IndexConfig{
-			Uid:        "trails",
-			PrimaryKey: "id",
-		})
-		if err != nil {
-			return err
-		}
-		settings := meilisearch.Settings{
-			SortableAttributes: []string{
-				"name", "distance", "elevation_gain", "difficulty", "created",
-			},
-			FilterableAttributes: []string{
-				"category", "difficulty", "distance", "elevation_gain", "completed", "_geo", "public", "author",
-			},
-		}
-		_, err = client.Index("trails").UpdateSettings(&settings)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 func indexRecord(r *models.Record, client *meilisearch.Client) error {
 	documents := []map[string]interface{}{

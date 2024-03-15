@@ -6,7 +6,6 @@ WORKDIR /
 COPY go.mod ./
 COPY go.sum ./
 COPY migrations ./migrations
-RUN tar -xvf migrations/initial_data/cities500.tar.gz -C migrations/initial_data
 
 RUN go mod download
 
