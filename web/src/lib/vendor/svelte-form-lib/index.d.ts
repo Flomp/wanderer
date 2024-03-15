@@ -61,6 +61,7 @@ type FormState<Inf = Record<string, any>> = {
 declare function createForm<Inf = Record<string, any>>(formProperties: {
   initialValues: Inf;
   onSubmit: (values: Inf) => any | Promise<any>;
+  onError?: (errors: Record<string, any>) => any | Promise<any>;
   validate?: (values: Inf) => any | undefined;
   validationSchema?: ObjectSchema<any>;
 }): FormState<Inf>;

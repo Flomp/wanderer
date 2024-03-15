@@ -101,6 +101,26 @@
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
         initialValues: data.trail,
         validationSchema: trailSchema,
+        onError: (errors) => {
+            if (errors.name) {
+                const nameInput = document.querySelector(
+                    "input[name=name]",
+                ) as HTMLElement;
+
+                if (window.innerWidth < 768) {
+                    window?.scroll({
+                        top: nameInput.offsetTop - 24,
+                        behavior: "smooth",
+                    });
+                } else {
+                    const form = document.getElementById("trail-form");
+                    form?.scroll({
+                        top: nameInput.offsetTop - 130,
+                        behavior: "smooth",
+                    });
+                }
+            }
+        },
         onSubmit: async (submittedTrail) => {
             loading = true;
             try {

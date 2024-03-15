@@ -28,6 +28,7 @@ export const createForm = (config) => {
   const validationSchema = config.validationSchema;
   const validateFunction = config.validate;
   const onSubmit = config.onSubmit;
+  const onError = config.onError;
 
   const getInitial = {
     values: () => util.cloneDeep(initialValues),
@@ -133,6 +134,7 @@ export const createForm = (config) => {
               return clearErrorsAndSubmit(values);
             } else {
               errors.set(error);
+              onError(error)
               isSubmitting.set(false);
             }
           })
@@ -154,7 +156,7 @@ export const createForm = (config) => {
                 yupErrors.inner.map((error) =>
                   util.set(updatedErrors, error.path, error.message),
                 );
-
+                onError(updatedErrors)
                 errors.set(updatedErrors);
               }
               isSubmitting.set(false);
