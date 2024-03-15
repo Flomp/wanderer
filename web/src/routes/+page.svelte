@@ -75,13 +75,13 @@
 </svelte:head>
 
 <section
-    class="hero grid grid-cols-1 md:grid-cols-2 md:px-8 md:gap-8"
+    class="hero grid grid-cols-1 lg:grid-cols-2 md:px-8 md:gap-8"
     style="height: calc(100vh - 112px)"
 >
     <div
-        class="flex flex-col justify-center gap-8 max-w-md mx-8 md:mx-auto lg:-mt-24"
+        class="flex flex-col justify-center gap-8 max-w-md mx-8 sm:mx-auto mt-0 lg:-mt-24 md:mt-24"
     >
-        <h2 class="text-7xl font-bold">
+        <h2 class="text-5xl sm:text-6xl md:text-7xl font-bold">
             {$_("welcome_to")} <span class="-tracking-[0.075em]">wanderer</span>
         </h2>
         <h5>
@@ -102,7 +102,7 @@
     </div>
 </section>
 <section
-    class="max-w-7xl mx-auto mt-8 px-8 xl:px-0 grid grid-cols-1 md:grid-cols-2 items-center"
+    class="max-w-7xl mx-auto mt-8 px-8 xl:px-0 grid grid-cols-1 md:grid-cols-2 items-center gap-x-12"
 >
     <div
         id="trails"
@@ -111,7 +111,7 @@
         {#if $trails.length == 0}
             <div>
                 <img
-                    style="max-width: 450px"
+                    style="max-width: min(450px, 100%)"
                     class="rounded-full aspect-square"
                     src="/imgs/default_thumbnail.webp"
                     alt="Empty State showing a wanderer going into the distance"

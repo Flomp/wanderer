@@ -59,14 +59,14 @@
 
 <div class="min-w-0">
     <div class="flex items-end flex-wrap md:flex-nowrap gap-x-6 gap-y-2 mx-4">
-        <div class="basis-full order-1 md:order-none mt-6 md:mt-0">
+        <div class="basis-full order-1 md:order-none">
             <Pagination
                 page={pagination.page}
                 totalPages={pagination.totalPages}
                 on:pagination
             ></Pagination>
         </div>
-        <div class="lg:shrink-0">
+        <div class="shrink-0">
             <p class="text-sm text-gray-500 pb-2">{$_("sort")}</p>
             <div class="flex items-center gap-2">
                 <Select
@@ -83,7 +83,7 @@
                 >
             </div>
         </div>
-        <div class="lg:shrink-0">
+        <div class="shrink-0">
             <p class="text-sm text-gray-500 pb-2">{$_("display-as")}</p>
 
             <Select

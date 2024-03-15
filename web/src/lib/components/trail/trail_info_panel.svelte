@@ -52,6 +52,7 @@
             await import("leaflet.awesome-markers");
 
             map = L.map("map").setView([0, 0], 2);
+            map.attributionControl.setPrefix(false)
 
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 attribution: "© OpenStreetMap contributors",
@@ -150,12 +151,12 @@
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
                         {#if trail.location}
                             <h3 class="text-lg">
-                                <i class="fa fa-location-dot mr-3"></i>
+                                <i class="fa fa-location-dot mr-2"></i>
                                 {trail.location}
                             </h3>
                         {/if}
                         <h3 class="text-lg">
-                            <i class="fa fa-person-hiking mr-3"></i>
+                            <i class="fa fa-person-hiking mr-2"></i>
                             {$_(trail.difficulty ?? "?")}
                         </h3>
                     </div>

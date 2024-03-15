@@ -13,7 +13,7 @@ export async function GET(event: RequestEvent) {
         const r = await pb.collection('trails')
             .getList<Trail>(parseInt(page), parseInt(perPage), { expand: expand ?? "", sort: sort ?? "", filter: filter ?? "" })
         return json(r)
-    } catch (e: any) {
+    } catch (e: any) {        
         throw error(e.status, e);
     }
 }

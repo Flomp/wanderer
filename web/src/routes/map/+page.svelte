@@ -55,6 +55,7 @@
         await import("leaflet.awesome-markers");
 
         map = L.map("map").setView([0, 0], 4);
+        map.attributionControl.setPrefix(false)
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors",
@@ -220,7 +221,10 @@
         </div>
         <div>
             <h4 class="font-semibold text-lg">${trail.name}</h4>
-            <h5><i class="fa fa-location-dot mr-3"></i>${trail.location}</h5>
+            <div class="flex gap-x-4">
+            ${trail.location ? `<h5><i class="fa fa-location-dot mr-2"></i>${trail.location}</h5>` : ""}
+            <h5><i class="fa fa-person-hiking mr-2"></i>${$_(trail.difficulty as string)}</h5>
+            </div>
             <div class="flex mt-2 gap-4 text-sm text-gray-500"><span class="shrink-0"><i
                         class="fa fa-left-right mr-2"></i>${formatDistance(
                             trail.distance,
@@ -265,7 +269,7 @@
 <main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <div
         id="trail-list"
-        class="md:overflow-y-auto md:overflow-x-hidden flex flex-col items-stretch gap-4 px-8"
+        class="md:overflow-y-auto md:overflow-x-hidden flex flex-col items-stretch gap-4 px-3 md:px-8"
     >
         <div class="sticky top-0 z-10 bg-background pb-4 space-y-4">
             <div class="flex items-center gap-2 md:gap-4">

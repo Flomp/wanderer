@@ -125,17 +125,26 @@
             <div class="basis-full"></div>
             <hr class="border-input-border" />
             <div class="flex gap-4 items-center m-4">
-                <img
-                    class="rounded-full w-8 aspect-square"
-                    src={getFileURL($currentUser, $currentUser.avatar) ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
-                    alt="avatar"
-                />
-                <div>
+                <a href="/profile">
+                    <img
+                        class="rounded-full w-10 aspect-square"
+                        src={getFileURL($currentUser, $currentUser.avatar) ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                        alt="avatar"
+                    />
+                </a>
+                <a href="/profile">
                     <p class="text-sm">{$currentUser.username}</p>
-                    <p class="text-sm text-gray-500">{$currentUser.email}</p>
-                </div>
-                <button class="btn-icon"
+                    <p class="text-sm text-gray-500">
+                        {$currentUser.email}
+                    </p>
+                </a>
+                <button
+                    on:click={() => {
+                        logout();
+                        window.location.href = "/";
+                    }}
+                    class="btn-icon"
                     ><i class="fa-solid fa-arrow-right-from-bracket"
                     ></i></button
                 >
@@ -156,7 +165,7 @@
             <LogoTextLight></LogoTextLight>
         {/if}
     </a>
-    <menu id="nav-bar-links" class="hidden md:flex gap-8 relative py-1 px-2">
+    <menu id="nav-bar-links" class="hidden lg:flex gap-8 relative py-1 px-2">
         <div
             class="absolute h-full w-16 bg-menu-item-background-hover rounded-xl top-0 z-0"
             style="width: {$indicatorWidth}px; left: {$indicatorPosition}px; scale: {$indicatorScale}"
@@ -178,16 +187,14 @@
         {/if}
     </menu>
     {#if $currentUser}
-        <div class="hidden md:flex gap-6 items-center">
+        <div class="hidden lg:flex gap-6 items-center">
             <button
                 class="btn-icon fa-regular fa-{$theme === 'light'
                     ? 'sun'
                     : 'moon'}"
                 on:click={() => toggleTheme()}
             ></button>
-            <a
-                class="btn-primary btn-large"
-                href="/trail/edit/new"
+            <a class="btn-primary btn-large" href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
             <Dropdown
@@ -220,7 +227,7 @@
         </div>
     {/if}
     <button
-        class="btn-icon fa fa-bars md:hidden"
+        class="btn-icon fa fa-bars lg:hidden"
         on:click={() => (drawerOpen = !drawerOpen)}
     ></button>
 </nav>

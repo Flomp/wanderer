@@ -78,7 +78,8 @@
         await import("leaflet.awesome-markers");
 
         map = L.map("map").setView([0, 0], 2);
-
+        map.attributionControl.setPrefix(false)
+        
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors",
         }).addTo(map);
@@ -450,7 +451,7 @@
                 >
                 <input type="hidden" name="distance" value={$form.distance} />
             </div>
-            <div class="flex flex-col items-center">
+            <div class="flex flex-col items-center ">
                 <span>{$_("elevation-gain")}</span>
                 <span class="font-medium"
                     >{formatElevation($form.elevation_gain)}</span

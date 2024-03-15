@@ -25,6 +25,7 @@
         await import("$lib/vendor/leaflet-elevation/src/index.js");
 
         map = L.map("map").setView([trail.lat ?? 0, trail.lon ?? 0], 14);
+        map.attributionControl.setPrefix(false)
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors",

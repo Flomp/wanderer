@@ -27,14 +27,18 @@
     <div class="p-4">
         <div>
             <h4 class="font-semibold text-lg">{trail.name}</h4>
-            {#if trail.location}
-                <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
-            {/if}
-            <h5>
-                <i class="fa fa-person-hiking mr-3"></i>{$_(
-                    trail.difficulty ?? "?",
-                )}
-            </h5>
+            <div class="flex gap-x-4">
+                {#if trail.location}
+                    <h5>
+                        <i class="fa fa-location-dot mr-3"></i>{trail.location}
+                    </h5>
+                {/if}
+                <h5>
+                    <i class="fa fa-person-hiking mr-3"></i>{$_(
+                        trail.difficulty ?? "?",
+                    )}
+                </h5>
+            </div>
         </div>
         <div class="flex mt-2 gap-4 text-sm text-gray-500 whitespace-nowrap">
             <span
