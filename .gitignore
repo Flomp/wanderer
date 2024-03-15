@@ -1,10 +1,11 @@
 .DS_Store
 .vscode/
 
-db/pocketbase
+db/pocketbase*
 
 search/meilisearch
 search/data.ms
 search/dumps
 
 run.sh
+build.sh

@@ -22,13 +22,13 @@ The recommended and quickest way to install wanderer is using docker compose:
 
 ``` bash
 # clone the git repository
-git clone https://github.com/Flomp/wanderer
-cd wanderer
+wget https://raw.githubusercontent.com/Flomp/wanderer/main/docker-compose.yml
+
 # build and launch via docker compose
-docker compose up -d --build
+docker compose up -d
 ```
 
-You can now access the frontend at localhost:3000.
+The first startup can take up to 90 seconds after which you can access the frontend at localhost:3000.
 
 > Note: if you are using wanderer in a production environment make sure to change the MEILI_MASTER_KEY.
 

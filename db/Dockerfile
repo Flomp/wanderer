@@ -1,17 +1,11 @@
-FROM golang:1.22-alpine
-RUN apk add build-base
+FROM alpine:3.16
 
 WORKDIR /
 
-COPY go.mod ./
-COPY go.sum ./
 COPY migrations ./migrations
 
-RUN go mod download
-
-COPY *.go ./
-
-RUN go build -o /pocketbase
+COPY ./pocketbase_arm64 /pocketbase
+RUN chmod +x /pocketbase
 
 ENV MEILI_URL=http://localhost:7700
 ENV MEILI_MASTER_KEY=
