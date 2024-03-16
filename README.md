@@ -21,7 +21,7 @@ wanderer is a self-hosted trail database. You can upload your recorded tracks an
 The recommended and quickest way to install wanderer is using docker compose:
 
 ``` bash
-# clone the git repository
+# download the docker compose file
 wget https://raw.githubusercontent.com/Flomp/wanderer/main/docker-compose.yml
 
 # build and launch via docker compose
