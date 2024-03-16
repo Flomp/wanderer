@@ -17,6 +17,7 @@ const HOUR = MIN * 60;
 const DAY  = HOUR * 24;
 
 export function resolveURL(src, baseUrl) {
+	console.log(baseUrl, src);
 	return (new URL(src, (src.startsWith('../') || src.startsWith('./')) ? baseUrl : undefined)).toString()
 };
 

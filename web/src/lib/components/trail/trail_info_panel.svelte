@@ -208,13 +208,13 @@
             </section>
             <hr class="border-separator" />
         {/if}
-        <section class="trail-info-panel-tabs px-4 py-2 bg-white">
+        <section class="trail-info-panel-tabs px-4 py-2 bg-background">
             <Tabs {tabs} bind:activeTab></Tabs>
         </section>
     </div>
     <section class="trail-info-panel-content px-8">
         <div
-            class="grid grid-cols-1 mt-4 gap-8 overflow-scroll"
+            class="grid grid-cols-1 mt-4 gap-8"
             class:md:grid-cols-[1fr_18rem]={mode == "overview"}
         >
             {#if activeTab == 0}

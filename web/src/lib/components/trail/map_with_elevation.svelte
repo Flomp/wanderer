@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
     import { currentUser } from "$lib/stores/user_store";
-    import { getFileURL } from "$lib/util/file_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import type { Map, Marker } from "leaflet";
     import { onMount } from "svelte";

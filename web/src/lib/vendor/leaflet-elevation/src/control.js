@@ -13,18 +13,18 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	options: Options,
 	__mileFactor: 0.621371, // 1 km = (0.621371 mi)
 	__footFactor: 3.28084,  // 1 m  = (3.28084 ft)
-	__D3: 'https://unpkg.com/d3@7.8.4/dist/d3.min.js',
-	__TOGEOJSON: 'https://unpkg.com/@tmcw/togeojson@5.6.2/dist/togeojson.umd.js',
-	__LGEOMUTIL: 'https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js',
-	__LALMOSTOVER: 'https://unpkg.com/leaflet-almostover@1.0.1/src/leaflet.almostover.js',
-	__LHOTLINE: '../libs/leaflet-hotline.min.js',
-	__LDISTANCEM: '../libs/leaflet-distance-marker.min.js',
-	__LEDGESCALE: '../libs/leaflet-edgescale.min.js',
-	__LCHART: '../src/components/chart.js',
-	__LMARKER: '../src/components/marker.js',
-	__LSUMMARY: '../src/components/summary.js',
-	__modulesFolder: '../src/handlers/',
-	__btnIcon: '../images/elevation.svg',
+	__D3: '/vendor/leaflet-elevation/libs/d3.min.js',
+	__TOGEOJSON: '/vendor/leaflet-elevation/libs/togeojson.umd.js',
+	__LGEOMUTIL: '/vendor/leaflet-elevation/libs/leaflet.geometryutil.js',
+	__LALMOSTOVER: '/vendor/leaflet-elevation/libs/leaflet.almostover.js',
+	__LHOTLINE: '/vendor/leaflet-elevation/libs/leaflet-hotline.min.js',
+	__LDISTANCEM: '/vendor/leaflet-elevation/libs/leaflet-distance-marker.min.js',
+	__LEDGESCALE: '/vendor/leaflet-elevation/libs/leaflet-edgescale.min.js',
+	__LCHART: '/vendor/leaflet-elevation/src/components/chart.js',
+	__LMARKER: '/vendor/leaflet-elevation/src/components/marker.js',
+	__LSUMMARY: '/vendor/leaflet-elevation/src/components/summary.js',
+	__modulesFolder: '/vendor/leaflet-elevation/src/handlers/',
+	__btnIcon: '/vendor/leaflet-elevation/images/elevation.svg',
 
 	/*
 	 * Add data to the diagram either from GPX or GeoJSON and update the axis domain and data
@@ -226,7 +226,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			case this.__LEDGESCALE: condition = typeof L.Control.EdgeScale !== 'function'; break;
 			case this.__LHOTLINE: condition = typeof L.Hotline !== 'function'; break;
 		}
-		return condition !== false ? import(_.resolveURL(src, this.options.srcFolder)) : Promise.resolve();
+		return condition !== false ? import(src) : Promise.resolve();
 	},
 
 	/**
@@ -441,7 +441,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 
 	_initHotLine(layer) {
 		let prop = typeof this.options.hotline == 'string' ? this.options.hotline : 'elevation';
-		return this.options.hotline ? this.import(this.__LHOTLINE)
+		return this.options.hotline ? this.import(/* @vite-ignore */this.__LHOTLINE)
 			.then(() => {
 				layer.eachLayer((trkseg) => {
 					if (trkseg.feature.geometry.type != "Point") {
@@ -722,7 +722,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	},
 
 	_initSummary(container) {
-		this.import(this.__LSUMMARY).then((m) => {
+		this.import(/* @vite-ignore */this.__LSUMMARY).then((m) => {
 			this._summary = new (m || Elevation).Summary({ summary: this.options.summary }, this);
 
 			this.on('elechart_init', () => {
