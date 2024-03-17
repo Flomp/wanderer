@@ -34,7 +34,15 @@ export async function trails_index(data: { perPage: number, random?: boolean, f:
 }
 
 export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    let filterText: string = `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.elevationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
+    let filterText: string = `distance >= ${filter.distanceMin} AND elevation_gain >= ${filter.elevationGainMin}`
+
+    if (filter.distanceMax < filter.distanceLimit) {
+        filterText += ` AND distance <= ${filter.distanceMax}`
+    }
+
+    if (filter.elevationGainMax < filter.elevationGainLimit) {
+        filterText += ` AND elevation_gain <= ${filter.elevationGainMax}`
+    }
 
     filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
 
@@ -52,7 +60,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     }
     let r = await f("/api/v1/search/trails", {
         method: "POST",
-        body: JSON.stringify({ q: filter.q, options: { filter: filterText, hitsPerPage: 20, page: page } }),
+        body: JSON.stringify({ q: filter.q, options: { filter: filterText, hitsPerPage: 21, page: page } }),
     });
 
     const result = await r.json();
@@ -90,7 +98,15 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     let filterText: string = "";
 
     if (filter) {
-        filterText += `distance >= ${filter.distanceMin} AND distance <= ${filter.distanceMax} AND elevation_gain >= ${filter.elevationGainMin} AND elevation_gain <= ${filter.elevationGainMax}`;
+        filterText += `distance >= ${filter.distanceMin} AND elevation_gain >= ${filter.elevationGainMin}`;
+
+        if (filter.distanceMax < filter.distanceLimit) {
+            filterText += ` AND distance <= ${filter.distanceMax}`
+        }
+
+        if (filter.elevationGainMax < filter.elevationGainLimit) {
+            filterText += ` AND elevation_gain <= ${filter.elevationGainMax}`
+        }
 
         filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
 
@@ -162,7 +178,7 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     }
 
     if (loadGPX) {
-        if(!response.expand) {
+        if (!response.expand) {
             response.expand = {}
         }
         const gpxData: string = await fetchGPX(response, f);
@@ -312,12 +328,12 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos: Fi
 export async function trails_delete(trail: Trail) {
     if (trail.expand.waypoints) {
         for (const waypoint of trail.expand.waypoints) {
-            waypoints_delete(waypoint);
+            await waypoints_delete(waypoint);
         }
     }
     if (trail.expand.summit_logs) {
         for (const summit_log of trail.expand.summit_logs) {
-            summit_logs_delete(summit_log);
+            await summit_logs_delete(summit_log);
         }
     }
 

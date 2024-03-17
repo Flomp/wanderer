@@ -2,7 +2,7 @@ version: '3'
 
 x-common-env: &cenv
   MEILI_URL: http://search:7700
-  MEILI_MASTER_KEY: CHANGE_ME!
+  MEILI_MASTER_KEY: vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo
 
 services:
   search:
@@ -50,6 +50,7 @@ services:
     environment:
       <<: *cenv
       ORIGIN: http://localhost:3000
+      BODY_SIZE_LIMIT: Infinity
       PUBLIC_POCKETBASE_URL: http://db:8090
     ports:
       - "3000:3000"

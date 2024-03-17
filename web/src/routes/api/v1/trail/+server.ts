@@ -4,7 +4,7 @@ import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
     const page = event.url.searchParams.get("page") ?? "0";
-    const perPage = event.url.searchParams.get("per-page") ?? "5";
+    const perPage = event.url.searchParams.get("per-page") ?? "21";
     const expand = event.url.searchParams.get("expand") ?? ""
     const sort = event.url.searchParams.get("sort") ?? ""
     const filter = event.url.searchParams.get("filter") ?? "";

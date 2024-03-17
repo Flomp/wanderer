@@ -16,6 +16,7 @@ export type User = {
 export const currentUser: Writable<User | null> = writable<User | null>()
 
 export async function users_create(user: User) {
+    user.unit = "metric";
     const r = await fetch('/api/v1/user', {
         method: 'PUT',
         body: JSON.stringify({ ...user, passwordConfirm: user.password })

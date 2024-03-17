@@ -59,6 +59,7 @@
     }
 
     async function handleSearchClick(item: SearchItem) {
+        citySearchQuery = item.text;
         await users_update($currentUser!.id, {
             location: {
                 name: item.value.name,

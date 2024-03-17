@@ -13,8 +13,10 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
         },
         distanceMin: 0,
         distanceMax: 20000,
+        distanceLimit: 20000,
         elevationGainMin: 0,
         elevationGainMax: 4000,
+        elevationGainLimit: 4000,
         sort: "created",
         sortOrder: "+",
     };

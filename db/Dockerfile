@@ -4,7 +4,9 @@ WORKDIR /
 
 COPY migrations ./migrations
 
-COPY ./pocketbase_arm64 /pocketbase
+ARG TARGETARCH
+RUN echo ${TARGETARCH}
+COPY ./pocketbase_${TARGETARCH} /pocketbase
 RUN chmod +x /pocketbase
 
 ENV MEILI_URL=http://localhost:7700

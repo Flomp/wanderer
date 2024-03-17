@@ -201,27 +201,27 @@
             <p class="text-sm font-medium pb-4">{$_("distance")}</p>
             <DoubleSlider
                 minValue={filter.distanceMin}
-                maxValue={filter.distanceMax}
+                maxValue={filter.distanceLimit}
                 bind:currentMin={filter.distanceMin}
                 bind:currentMax={filter.distanceMax}
                 on:set={() => update()}
             ></DoubleSlider>
             <div class="flex justify-between">
                 <span>{formatDistance(filter.distanceMin)}</span>
-                <span>{formatDistance(filter.distanceMax)}</span>
+                <span>{formatDistance(filter.distanceMax)}{filter.distanceMax == filter.distanceLimit ? '+' : ''}</span>
             </div>
             <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">{$_("elevation-gain")}</p>
             <DoubleSlider
                 minValue={filter.elevationGainMin}
-                maxValue={filter.elevationGainMax}
+                maxValue={filter.elevationGainLimit}
                 bind:currentMin={filter.elevationGainMin}
                 bind:currentMax={filter.elevationGainMax}
                 on:set={() => update()}
             ></DoubleSlider>
             <div class="flex justify-between">
                 <span>{formatElevation(filter.elevationGainMin)}</span>
-                <span>{formatElevation(filter.elevationGainMax)}</span>
+                <span>{formatElevation(filter.elevationGainMax)}{filter.elevationGainMax == filter.elevationGainLimit ? '+' : ''}</span>
             </div>
             <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">{$_("completed")}</p>

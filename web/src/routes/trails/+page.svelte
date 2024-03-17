@@ -4,17 +4,15 @@
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import type { TrailFilter } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
-    import {
-        trails,
-        trails_search_filter,
-    } from "$lib/stores/trail_store";
+    import { trails, trails_search_filter } from "$lib/stores/trail_store";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
 
     let filterExpanded: boolean = true;
 
     const filter: TrailFilter = $page.data.filter;
-    const pagination: {page: number, totalPages: number} = $page.data.pagination
+    const pagination: { page: number; totalPages: number } =
+        $page.data.pagination;
 
     onMount(() => {
         if (window.innerWidth < 768) {
@@ -23,8 +21,8 @@
     });
 
     async function handleFilterUpdate() {
-        const response= await trails_search_filter(filter, 1);
-        pagination.page = response.page
+        const response = await trails_search_filter(filter, 1);
+        pagination.page = response.page;
         pagination.totalPages = response.totalPages;
     }
 
@@ -50,7 +48,7 @@
     <TrailList
         {filter}
         trails={$trails}
-        pagination={pagination}
+        {pagination}
         on:update={() => handleFilterUpdate()}
         on:pagination={(e) => paginate(e.detail)}
     ></TrailList>

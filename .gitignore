@@ -8,4 +8,4 @@ search/data.ms
 search/dumps
 
 run.sh
-build.sh
+build*.sh
