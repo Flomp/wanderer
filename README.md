@@ -30,7 +30,9 @@ docker compose up -d
 
 The first startup can take up to 90 seconds after which you can access the frontend at localhost:3000.
 
-> Note: if you are using wanderer in a production environment make sure to change the MEILI_MASTER_KEY.
+> ℹ️ if you are not hosting wanderer at http://localhost:3000 make sure to change ORIGIN variable. Otherwise you will run into CORS errors.
+
+> ⚠️ if you are using wanderer in a production environment make sure to change the MEILI_MASTER_KEY variable.
 
 You can also run wanderer on bare-metal. Check out the [documentation](https://github.com/Flomp/wanderer/wiki/Installation#from-source) for a detailed how-to guide.
 
