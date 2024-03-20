@@ -60,7 +60,8 @@
 
     async function handleSearchClick(item: SearchItem) {
         citySearchQuery = item.text;
-        await users_update($currentUser!.id, {
+        await users_update({
+            id: $currentUser!.id,
             location: {
                 name: item.value.name,
                 lat: item.value.lat,
@@ -74,25 +75,24 @@
             document.getElementById("avatarInput") as HTMLInputElement
         ).files;
 
-        if (!files) {
+        if (!files || files.length == 0) {
             return;
         }
 
-        const formData = new FormData();
-        formData.append("avatar", files[0]);
-
-        await users_update($currentUser!.id, formData);
+        await users_update($currentUser!, files[0]);
     }
 
     async function handleUnitSelection(e: RadioItem) {
-        await users_update($currentUser!.id, {
+        await users_update({
+            id: $currentUser!.id,
             unit: e.value as "imperial" | "metric",
         });
     }
 
     async function handleLanguageSelection(value: "en" | "de") {
         locale.set(value);
-        await users_update($currentUser!.id, {
+        await users_update({
+            id: $currentUser!.id,
             language: value,
         });
     }

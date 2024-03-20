@@ -48,18 +48,34 @@ export async function logout() {
     pb.authStore.clear();
 }
 
-export async function users_update(id: string, user: User | { [K in keyof User]?: User[K] } | FormData) {
-    const r = await fetch('/api/v1/user/' + id, {
+export async function users_update(user: User | { [K in keyof User]?: User[K] }, avatar?: File) {
+    let r = await fetch('/api/v1/user/' + user.id, {
         method: 'POST',
         body: JSON.stringify(user)
     })
 
-    if (r.ok) {
-        const model = await r.json();
-        currentUser.set(model);
-    } else {
+    if (!r.ok) {
         throw new ClientResponseError(await r.json())
     }
+
+
+    const formData = new FormData();
+
+    if (avatar) {
+        formData.append("avatar", avatar);
+    }
+
+    r = await fetch(`/api/v1/user/${user.id!}/file`, {
+        method: 'POST',
+        body: formData,
+    })
+
+    if (!r.ok) {
+        throw new ClientResponseError(await r.json())
+    }
+
+    const model: User = await r.json();
+    currentUser.set(model);
 }
 
 export async function users_delete(user: User) {
