@@ -15,7 +15,7 @@
         (photoFiles ?? []).map(async (f) => {
             return await readAsDataURLAsync(f);
         }),
-    ).then((v) => {
+    ).then((v) => {       
         photoPreviews = v;
     });
 
@@ -59,20 +59,7 @@
             if (!photoFiles) {
                 photoFiles = [];
             }
-            photoFiles.push(file);
-
-            // (function (file) {
-            //     var reader = new FileReader();
-            //     reader.onload = function (e) {
-            //         if (e.target?.result) {
-            //             photoPreviews = [
-            //                 ...photoPreviews,
-            //                 e.target.result as string,
-            //             ];
-            //         }
-            //     };
-            //     reader.readAsDataURL(file);
-            // })(file);
+            photoFiles = [...photoFiles, file]
         }
     }
 

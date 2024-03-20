@@ -40,13 +40,16 @@
     class="flex gap-4 p-4 border border-input-border rounded-md my-2 hover:bg-menu-item-background-hover"
 >
     {#if imgSrc.length}
-        <PhotoGallery
-            photos={waypoint.photos.map((p) => getFileURL(waypoint, p))}
-            bind:open={openGallery}
-        ></PhotoGallery>
+        {#if mode == "show"}
+            <PhotoGallery
+                photos={waypoint.photos.map((p) => getFileURL(waypoint, p))}
+                bind:open={openGallery}
+            ></PhotoGallery>
+        {/if}
         <button
             class="relative basis-16 aspect-square ml-2 mb-3 shrink-0"
-            on:click={() => openGallery()}
+            type="button"
+            on:click={mode == "show" ? () => openGallery() : undefined}
         >
             {#each imgSrc as img, i}
                 <img
