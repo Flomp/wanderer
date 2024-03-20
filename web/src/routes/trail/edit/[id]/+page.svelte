@@ -4,9 +4,9 @@
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
     import Toggle from "$lib/components/base/toggle.svelte";
-    import PhotoCard from "$lib/components/photo_card.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
+    import PhotoPicker from "$lib/components/trail/photo_picker.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
     import { SummitLog } from "$lib/models/summit_log";
@@ -21,7 +21,6 @@
         trails_update,
     } from "$lib/stores/trail_store";
     import { waypoint } from "$lib/stores/waypoint_store";
-    import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -32,7 +31,7 @@
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
     import { format } from "date-fns";
-    import type { GPX, Icon, LeafletEvent, Map } from "leaflet";
+    import type { GPX, Icon, LatLng, LeafletEvent, Map } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
@@ -51,8 +50,9 @@
 
     let loading = false;
 
-    const photoFiles: File[] = [];
-    let photoPreviews: string[] = [];
+    let editingBasicInfo: boolean = false;
+
+    let photoFiles: File[] = [];
 
     let gpxFile: File | null = null;
 
@@ -70,33 +70,6 @@
         photos: array(string()).optional(),
         gpx: string().optional(),
         description: string().optional(),
-    });
-
-    onMount(async () => {
-        L = (await import("leaflet")).default;
-        await import("leaflet-gpx");
-        await import("leaflet.awesome-markers");
-
-        map = L.map("map").setView([0, 0], 2);
-        map.attributionControl.setPrefix(false)
-        
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: "© OpenStreetMap contributors",
-        }).addTo(map);
-
-        if (
-            data.trail.expand.gpx_data &&
-            data.trail.expand.gpx_data.length > 0
-        ) {
-            addGPXLayer(data.trail.expand.gpx_data, false);
-        }
-
-        if (data.trail.expand.waypoints?.length > 0) {
-            for (const waypoint of data.trail.expand.waypoints) {
-                const marker = createMarkerFromWaypoint(L, waypoint);
-                marker.addTo(map);
-            }
-        }
     });
 
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
@@ -170,9 +143,50 @@
         },
     });
 
+    onMount(async () => {
+        L = (await import("leaflet")).default;
+        await import("leaflet-gpx");
+        await import("leaflet.awesome-markers");
+
+        map = L.map("map").setView([0, 0], 2);
+        map.attributionControl.setPrefix(false);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors",
+        }).addTo(map);
+
+        if (
+            data.trail.expand.gpx_data &&
+            data.trail.expand.gpx_data.length > 0
+        ) {
+            addGPXLayer(data.trail.expand.gpx_data, false);
+        }
+
+        if (data.trail.expand.waypoints?.length > 0) {
+            for (const waypoint of data.trail.expand.waypoints) {
+                const marker = createMarkerFromWaypoint(
+                    L,
+                    waypoint,
+                    (event) => {
+                        var marker = event.target;
+                        var position = marker.getLatLng();
+                        const editableWaypoint = $form.expand.waypoints.find(
+                            (w) => w.id == waypoint.id,
+                        );
+                        editableWaypoint!.lat = position.lat;
+                        editableWaypoint!.lon = position.lng;
+                        $form.expand.waypoints = [...$form.expand.waypoints];
+                    },
+                );
+                marker.addTo(map);
+            }
+        }
+    });
+
     function addGPXLayer(gpx: string, addWaypoints: boolean = true) {
         return new Promise<void>(function (resolve, reject) {
             gpxLayer?.remove();
+            let startCoordinates: LatLng;
             gpxLayer = new L.GPX(gpx, {
                 async: true,
                 polyline_options: {
@@ -216,24 +230,37 @@
                 .on("addpoint", function (e: any) {
                     if (e.point_type === "start") {
                         e.point.setZIndexOffset(1000);
-                        $form.lat = e.point._latlng.lat;
-                        $form.lon = e.point._latlng.lng;
+                        startCoordinates = e.point._latlng;
+                    } else if (e.point_type == "end") {
+                        if (startCoordinates) {
+                            $form.lat =
+                                (startCoordinates.lat + e.point._latlng.lat) /
+                                2;
+                            $form.lon =
+                                (startCoordinates.lng + e.point._latlng.lng) /
+                                2;
+                        } else {
+                            $form.lat = e.point._latlng.lat;
+                            $form.lon = e.point._latlng.lng;
+                        }
                     } else if (e.point_type === "waypoint") {
                         const waypoint = new Waypoint(
                             e.point._latlng.lat,
                             e.point._latlng.lng,
                             { name: e.point.options.title, marker: e.point },
                         );
-                        if (!$form.expand.waypoints) {
-                        }
                         $form.expand.waypoints.push(waypoint);
                     }
                 })
                 .on("loaded", function (e: LeafletEvent) {
                     map.fitBounds(e.target.getBounds());
-                    $form.distance = e.target.get_distance();
-                    $form.elevation_gain = e.target.get_elevation_gain();
-                    $form.duration = e.target.get_total_time() / 1000 / 60;
+                    $form.distance = Math.round(e.target.get_distance());
+                    $form.elevation_gain = Math.round(
+                        e.target.get_elevation_gain(),
+                    );
+                    $form.duration = Math.round(
+                        e.target.get_total_time() / 1000 / 60,
+                    );
                     resolve();
                 })
                 .on("error", reject)
@@ -309,8 +336,7 @@
         openWaypointModal();
     }
 
-    function saveWaypoint(e: CustomEvent<Waypoint>) {
-        const savedWaypoint = e.detail;
+    function saveWaypoint(savedWaypoint: Waypoint) {
         let editedWaypointIndex = $form.expand.waypoints.findIndex(
             (s) => s.id == savedWaypoint.id,
         );
@@ -323,59 +349,19 @@
 
             $form.expand.waypoints = [...$form.expand.waypoints, savedWaypoint];
         }
-        const marker = createMarkerFromWaypoint(L, savedWaypoint);
+        const marker = createMarkerFromWaypoint(L, savedWaypoint, (event) => {
+            var marker = event.target;
+            var position = marker.getLatLng();
+            const editableWaypoint = $form.expand.waypoints.find(
+                (w) => w.id == savedWaypoint.id,
+            );
+            editableWaypoint!.lat = position.lat;
+            editableWaypoint!.lon = position.lng;
+            $form.expand.waypoints = [...$form.expand.waypoints];
+        });
+
         marker.addTo(map);
         savedWaypoint.marker = marker;
-    }
-
-    function openPhotoBrowser() {
-        document.getElementById("photoInput")!.click();
-    }
-
-    function handlePhotoSelection() {
-        const files = (
-            document.getElementById("photoInput") as HTMLInputElement
-        ).files;
-
-        if (!files) {
-            return;
-        }
-
-        for (const file of files) {
-            photoFiles.push(file);
-
-            (function (file) {
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                    if (e.target?.result) {
-                        photoPreviews = [
-                            ...photoPreviews,
-                            e.target.result as string,
-                        ];
-                    }
-                };
-                reader.readAsDataURL(file);
-            })(file);
-        }
-    }
-
-    function makePhotoThumbnail(index: number) {
-        $form.thumbnail = index;
-    }
-
-    function handlePhotoDelete(index: number) {
-        if ($form.thumbnail == index) {
-            $form.thumbnail = 0;
-        }
-
-        if (index >= $form.photos.length) {
-            const adjustedIndex = index - $form.photos.length;
-            photoFiles.splice(adjustedIndex, 1);
-            photoPreviews.splice(adjustedIndex, 1);
-        } else {
-            $form.photos.splice(index, 1);
-            $form.photos = $form.photos;
-        }
     }
 
     function beforeSummitLogModalOpen() {
@@ -443,31 +429,69 @@
             on:change={handleFileSelection}
         />
         <hr class="border-separator" />
-        <h3 class="text-xl font-semibold">{$_("basic-info")}</h3>
+        <div class="flex gap-x-4">
+            <h3 class="text-xl font-semibold">{$_("basic-info")}</h3>
+            <button
+                type="button"
+                class="btn-icon"
+                on:click={() => (editingBasicInfo = !editingBasicInfo)}
+                ><i class="fa fa-{editingBasicInfo ? 'check' : 'pen'}"
+                ></i></button
+            >
+        </div>
+
         <div class="flex gap-4 justify-around">
-            <div class="flex flex-col items-center">
-                <span>{$_("distance")}</span>
-                <span class="font-medium">{formatDistance($form.distance)}</span
-                >
-                <input type="hidden" name="distance" value={$form.distance} />
-            </div>
-            <div class="flex flex-col items-center ">
-                <span>{$_("elevation-gain")}</span>
-                <span class="font-medium"
-                    >{formatElevation($form.elevation_gain)}</span
-                >
-                <input
-                    type="hidden"
+            {#if editingBasicInfo}
+                <TextField
+                    bind:value={$form.distance}
+                    name="distance"
+                    label={$_("distance")}
+                ></TextField>
+                <TextField
+                    bind:value={$form.elevation_gain}
                     name="elevation_gain"
-                    value={$form.elevation_gain}
-                />
-            </div>
-            <div class="flex flex-col items-center">
-                <span>{$_("est-duration")}</span>
-                <span class="font-medium">{formatTimeHHMM($form.duration)}</span
-                >
-                <input type="hidden" name="duration" value={$form.duration} />
-            </div>
+                    label={$_("elevation-gain")}
+                ></TextField>
+                <TextField
+                    bind:value={$form.duration}
+                    name="duration"
+                    label={$_("est-duration")}
+                ></TextField>
+            {:else}
+                <div class="flex flex-col">
+                    <span>{$_("distance")}</span>
+                    <span class="font-medium"
+                        >{formatDistance($form.distance)}</span
+                    >
+                    <input
+                        type="hidden"
+                        name="distance"
+                        value={$form.distance}
+                    />
+                </div>
+                <div class="flex flex-col">
+                    <span>{$_("elevation-gain")}</span>
+                    <span class="font-medium"
+                        >{formatElevation($form.elevation_gain)}</span
+                    >
+                    <input
+                        type="hidden"
+                        name="elevation_gain"
+                        value={$form.elevation_gain}
+                    />
+                </div>
+                <div class="flex flex-col">
+                    <span>{$_("est-duration")}</span>
+                    <span class="font-medium"
+                        >{formatTimeHHMM($form.duration)}</span
+                    >
+                    <input
+                        type="hidden"
+                        name="duration"
+                        value={$form.duration}
+                    />
+                </div>
+            {/if}
             <input type="hidden" name="lat" value={$form.lat} />
             <input type="hidden" name="lon" value={$form.lon} />
         </div>
@@ -529,33 +553,13 @@
         >
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">{$_("photos")}</h3>
-        <div class="flex gap-4 max-w-full overflow-x-auto shrink-0">
-            <button
-                class="btn-secondary h-32 w-32 m-2 shrink-0 grow-0 basis-auto"
-                type="button"
-                on:click={openPhotoBrowser}><i class="fa fa-plus"></i></button
-            >
-            <input
-                type="file"
-                id="photoInput"
-                accept="image/*"
-                multiple={true}
-                style="display: none;"
-                on:change={handlePhotoSelection}
-            />
-            {#each ($form.photos ?? []).concat(photoPreviews) as photo, i}
-                <div class="shrink-0 grow-0 basis-auto m-2">
-                    <PhotoCard
-                        src={i >= $form.photos.length
-                            ? photo
-                            : getFileURL($form, photo)}
-                        on:delete={() => handlePhotoDelete(i)}
-                        isThumbnail={$form.thumbnail === i}
-                        on:thumbnail={() => makePhotoThumbnail(i)}
-                    ></PhotoCard>
-                </div>
-            {/each}
-        </div>
+        <PhotoPicker
+            id="trail"
+            parent={$form}
+            bind:photos={$form.photos}
+            bind:thumbnail={$form.thumbnail}
+            bind:photoFiles
+        ></PhotoPicker>
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">{$_("summit-book")}</h3>
         <ul>
@@ -586,7 +590,9 @@
     </form>
     <div class="rounded-xl" id="map"></div>
 </main>
-<WaypointModal bind:openModal={openWaypointModal} on:save={saveWaypoint}
+<WaypointModal
+    bind:openModal={openWaypointModal}
+    on:save={(e) => saveWaypoint(e.detail)}
 ></WaypointModal>
 <SummitLogModal bind:openModal={openSummitLogModal} on:save={saveSummitLog}
 ></SummitLogModal>

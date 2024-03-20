@@ -253,12 +253,13 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos: Fi
         const model = await waypoints_create({
             ...addedWaypoint,
             marker: undefined,
-        });
+        },);
         newTrail.waypoints.push(model.id!);
     }
 
     for (const updatedWaypoint of waypointUpdates.updated) {
-        const model = await waypoints_update({
+        const oldWaypoint = oldTrail.expand.waypoints.find(w => w.id == updatedWaypoint.id);
+        const model = await waypoints_update(oldWaypoint!, {
             ...updatedWaypoint,
             marker: undefined,
         });

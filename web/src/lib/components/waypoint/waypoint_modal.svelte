@@ -11,6 +11,7 @@
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
+    import PhotoPicker from "../trail/photo_picker.svelte";
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -24,6 +25,7 @@
             closeModal!();
         },
     });
+
     $: form.set(util.cloneDeep($waypoint));
 
     $: filteredIcons =
@@ -91,6 +93,18 @@
                 error={$errors.lat}
                 on:change={handleChange}
             ></TextField>
+        </div>
+        <div>
+            <label for="trail-photo-input" class="text-sm font-medium pb-1">
+                {$_("photos")}
+            </label>
+            <PhotoPicker
+                id="waypoint"
+                parent={$form}
+                bind:photos={$form.photos}
+                bind:photoFiles={$form._photos}
+                showThumbnailControls={false}
+            ></PhotoPicker>
         </div>
     </form>
     <div slot="footer" class="flex items-center gap-4">

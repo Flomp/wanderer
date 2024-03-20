@@ -20,10 +20,10 @@ export function formatDistance(meters?: number) {
     const unit = get(currentUser)?.unit ?? "metric";
 
     if (unit == "metric") {
-        if (meters % 1 === 0) {
-            return meters >= 1000 ? `${(meters / 1000)} km` : `${meters} m`;
+        if (meters >= 1000) {
+            return `${(meters / 1000).toFixed(2)} km`
         } else {
-            return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`
+            return meters % 1 == 0 ? `${meters} m` : `${Math.round(meters)} m`;
         }
     } else {
         const miles = meters * 0.000621371;
@@ -44,7 +44,7 @@ export function formatElevation(meters?: number) {
         return `${Math.round(meters)} m`
     } else {
         const feet = meters * 3.28084;
-    
+
         return `${Math.round(feet)} ft`;
     }
 }

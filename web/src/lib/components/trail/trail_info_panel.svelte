@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
-    import Tabs from "$lib/components/tabs.svelte";
+    import Tabs from "$lib/components/base/tabs.svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import type { Trail } from "$lib/models/trail";
@@ -17,11 +17,10 @@
     import type { Icon, Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
-    import type { DataSource } from "photoswipe";
-    import PhotoSwipeLightbox from "photoswipe/lightbox";
     import "photoswipe/style.css";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import PhotoGallery from "../photo_gallery.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" = "map";
@@ -38,12 +37,11 @@
 
     let activeTab = 0;
 
-    let lightbox: PhotoSwipeLightbox;
-    let lightboxDataSource: DataSource;
-
     let thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail])
         : "/imgs/default_thumbnail.webp";
+
+    let openGallery: (idx?: number) => void;
 
     onMount(async () => {
         if (mode == "overview") {
@@ -91,40 +89,10 @@
                 markers.push(marker);
             }
         }
-
-        lightboxDataSource = trail.photos.map((p) => ({
-            src: getFileURL(trail, p),
-        }));
-        lightbox = new PhotoSwipeLightbox({
-            dataSource: lightboxDataSource,
-            pswpModule: async () => await import("photoswipe"),
-        });
-        lightbox.init();
-
-        lightbox.on("beforeOpen", () => {
-            const pswp = lightbox.pswp;
-            const ds = pswp?.options?.dataSource;
-            if (Array.isArray(ds)) {
-                for (let idx = 0, len = ds.length; idx < len; idx++) {
-                    const item = ds[idx];
-                    const img = new Image();
-                    img.onload = () => {
-                        item.width = img.naturalWidth;
-                        item.height = img.naturalHeight;
-                        pswp?.refreshSlideContent(idx);
-                    };
-                    img.src = item.src as string;
-                }
-            }
-        });
     });
 
     function openMarkerPopup(i: number) {
         markers[i].openPopup();
-    }
-
-    function openGallery(idx: number) {
-        lightbox?.loadAndOpen(idx, lightboxDataSource);
     }
 
     async function toggleMapFullScreen() {
@@ -162,8 +130,7 @@
                     </div>
                 </div>
                 {#if $currentUser && $currentUser.id == trail.author}
-                    <TrailDropdown {trail} {mode}
-                    ></TrailDropdown>
+                    <TrailDropdown {trail} {mode}></TrailDropdown>
                 {/if}
             </div>
         </section>
@@ -234,10 +201,14 @@
             {#if activeTab == 2}
                 <div
                     id="photo-gallery"
-                    class="grid grid-cols-1 {mode == "overview"
+                    class="grid grid-cols-1 {mode == 'overview'
                         ? 'sm:grid-cols-2 md:grid-cols-3'
                         : ''} gap-4"
                 >
+                    <PhotoGallery
+                        photos={trail.photos.map((p) => getFileURL(trail, p))}
+                        bind:open={openGallery}
+                    ></PhotoGallery>
                     {#each trail.photos ?? [] as photo, i}
                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                         <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
