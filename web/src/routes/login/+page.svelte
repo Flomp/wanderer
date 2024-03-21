@@ -1,17 +1,18 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
+    import { env } from "$env/dynamic/public";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
+    import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { login, type User } from "$lib/stores/user_store";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import { ClientResponseError } from "pocketbase";
-    import { object, string } from "yup";
-    import { theme } from "$lib/stores/theme_store";
     import { _ } from "svelte-i18n";
-    import { page } from "$app/stores";
+    import { object, string } from "yup";
 
     let loading: boolean = false;
     const { form, errors, handleChange, handleSubmit } = createForm<User>({
@@ -37,13 +38,13 @@
                     show_toast({
                         icon: "close",
                         type: "error",
-                        text: $_('wrong-username-or-password'),
+                        text: $_("wrong-username-or-password"),
                     });
                 } else {
                     show_toast({
                         icon: "close",
                         type: "error",
-                        text: $_('error-during-login'),
+                        text: $_("error-during-login"),
                     });
                 }
             } finally {
@@ -90,11 +91,13 @@
                 {loading}>Login</Button
             >
         </div>
-        <span
-            >{$_("no-account")}
-            <a class="text-blue-500 underline" href="/register"
-                >{$_("make-one")}</a
-            ></span
-        >
+        {#if env.PUBLIC_DISABLE_SIGNUP === "false"}
+            <span
+                >{$_("no-account")}
+                <a class="text-blue-500 underline" href="/register"
+                    >{$_("make-one")}</a
+                ></span
+            >
+        {/if}
     </form>
 </main>

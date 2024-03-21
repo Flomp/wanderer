@@ -28,7 +28,7 @@ export async function POST(event: RequestEvent) {
 export async function DELETE(event: RequestEvent) {
     try {
         const r = await pb.collection('trails').delete(event.params.id as string)
-        return json(r);
+        return json({ 'acknowledged': r });
     } catch (e: any) {
         throw error(e.status, e)
     }

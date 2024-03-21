@@ -13,7 +13,6 @@ export async function GET(event: RequestEvent) {
     } catch (e: any) {
         throw error(e.status, e);
     }
-
 }
 
 export async function PUT(event: RequestEvent) {

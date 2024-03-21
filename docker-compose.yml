@@ -52,6 +52,7 @@ services:
       ORIGIN: http://localhost:3000
       BODY_SIZE_LIMIT: Infinity
       PUBLIC_POCKETBASE_URL: http://db:8090
+      PUBLIC_DISABLE_SIGNUP: false
     ports:
       - "3000:3000"
     networks:

@@ -1,4 +1,6 @@
 import { env } from '$env/dynamic/private'
+import { env as envPub } from '$env/dynamic/public'
+
 import { pb } from '$lib/pocketbase'
 import { isRouteProtected } from '$lib/util/authorization_util'
 import { redirect, type Handle } from '@sveltejs/kit'
@@ -11,10 +13,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const url = new URL(event.request.url);
 
+ 
   // validate the user existence and if the path is acceesible
   if (!pb.authStore.model && isRouteProtected(url.pathname)) {
     throw redirect(302, '/login?r=' + url.pathname);
   } else if (pb.authStore.model && url.pathname === "/login") {
+    throw redirect(302, '/');
+  } else if (envPub.PUBLIC_DISABLE_SIGNUP === "true" && url.pathname === "/register") {
     throw redirect(302, '/');
   }
 
@@ -34,7 +39,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   } else {
     const r = await event.fetch(pb.buildUrl("/public/search/token"));
     const response = await r.json();
-    meiliApiKey = response.token;    
+    meiliApiKey = response.token;
   }
   const ms = new MeiliSearch({ host: env.MEILI_URL, apiKey: meiliApiKey });
 

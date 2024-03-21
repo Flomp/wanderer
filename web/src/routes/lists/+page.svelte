@@ -205,6 +205,8 @@
                 [minLat, maxLon],
             ];
             map.fitBounds(boundingBox);
+        } else {
+            map.setView([0, 0], 4);
         }
     }
 </script>
@@ -213,7 +215,7 @@
     <title>{$_("list", { values: { n: 2 } })} | wanderer</title>
 </svelte:head>
 <main
-    class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-8 max-w-7xl mx-4 md:mx-auto"
+    class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-4 lg:gap-8 max-w-7xl mx-4 md:mx-auto"
     style="min-height: calc(100vh - 124px)"
 >
     <ul

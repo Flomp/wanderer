@@ -193,10 +193,10 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     return response;
 }
 
-export async function trails_create(trail: Trail, photos: File[], gpx: File | null) {
+export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     if (!pb.authStore.model) {
-        throw new Error("Unauthenticated");
+        throw new ClientResponseError({ status: 401, response: { message: "Forbidden" } });
     }
 
     for (const waypoint of trail.expand.waypoints) {
@@ -213,7 +213,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | nu
 
     trail.author = pb.authStore.model!.id
 
-    let r = await fetch('/api/v1/trail', {
+    let r = await f('/api/v1/trail', {
         method: 'PUT',
         body: JSON.stringify({ ...trail, expand: undefined }),
     })
@@ -233,7 +233,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | nu
         formData.append("photos", photo)
     }
 
-    r = await fetch(`/api/v1/trail/${model.id!}/file`, {
+    r = await f(`/api/v1/trail/${model.id!}/file`, {
         method: 'POST',
         body: formData,
     })

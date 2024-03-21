@@ -242,6 +242,8 @@
                 })
                 .on("loaded", function (e: LeafletEvent) {
                     map.fitBounds(e.target.getBounds());
+                    $form.name = e.target._info.name;
+                    $form.description = e.target._info.desc;
                     $form.distance = Math.round(e.target.get_distance());
                     $form.elevation_gain = Math.round(
                         e.target.get_elevation_gain(),
