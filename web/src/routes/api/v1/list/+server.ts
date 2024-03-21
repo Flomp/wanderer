@@ -6,7 +6,7 @@ export async function GET(event: RequestEvent) {
     const sort = event.url.searchParams.get('sort') ?? ""
     try {
         const r: List[] = await pb.collection('lists').getFullList<List>({
-            expand: "trails",
+            expand: "trails,trails.waypoints,trails.category",
             sort: sort,
         })
         return json(r)

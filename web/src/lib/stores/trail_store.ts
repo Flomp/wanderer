@@ -349,7 +349,7 @@ export async function trails_delete(trail: Trail) {
     }
 }
 
-async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     if (!trail.gpx) {
         return "";
     }

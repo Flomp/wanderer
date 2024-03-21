@@ -51,8 +51,9 @@
         const result = await r.json();
         searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
             text: h.name,
-            description:
-                country_codes[h["country code"] as keyof typeof country_codes],
+            description: `${h.division} | ${
+                country_codes[h["country code"] as keyof typeof country_codes]
+            }`,
             value: h,
             icon: "city",
         }));

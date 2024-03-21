@@ -186,7 +186,6 @@
     function addGPXLayer(gpx: string, addWaypoints: boolean = true) {
         return new Promise<void>(function (resolve, reject) {
             gpxLayer?.remove();
-            let startCoordinates: LatLng;
             gpxLayer = new L.GPX(gpx, {
                 async: true,
                 polyline_options: {
@@ -230,19 +229,8 @@
                 .on("addpoint", function (e: any) {
                     if (e.point_type === "start") {
                         e.point.setZIndexOffset(1000);
-                        startCoordinates = e.point._latlng;
-                    } else if (e.point_type == "end") {
-                        if (startCoordinates) {
-                            $form.lat =
-                                (startCoordinates.lat + e.point._latlng.lat) /
-                                2;
-                            $form.lon =
-                                (startCoordinates.lng + e.point._latlng.lng) /
-                                2;
-                        } else {
-                            $form.lat = e.point._latlng.lat;
-                            $form.lon = e.point._latlng.lng;
-                        }
+                        $form.lat = e.point._latlng.lat;
+                        $form.lon = e.point._latlng.lng;
                     } else if (e.point_type === "waypoint") {
                         const waypoint = new Waypoint(
                             e.point._latlng.lat,

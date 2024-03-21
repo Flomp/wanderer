@@ -142,7 +142,7 @@
         const cityItems = response.results[1].hits.map(
             (c: Record<string, any>) => ({
                 text: c.name,
-                description: `City | ${
+                description: `City | ${c.division} | ${
                     country_codes[
                         c["country code"] as keyof typeof country_codes
                     ]
@@ -340,9 +340,5 @@
         #trail-list {
             height: calc(100vh - 124px);
         }
-    }
-    :global(.leaflet-popup-content) {
-        width: max-content !important;
-        max-width: 100%;
     }
 </style>

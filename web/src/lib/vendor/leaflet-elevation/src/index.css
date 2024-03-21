@@ -332,3 +332,8 @@
   color: #000;
   background: #fff;
 }
+
+.leaflet-popup-content {
+  width: max-content !important;
+  max-width: 100%;
+}

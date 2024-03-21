@@ -43,7 +43,7 @@
             reverseCoords: false,
             acceleration: false,
             slope: true,
-            speed: false,
+            speed: true,
             altitude: true,
             time: true,
             distance: true,

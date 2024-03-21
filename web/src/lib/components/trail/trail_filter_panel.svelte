@@ -54,10 +54,12 @@
         update();
     }
 
-    function setDifficultyFilter(difficulty: "easy" | "moderate" | "difficult") {
+    function setDifficultyFilter(
+        difficulty: "easy" | "moderate" | "difficult",
+    ) {
         const difficultyIndex = filter.difficulty.findIndex(
             (d) => d == difficulty,
-        );        
+        );
         if (difficultyIndex !== -1) {
             filter.difficulty.splice(difficultyIndex, 1);
         } else {
@@ -102,8 +104,9 @@
 
         searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
             text: h.name,
-            description:
-                country_codes[h["country code"] as keyof typeof country_codes],
+            description: `${h.division} | ${
+                country_codes[h["country code"] as keyof typeof country_codes]
+            }`,
             value: h,
             icon: "city",
         }));
@@ -208,7 +211,12 @@
             ></DoubleSlider>
             <div class="flex justify-between">
                 <span>{formatDistance(filter.distanceMin)}</span>
-                <span>{formatDistance(filter.distanceMax)}{filter.distanceMax == filter.distanceLimit ? '+' : ''}</span>
+                <span
+                    >{formatDistance(filter.distanceMax)}{filter.distanceMax ==
+                    filter.distanceLimit
+                        ? "+"
+                        : ""}</span
+                >
             </div>
             <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">{$_("elevation-gain")}</p>
@@ -221,7 +229,13 @@
             ></DoubleSlider>
             <div class="flex justify-between">
                 <span>{formatElevation(filter.elevationGainMin)}</span>
-                <span>{formatElevation(filter.elevationGainMax)}{filter.elevationGainMax == filter.elevationGainLimit ? '+' : ''}</span>
+                <span
+                    >{formatElevation(
+                        filter.elevationGainMax,
+                    )}{filter.elevationGainMax == filter.elevationGainLimit
+                        ? "+"
+                        : ""}</span
+                >
             </div>
             <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">{$_("completed")}</p>
