@@ -104,7 +104,7 @@
 
         searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
             text: h.name,
-            description: `${h.division} | ${
+            description: `${h.division ? `${h.division} | ` : ""}${
                 country_codes[h["country code"] as keyof typeof country_codes]
             }`,
             value: h,

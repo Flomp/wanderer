@@ -5,11 +5,11 @@ import { writable, type Writable } from "svelte/store";
 
 export const waypoint: Writable<Waypoint> = writable(new Waypoint(0, 0));
 
-export async function waypoints_create(waypoint: Waypoint) {
+export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     waypoint.author = pb.authStore.model!.id
 
-    let r = await fetch('/api/v1/waypoint', {
+    let r = await f('/api/v1/waypoint', {
         method: 'PUT',
         body: JSON.stringify(waypoint),
     })

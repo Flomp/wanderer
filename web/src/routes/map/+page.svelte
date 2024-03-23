@@ -142,7 +142,7 @@
         const cityItems = response.results[1].hits.map(
             (c: Record<string, any>) => ({
                 text: c.name,
-                description: `City | ${c.division} | ${
+                description: `City ${c.division ? `| ${c.division} ` : ""}| ${
                     country_codes[
                         c["country code"] as keyof typeof country_codes
                     ]

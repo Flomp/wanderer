@@ -115,6 +115,22 @@ func main() {
 			}
 		}
 
+		// bootstrap meilisearch
+		query = app.Dao().RecordQuery("trails")
+		trails := []*models.Record{}
+
+		if err := query.All(&trails); err != nil {
+			return err
+		}
+
+		for _, trail := range trails {
+			log.Println(trail)
+
+			if err := indexRecord(trail, client); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 

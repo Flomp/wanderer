@@ -13,6 +13,11 @@
         <h5 class="font-semibold">Resources</h5>
         <ul class="mt-4 text-sm">
             <li>
+                <a href="/docs/api/index.html"
+                    >API {$_("documentation")}</a
+                >
+            </li>
+            <li>
                 <a href="https://github.com/Flomp/wanderer/wiki"
                     >{$_("documentation")}</a
                 >
