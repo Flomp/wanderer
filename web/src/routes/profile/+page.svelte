@@ -22,8 +22,11 @@
     import { _, locale } from "svelte-i18n";
 
     const languages: SelectItem[] = [
-        { text: $_("english"), value: "en" },
         { text: $_("german"), value: "de" },
+        { text: $_("english"), value: "en" },
+        { text: $_("dutch"), value: "nl" },
+        { text: $_("polish"), value: "pl" },
+        { text: $_("portugese"), value: "pt" },
     ];
 
     const units: RadioItem[] = [
@@ -90,7 +93,9 @@
         });
     }
 
-    async function handleLanguageSelection(value: "en" | "de") {
+    async function handleLanguageSelection(
+        value: "en" | "de" | "nl" | "pl" | "pt",
+    ) {
         locale.set(value);
         await users_update({
             id: $currentUser!.id,

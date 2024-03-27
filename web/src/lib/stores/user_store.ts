@@ -9,7 +9,7 @@ export type User = {
     password: string,
     avatar?: string;
     unit?: "metric" | "imperial";
-    language?: "en" | "de";
+    language?: "en" | "de" | "nl" | "pl" | "pt";
     location?: { name: string, lat: number, lon: number }
 }
 
