@@ -4,15 +4,23 @@
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
     import Toggle from "$lib/components/base/toggle.svelte";
+    import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
     import PhotoPicker from "$lib/components/trail/photo_picker.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
+    import type { List } from "$lib/models/list";
     import { SummitLog } from "$lib/models/summit_log";
     import { Trail } from "$lib/models/trail";
     import { Waypoint } from "$lib/models/waypoint";
     import { categories } from "$lib/stores/category_store";
+    import {
+        lists,
+        lists_add_trail,
+        lists_index,
+        lists_remove_trail,
+    } from "$lib/stores/list_store";
     import { summitLog } from "$lib/stores/summit_log_store";
     import { show_toast } from "$lib/stores/toast_store";
     import {
@@ -21,17 +29,19 @@
         trails_update,
     } from "$lib/stores/trail_store";
     import { waypoint } from "$lib/stores/waypoint_store";
+    import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
+    import { fromKML, fromTCX } from "$lib/util/gpx_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
     import { format } from "date-fns";
-    import type { GPX, Icon, LatLng, LeafletEvent, Map } from "leaflet";
+    import type { GPX, Icon, LeafletEvent, Map } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { onMount } from "svelte";
@@ -47,6 +57,7 @@
 
     let openWaypointModal: () => void;
     let openSummitLogModal: () => void;
+    let openListSelectModal: () => void;
 
     let loading = false;
 
@@ -281,7 +292,25 @@
         reader.readAsText(selectedFile);
 
         reader.onload = async function (e) {
-            await addGPXLayer(e.target?.result as string);
+            let gpxData = "";
+            const fileContent = e.target?.result as string;
+            if (fileContent.includes("http://www.opengis.net/kml")) {
+                gpxData = fromKML(e.target?.result as string);
+            } else if (fileContent.includes("TrainingCenterDatabase")) {
+                gpxData = fromTCX(e.target?.result as string);
+            } else {
+                gpxData = fileContent;
+            }
+            try {
+                await addGPXLayer(gpxData);
+            } catch (e) {
+                show_toast({
+                    icon: "close",
+                    type: "error",
+                    text: $_("error-reading-file"),
+                });
+                return;
+            }
             const r = await fetch("/api/v1/search/cities500", {
                 method: "POST",
                 body: JSON.stringify({
@@ -393,6 +422,28 @@
             $form.expand.summit_logs = $form.expand.summit_logs;
         }
     }
+
+    async function handleListSelection(list: List) {
+        if (!$form.id) {
+            return;
+        }
+        try {
+            if (list.trails?.includes($form.id!)) {
+                await lists_remove_trail(list, $form);
+            } else {
+                await lists_add_trail(list, $form);
+            }
+            await lists_index();
+        } catch (e) {
+            console.error(e);
+
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: "Error adding trail to list.",
+            });
+        }
+    }
 </script>
 
 <svelte:head>
@@ -415,7 +466,7 @@
             type="file"
             name="gpx"
             id="fileInput"
-            accept=".gpx"
+            accept=".gpx,.kml,.tcx"
             style="display: none;"
             on:change={handleFileSelection}
         />
@@ -570,6 +621,43 @@
             on:click={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
+        {#if $lists.length}
+            <hr class="border-separator" />
+            <h3 class="text-xl font-semibold">
+                {$_("list", { values: { n: 2 } })}
+            </h3>
+            <div class="flex gap-4 flex-wrap">
+                {#each $lists as list}
+                    {#if $form.id && list.trails?.includes($form.id)}
+                        <div
+                            class="flex gap-2 items-center border border-input-border rounded-xl p-2"
+                        >
+                            {#if list.avatar}
+                                <img
+                                    class="w-8 aspect-square rounded-full object-cover"
+                                    src={getFileURL(list, list.avatar)}
+                                    alt="avatar"
+                                />
+                            {:else}
+                                <div
+                                    class="flex w-4 aspect-square shrink-0 items-center justify-center"
+                                >
+                                    <i class="fa fa-table-list text-5xl"></i>
+                                </div>
+                            {/if}
+                            <span class="text-sm">{list.name}</span>
+                        </div>
+                    {/if}
+                {/each}
+            </div>
+            <Button
+                secondary={true}
+                disabled={!$form.id}
+                type="button"
+                on:click={openListSelectModal}
+                ><i class="fa fa-plus mr-2"></i>{$_("add-to-list")}</Button
+            >
+        {/if}
         <hr class="border-separator" />
         <Button
             primary={true}
@@ -587,6 +675,10 @@
 ></WaypointModal>
 <SummitLogModal bind:openModal={openSummitLogModal} on:save={saveSummitLog}
 ></SummitLogModal>
+<ListSelectModal
+    bind:openModal={openListSelectModal}
+    on:change={(e) => handleListSelection(e.detail)}
+></ListSelectModal>
 
 <style>
     #map {

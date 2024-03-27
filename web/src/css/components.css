@@ -19,7 +19,7 @@
 }
 
 .btn-disabled {
-    @apply bg-gray-500 hover:bg-gray-500
+    @apply bg-menu-item-background-hover border-none text-gray-500 hover:bg-menu-item-background-hover
 }
 
 .btn-icon {

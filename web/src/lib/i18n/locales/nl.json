@@ -47,6 +47,7 @@
   "entry": "Item",
   "error-creating-user": "Fout bij het aanmaken van de gebruiker",
   "error-during-login": "Fout bij het inloggen",
+  "error-reading-file": "",
   "est-duration": "Geschatte duur",
   "explore": "Verkennen",
   "explore-some-trails": "Verken enkele routes",

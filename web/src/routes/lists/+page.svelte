@@ -92,8 +92,6 @@
                 },
             })
                 .on("addpoint", function (e: any) {
-                    console.log(e);
-
                     if (e.point_type === "start") {
                         const marker: Marker = e.point as Marker;
                         marker.bindPopup(

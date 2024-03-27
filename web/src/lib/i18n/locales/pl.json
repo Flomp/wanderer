@@ -47,6 +47,7 @@
   "entry": "Pozycja",
   "error-creating-user": "Błąd tworzenia użytkownika",
   "error-during-login": "Błąd podczas logowania",
+  "error-reading-file": "",
   "est-duration": "Szacowany czas",
   "explore": "Eksploruj",
   "explore-some-trails": "Eksploruj różne ścieżki",

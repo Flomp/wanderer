@@ -5,7 +5,7 @@ import { ClientResponseError } from "pocketbase";
 
 export const categories: Writable<Category[]> = writable([])
 
-export async function categories_index(f: Function = fetch) {
+export async function categories_index(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/category', {
         method: 'GET',
     })

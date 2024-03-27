@@ -47,6 +47,7 @@
   "entry": "Entry",
   "error-creating-user": "Error creating user",
   "error-during-login": "Error during login",
+  "error-reading-file": "Error reading file",
   "est-duration": "Est. duration",
   "explore": "Explore",
   "explore-some-trails": "Explore some trails",
