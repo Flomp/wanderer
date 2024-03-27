@@ -1,3 +1,15 @@
+# v0.2.1
+## Bug fixes
+
+- summit book dates now show in the correct format for the current locale
+- fixed a bug that would overwrite trail names and descriptions when editing a trail
+
+## Translations
+
+- adds Dutch translation (thanks to [yves-bonami](https://github.com/yves-bonami))
+- adds Polish translation (thanks to [ludrol](https://github.com/ludrol))
+- adds Portugese translation (thanks to [poVoq](https://github.com/poVoq))
+
 # v0.2.0
 ## Features
 
