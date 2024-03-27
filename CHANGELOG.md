@@ -8,7 +8,7 @@
 
 - adds Dutch translation (thanks to [yves-bonami](https://github.com/yves-bonami))
 - adds Polish translation (thanks to [ludrol](https://github.com/ludrol))
-- adds Portugese translation (thanks to [poVoq](https://github.com/poVoq))
+- adds Portuguese translation (thanks to [poVoq](https://github.com/poVoq))
 
 # v0.2.0
 ## Features
