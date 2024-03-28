@@ -238,7 +238,7 @@
                 >
             </div>
             <hr class="my-4 border-separator" />
-            <p class="text-sm font-medium pb-4">{$_("completed")}</p>
+            <p class="text-sm font-medium pb-4">{$_("completion-status")}</p>
             <RadioGroup
                 name="completed"
                 items={radioGroupItems}

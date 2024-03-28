@@ -1,7 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
 
-    import { summitLogSchema, type SummitLog } from "$lib/models/summit_log";
+    import { type SummitLog } from "$lib/models/summit_log";
     import { summitLog } from "$lib/stores/summit_log_store";
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
     import { util } from "$lib/vendor/svelte-form-lib/util";
@@ -9,10 +9,24 @@
     import Datepicker from "../base/datepicker.svelte";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
+    import { date, object, string } from "yup";
+    import { parse } from "date-fns";
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
     const dispatch = createEventDispatcher();
+
+    const summitLogSchema = object<SummitLog>({
+        id: string().optional(),
+        date: date()
+            .transform((value, originalValue, context) => {
+                if (context.isType(value)) return value;
+                return parse(originalValue, "dd.MM.yyyy", new Date());
+            })
+            .required("Required")
+            .typeError($_("invalid-date")),
+        text: string().optional(),
+    });
 
     const { form, errors, handleChange, handleSubmit } = createForm<SummitLog>({
         initialValues: $summitLog,

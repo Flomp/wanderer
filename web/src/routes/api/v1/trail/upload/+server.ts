@@ -13,7 +13,7 @@ export async function PUT(event: RequestEvent) {
         }
         let trail: Trail;
         try {
-            trail = gpx2trail(gpx);
+            trail = await gpx2trail(gpx);
         } catch (e: any) {
             throw new ClientResponseError({ status: 400, response: { message: "Invalid GPX file" } })
         }
