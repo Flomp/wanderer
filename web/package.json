@@ -40,7 +40,6 @@
     "@types/leaflet.awesome-markers": "^2.0.28",
     "@types/three": "^0.161.2",
     "crypto-random-string": "^5.0.0",
-    "date-fns": "^3.3.1",
     "jsdom": "^24.0.0",
     "leaflet": "^1.9.4",
     "leaflet-gpx": "^1.7.0",

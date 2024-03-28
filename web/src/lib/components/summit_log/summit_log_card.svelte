@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { SummitLog } from "$lib/models/summit_log";
-    import { format, parse } from "date-fns";
+    import { parse } from "date-fns";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 

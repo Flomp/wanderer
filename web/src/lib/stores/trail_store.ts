@@ -167,7 +167,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
 
 export async function trails_show(id: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f(`/api/v1/trail/${id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,lists_via_trails",
+        expand: "category,waypoints,summit_logs",
     }), {
         method: 'GET',
     })

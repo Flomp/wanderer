@@ -6,11 +6,10 @@
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
     import { util } from "$lib/vendor/svelte-form-lib/util";
     import { _ } from "svelte-i18n";
+    import { date, object, string } from "yup";
     import Datepicker from "../base/datepicker.svelte";
     import Modal from "../base/modal.svelte";
     import TextField from "../base/text_field.svelte";
-    import { date, object, string } from "yup";
-    import { parse } from "date-fns";
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -18,13 +17,7 @@
 
     const summitLogSchema = object<SummitLog>({
         id: string().optional(),
-        date: date()
-            .transform((value, originalValue, context) => {
-                if (context.isType(value)) return value;
-                return parse(originalValue, "dd.MM.yyyy", new Date());
-            })
-            .required("Required")
-            .typeError($_("invalid-date")),
+        date: date().required("Required").typeError($_("invalid-date")),
         text: string().optional(),
     });
 
@@ -37,6 +30,7 @@
         },
     });
     $: form.set(util.cloneDeep($summitLog));
+    $: console.log($summitLog);
 </script>
 
 <Modal

@@ -2,7 +2,7 @@ import { SummitLog } from "$lib/models/summit_log";
 import { ClientResponseError } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
-export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString()));
+export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
 
 export async function summit_logs_create(summitLog: SummitLog) {
     const r = await fetch('/api/v1/summit-log', {

@@ -40,7 +40,6 @@
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
-    import { format } from "date-fns";
     import type { GPX, Icon, LeafletEvent, Map } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
@@ -384,14 +383,8 @@
         savedWaypoint.marker = marker;
     }
 
-    function beforeSummitLogModalOpen() {
-        summitLog.set(new SummitLog(format(new Date(), "yyyy-MM-dd")));
-        openSummitLogModal();
-    }
-
     function saveSummitLog(e: CustomEvent<SummitLog>) {
         const savedSummitLog = e.detail;
-        savedSummitLog.date = format(savedSummitLog.date, "yyyy-MM-dd");
         let editedSummitLogIndex = $form.expand.summit_logs.findIndex(
             (s) => s.id == savedSummitLog.id,
         );
@@ -413,7 +406,6 @@
         e: CustomEvent<{ text: string; value: string }>,
     ) {
         if (e.detail.value === "edit") {
-            currentSummitLog.date = format(currentSummitLog.date, "yyyy-MM-dd");
             summitLog.set(currentSummitLog);
             openSummitLogModal();
         } else if (e.detail.value === "delete") {
@@ -618,7 +610,7 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={beforeSummitLogModalOpen}
+            on:click={openSummitLogModal}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
         {#if $lists.length}
