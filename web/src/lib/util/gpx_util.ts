@@ -3,6 +3,19 @@ import { Waypoint } from "$lib/models/waypoint";
 import { kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON"
 import GeoJsonToGpx from "$lib/vendor/geoJSONToGPX"
 
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180); // Convert degrees to radians
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * (Math.PI / 180))) * Math.cos((lat2 * (Math.PI / 180))) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c * 1000; // Distance in km
+    return distance;
+}
+
 export async function gpx2trail(gpx: string) {
     const JSDOM = (await import("jsdom")).JSDOM
     const xml = new JSDOM(gpx).window.document
@@ -18,7 +31,8 @@ export async function gpx2trail(gpx: string) {
     }
 
     const el = xml.getElementsByTagName('wpt');
-    for (let i = 0; i < el.length; i++) {
+    const elLength = el.length
+    for (let i = 0; i < elLength; i++) {
         const wp = new Waypoint(parseFloat(el[i].getAttribute('lat')!), parseFloat(el[i].getAttribute('lon')!));
 
         let nameEl = el[i].getElementsByTagName('name');
@@ -30,11 +44,58 @@ export async function gpx2trail(gpx: string) {
         trail.expand.waypoints.push(wp);
     }
 
+    let totalElevationGain = 0;
+    let totalDuration = 0;
+    let totalDistance = 0;
+
+    const tracks = xml.getElementsByTagName("trk")
+    for (const track of tracks) {
+        const segments = track.getElementsByTagName("trkseg")
+        for (const segment of segments) {
+            const points = segment.getElementsByTagName("trkpt")
+
+            if (points.length >= 2) {
+                const startTimeString = points[0].querySelector('time')?.textContent;
+                const startTime = startTimeString ? new Date(startTimeString) : undefined;
+                const endTimeString = points[points.length - 1].querySelector('time')?.textContent;
+                const endTime = endTimeString ? new Date(endTimeString) : undefined;
+
+                if (startTime && endTime) {
+                    totalDuration += endTime.getTime() - startTime.getTime();
+                }
+            }
+            
+            const pointLength = points.length
+            for (let i = 1; i < pointLength; i++) {                
+                const elevation = parseFloat(points[i].querySelector('ele')?.textContent || '0')
+                const previousElevation = parseFloat(points[i - 1].querySelector('ele')?.textContent || '0')
+                const elevationDiff = elevation - previousElevation;
+                if (elevationDiff > 0) {
+                    totalElevationGain += elevationDiff;
+                }
+
+                const prevPoint = points[i - 1];
+                const point = points[i];
+                const distance = calculateDistance(
+                    parseFloat(prevPoint.getAttribute("lat") || '0'),
+                    parseFloat(prevPoint.getAttribute("lon") || '0'),
+                    parseFloat(point.getAttribute("lat") || '0'),
+                    parseFloat(point.getAttribute("lon") || '0')
+                );
+                totalDistance += distance;
+            }
+        }
+    }
+
     const startPoint = xml.getElementsByTagName("trk")[0].getElementsByTagName("trkseg")[0].getElementsByTagName("trkpt")[0];
     if (startPoint) {
         trail.lat = parseFloat(startPoint.getAttribute('lat')!)
         trail.lon = parseFloat(startPoint.getAttribute('lon')!)
     }
+
+    trail.duration = totalDuration / 1000 / 60
+    trail.elevation_gain = totalElevationGain;
+    trail.distance = totalDistance
 
     return trail
 }
@@ -69,7 +130,7 @@ export function fromTCX(tcxData: string) {
                 }
             }
         }
-    }    
-    const gpx = GeoJsonToGpx(geojson as any, options)    
+    }
+    const gpx = GeoJsonToGpx(geojson as any, options)
     return new XMLSerializer().serializeToString(gpx)
 }
