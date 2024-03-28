@@ -452,7 +452,7 @@
     >
         <h3 class="text-xl font-semibold">{$_("pick-a-trail")}</h3>
         <button class="btn-primary" type="button" on:click={openFileBrowser}
-            >{$_("upload-gpx")}</button
+            >{$_("upload-file")}</button
         >
         <input
             type="file"
