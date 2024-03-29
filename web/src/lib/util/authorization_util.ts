@@ -1,6 +1,7 @@
 const privateRoutes = [
   "/profile",
   "/lists",
+  "/trail/edit/new",
 ]
 
 export function isRouteProtected(path: string) {

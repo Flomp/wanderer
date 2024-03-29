@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { SummitLog } from "$lib/models/summit_log";
-    import { parse } from "date-fns";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
@@ -16,10 +15,11 @@
 <div class="p-4 my-2 border border-input-border rounded-xl">
     <div class="flex justify-between items-center mb-2">
         <h5 class="font-medium mr-2">
-            {parse(log.date, "yyyy-MM-dd", new Date()).toLocaleDateString(
-                undefined,
-                { month: "2-digit", day: "2-digit", year: "numeric" },
-            )}
+            {new Date(log.date).toLocaleDateString(undefined, {
+                month: "2-digit",
+                day: "2-digit",
+                year: "numeric",
+            })}
         </h5>
 
         {#if mode == "edit"}

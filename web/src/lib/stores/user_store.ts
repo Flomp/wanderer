@@ -1,5 +1,5 @@
 import { pb } from "$lib/pocketbase";
-import { ClientResponseError } from "pocketbase";
+import { ClientResponseError, type AuthMethodsList } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export type User = {
@@ -30,6 +30,20 @@ export async function users_create(user: User) {
 
 }
 
+export async function users_auth_methods(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<AuthMethodsList> {
+    const r = await f('/api/v1/auth/oauth', {
+        method: 'GET',
+    })
+
+    if (r.ok) {
+        return await r.json()
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
+
+}
+
+
 export async function login(user: User) {
     const r = await fetch('/api/v1/auth/login', {
         method: 'POST',
@@ -43,6 +57,23 @@ export async function login(user: User) {
     }
 
 }
+
+export async function oauth_login(data: { name: string, code: string, codeVerifier: string }) {
+    const r = await fetch('/api/v1/auth/oauth', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    })
+    console.log(r);
+    
+
+    if (r.ok) {
+        pb.authStore.loadFromCookie(document.cookie)
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
+
+}
+
 
 export async function logout() {
     pb.authStore.clear();

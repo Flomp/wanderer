@@ -10,11 +10,15 @@
     import { show_toast } from "$lib/stores/toast_store";
     import { login, type User } from "$lib/stores/user_store";
     import { createForm } from "$lib/vendor/svelte-form-lib";
-    import { ClientResponseError } from "pocketbase";
+    import { ClientResponseError, type AuthProviderInfo } from "pocketbase";
     import { _ } from "svelte-i18n";
     import { object, string } from "yup";
 
     let loading: boolean = false;
+
+    const redirectURL = "/redirect";
+
+    const authProviders = $page.data.authMethods.authProviders;
     const { form, errors, handleChange, handleSubmit } = createForm<User>({
         initialValues: {
             id: "",
@@ -52,6 +56,13 @@
             }
         },
     });
+
+    function setProvider(provider: AuthProviderInfo) {
+        localStorage.setItem(
+            "provider",
+            JSON.stringify(provider),
+        );
+    }
 </script>
 
 <svelte:head>
@@ -59,7 +70,7 @@
 </svelte:head>
 <main class="flex justify-center">
     <form
-        class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-8 w-[28rem] mt-8"
+        class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-4 w-[28rem] mt-8"
         on:submit={handleSubmit}
     >
         {#if $theme == "light"}
@@ -98,6 +109,29 @@
                     >{$_("make-one")}</a
                 ></span
             >
+        {/if}
+        {#if authProviders.length}
+            <div class="flex gap-4 items-center w-full">
+                <hr class="basis-full border-input-border" />
+                <span class="text-gray-500 uppercase">{$_("or")}</span>
+                <hr class="basis-full border-input-border" />
+            </div>
+            <div class="w-80 space-y-4">
+                {#each authProviders as provider}
+                    <a
+                        href={provider.url}
+                        class="btn-secondary inline-flex min-w-full justify-center"
+                        on:click={() => setProvider(provider)}
+                    >
+                        <img
+                            class="w-5 aspect-square mr-4"
+                            src={provider.img}
+                            alt="Provider logo"
+                        />
+                        Login with {provider.displayName}
+                    </a>
+                {/each}
+            </div>
         {/if}
     </form>
 </main>

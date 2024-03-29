@@ -87,6 +87,11 @@
     animation: spinner 1.2s linear infinite;
 }
 
+.spinner-dark:after {
+    border: 6px solid rgba(var(--primary));
+    border-color: rgba(var(--primary)) transparent rgba(var(--primary)) transparent;
+}
+
 @keyframes spinner {
     0% {
         transform: rotate(0deg);

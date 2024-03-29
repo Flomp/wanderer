@@ -31,8 +31,9 @@ func main() {
 		APIKey: os.Getenv("MEILI_MASTER_KEY"),
 	})
 
-	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
-		userId := e.Record.GetId()
+	app.OnModelAfterCreate("users").Add(func(e *core.ModelEvent) error {
+		record := e.Model.(*models.Record)
+		userId := record.GetId()
 
 		searchRules := map[string]interface{}{
 			"cities500": map[string]string{},
@@ -44,9 +45,9 @@ func main() {
 		if token, err := generateMeilisearchToken(searchRules, client); err != nil {
 			return err
 		} else {
-			e.Record.Set("token", token)
+			record.Set("token", token)
 
-			if err := app.Dao().SaveRecord(e.Record); err != nil {
+			if err := app.Dao().SaveRecord(record); err != nil {
 				return err
 			}
 		}
