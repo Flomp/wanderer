@@ -7,9 +7,6 @@ search/meilisearch
 search/data.ms
 search/dumps
 
-web/uploads/*
-web/cookie.txt
-
 run.sh
 build*.sh
 

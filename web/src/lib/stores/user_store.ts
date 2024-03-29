@@ -62,9 +62,7 @@ export async function oauth_login(data: { name: string, code: string, codeVerifi
     const r = await fetch('/api/v1/auth/oauth', {
         method: 'POST',
         body: JSON.stringify(data)
-    })
-    console.log(r);
-    
+    })    
 
     if (r.ok) {
         pb.authStore.loadFromCookie(document.cookie)

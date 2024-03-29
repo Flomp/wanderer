@@ -53,8 +53,9 @@ services:
       BODY_SIZE_LIMIT: Infinity
       PUBLIC_POCKETBASE_URL: http://db:8090
       PUBLIC_DISABLE_SIGNUP: false
-      UPLOAD_USER: Flomp
-      UPLOAD_PASSWORD: 12345678
+      UPLOAD_FOLDER: /app/uploads
+      UPLOAD_USER:
+      UPLOAD_PASSWORD:
     volumes:
       - ./data/uploads:/app/uploads
     ports:

@@ -4,7 +4,7 @@
 API_URL="http://localhost:3000/api/v1"
 
 # Folder containing files to upload
-UPLOAD_FOLDER="/app/uploads"
+UPLOAD_FOLDER=$UPLOAD_FOLDER
 
 # Credentials for login
 USERNAME=$UPLOAD_USER
