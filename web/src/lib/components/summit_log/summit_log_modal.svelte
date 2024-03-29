@@ -30,7 +30,6 @@
         },
     });
     $: form.set(util.cloneDeep($summitLog));
-    $: console.log($summitLog);
 </script>
 
 <Modal

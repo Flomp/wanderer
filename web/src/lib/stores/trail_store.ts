@@ -245,7 +245,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
     }
 }
 
-export async function trails_update(oldTrail: Trail, newTrail: Trail, photos: File[], gpx: File | null) {
+export async function trails_update(oldTrail: Trail, newTrail: Trail, photos: File[], gpx: File | Blob | null) {
 
     const waypointUpdates = compareObjectArrays<Waypoint>(oldTrail.expand.waypoints ?? [], newTrail.expand.waypoints ?? []);
 
@@ -358,13 +358,6 @@ export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?
     const gpxData = await response.text();
 
     return gpxData
-}
-
-function setFileURLs(trail: Trail) {
-    for (let i = 0; i < trail.photos.length; i++) {
-        const photo = trail.photos[i];
-        trail.photos[i] = getFileURL(trail, photo)
-    }
 }
 
 function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray: T[]) {

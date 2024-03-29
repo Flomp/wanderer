@@ -8,6 +8,7 @@
     export let large: boolean = false;
     export let loading: boolean = false;
     export let disabled: boolean = false;
+    export let tooltip: string = "";
 </script>
 
 <button
@@ -17,6 +18,8 @@
     class:btn-large={large}
     class:btn-disabled={disabled || loading}
     disabled={disabled || loading}
+    class:tooltip={tooltip.length > 0}
+    data-title={tooltip}
     on:click
     {type}
 >

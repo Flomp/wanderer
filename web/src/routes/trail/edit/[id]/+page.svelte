@@ -64,7 +64,7 @@
 
     let photoFiles: File[] = [];
 
-    let gpxFile: File | null = null;
+    let gpxFile: File | Blob | null = null;
 
     const trailSchema = object<Trail>({
         id: string().optional(),
@@ -282,7 +282,6 @@
             return;
         }
 
-        gpxFile = selectedFile;
         $form.expand.waypoints = [];
         $form.waypoints = [];
 
@@ -295,10 +294,13 @@
             const fileContent = e.target?.result as string;
             if (fileContent.includes("http://www.opengis.net/kml")) {
                 gpxData = fromKML(e.target?.result as string);
+                gpxFile = new Blob([gpxData], { type: "application/gpx+xml" });
             } else if (fileContent.includes("TrainingCenterDatabase")) {
                 gpxData = fromTCX(e.target?.result as string);
+                gpxFile = new Blob([gpxData], { type: "application/gpx+xml" });
             } else {
                 gpxData = fileContent;
+                gpxFile = selectedFile;
             }
             try {
                 await addGPXLayer(gpxData);
@@ -644,6 +646,7 @@
             </div>
             <Button
                 secondary={true}
+                tooltip={$_("save-your-trail-first")}
                 disabled={!$form.id}
                 type="button"
                 on:click={openListSelectModal}
