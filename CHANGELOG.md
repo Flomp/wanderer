@@ -1,3 +1,21 @@
+# v0.3.0
+## Features
+
+- Trails can now be added to a list while editing or creating a trail. The trail must be saved at least once to add it to a list.
+- wanderer now has an auto-upload folder. GPX files in this folder will be autmatically uploaded and converted to a trail. Read the [docs](https://github.com/Flomp/wanderer/wiki/API#auto-upload-folder) for more information.
+- addded support for TCX and KML files. Note that this feature is still experimental. Please report any issues you encounter.
+- added OAuth support. Read [here](https://github.com/Flomp/wanderer/wiki/OAuth) how to enable providers.
+  
+## Bug fixes
+
+- fixed a bug that would show a wrong date for summit logs for certain time zones
+- added client side validation for usernames
+
+## Translations
+- adds French translation (thanks to [seb2020](https://github.com/seb2020))
+- adds Hungarian translation (thanks to [sszemtelen](https://github.com/sszemtelen))
+
+
 # v0.2.1
 ## Bug fixes
 
