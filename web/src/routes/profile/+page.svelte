@@ -25,6 +25,7 @@
         { text: $_("german"), value: "de" },
         { text: $_("english"), value: "en" },
         { text: $_("french"), value: "fr" },
+        { text: $_("hungarian"), value: "hu" },
         { text: $_("dutch"), value: "nl" },
         { text: $_("polish"), value: "pl" },
         { text: $_("portuguese"), value: "pt" },
@@ -95,7 +96,7 @@
     }
 
     async function handleLanguageSelection(
-        value: "en" | "de" | "fr" | "nl" | "pl" | "pt",
+        value: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt",
     ) {
         locale.set(value);
         await users_update({

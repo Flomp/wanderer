@@ -20,13 +20,24 @@
         },
         validationSchema: object<User>({
             username: string()
+                .min(
+                    3,
+                    $_("must-be-at-least-n-characters-long", {
+                        values: { n: 3 },
+                    }),
+                )
                 .required($_("required"))
                 .matches(/^[\w][\w\.]*$/, { message: $_("invalid-username") }),
             email: string()
                 .email($_("not-a-valid-email-address"))
                 .required($_("required")),
             password: string()
-                .min(8, $_("must-be-at-least-8-characters-long"))
+                .min(
+                    8,
+                    $_("must-be-at-least-n-characters-long", {
+                        values: { n: 8 },
+                    }),
+                )
                 .required($_("required")),
         }),
         onSubmit: async (newUser) => {

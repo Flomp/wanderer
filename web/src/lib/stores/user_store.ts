@@ -9,7 +9,7 @@ export type User = {
     password: string,
     avatar?: string;
     unit?: "metric" | "imperial";
-    language?: "en" | "de" | "fr" | "nl" | "pl" | "pt";
+    language?: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt";
     location?: { name: string, lat: number, lon: number }
 }
 
@@ -62,7 +62,7 @@ export async function oauth_login(data: { name: string, code: string, codeVerifi
     const r = await fetch('/api/v1/auth/oauth', {
         method: 'POST',
         body: JSON.stringify(data)
-    })    
+    })
 
     if (r.ok) {
         pb.authStore.loadFromCookie(document.cookie)
