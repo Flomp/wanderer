@@ -8,6 +8,7 @@ const defaultLocale = 'en'
 register('en', () => import('./locales/en.json'))
 register('de', () => import('./locales/de.json'))
 register('fr', () => import('./locales/fr.json'))
+register('hu', () => import('./locales/hu.json'))
 register('nl', () => import('./locales/nl.json'))
 register('pl', () => import('./locales/pl.json'))
 register('pt', () => import('./locales/pt.json'))
