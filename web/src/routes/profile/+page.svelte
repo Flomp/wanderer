@@ -29,6 +29,7 @@
         { text: $_("dutch"), value: "nl" },
         { text: $_("polish"), value: "pl" },
         { text: $_("portuguese"), value: "pt" },
+        { text: $_("simplified-chinese"), value: "zh-CN" },
     ];
 
     const units: RadioItem[] = [

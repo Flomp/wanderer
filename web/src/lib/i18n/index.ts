@@ -12,6 +12,7 @@ register('hu', () => import('./locales/hu.json'))
 register('nl', () => import('./locales/nl.json'))
 register('pl', () => import('./locales/pl.json'))
 register('pt', () => import('./locales/pt.json'))
+register('zh-Hans', () => import('./locales/zh-Hans.json'))
 
 init({
     fallbackLocale: defaultLocale,
