@@ -1,3 +1,21 @@
+# v0.3.1
+## Features
+
+- Max values for elevation gain and distance filters are now dynamically calculated based on your longest trail
+- Disabling username/email & password auth in PocketBase is now reflected in wanderer's login UI
+
+## Bug fixes
+
+- Fixed a bug that prevented import trails from appearing in map view
+
+## Translations
+
+- adds Simplified Chinese translation (thanks to [icyleaf](https://github.com/icyleaf))
+
+## Dependencies
+
+- updates PocketBase to v0.22.7
+
 # v0.3.0
 ## Features
 
