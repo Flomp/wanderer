@@ -22,6 +22,7 @@
     import { _, locale } from "svelte-i18n";
 
     const languages: SelectItem[] = [
+        { text: $_("chinese"), value: "zh" },
         { text: $_("german"), value: "de" },
         { text: $_("english"), value: "en" },
         { text: $_("french"), value: "fr" },
