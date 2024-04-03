@@ -1,5 +1,5 @@
 import type { SummitLog } from "$lib/models/summit_log";
-import { Trail, type TrailFilter } from "$lib/models/trail";
+import { Trail, type TrailFilter, type TrailFilterValues } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { getFileURL } from "$lib/util/file_util";
@@ -340,6 +340,18 @@ export async function trails_delete(trail: Trail) {
 
     const r = await fetch('/api/v1/trail/' + trail.id, {
         method: 'DELETE',
+    })
+
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
+}
+
+export async function trails_get_filter_values(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
+    const r = await f('/api/v1/trail/filter', {
+        method: 'GET',
     })
 
     if (r.ok) {

@@ -99,6 +99,15 @@ interface TrailFilter {
     sortOrder: "+" | "-"
 }
 
+interface TrailFilterValues {
+    min_distance: number,
+    max_distance: number,
+    min_elevation_gain: number,
+    max_elevation_gain: number,
+    min_durtation: number,
+    max_duration: number,
+}
+
 export { Trail };
 
-export type { TrailFilter };
+export type { TrailFilter, TrailFilterValues };

@@ -16,9 +16,20 @@
 
     let loading: boolean = false;
 
-    const redirectURL = "/redirect";
-
     const authProviders = $page.data.authMethods.authProviders;
+    let loginLabel = "";
+
+    if (
+        $page.data.authMethods.usernamePassword &&
+        $page.data.authMethods.emailPassword
+    ) {
+        loginLabel = `${$_("username")}/${$_("email")}`;
+    } else if ($page.data.authMethods.usernamePassword) {
+        loginLabel = `${$_("username")}`;
+    } else if ($page.data.authMethods.emailPassword) {
+        loginLabel = `${$_("email")}`;
+    }
+
     const { form, errors, handleChange, handleSubmit } = createForm<User>({
         initialValues: {
             id: "",
@@ -58,10 +69,7 @@
     });
 
     function setProvider(provider: AuthProviderInfo) {
-        localStorage.setItem(
-            "provider",
-            JSON.stringify(provider),
-        );
+        localStorage.setItem("provider", JSON.stringify(provider));
     }
 </script>
 
@@ -79,43 +87,48 @@
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
         <h4 class="text-xl font-semibold">{$_("slogan")}</h4>
-        <div class="space-y-6 w-80">
-            <TextField
-                name="username"
-                label="{$_('username')}/{$_('email')}"
-                bind:value={$form.username}
-                on:change={handleChange}
-                error={$errors.username}
-            ></TextField>
-            <TextField
-                name="password"
-                label={$_("password")}
-                type="password"
-                bind:value={$form.password}
-                on:change={handleChange}
-                error={$errors.password}
-            ></TextField>
-            <Button
-                primary={true}
-                extraClasses={"min-w-full"}
-                type="submit"
-                {loading}>Login</Button
-            >
-        </div>
-        {#if env.PUBLIC_DISABLE_SIGNUP === "false"}
-            <span
-                >{$_("no-account")}
-                <a class="text-blue-500 underline" href="/register"
-                    >{$_("make-one")}</a
-                ></span
-            >
-        {/if}
-        {#if authProviders.length}
-            <div class="flex gap-4 items-center w-full">
-                <hr class="basis-full border-input-border" />
-                <span class="text-gray-500 uppercase">{$_("or")}</span>
-                <hr class="basis-full border-input-border" />
+        {#if $page.data.authMethods.usernamePassword || $page.data.authMethods.emailPassword}
+            <div class="space-y-6 w-80">
+                <TextField
+                    name="username"
+                    label={loginLabel}
+                    bind:value={$form.username}
+                    on:change={handleChange}
+                    error={$errors.username}
+                ></TextField>
+                <TextField
+                    name="password"
+                    label={$_("password")}
+                    type="password"
+                    bind:value={$form.password}
+                    on:change={handleChange}
+                    error={$errors.password}
+                ></TextField>
+                <Button
+                    primary={true}
+                    extraClasses={"min-w-full"}
+                    type="submit"
+                    {loading}>Login</Button
+                >
             </div>
+            {#if env.PUBLIC_DISABLE_SIGNUP === "false"}
+                <span
+                    >{$_("no-account")}
+                    <a class="text-blue-500 underline" href="/register"
+                        >{$_("make-one")}</a
+                    ></span
+                >
+            {/if}
+        {/if}
+
+        {#if authProviders.length}
+            {#if $page.data.authMethods.usernamePassword || $page.data.authMethods.emailPassword}
+                <div class="flex gap-4 items-center w-full">
+                    <hr class="basis-full border-input-border" />
+                    <span class="text-gray-500 uppercase">{$_("or")}</span>
+                    <hr class="basis-full border-input-border" />
+                </div>
+            {/if}
             <div class="w-80 space-y-4">
                 {#each authProviders as provider}
                     <a
