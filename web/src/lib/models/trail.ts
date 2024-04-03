@@ -1,4 +1,5 @@
 import type { Category } from "./category";
+import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
 import type { Waypoint } from "./waypoint";
 
@@ -24,6 +25,7 @@ class Trail {
         category?: Category;
         waypoints: Waypoint[]
         summit_logs: SummitLog[]
+        comments_via_trail: Comment[]
         gpx_data?: string
     }
     tags?: string[];
@@ -47,6 +49,7 @@ class Trail {
             category?: Category,
             waypoints?: Waypoint[],
             summit_logs?: SummitLog[],
+            comments?: Comment[],
             tags?: string[],
             description?: string
             created?: string
@@ -71,7 +74,8 @@ class Trail {
         this.expand = {
             category: params?.category,
             waypoints: params?.waypoints ?? [],
-            summit_logs: params?.summit_logs ?? []
+            summit_logs: params?.summit_logs ?? [],
+            comments_via_trail: params?.comments ?? []
         }
         this.tags = params?.tags ?? []
         this.description = params?.description ?? "";

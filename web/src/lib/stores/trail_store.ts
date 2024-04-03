@@ -167,7 +167,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
 
 export async function trails_show(id: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f(`/api/v1/trail/${id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs",
+        expand: "category,waypoints,summit_logs,comments_via_trail.author",
     }), {
         method: 'GET',
     })
@@ -245,7 +245,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
     }
 }
 
-export async function trails_update(oldTrail: Trail, newTrail: Trail, photos: File[], gpx: File | Blob | null) {
+export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: File[], gpx?: File | Blob | null) {
 
     const waypointUpdates = compareObjectArrays<Waypoint>(oldTrail.expand.waypoints ?? [], newTrail.expand.waypoints ?? []);
 
@@ -300,9 +300,12 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos: Fi
         formData.append("gpx", gpx);
     }
 
-    for (const photo of photos) {
-        formData.append("photos", photo)
+    if (photos) {
+        for (const photo of photos) {
+            formData.append("photos", photo)
+        }
     }
+
 
     const deletedPhotos = oldTrail.photos.filter(oldPhoto => !newTrail.photos.find(newPhoto => newPhoto === oldPhoto));
 

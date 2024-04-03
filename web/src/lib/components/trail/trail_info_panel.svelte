@@ -1,10 +1,17 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import Tabs from "$lib/components/base/tabs.svelte";
+    import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
+    import { Comment } from "$lib/models/comment";
     import type { Trail } from "$lib/models/trail";
+
+    import {
+        comments_create,
+        comments_delete,
+        comments_update,
+    } from "$lib/stores/comment_store";
     import { currentUser } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
@@ -20,6 +27,9 @@
     import "photoswipe/style.css";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import Button from "../base/button.svelte";
+    import Textarea from "../base/textarea.svelte";
+    import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
 
     export let trail: Trail;
@@ -31,6 +41,7 @@
         $_("waypoints"),
         $_("photos"),
         $_("summit-book"),
+        $_("comments"),
     ];
 
     let map: Map;
@@ -42,6 +53,10 @@
         : "/imgs/default_thumbnail.webp";
 
     let openGallery: (idx?: number) => void;
+
+    let newComment: Comment = new Comment("", 0, "", trail.id ?? "");
+    let commentCreateLoading: boolean = false;
+    let commentDeleteLoading: boolean = false;
 
     onMount(async () => {
         if (mode == "overview") {
@@ -97,6 +112,42 @@
 
     async function toggleMapFullScreen() {
         goto(`/map/trail/${trail.id!}`);
+    }
+
+    async function createComment() {
+        if (!$currentUser || !trail.id) {
+            return;
+        }
+        commentCreateLoading = true;
+        newComment.author = $currentUser.id;
+        newComment.trail = trail.id;
+
+        comments_create(newComment).then((c) => {
+            newComment.text = "";
+            c.expand = {
+                author: $currentUser!,
+            };
+
+            trail.expand.comments_via_trail = [
+                c,
+                ...(trail.expand.comments_via_trail ?? []),
+            ];
+        });
+
+        commentCreateLoading = false;
+    }
+
+    async function editComment(data: { comment: Comment; text: string }) {
+        data.comment.text = data.text;
+        await comments_update(data.comment);
+    }
+
+    async function deleteComment(comment: Comment) {
+        commentDeleteLoading = true;
+        await comments_delete(comment);
+        trail.expand.comments_via_trail =
+            trail.expand.comments_via_trail.filter((c) => c.id !== comment.id);
+        commentDeleteLoading = false;
     }
 </script>
 
@@ -227,6 +278,53 @@
                         <li><SummitLogCard {log}></SummitLogCard></li>
                     {/each}
                 </ul>
+            {/if}
+            {#if activeTab == 4}
+                <div>
+                    {#if $currentUser}
+                        <div class="flex items-center gap-4">
+                            <img
+                                class="rounded-full w-10 aspect-square"
+                                src={getFileURL(
+                                    $currentUser,
+                                    $currentUser.avatar,
+                                ) ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                                alt="avatar"
+                            />
+                            <div class="basis-full">
+                                <Textarea
+                                    bind:value={newComment.text}
+                                    rows={2}
+                                    placeholder="Add comment..."
+                                ></Textarea>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-3">
+                            <Button
+                                on:click={createComment}
+                                loading={commentCreateLoading}
+                                secondary={true}
+                                disabled={newComment.text.length == 0}
+                                >Comment</Button
+                            >
+                        </div>
+                    {/if}
+                    <ul>
+                        {#each trail.expand.comments_via_trail ?? [] as comment}
+                            <li>
+                                <CommentCard
+                                    {comment}
+                                    mode={comment.author == $currentUser?.id
+                                        ? "edit"
+                                        : "show"}
+                                    on:delete={(e) => deleteComment(e.detail)}
+                                    on:edit={(e) => editComment(e.detail)}
+                                ></CommentCard>
+                            </li>
+                        {/each}
+                    </ul>
+                </div>
             {/if}
             {#if mode == "overview"}
                 <div class="relative">
