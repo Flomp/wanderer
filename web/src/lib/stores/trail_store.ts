@@ -151,6 +151,9 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     if (r.ok) {
         for (const trail of response.items) {
             const gpxData: string = await fetchGPX(trail);
+            if (!trail.expand) {
+                trail.expand = {};
+            }
             trail.expand.gpx_data = gpxData;
         }
 
@@ -182,6 +185,9 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
             response.expand = {}
         }
         const gpxData: string = await fetchGPX(response, f);
+        if (!response.expand) {
+            response.expand = {};
+        }
         response.expand.gpx_data = gpxData;
     }
 
