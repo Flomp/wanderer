@@ -18,6 +18,7 @@
   "change": "Change",
   "changelog": "Changelog",
   "chinese": "Chinese (simplified)",
+  "comment": "{n, plural, =1 {Comment} other {Comments}}",
   "completed": "Completed",
   "completion-status": "Completion Status",
   "contribute": "Contribute",

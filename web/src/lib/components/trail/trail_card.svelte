@@ -27,6 +27,17 @@
     <div class="p-4">
         <div>
             <h4 class="font-semibold text-lg">{trail.name}</h4>
+            {#if trail.date}
+                <p class="text-xs text-gray-500 mb-3">
+                   {new Date(
+                        trail.date,
+                    ).toLocaleDateString(undefined, {
+                        month: "long",
+                        day: "2-digit",
+                        year: "numeric",
+                    })}
+                </p>
+            {/if}
             <div class="flex gap-x-4">
                 {#if trail.location}
                     <h5>
@@ -40,7 +51,7 @@
                 </h5>
             </div>
         </div>
-        <div class="flex mt-2 gap-4 text-sm text-gray-500 whitespace-nowrap">
+        <div class="flex mt-1 gap-4 text-sm text-gray-500 whitespace-nowrap">
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
                     trail.distance,

@@ -41,7 +41,7 @@
         $_("waypoints"),
         $_("photos"),
         $_("summit-book"),
-        $_("comments"),
+        $_("comment", { values: { n: 2 } }),
     ];
 
     let map: Map;

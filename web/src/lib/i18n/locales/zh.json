@@ -18,7 +18,7 @@
   "change": "更换",
   "changelog": "变更日志",
   "chinese": "华人",
-  "comments": "",
+  "comment": "{n, plural, =1 {评论} other {评论}}",
   "completed": "已完成",
   "completion-status": "完成状态",
   "contribute": "贡献",

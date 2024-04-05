@@ -1,6 +1,6 @@
 <script lang="ts">
     export let name: string = "";
-    export let value: string | number | Date = "";
+    export let value: string | Date = "";
     export let label: string = "";
     export let error: string = "";
 </script>

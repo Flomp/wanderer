@@ -14,10 +14,9 @@
 
     let editedComment = comment.text;
 
-    const avatarSrc =
-        comment.expand && comment.expand.author
-            ? getFileURL(comment.expand?.author, comment.expand?.author.avatar)
-            : "https://api.dicebear.com/7.x/initials/svg?seed=comment&backgroundType=gradientLinear";
+    const avatarSrc = comment.expand?.author.avatar
+        ? getFileURL(comment.expand.author, comment.expand.author.avatar)
+        : `https://api.dicebear.com/7.x/initials/svg?seed=${comment.expand?.author.username ?? ""}&backgroundType=gradientLinear`;
 
     function deleteComment() {
         dispatch("delete", comment);
@@ -31,7 +30,11 @@
     }
 </script>
 
-<div class="flex gap-4 items-center" in:fade={{duration: 150}} out:fade={{duration: 150}}>
+<div
+    class="flex gap-4 items-center"
+    in:fade={{ duration: 150 }}
+    out:fade={{ duration: 150 }}
+>
     <img class="rounded-full w-10 aspect-square" src={avatarSrc} alt="avatar" />
     <div>
         <div class="flex items-center">

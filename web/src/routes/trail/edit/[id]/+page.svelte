@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from "$lib/components/base/button.svelte";
+    import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
@@ -262,6 +263,15 @@
                     $form.duration = Math.round(
                         e.target.get_total_time() / 1000 / 60,
                     );
+                    if ($form.duration) {
+                        $form.date = e.target
+                            .get_start_time()
+                            .toISOString()
+                            .substring(0, 10);
+                    } else {
+                        $form.date = new Date().toISOString().substring(0, 10);
+                    }
+
                     resolve();
                 })
                 .on("error", reject)
@@ -544,6 +554,7 @@
             error={$errors.location}
             bind:value={$form.location}
         ></TextField>
+        <Datepicker label="Date" bind:value={$form.date}></Datepicker>
         <Textarea
             name="description"
             label={$_("describe-your-trail")}

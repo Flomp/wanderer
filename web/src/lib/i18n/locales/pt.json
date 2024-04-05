@@ -18,6 +18,7 @@
   "change": "Alterar",
   "changelog": "Registo de alterações",
   "chinese": "Chinês (simplificado)",
+  "comment": "{n, plural, =1 {Comentário} other {Comentários}}",
   "completed": "Completada",
   "completion-status": "Status de conclusão",
   "contribute": "Contribuir",
