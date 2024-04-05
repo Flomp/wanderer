@@ -263,12 +263,12 @@
                     $form.duration = Math.round(
                         e.target.get_total_time() / 1000 / 60,
                     );
-                    if ($form.duration) {
+                    if ($form.duration && !$form.date) {
                         $form.date = e.target
                             .get_start_time()
                             .toISOString()
                             .substring(0, 10);
-                    } else {
+                    } else if(!$form.date) {                       
                         $form.date = new Date().toISOString().substring(0, 10);
                     }
 
@@ -418,7 +418,7 @@
         e: CustomEvent<{ text: string; value: string }>,
     ) {
         if (e.detail.value === "edit") {
-            summitLog.set(currentSummitLog);
+            summitLog.set(currentSummitLog);            
             openSummitLogModal();
         } else if (e.detail.value === "delete") {
             $form.expand.summit_logs.splice(index, 1);
@@ -475,11 +475,12 @@
             on:change={handleFileSelection}
         />
         <hr class="border-separator" />
-        <div class="flex gap-x-4">
+        <div class="flex gap-x-2">
             <h3 class="text-xl font-semibold">{$_("basic-info")}</h3>
             <button
                 type="button"
                 class="btn-icon"
+                style="font-size: 0.9rem"
                 on:click={() => (editingBasicInfo = !editingBasicInfo)}
                 ><i class="fa fa-{editingBasicInfo ? 'check' : 'pen'}"
                 ></i></button
@@ -554,7 +555,7 @@
             error={$errors.location}
             bind:value={$form.location}
         ></TextField>
-        <Datepicker label="Date" bind:value={$form.date}></Datepicker>
+        <Datepicker label={$_("date")} bind:value={$form.date}></Datepicker>
         <Textarea
             name="description"
             label={$_("describe-your-trail")}

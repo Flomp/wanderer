@@ -8,9 +8,15 @@ export async function GET(event: RequestEvent) {
     try {
         const r = await pb.collection('trails')
             .getOne<Trail>(event.params.id as string, { expand: expand ?? "" })
+
+        // remove time from dates
+        r.date = r.date?.substring(0, 10) ?? ""
+        for (const log of r.expand?.summit_logs ?? []) {
+            log.date = log.date.substring(0, 10)
+        }
         return json(r)
-    } catch (e: any) {
-        throw error(e.status, e);
+    } catch (e: any) {       
+        throw error(e.status || 500, e);
     }
 }
 
