@@ -16,12 +16,23 @@
 </script>
 
 <div
-    class="trail-card rounded-2xl border border-input-border sm:w-72 cursor-pointer"
+    class="trail-card relative rounded-2xl border border-input-border sm:w-72 cursor-pointer"
     on:mouseenter
     on:mouseleave
     role="listitem"
 >
-    <div class="w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl">
+    {#if trail.public}
+        <div
+            class=" top-4 right-4 z-10 tooltip"
+            style="position: absolute!important"
+            data-title={$_("public")}
+        >
+            <i class="fa fa-globe"></i>
+        </div>
+    {/if}
+    <div
+        class="relative w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl"
+    >
         <img src={thumbnail} alt="" />
     </div>
     <div class="p-4">
@@ -29,9 +40,7 @@
             <h4 class="font-semibold text-lg">{trail.name}</h4>
             {#if trail.date}
                 <p class="text-xs text-gray-500 mb-3">
-                   {new Date(
-                        trail.date,
-                    ).toLocaleDateString(undefined, {
+                    {new Date(trail.date).toLocaleDateString(undefined, {
                         month: "long",
                         day: "2-digit",
                         year: "numeric",

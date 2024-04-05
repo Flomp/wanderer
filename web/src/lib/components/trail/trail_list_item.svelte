@@ -22,7 +22,13 @@
         <img class="h-28 w-28 object-cover rounded-xl" src={thumbnail} alt="" />
     </div>
     <div class="min-w-0 basis-full">
-        <h4 class="font-semibold text-lg">{trail.name}</h4>
+        <h4 class="font-semibold text-lg">
+            {trail.name}{#if trail.public}
+                <span class="tooltip ml-3" data-title={$_("public")}>
+                    <i class="fa fa-globe"></i>
+                </span>
+            {/if}
+        </h4>
         {#if trail.date}
             <p class="text-xs text-gray-500 mb-3">
                 {new Date(trail.date).toLocaleDateString(undefined, {
