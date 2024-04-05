@@ -1,3 +1,13 @@
+# v0.3.2
+## Bug fixes
+
+- Fixed a bug that caused a 500 Internal Error to appear when viewing trails without an account
+
+## Translations
+
+- improves Dutch translation (thanks to [Vistaus](https://github.com/Vistaus))
+
+
 # v0.3.1
 ## Features
 
