@@ -232,7 +232,7 @@
     </div>
     <section class="trail-info-panel-content px-8">
         <div
-            class="grid grid-cols-1 mt-4 gap-8"
+            class="grid grid-cols-1 my-4 gap-8"
             class:md:grid-cols-[1fr_18rem]={mode == "overview"}
         >
             {#if activeTab == 0}
@@ -310,7 +310,7 @@
                             >
                         </div>
                     {/if}
-                    <ul>
+                    <ul class="space-y-4">
                         {#each trail.expand.comments_via_trail ?? [] as comment}
                             <li>
                                 <CommentCard

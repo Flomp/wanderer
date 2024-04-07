@@ -6,6 +6,7 @@ export class Comment {
     rating: number;
     author: string;
     trail: string;
+    created?: string;
     expand?: {
         author: User
     }
