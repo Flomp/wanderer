@@ -12,7 +12,10 @@ export function createMarkerFromWaypoint(L: any, waypoint: Waypoint, onDragEnd?:
     const marker = L.marker([waypoint.lat, waypoint.lon], {
         title: waypoint.name,
         icon: fontAwesomeIcon,
-        draggable: onDragEnd != null
+        draggable: onDragEnd != null,
+        meta: {
+            waypointName: waypoint.name
+        }
     })
         .bindPopup(
             "<b>" +
@@ -25,7 +28,7 @@ export function createMarkerFromWaypoint(L: any, waypoint: Waypoint, onDragEnd?:
     if (onDragEnd) {
         marker.on("dragend", onDragEnd);
     }
-
+    
     return marker;
 }
 

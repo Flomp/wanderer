@@ -25,6 +25,7 @@
         await import("leaflet.awesome-markers");
         //@ts-ignore
         await import("$lib/vendor/leaflet-elevation/src/index.js");
+        const AutoGraticule = (await import("$lib/vendor/leaflet-graticule/leaflet-auto-graticule")).default;
 
         map = L.map("map", { preferCanvas: true }).setView(
             [trail.lat ?? 0, trail.lon ?? 0],
@@ -35,7 +36,7 @@
         map!.on("zoomend", function () {
             dispatch("zoomend", map);
         });
-        
+
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors",
         }).addTo(map);
@@ -92,6 +93,7 @@
                     iconColor: "white",
                 }),
             },
+            graticule: false
         };
 
         const elevation_options = Object.assign(
@@ -106,6 +108,11 @@
             marker.addTo(map!);
             markers.push(marker);
         }
+
+        if(elevation_options.graticule) {
+            new AutoGraticule().addTo(map!);
+        }
+       
     });
 </script>
 

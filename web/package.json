@@ -46,6 +46,7 @@
     "leaflet.awesome-markers": "^2.0.5",
     "meilisearch": "^0.37.0",
     "nouislider": "^15.7.1",
+    "pdfkit": "^0.15.0",
     "photoswipe": "^5.4.3",
     "pocketbase": "^0.21.0",
     "qrcode-with-logos": "^1.0.5",

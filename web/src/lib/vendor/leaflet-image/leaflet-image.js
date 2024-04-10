@@ -197,12 +197,11 @@ export default function leafletImage(map, callback) {
             minPoint = new L.Point(pixelBounds.min.x, pixelBounds.min.y),
             pixelPoint = map.project(marker.getLatLng()),
             url = "/vendor/leaflet-image/marker.png",
-            icon = getComputedStyle(marker._icon.children[0], ':before').getPropertyValue('content').substring(1, 2) ?? "\uf111",
             im = new Image(),
             options = marker.options.icon.options,
             size = options.iconSize,
             pos = pixelPoint.subtract(minPoint),
-            anchor = L.point(options.iconAnchor || size && size.divideBy(2, true));
+            anchor = L.point(options.iconAnchor || size && { x: size[0], y: size[1] });
 
         if (size instanceof L.Point) size = [size.x, size.y];
 
@@ -214,10 +213,28 @@ export default function leafletImage(map, callback) {
         im.crossOrigin = '';
 
         im.onload = function () {
-            ctx.drawImage(this, x, y, size[0], size[1]);
-            ctx.font = '600 14px "Font Awesome 6 Free"';
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(icon, x + 10.2, y + 24);
+            if (marker._icon.classList.contains("leaflet-grid-label")) {
+                const label = marker._icon.children[0].textContent;
+                ctx.font = '600 8px "Font Awesome 6 Free"';
+                ctx.fillStyle = "#000";
+                ctx.fillText(label, x + 4, y + 12);
+            } else {
+                const waypointName = marker.options.meta?.waypointName;
+                const icon = getComputedStyle(marker._icon.children[0], ':before').getPropertyValue('content').substring(1, 2) ?? "\uf111";
+                ctx.drawImage(this, x, y, size[0], size[1]);
+                ctx.font = '600 14px "Font Awesome 6 Free"';
+                ctx.fillStyle = "#ffffff";
+                ctx.fillText(icon, x + 10.2, y + 24);
+                if (waypointName) {
+                    ctx.fillStyle = "#313131"
+                    ctx.roundRect(x - 8, y - 18, waypointName.length * 7, 20, 5)
+                    ctx.fill();
+                    ctx.font = '600 12px "IBMPlexSans"';
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillText(waypointName, x, y - 4);
+                }
+            }
+
             callback(null, {
                 canvas: canvas
             });

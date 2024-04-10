@@ -2,8 +2,15 @@
     import { page } from "$app/stores";
     import Button from "$lib/components/base/button.svelte";
     import Select from "$lib/components/base/select.svelte";
+    import LogoText from "$lib/components/logo/logo_text.svelte";
     import MapWithElevation from "$lib/components/trail/map_with_elevation.svelte";
     import { trail } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
+    import {
+        formatDistance,
+        formatElevation,
+        formatTimeHHMM,
+    } from "$lib/util/format_util";
     import {
         calculatePixelPerMeter,
         calculateScaleFactor,
@@ -16,14 +23,7 @@
     import "leaflet/dist/leaflet.css";
     import QrCodeWithLogo from "qrcode-with-logos";
     import { onMount, tick } from "svelte";
-    import { currentUser } from "$lib/stores/user_store";
-    import {
-        formatDistance,
-        formatElevation,
-        formatTimeHHMM,
-    } from "$lib/util/format_util";
-    import LogoTextLight from "$lib/components/logo/logo_text_light.svelte";
-    import LogoText from "$lib/components/logo/logo_text.svelte";
+    import { _ } from "svelte-i18n";
 
     let map: Map;
 
@@ -164,9 +164,13 @@
     }
 </script>
 
-<main class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-x-1 gap-y-4">
+<svelte:head>
+    <title>{$_("print")} | wanderer</title>
+</svelte:head>
+
+<main class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-x-1 gap-y-4 items-start">
     <div
-        class="print-details px-6 space-y-4 border border-input-border rounded-3xl"
+        class="print-details px-6 space-y-4 pb-4 border border-input-border rounded-3xl"
     >
         <div id="images"></div>
         <h1 class="text-4xl font-bold">Print Trail</h1>
@@ -205,6 +209,7 @@
                         legend: false,
                         time: false,
                         hotline: false,
+                        graticule: true,
                         height: 150,
                     }}
                     on:zoomend={(e) => updateScale(e.detail)}
@@ -216,6 +221,24 @@
                         alt="QR Code"
                     />
                     <div class="basis-full mx-4">
+                        <div
+                            class="flex mt-1 gap-4 text-sm text-gray-500 whitespace-nowrap"
+                        >
+                            <span
+                                ><i class="fa fa-left-right mr-2"
+                                ></i>{formatDistance($trail.distance)}</span
+                            >
+                            <span
+                                ><i class="fa fa-up-down mr-2"
+                                ></i>{formatElevation(
+                                    $trail.elevation_gain,
+                                )}</span
+                            >
+                            <span
+                                ><i class="fa fa-clock mr-2"
+                                ></i>{formatTimeHHMM($trail.duration)}</span
+                            >
+                        </div>
                         <svg width="100%" height="50" id="ruler"> </svg>
                         <span class="text-sm"
                             >Scale: &nbsp 1 : {Math.round(scale)}</span
@@ -224,32 +247,13 @@
                 </MapWithElevation>
             </div>
             <div class="pt-4 -mt-4 border-t border-t-input-border z-10">
-                <div class="float-right"><LogoText></LogoText></div>
+                <div class="float-right"><LogoText height={48}></LogoText></div>
 
-                <h4 class="font-semibold">{$trail.name}</h4>
-                <h5>
+                <h4 class="text-sm font-semibold">{$trail.name}</h4>
+                <h5 class="text-sm">
                     <i class="fa fa-location-dot mr-2"></i>{$trail.location ||
                         "-"}
                 </h5>
-                <div
-                    class="flex mt-1 gap-4 text-sm text-gray-500 whitespace-nowrap"
-                >
-                    <span
-                        ><i class="fa fa-left-right mr-2"></i>{formatDistance(
-                            $trail.distance,
-                        )}</span
-                    >
-                    <span
-                        ><i class="fa fa-up-down mr-2"></i>{formatElevation(
-                            $trail.elevation_gain,
-                        )}</span
-                    >
-                    <span
-                        ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                            $trail.duration,
-                        )}</span
-                    >
-                </div>
             </div>
         </div>
     </div>
