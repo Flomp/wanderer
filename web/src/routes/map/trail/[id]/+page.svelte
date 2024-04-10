@@ -16,9 +16,7 @@
     <title>{$trail.name} | {$_("map")} | wanderer</title>
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[458px_1fr] gap-x-1 gap-y-4">
-    <div
-        id="trail-details"
-    >
+    <div id="trail-details">
         <TrailInfoPanel trail={$trail} {markers}></TrailInfoPanel>
     </div>
     <MapWithElevation trail={$trail} bind:markers></MapWithElevation>

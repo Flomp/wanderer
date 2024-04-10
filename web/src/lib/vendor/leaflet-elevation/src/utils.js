@@ -8,7 +8,8 @@ export const Colors = {
 	'purple'   : { area: '#732C7B' },
 	'steelblue': { area: '#4682B4' },
 	'red'      : { area: '#F00' },
-	'lime'     : { area: '#9CC222', line: '#566B13' }
+	'lime'     : { area: '#9CC222', line: '#566B13' },
+	'gray': { area: '#000000', line: '#242734', alpha: 0.00001, stroke: '#000000' }
 };
 
 const SEC  = 1000;

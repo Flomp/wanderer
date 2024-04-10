@@ -319,6 +319,17 @@
   --ele-grid: rgba(var(--input-border));
 }
 
+/* GRAY THEME //////////////////////////////////////////////// */
+.gray-theme {
+  --ele-bg: #ffffff;
+  --ele-area: #242734;
+  --ele-alpha: 0.45;
+  --ele-stroke: #7b7b7b;
+  --ele-circle: #fff;
+  --ele-line: #000;
+  --ele-grid: rgba(var(--input-border));
+}
+
 .elevation-detached.lightblue-theme .area {
   stroke: #3366CC;
 }

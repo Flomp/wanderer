@@ -773,6 +773,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			this.track_info.name = geojson.name;
 		}
 
+		style.color = "#ff0000"
 		let layer = L.geoJson(geojson, {
 			distanceMarkers: distanceMarkers,
 			style: style,
