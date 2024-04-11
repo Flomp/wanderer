@@ -327,7 +327,7 @@
   --ele-stroke: #7b7b7b;
   --ele-circle: #fff;
   --ele-line: #000;
-  --ele-grid: rgba(var(--input-border));
+  --ele-grid: #d1d5db;
 }
 
 .elevation-detached.lightblue-theme .area {

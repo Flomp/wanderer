@@ -215,7 +215,7 @@ export default function leafletImage(map, callback) {
         im.onload = function () {
             if (marker._icon.classList.contains("leaflet-grid-label")) {
                 const label = marker._icon.children[0].textContent;
-                ctx.font = '600 8px "Font Awesome 6 Free"';
+                ctx.font = '600 10px "IBMPlexSans"';
                 ctx.fillStyle = "#000";
                 ctx.fillText(label, x + 4, y + 12);
             } else {
@@ -224,14 +224,16 @@ export default function leafletImage(map, callback) {
                 ctx.drawImage(this, x, y, size[0], size[1]);
                 ctx.font = '600 14px "Font Awesome 6 Free"';
                 ctx.fillStyle = "#ffffff";
-                ctx.fillText(icon, x + 10.2, y + 24);
+                const iconWidth = ctx.measureText(icon).width
+                ctx.fillText(icon, x + size[0] / 2 - iconWidth / 2, y + 24);
                 if (waypointName) {
-                    ctx.fillStyle = "#313131"
-                    ctx.roundRect(x - 8, y - 18, waypointName.length * 7, 20, 5)
-                    ctx.fill();
+                    ctx.fillStyle = "rgba(49, 49, 49, 0.5)"
                     ctx.font = '600 12px "IBMPlexSans"';
+                    const textWidth = ctx.measureText(waypointName).width
+                    ctx.roundRect(size[0] / 2 + x - (textWidth + 16) / 2, y - 18, textWidth + 16, 20, 5)
+                    ctx.fill();
                     ctx.fillStyle = "#ffffff";
-                    ctx.fillText(waypointName, x, y - 4);
+                    ctx.fillText(waypointName, size[0] / 2 + x - (textWidth + 16) / 2 + 8, y - 4);
                 }
             }
 

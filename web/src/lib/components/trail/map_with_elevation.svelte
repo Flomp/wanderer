@@ -2,6 +2,7 @@
     import type { Trail } from "$lib/models/trail";
     import { currentUser } from "$lib/stores/user_store";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
+    import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
     import type { Map, Marker } from "leaflet";
     import { createEventDispatcher, onMount } from "svelte";
 
@@ -9,6 +10,7 @@
     export let markers: Marker[] = [];
     export let map: Map | null = null;
     export let options = {};
+    export let graticule: AutoGraticule | null = null;
 
     const dispatch = createEventDispatcher();
 
@@ -110,7 +112,8 @@
         }
 
         if(elevation_options.graticule) {
-            new AutoGraticule().addTo(map!);
+            graticule = new AutoGraticule();
+            graticule.addTo(map!);
         }
        
     });
@@ -120,6 +123,6 @@
     <div id="map" class="rounded-xl z-0 basis-full"></div>
     <div class="flex items-center justify-between">
         <slot />
-        <div class="basis-full min-w-[300px]" id="elevation"></div>
+        <div class="basis-[300px] flex-grow flex-shrink-0" id="elevation"></div>
     </div>
 </div>

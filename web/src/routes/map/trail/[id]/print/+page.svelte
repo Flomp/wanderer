@@ -1,7 +1,12 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import "$lib/assets/fonts/IBMPlexSans-Regular-normal";
+    import "$lib/assets/fonts/IBMPlexSans-SemiBold-bold";
+    import "$lib/assets/fonts/fa-solid-900-normal";
     import Button from "$lib/components/base/button.svelte";
-    import Select from "$lib/components/base/select.svelte";
+    import Select, {
+        type SelectItem,
+    } from "$lib/components/base/select.svelte";
     import LogoText from "$lib/components/logo/logo_text.svelte";
     import MapWithElevation from "$lib/components/trail/map_with_elevation.svelte";
     import { trail } from "$lib/stores/trail_store";
@@ -18,14 +23,19 @@
     import { createRect, createText } from "$lib/util/svg_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import leafletImage from "$lib/vendor/leaflet-image/leaflet-image.js";
+    import { jsPDF } from "jspdf";
     import type { Map } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import QrCodeWithLogo from "qrcode-with-logos";
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
+    import { Canvg } from "canvg";
+    import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
+    import { show_toast } from "$lib/stores/toast_store";
 
     let map: Map;
+    let graticule: AutoGraticule;
 
     const paperSizes: { text: string; value: keyof typeof paperDimensions }[] =
         [
@@ -34,12 +44,24 @@
         ];
     const paperDimensions = {
         a4: {
-            width: "21cm",
-            height: "29.7cm",
+            css: {
+                width: "21cm",
+                height: "29.7cm",
+            },
+            pdf: {
+                width: 210,
+                height: 297,
+            },
         },
         letter: {
-            width: "21.59cm",
-            height: "27.94cm",
+            css: {
+                width: "21.59cm",
+                height: "27.94cm",
+            },
+            pdf: {
+                width: 215.9,
+                height: 279.4,
+            },
         },
     };
     let selectedPaperSize = paperSizes[0].value;
@@ -50,7 +72,17 @@
     ];
     let selectedOrientation: "portrait" | "landscape" = orientations[0].value;
 
-    let scale = 1;
+    const gridOptions = [
+        { text: "Degrees", value: "degree" },
+        { text: "No Grid", value: "off" },
+    ];
+    let selectedGrid = gridOptions[0].value;
+
+    let scale: number = 1;
+
+    let printLoading: boolean = false;
+
+    let includeDescription: boolean = false;
 
     onMount(() => {
         let qrcode = new QrCodeWithLogo({
@@ -63,16 +95,262 @@
     });
 
     function print() {
-        leafletImage(map, function (err: string, canvas: HTMLCanvasElement) {
-            var img = document.createElement("img");
-            var dimensions = map.getSize();
-            img.width = dimensions.x;
-            img.height = dimensions.y;
-            img.src = canvas.toDataURL();
+        printLoading = true;
+        const doc = new jsPDF(selectedOrientation, "mm", [
+            paperDimensions[selectedPaperSize].pdf[
+                selectedOrientation == "portrait" ? "width" : "height"
+            ],
+            paperDimensions[selectedPaperSize].pdf[
+                selectedOrientation == "portrait" ? "height" : "width"
+            ],
+        ]);
+        doc.setFont("IBMPlexSans-Regular", "normal");
+        var width = doc.internal.pageSize.getWidth();
+        var height = doc.internal.pageSize.getHeight();
+        let currentHeight = 0;
+        const rulerElement = document.getElementById("ruler") as HTMLElement;
+        const rulerSegments = rulerElement.getElementsByTagName("rect");
+        const rulerLabels = rulerElement.getElementsByTagName("text");
 
-            document.getElementById("images")!.innerHTML = "";
-            document.getElementById("images")!.appendChild(img);
-        });
+        const pageWidth = document
+            .getElementById("paper")
+            ?.getBoundingClientRect().width;
+
+        try {
+            leafletImage(
+                map,
+                async function (err: string, canvas: HTMLCanvasElement) {
+                    // Map
+                    var img = document.createElement("img");
+                    var dimensions = map.getSize();
+                    img.width = dimensions.x;
+                    img.height = dimensions.y;
+                    const ratio = img.height / img.width;
+                    img.src = canvas.toDataURL();
+                    doc.addImage(img.src, "png", 8, 8, 0, (width - 16) * ratio);
+                    currentHeight += (width - 16) * ratio + 11;
+                    const elevationProfileHeight = currentHeight - 4;
+
+                    // QR Code
+                    doc.addImage(
+                        document.getElementById("qrcode") as HTMLImageElement,
+                        "png",
+                        8,
+                        currentHeight,
+                        24,
+                        24,
+                    );
+
+                    // Distance
+                    currentHeight += 5;
+                    let currentWidth = 8 + 24 + 4;
+                    doc.setFontSize(9);
+                    doc.setTextColor(107, 114, 128);
+                    doc.setFont("fa-solid-900", "normal");
+                    doc.text("\uf337", currentWidth, currentHeight);
+                    currentWidth += doc.getTextWidth("\uf337") + 3;
+                    doc.setFont("IBMPlexSans-Regular", "normal");
+                    doc.text(
+                        formatDistance($trail.distance),
+                        currentWidth,
+                        currentHeight,
+                    );
+                    currentWidth +=
+                        doc.getTextWidth(formatDistance($trail.distance)) + 4;
+
+                    // Elevation gain
+                    doc.setFont("fa-solid-900", "normal");
+                    doc.text("\uf338", currentWidth, currentHeight);
+                    currentWidth += doc.getTextWidth("\uf338") + 3;
+                    doc.setFont("IBMPlexSans-Regular", "normal");
+                    doc.text(
+                        formatElevation($trail.elevation_gain),
+                        currentWidth,
+                        currentHeight,
+                    );
+                    currentWidth +=
+                        doc.getTextWidth(
+                            formatDistance($trail.elevation_gain),
+                        ) + 4;
+
+                    // Duration
+                    doc.setFont("fa-solid-900", "normal");
+                    doc.text("\uf017", currentWidth, currentHeight);
+                    currentWidth += doc.getTextWidth("\uf337") + 3;
+                    doc.setFont("IBMPlexSans-Regular", "normal");
+                    doc.text(
+                        formatTimeHHMM($trail.duration),
+                        currentWidth,
+                        currentHeight,
+                    );
+
+                    // Ruler
+                    currentHeight += 6;
+                    currentWidth = 8 + 24 + 4;
+                    doc.setTextColor(0, 0, 0);
+                    for (let i = 0; i < rulerSegments.length; i++) {
+                        const segment = rulerSegments[i];
+                        const label = rulerLabels[i].textContent ?? "";
+                        const segmentWidth =
+                            segment.getBoundingClientRect().width;
+                        const segmentWidthPercent =
+                            segmentWidth / (pageWidth ?? 0);
+                        const segmentPDFWidth = width * segmentWidthPercent;
+                        let textWidth = doc.getTextWidth(label);
+
+                        if (i % 2 == 0) {
+                            doc.setFillColor(255, 255, 255);
+                        } else {
+                            doc.setFillColor(93, 93, 93);
+                        }
+
+                        doc.rect(
+                            currentWidth,
+                            currentHeight,
+                            segmentPDFWidth,
+                            2,
+                            "FD",
+                        );
+                        doc.text(
+                            label,
+                            currentWidth - textWidth / 2,
+                            currentHeight + 6,
+                        );
+                        currentWidth += segmentPDFWidth;
+                        if (i == rulerSegments.length - 1) {
+                            const endLabel =
+                                rulerLabels[i + 1].textContent ?? "";
+                            textWidth = doc.getTextWidth(endLabel);
+                            doc.text(
+                                endLabel,
+                                currentWidth - textWidth / 2,
+                                currentHeight + 6,
+                            );
+                            textWidth = doc.getTextWidth("KM");
+                            doc.text(
+                                "KM",
+                                currentWidth - textWidth,
+                                currentHeight - 2,
+                            );
+                        }
+                    }
+
+                    // Scale
+                    currentHeight += 12;
+                    doc.setFillColor(255, 255, 255);
+                    doc.text(
+                        `Scale:  1 : ${Math.round(scale)}`,
+                        8 + 24 + 4,
+                        currentHeight,
+                    );
+
+                    // Elevation profile
+                    const gridLines = document.querySelectorAll(
+                        "#elevation .grid line",
+                    );
+                    gridLines.forEach((l) =>
+                        l.setAttribute("stroke", "#d1d5db"),
+                    );
+                    const gridBorders = document.querySelectorAll(
+                        "#elevation .grid path",
+                    );
+                    gridBorders.forEach((l) =>
+                        l.setAttribute("stroke", "#fff"),
+                    );
+                    const tooltip = document.querySelector(
+                        "#elevation .tooltip",
+                    ) as HTMLElement;
+                    tooltip.style.display = "none";
+                    const units = document.querySelectorAll(
+                        "#elevation .axis text",
+                    );
+                    units.forEach((l) => l.setAttribute("fill", "#000"));
+                    const elevationCanvas = document.createElement("canvas");
+                    const ctx = elevationCanvas.getContext("2d")!;
+                    const v = await Canvg.from(
+                        ctx,
+                        document.querySelector("#elevation svg")!.outerHTML,
+                    );
+                    v.start();
+                    const profileRatio =
+                        elevationCanvas.height / elevationCanvas.width;
+                    doc.addImage(
+                        elevationCanvas.toDataURL("image/png"),
+                        width - 79.3 - 8,
+                        elevationProfileHeight,
+                        79.3,
+                        79.3 * profileRatio,
+                    );
+                    const elevationPlot = (
+                        document.querySelector(
+                            ".canvas-plot",
+                        ) as HTMLCanvasElement
+                    ).toDataURL("image/png");
+                    doc.addImage(
+                        elevationPlot,
+                        width - 77.3,
+                        elevationProfileHeight + 8,
+                        0,
+                        0,
+                    );
+                    tooltip.style.display = "block";
+
+                    // Separator
+                    currentHeight += 5;
+                    doc.setDrawColor(232, 234, 237);
+                    doc.line(8, currentHeight, width - 8, currentHeight);
+                    currentHeight += 6;
+
+                    // Trail name & location
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont("IBMPlexSans-SemiBold", "bold");
+                    doc.text($trail.name, 8, currentHeight);
+                    doc.setFont("fa-solid-900", "normal");
+                    currentHeight += 5;
+                    doc.text("\uf3c5", 8, currentHeight);
+                    doc.setFont("IBMPlexSans-Regular", "normal");
+                    doc.text($trail.location || "-", 12, currentHeight);
+
+                    // Logo
+                    const logo = new Image();
+                    logo.src = "/imgs/logo_text_dark.png";
+                    const logoRatio = 64 / 212;
+                    const logoWidth = 32;
+                    const logoHeight = logoWidth * logoRatio;
+                    doc.addImage(
+                        logo,
+                        width - 8 - logoWidth,
+                        height - 4 - logoHeight,
+                        logoWidth,
+                        logoHeight,
+                    );
+
+                    if (includeDescription && $trail.description) {
+                        doc.addPage();
+                        doc.text($trail.description, 16, 16, {
+                            maxWidth: width - 32,
+                        });
+                        doc.addImage(
+                            logo,
+                            width - 8 - logoWidth,
+                            height - 4 - logoHeight,
+                            logoWidth,
+                            logoHeight,
+                        );
+                    }
+
+                    doc.save($trail.name + ".pdf");
+                    printLoading = false;
+                },
+            );
+        } catch (e) {
+            show_toast({
+                icon: "close",
+                type: "error",
+                text: $_("error-printing-map"),
+            });
+            printLoading = false;
+        }
     }
 
     async function updateMapSize() {
@@ -107,8 +385,7 @@
             label: string,
             fill: string,
         ) {
-            const bar = createRect(x, height / 2, width - 4, 6, fill);
-            const tick = createRect(x + width - 4, height / 2, 4, 6, "#000");
+            const bar = createRect(x, height / 2, width, 6, fill, "#000");
             const text = createText(
                 label,
                 x + width - 5 * label.length,
@@ -116,7 +393,6 @@
                 "0.75rem",
             );
             svg.appendChild(bar);
-            svg.appendChild(tick);
             svg.append(text);
         }
         let multiplier = 1;
@@ -148,7 +424,7 @@
                 oneUnitInPixels * i * multiplier,
                 oneUnitInPixels * multiplier,
                 `${multiplier < 1 ? ((i + 1) * multiplier).toFixed(1) : (i + 1) * multiplier}`,
-                i % 2 == 0 ? "#7c7c7c" : "#5d5d5d",
+                i % 2 == 0 ? "#fff" : "#5d5d5d",
             );
         }
 
@@ -162,40 +438,72 @@
 
         scale = calculateScaleFactor(map);
     }
+
+    function toggleGrid() {
+        if (selectedGrid == "off") {
+            graticule?.remove();
+        } else {
+            graticule.addTo(map);
+        }
+    }
 </script>
 
 <svelte:head>
     <title>{$_("print")} | wanderer</title>
 </svelte:head>
 
-<main class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-x-1 gap-y-4 items-start">
+<main
+    class="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-x-1 gap-y-4 items-start"
+>
     <div
-        class="print-details px-6 space-y-4 pb-4 border border-input-border rounded-3xl"
+        class="print-details md:sticky w-80 md:top-8 mx-auto md:ml-8 p-6 flex flex-col gap-y-4 border border-input-border rounded-3xl"
     >
-        <div id="images"></div>
         <h1 class="text-4xl font-bold">Print Trail</h1>
         <Select
             bind:value={selectedPaperSize}
             items={paperSizes}
-            label="Paper size"
+            label={$_("paper-size")}
             on:change={updateMapSize}
         ></Select>
         <Select
             bind:value={selectedOrientation}
             items={orientations}
-            label="Orientation"
+            label={$_("orientation")}
             on:change={updateMapSize}
         ></Select>
+        <Select
+            bind:value={selectedGrid}
+            items={gridOptions}
+            label={$_("grid")}
+            on:change={toggleGrid}
+        ></Select>
+        <div>
+            <input
+                id="description-checkbox"
+                type="checkbox"
+                bind:value={includeDescription}
+                class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+            />
+            <label for="description-checkbox" class="ms-2 text-sm"
+                >{$_("include-description")}</label
+            >
+        </div>
 
-        <Button primary={true} on:click={print}>Print!</Button>
+        <Button
+            loading={printLoading}
+            extraClasses="mt-2"
+            primary={true}
+            on:click={print}>Print!</Button
+        >
     </div>
 
     <div class="paper-container overflow-scroll">
         <div
-            class="paper flex flex-col mx-auto shadow-xl mb-8 p-8 bg-white"
-            style="width: {paperDimensions[selectedPaperSize][
+            id="paper"
+            class="flex flex-col mx-auto shadow-xl mb-8 p-8 bg-white"
+            style="width: {paperDimensions[selectedPaperSize].css[
                 selectedOrientation == 'portrait' ? 'width' : 'height'
-            ]}; height: {paperDimensions[selectedPaperSize][
+            ]}; height: {paperDimensions[selectedPaperSize].css[
                 selectedOrientation == 'portrait' ? 'height' : 'width'
             ]}"
         >
@@ -214,6 +522,7 @@
                     }}
                     on:zoomend={(e) => updateScale(e.detail)}
                     bind:map
+                    bind:graticule
                 >
                     <img
                         class="w-[100px] h-[100px]"
@@ -239,7 +548,14 @@
                                 ></i>{formatTimeHHMM($trail.duration)}</span
                             >
                         </div>
-                        <svg width="100%" height="50" id="ruler"> </svg>
+                        <svg
+                            width="100%"
+                            height="50"
+                            id="ruler"
+                            xmlns="http://www.w3.org/2000/svg"
+                            version="1.1"
+                        >
+                        </svg>
                         <span class="text-sm"
                             >Scale: &nbsp 1 : {Math.round(scale)}</span
                         >

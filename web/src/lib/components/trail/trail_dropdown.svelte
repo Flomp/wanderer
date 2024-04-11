@@ -40,6 +40,7 @@
                   },
               ]
             : []),
+        { text: $_("print"), value: "print", icon: "print" },
         { text: $_("add-to-list"), value: "list", icon: "bookmark" },
         { text: $_("edit"), value: "edit", icon: "pen" },
         { text: $_("delete"), value: "delete", icon: "trash" },
@@ -61,6 +62,8 @@
                     "_blank",
                 )
                 ?.focus();
+        } else if (item.value == "print") {
+            goto(`/map/trail/${trail.id}/print`);
         } else if (item.value == "download") {
             downloadURI(getFileURL(trail, trail.gpx), trail.gpx!);
         } else if (item.value == "edit") {

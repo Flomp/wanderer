@@ -4,6 +4,7 @@ export function createRect(
     width: number,
     height: number,
     fill: string,
+    border?: string,
 ) {
     const svgns = "http://www.w3.org/2000/svg";
 
@@ -12,7 +13,7 @@ export function createRect(
     rect.setAttribute("y", y.toString());
     rect.setAttribute("width", width.toString());
     rect.setAttribute("height", height.toString());
-    rect.setAttribute("fill", fill);
+    rect.setAttribute("style", `fill:${fill};stroke-width:1;stroke:${border ?? ''}`);
     return rect;
 }
 
