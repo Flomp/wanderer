@@ -31,7 +31,6 @@
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
-    import { page } from "$app/stores";
 
     export let trail: Trail;
     export let mode: "overview" | "map" = "map";
@@ -42,7 +41,7 @@
         $_("waypoints"),
         $_("photos"),
         $_("summit-book"),
-        $_("comment", { values: { n: 2 } }),
+        ...($currentUser ? [$_("comment", { values: { n: 2 } })] : []),
     ];
 
     let map: Map;

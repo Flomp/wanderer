@@ -52,7 +52,7 @@ func init() {
 			settings.Set("unit", unit)
 			settings.Set("location", location)
 			settings.Set("user", user.Id)
-			settings.Set("mapFocus", "trails")
+			settings.Set("mapFocus", "location")
 			if err := dao.SaveRecord(settings); err != nil {
 				return err
 			}
