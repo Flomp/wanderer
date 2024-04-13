@@ -1,5 +1,8 @@
+import type { User } from '$lib/models/user'
 import { pb } from '$lib/pocketbase'
-import { currentUser, type User } from '$lib/stores/user_store'
+import { settings_show } from '$lib/stores/settings_store';
+import { currentUser } from '$lib/stores/user_store'
+import { get } from 'svelte/store';
 
 pb.authStore.loadFromCookie(document.cookie)
 pb.authStore.onChange(() => {

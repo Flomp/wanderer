@@ -8,7 +8,12 @@
     import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
-    import type { Trail, TrailFilter } from "$lib/models/trail";
+    import type { Settings } from "$lib/models/settings";
+    import type {
+        Trail,
+        TrailBoundingBox,
+        TrailFilter,
+    } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
     import {
         trails,
@@ -48,6 +53,8 @@
     let showMap: boolean = true;
 
     const filter: TrailFilter = $page.data.filter;
+    const maxBoundingBox: TrailBoundingBox = $page.data.boundingBox;
+    const settings: Settings = $page.data.settings;
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -90,11 +97,18 @@
             ];
 
             map.fitBounds(boundingBox);
-        } else if ($currentUser && $currentUser.location) {
-            map.setView(
-                [$currentUser.location.lat, $currentUser.location.lon],
-                12,
-            );
+        } else if (settings && settings.mapFocus == "trails") {
+            const boundingBox: LatLngBoundsExpression = [
+                [maxBoundingBox.max_lat, maxBoundingBox.min_lon],
+                [maxBoundingBox.min_lat, maxBoundingBox.max_lon],
+            ];
+            map.fitBounds(boundingBox);
+        } else if (
+            settings &&
+            settings.mapFocus == "location" &&
+            settings.location
+        ) {
+            map.setView([settings.location.lat, settings.location.lon], 12);
         } else {
             navigator.geolocation.getCurrentPosition(
                 (position) => {

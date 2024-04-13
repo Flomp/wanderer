@@ -12,6 +12,7 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import Slider from "../base/slider.svelte";
     import type { SelectItem } from "../base/select.svelte";
+    import { page } from "$app/stores";
 
     export let categories: Category[];
     export let filterExpanded: boolean = true;

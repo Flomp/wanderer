@@ -1,33 +1,26 @@
+import { Settings } from "$lib/models/settings";
+import type { User } from "$lib/models/user";
 import { pb } from "$lib/pocketbase";
 import { ClientResponseError, type AuthMethodsList } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
-
-export type User = {
-    id: string,
-    username?: string,
-    email?: string,
-    password: string,
-    avatar?: string;
-    unit?: "metric" | "imperial";
-    language?: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt" | "zh" ;
-    location?: { name: string, lat: number, lon: number }
-}
+import { settings_create } from "./settings_store";
 
 export const currentUser: Writable<User | null> = writable<User | null>()
 
 export async function users_create(user: User) {
-    user.unit = "metric";
-    const r = await fetch('/api/v1/user', {
+    let r = await fetch('/api/v1/user', {
         method: 'PUT',
         body: JSON.stringify({ ...user, passwordConfirm: user.password })
     })
 
-    if (r.ok) {
-        return await r.json();
-    } else {
+    if (!r.ok) {
         throw new ClientResponseError(await r.json())
     }
 
+    const createdUser: User = await r.json();
+
+    const settings = new Settings("metric", "en", "trails", createdUser.id!)
+    await settings_create(settings);
 }
 
 export async function users_auth_methods(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<AuthMethodsList> {

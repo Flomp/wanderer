@@ -14,7 +14,9 @@ declare global {
 		interface Locals {
 			pb: PocketBase
 			ms: MeiliSearch
-			user: AuthModel | null
+			user: AuthModel | null,
+			settings: Settings | null
+
 		}
 	}
 }

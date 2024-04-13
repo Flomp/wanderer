@@ -4,13 +4,12 @@
     import "$lib/assets/fonts/IBMPlexSans-SemiBold-bold";
     import "$lib/assets/fonts/fa-solid-900-normal";
     import Button from "$lib/components/base/button.svelte";
-    import Select, {
-        type SelectItem,
-    } from "$lib/components/base/select.svelte";
+    import Select from "$lib/components/base/select.svelte";
     import LogoText from "$lib/components/logo/logo_text.svelte";
     import MapWithElevation from "$lib/components/trail/map_with_elevation.svelte";
+    import type { Settings } from "$lib/models/settings";
+    import { show_toast } from "$lib/stores/toast_store";
     import { trail } from "$lib/stores/trail_store";
-    import { currentUser } from "$lib/stores/user_store";
     import {
         formatDistance,
         formatElevation,
@@ -22,20 +21,21 @@
     } from "$lib/util/leaflet_util";
     import { createRect, createText } from "$lib/util/svg_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
+    import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
     import leafletImage from "$lib/vendor/leaflet-image/leaflet-image.js";
+    import { Canvg } from "canvg";
     import { jsPDF } from "jspdf";
     import type { Map } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
-    import QrCodeWithLogo from "qrcode-with-logos";
+    import QrCodeWithLogo from "$lib/vendor/qr-code-with-logos/index";
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
-    import { Canvg } from "canvg";
-    import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
-    import { show_toast } from "$lib/stores/toast_store";
 
     let map: Map;
     let graticule: AutoGraticule;
+
+    const settings: Settings = $page.data.settings;
 
     const paperSizes: { text: string; value: keyof typeof paperDimensions }[] =
         [
@@ -375,7 +375,7 @@
 
         let oneUnitInPixels = calculatePixelPerMeter(
             map,
-            $currentUser && $currentUser.unit == "imperial" ? 1609.34 : 1000,
+            settings && settings.unit == "imperial" ? 1609.34 : 1000,
         );
         let unitsInRuler = width / oneUnitInPixels;
 
@@ -430,7 +430,7 @@
 
         svg.appendChild(
             createText(
-                $currentUser && $currentUser.unit == "imperial" ? "MI" : "KM",
+                settings && settings.unit == "imperial" ? "MI" : "KM",
                 segmentCount * multiplier * oneUnitInPixels - 20,
                 height / 2 - 7,
             ),
@@ -535,7 +535,9 @@
                         >
                             <span
                                 ><i class="fa fa-left-right mr-2"
-                                ></i>{formatDistance($trail.distance)}</span
+                                ></i>{formatDistance(
+                                    $trail.distance,
+                                )}</span
                             >
                             <span
                                 ><i class="fa fa-up-down mr-2"

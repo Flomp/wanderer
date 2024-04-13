@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from "$app/stores";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";

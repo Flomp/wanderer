@@ -1,3 +1,4 @@
+import { page } from "$app/stores";
 import { currentUser } from "$lib/stores/user_store";
 import { get } from "svelte/store";
 
@@ -17,7 +18,7 @@ export function formatDistance(meters?: number) {
         return "-";
     }
 
-    const unit = get(currentUser)?.unit ?? "metric";
+    const unit = get(page).data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         if (meters >= 1000) {
@@ -38,7 +39,7 @@ export function formatElevation(meters?: number) {
         return "-";
     }
 
-    const unit = get(currentUser)?.unit ?? "metric";
+    const unit = get(page).data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         return `${Math.round(meters)} m`

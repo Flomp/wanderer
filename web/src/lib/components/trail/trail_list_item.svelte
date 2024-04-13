@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from "$app/stores";
     import type { Trail } from "$lib/models/trail";
     import { getFileURL } from "$lib/util/file_util";
     import {
@@ -53,12 +54,12 @@
         <div class="flex mt-1 gap-4 text-sm text-gray-500">
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
-                    trail.distance,
+                    trail.distance
                 )}</span
             >
             <span
                 ><i class="fa fa-up-down mr-2"></i>{formatElevation(
-                    trail.elevation_gain,
+                    trail.elevation_gain
                 )}</span
             >
             <span

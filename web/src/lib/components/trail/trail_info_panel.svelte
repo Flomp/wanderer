@@ -31,6 +31,7 @@
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
+    import { page } from "$app/stores";
 
     export let trail: Trail;
     export let mode: "overview" | "map" = "map";

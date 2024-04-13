@@ -115,6 +115,13 @@ interface TrailFilterValues {
     max_duration: number,
 }
 
+interface TrailBoundingBox {
+    max_lat: number,
+    min_lat: number,
+    max_lon: number,
+    min_lon: number,
+}
+
 export { Trail };
 
-export type { TrailFilter, TrailFilterValues };
+export type { TrailFilter, TrailFilterValues, TrailBoundingBox };

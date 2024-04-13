@@ -370,6 +370,18 @@ export async function trails_get_filter_values(f: (url: RequestInfo | URL, confi
     }
 }
 
+export async function trails_get_bounding_box(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
+    const r = await f('/api/v1/trail/bounding-box', {
+        method: 'GET',
+    })
+
+    if (r.ok) {        
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
+}
+
 export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     if (!trail.gpx) {
         return "";

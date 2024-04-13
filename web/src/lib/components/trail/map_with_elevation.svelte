@@ -1,6 +1,6 @@
 <script lang="ts">
+    import { page } from "$app/stores";
     import type { Trail } from "$lib/models/trail";
-    import { currentUser } from "$lib/stores/user_store";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
     import type { Map, Marker } from "leaflet";
@@ -52,7 +52,7 @@
             closeBtn: false,
             followMarker: true,
             autofitBounds: true,
-            imperial: $currentUser?.unit == "imperial" ?? false,
+            imperial: $page.data.settings?.unit == "imperial" ?? false,
             reverseCoords: false,
             acceleration: false,
             slope: true,

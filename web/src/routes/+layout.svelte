@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import { beforeNavigate, goto } from "$app/navigation";
     import Toast from "$lib/components/base/toast.svelte";
     import Footer from "$lib/components/footer.svelte";
@@ -13,7 +13,7 @@
     beforeNavigate((n) => {
         if (!$currentUser && isRouteProtected(n.to?.url?.pathname ?? "")) {
             n.cancel();
-            goto("/login?r="+n.to?.url?.pathname);
+            goto("/login?r=" + n.to?.url?.pathname);
         }
     });
 </script>

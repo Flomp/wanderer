@@ -1,9 +1,10 @@
 import type { TrailFilter } from "$lib/models/trail";
 import { categories_index } from "$lib/stores/category_store";
-import { trails, trails_get_filter_values } from "$lib/stores/trail_store";
+import { trails, trails_get_bounding_box, trails_get_filter_values } from "$lib/stores/trail_store";
 import type { ServerLoad } from "@sveltejs/kit";
 
 export const load: ServerLoad = async ({ params, locals, fetch }) => {
+    const boundingBox = await trails_get_bounding_box(fetch);
     const filterValues = await trails_get_filter_values(fetch);
 
     const filter: TrailFilter = {
@@ -27,5 +28,5 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
 
     trails.set([])
 
-    return { filter: filter }
+    return { filter: filter, boundingBox: boundingBox }
 };

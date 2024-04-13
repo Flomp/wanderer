@@ -1,11 +1,13 @@
 import { env } from '$env/dynamic/private'
 import { env as envPub } from '$env/dynamic/public'
+import type { Settings } from '$lib/models/settings'
 
 import { pb } from '$lib/pocketbase'
 import { isRouteProtected } from '$lib/util/authorization_util'
 import { redirect, type Handle } from '@sveltejs/kit'
 import { MeiliSearch } from 'meilisearch'
 import { locale } from 'svelte-i18n'
+import { get } from 'svelte/store'
 
 export const handle: Handle = async ({ event, resolve }) => {
   // load the store data from the request cookie string
@@ -13,7 +15,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const url = new URL(event.request.url);
 
- 
+
   // validate the user existence and if the path is acceesible
   if (!pb.authStore.model && isRouteProtected(url.pathname)) {
     throw redirect(302, '/login?r=' + url.pathname);
@@ -34,8 +36,10 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   let meiliApiKey: string = "";
+  let settings: Settings | undefined;
   if (pb.authStore.model) {
     meiliApiKey = pb.authStore.model.token
+    settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.model.id}"`)
   } else {
     const r = await event.fetch(pb.buildUrl("/public/search/token"));
     const response = await r.json();
@@ -46,11 +50,15 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.ms = ms
   event.locals.pb = pb
   event.locals.user = pb.authStore.model
+  event.locals.settings = settings
 
-  const lang = pb.authStore.model?.language ?? event.request.headers.get('accept-language')?.split(',')[0]
+  const lang = settings?.language ?? event.request.headers.get('accept-language')?.split(',')[0]
 
   if (lang) {
     locale.set(lang)
+    if (pb.authStore.model) {
+      pb.authStore.model!.language = lang;
+    }
   }
 
   const response = await resolve(event)

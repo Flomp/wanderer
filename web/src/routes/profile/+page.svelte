@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import RadioGroup, {
         type RadioItem,
     } from "$lib/components/base/radio_group.svelte";
@@ -10,6 +11,7 @@
         type SelectItem,
     } from "$lib/components/base/select.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
+    import { settings_update } from "$lib/stores/settings_store";
     import {
         currentUser,
         logout,
@@ -20,6 +22,8 @@
     import { getFileURL } from "$lib/util/file_util";
     import { onMount } from "svelte";
     import { _, locale } from "svelte-i18n";
+
+    const settings = $page.data.settings;
 
     const languages: SelectItem[] = [
         { text: $_("chinese"), value: "zh" },
@@ -32,12 +36,18 @@
         { text: $_("portuguese"), value: "pt" },
     ];
 
+    const mapFocus: SelectItem[] = [
+        { text: $_("trail", { values: { n: 2 } }), value: "trails" },
+        { text: $_("location"), value: "location" },
+    ];
+
     const units: RadioItem[] = [
         { text: $_("metric"), value: "metric" },
         { text: $_("imperial"), value: "imperial" },
     ];
 
     let selectedLanguage = "en";
+    let selectedMapFocus = "trails";
 
     let searchDropdownItems: SearchItem[] = [];
     let citySearchQuery: string = "";
@@ -45,8 +55,9 @@
     let openConfirmModal: () => void;
 
     onMount(() => {
-        citySearchQuery = $currentUser?.location?.name ?? "";
-        selectedLanguage = $currentUser?.language || "en";
+        citySearchQuery = settings?.location?.name ?? "";
+        selectedLanguage = settings?.language || "en";
+        selectedMapFocus = settings?.mapFocus ?? "trails";
     });
 
     async function searchCities(q: string) {
@@ -67,8 +78,8 @@
 
     async function handleSearchClick(item: SearchItem) {
         citySearchQuery = item.text;
-        await users_update({
-            id: $currentUser!.id,
+        await settings_update({
+            id: settings?.id!,
             location: {
                 name: item.value.name,
                 lat: item.value.lat,
@@ -90,8 +101,8 @@
     }
 
     async function handleUnitSelection(e: RadioItem) {
-        await users_update({
-            id: $currentUser!.id,
+        await settings_update({
+            id: settings!.id,
             unit: e.value as "imperial" | "metric",
         });
     }
@@ -100,9 +111,16 @@
         value: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt",
     ) {
         locale.set(value);
-        await users_update({
-            id: $currentUser!.id,
+        await settings_update({
+            id: settings!.id,
             language: value,
+        });
+    }
+
+    async function handleMapFocusSelection(value: "trails" | "location") {
+        await settings_update({
+            id: settings!.id,
+            mapFocus: value,
         });
     }
 
@@ -156,17 +174,6 @@
         </div>
         <div class="space-y-6 rounded-xl p-4">
             <h3 class="text-2xl font-semibold">{$_("settings")}</h3>
-
-            <div>
-                <h5 class="font-medium mb-1">{$_("default-location")}</h5>
-                <Search
-                    items={searchDropdownItems}
-                    placeholder="{$_('search-cities')}..."
-                    bind:value={citySearchQuery}
-                    on:update={(e) => searchCities(e.detail)}
-                    on:click={(e) => handleSearchClick(e.detail)}
-                ></Search>
-            </div>
             <div>
                 <h5 class="font-medium mb-1">{$_("language")}</h5>
                 <Select
@@ -180,9 +187,29 @@
                 <RadioGroup
                     name="unit"
                     items={units}
-                    selected={$currentUser.unit == "metric" ? 0 : 1}
+                    selected={settings?.unit == "metric" ? 0 : 1}
                     on:change={(e) => handleUnitSelection(e.detail)}
                 ></RadioGroup>
+            </div>
+            <div>
+                <h5 class="font-medium mb-1">Focus map on</h5>
+
+                <Select
+                    items={mapFocus}
+                    bind:value={selectedMapFocus}
+                    on:change={(e) => handleMapFocusSelection(e.detail)}
+                ></Select>
+                {#if selectedMapFocus == "location"}
+                    <div class="mt-3">
+                        <Search
+                            items={searchDropdownItems}
+                            placeholder="{$_('search-cities')}..."
+                            bind:value={citySearchQuery}
+                            on:update={(e) => searchCities(e.detail)}
+                            on:click={(e) => handleSearchClick(e.detail)}
+                        ></Search>
+                    </div>
+                {/if}
             </div>
             <hr class="border-input-border" />
             <div class="space-y-4">
