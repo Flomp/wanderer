@@ -1,3 +1,15 @@
+# v0.4.0
+## Features
+
+- Trails can now be printed to PDF. Select "Print" from the menu when viewing a trail.
+- Trails can now have a date.
+- You can now comment on trails
+- Adds a setting to focus the map on all trails instead of a specific location
+
+## Bug fixes
+- fixed a bug that would show a wrong date for summit logs for certain time zones (now really)
+- fixed a bug that prevented waypoints from showing up in public trails
+
 # v0.3.2
 ## Bug fixes
 
