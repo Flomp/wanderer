@@ -62,11 +62,15 @@ export async function gpx2trail(gpx: string) {
 
                 if (startTime && endTime) {
                     totalDuration += endTime.getTime() - startTime.getTime();
+                    if (!trail.date) {
+                        trail.date = startTime.toISOString()
+                            .substring(0, 10);
+                    }
                 }
             }
-            
+
             const pointLength = points.length
-            for (let i = 1; i < pointLength; i++) {                
+            for (let i = 1; i < pointLength; i++) {
                 const elevation = parseFloat(points[i].querySelector('ele')?.textContent || '0')
                 const previousElevation = parseFloat(points[i - 1].querySelector('ele')?.textContent || '0')
                 const elevationDiff = elevation - previousElevation;
