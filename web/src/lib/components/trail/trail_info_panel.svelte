@@ -167,6 +167,19 @@
                     <h4 class="text-4xl font-bold">
                         {trail.name}
                     </h4>
+                    {#if trail.date}
+                        <h5 class="text-sm">
+                            {new Date(trail.date).toLocaleDateString(
+                                undefined,
+                                {
+                                    month: "long",
+                                    day: "2-digit",
+                                    year: "numeric",
+                                    timeZone: "UTC",
+                                },
+                            )}
+                        </h5>
+                    {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
                         {#if trail.location}
                             <h3 class="text-lg">

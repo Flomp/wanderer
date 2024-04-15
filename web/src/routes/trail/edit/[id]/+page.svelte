@@ -269,7 +269,7 @@
                             .get_start_time()
                             .toISOString()
                             .substring(0, 10);
-                    } else if(!$form.date) {                       
+                    } else if (!$form.date) {
                         $form.date = new Date().toISOString().substring(0, 10);
                     }
 
@@ -419,7 +419,7 @@
         e: CustomEvent<{ text: string; value: string }>,
     ) {
         if (e.detail.value === "edit") {
-            summitLog.set(currentSummitLog);            
+            summitLog.set(currentSummitLog);
             openSummitLogModal();
         } else if (e.detail.value === "delete") {
             $form.expand.summit_logs.splice(index, 1);
@@ -646,11 +646,7 @@
                                     alt="avatar"
                                 />
                             {:else}
-                                <div
-                                    class="flex w-4 aspect-square shrink-0 items-center justify-center"
-                                >
-                                    <i class="fa fa-table-list text-5xl"></i>
-                                </div>
+                                <i class="fa fa-table-list text-2xl"></i>
                             {/if}
                             <span class="text-sm">{list.name}</span>
                         </div>
