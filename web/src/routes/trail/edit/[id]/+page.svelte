@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";
@@ -9,6 +8,7 @@
     import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
+    import MapWithElevation from "$lib/components/trail/map_with_elevation.svelte";
     import PhotoPicker from "$lib/components/trail/photo_picker.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
@@ -37,14 +37,11 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromKML, fromTCX } from "$lib/util/gpx_util";
+    import { fromKML, fromTCX, gpx2trail } from "$lib/util/gpx_util";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
-    import "$lib/vendor/leaflet-elevation/src/index.css";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
-    import type { GPX, Icon, LeafletEvent, Map } from "leaflet";
-    import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
-    import "leaflet/dist/leaflet.css";
+    import type { Map } from "leaflet";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { array, number, object, string } from "yup";
@@ -53,8 +50,6 @@
 
     let L: any;
     let map: Map;
-
-    let gpxLayer: GPX;
 
     let openWaypointModal: () => void;
     let openSummitLogModal: () => void;
@@ -157,128 +152,8 @@
 
     onMount(async () => {
         L = (await import("leaflet")).default;
-        await import("leaflet-gpx");
-        await import("leaflet.awesome-markers");
-
-        map = L.map("map").setView([0, 0], 2);
-        map.attributionControl.setPrefix(false);
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: "© OpenStreetMap contributors",
-        }).addTo(map);
-
-        if (
-            data.trail.expand.gpx_data &&
-            data.trail.expand.gpx_data.length > 0
-        ) {
-            addGPXLayer(data.trail.expand.gpx_data, false);
-        }
-
-        if (data.trail.expand.waypoints?.length > 0) {
-            for (const waypoint of data.trail.expand.waypoints) {
-                const marker = createMarkerFromWaypoint(
-                    L,
-                    waypoint,
-                    (event) => {
-                        var marker = event.target;
-                        var position = marker.getLatLng();
-                        const editableWaypoint = $form.expand.waypoints.find(
-                            (w) => w.id == waypoint.id,
-                        );
-                        editableWaypoint!.lat = position.lat;
-                        editableWaypoint!.lon = position.lng;
-                        $form.expand.waypoints = [...$form.expand.waypoints];
-                    },
-                );
-                marker.addTo(map);
-            }
-        }
+        await import("leaflet.awesome-markers");     
     });
-
-    function addGPXLayer(gpx: string, addWaypoints: boolean = true) {
-        return new Promise<void>(function (resolve, reject) {
-            gpxLayer?.remove();
-            gpxLayer = new L.GPX(gpx, {
-                async: true,
-                polyline_options: {
-                    className: "lightblue-theme elevation-polyline",
-                    opacity: 0.75,
-                    weight: 5,
-                },
-                gpx_options: {
-                    parseElements: [
-                        "track",
-                        "route",
-                        ...(addWaypoints ? ["waypoint"] : []),
-                    ],
-                },
-                marker_options: {
-                    wptIcons: {
-                        "": L.AwesomeMarkers.icon({
-                            icon: "circle",
-                            prefix: "fa",
-                            markerColor: "cadetblue",
-                            iconColor: "white",
-                        }) as Icon,
-                    },
-                    startIcon: L.AwesomeMarkers.icon({
-                        icon: "circle-half-stroke",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
-                    endIcon: L.AwesomeMarkers.icon({
-                        icon: "flag-checkered",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
-                    startIconUrl: "",
-                    endIconUrl: "",
-                    shadowUrl: "",
-                },
-            })
-                .on("addpoint", function (e: any) {
-                    if (e.point_type === "start") {
-                        e.point.setZIndexOffset(1000);
-                        $form.lat = e.point._latlng.lat;
-                        $form.lon = e.point._latlng.lng;
-                    } else if (e.point_type === "waypoint") {
-                        const waypoint = new Waypoint(
-                            e.point._latlng.lat,
-                            e.point._latlng.lng,
-                            { name: e.point.options.title, marker: e.point },
-                        );
-                        $form.expand.waypoints.push(waypoint);
-                    }
-                })
-                .on("loaded", function (e: LeafletEvent) {
-                    map.fitBounds(e.target.getBounds());
-                    if (!$form.id) {
-                        $form.name = e.target._info.name;
-                    }
-                    $form.distance = Math.round(e.target.get_distance());
-                    $form.elevation_gain = Math.round(
-                        e.target.get_elevation_gain(),
-                    );
-                    $form.duration = Math.round(
-                        e.target.get_total_time() / 1000 / 60,
-                    );
-                    if ($form.duration && !$form.date) {
-                        $form.date = e.target
-                            .get_start_time()
-                            .toISOString()
-                            .substring(0, 10);
-                    } else if (!$form.date) {
-                        $form.date = new Date().toISOString().substring(0, 10);
-                    }
-
-                    resolve();
-                })
-                .on("error", reject)
-                .addTo(map);
-        });
-    }
 
     function openFileBrowser() {
         document.getElementById("fileInput")!.click();
@@ -314,8 +189,11 @@
                 gpxFile = selectedFile;
             }
             try {
-                await addGPXLayer(gpxData);
+                $form = await gpx2trail(gpxData);
+                $form.expand.gpx_data = gpxData;
             } catch (e) {
+                console.log(e);
+
                 show_toast({
                     icon: "close",
                     type: "error",
@@ -671,7 +549,7 @@
             {loading}>{$_("save-trail")}</Button
         >
     </form>
-    <div class="rounded-xl" id="map"></div>
+    <MapWithElevation trail={$form} bind:map></MapWithElevation>
 </main>
 <WaypointModal
     bind:openModal={openWaypointModal}

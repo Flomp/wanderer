@@ -7,7 +7,6 @@ import { isRouteProtected } from '$lib/util/authorization_util'
 import { redirect, type Handle } from '@sveltejs/kit'
 import { MeiliSearch } from 'meilisearch'
 import { locale } from 'svelte-i18n'
-import { get } from 'svelte/store'
 
 export const handle: Handle = async ({ event, resolve }) => {
   // load the store data from the request cookie string

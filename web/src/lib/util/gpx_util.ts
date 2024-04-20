@@ -2,6 +2,7 @@ import { Trail } from "$lib/models/trail";
 import { Waypoint } from "$lib/models/waypoint";
 import { kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON"
 import GeoJsonToGpx from "$lib/vendor/geoJSONToGPX"
+import { browser } from "$app/environment";
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371; // Radius of the Earth in km
@@ -17,8 +18,15 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 export async function gpx2trail(gpx: string) {
-    const JSDOM = (await import("jsdom")).JSDOM
-    const xml = new JSDOM(gpx).window.document
+    let xml;
+    if (browser) {       
+        const parser = new DOMParser();
+        xml = parser.parseFromString(gpx, "application/xml")
+    } else {        
+        const JSDOM = (await import("jsdom")).JSDOM
+        xml = new JSDOM(gpx).window.document
+    }
+
     const trail = new Trail("");
 
     let name = xml.getElementsByTagName('name');

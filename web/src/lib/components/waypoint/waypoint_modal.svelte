@@ -20,8 +20,9 @@
     const { form, errors, handleChange, handleSubmit } = createForm<Waypoint>({
         initialValues: $waypoint,
         validationSchema: waypointSchema,
-        onSubmit: async (submittedWaypoint) => {
-            dispatch("save", submittedWaypoint);
+        onSubmit: async (submittedWaypoint) => {           
+            dispatch("save", submittedWaypoint);        
+                
             closeModal!();
         },
     });

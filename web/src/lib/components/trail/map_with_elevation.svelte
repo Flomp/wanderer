@@ -2,11 +2,14 @@
     import { page } from "$app/stores";
     import type { Trail } from "$lib/models/trail";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
+    import "$lib/vendor/leaflet-elevation/src/index.css";
     import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
     import type { Map, Marker } from "leaflet";
+    import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
+    import "leaflet/dist/leaflet.css";
     import { createEventDispatcher, onMount } from "svelte";
 
-    export let trail: Trail;
+    export let trail: Trail | null;
     export let markers: Marker[] = [];
     export let map: Map | null = null;
     export let options = {};
@@ -17,7 +20,8 @@
     let L: any;
     let controlElevation: any;
 
-    $: if (trail.expand.gpx_data && controlElevation) {
+    $: if (trail?.expand.gpx_data && controlElevation) { 
+        controlElevation.clear();       
         controlElevation.load(trail.expand.gpx_data);
     }
 
@@ -30,8 +34,8 @@
         const AutoGraticule = (await import("$lib/vendor/leaflet-graticule/leaflet-auto-graticule")).default;
 
         map = L.map("map", { preferCanvas: true }).setView(
-            [trail.lat ?? 0, trail.lon ?? 0],
-            14,
+            [trail?.lat ?? 0, trail?.lon ?? 0],
+            3,
         );
         map!.attributionControl.setPrefix(false);
 
@@ -105,7 +109,7 @@
 
         controlElevation = L.control.elevation(elevation_options).addTo(map);
 
-        for (const waypoint of trail.expand.waypoints) {
+        for (const waypoint of trail?.expand.waypoints ?? []) {
             const marker = createMarkerFromWaypoint(L, waypoint);
             marker.addTo(map!);
             markers.push(marker);

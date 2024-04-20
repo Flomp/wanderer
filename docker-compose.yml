@@ -56,6 +56,7 @@ services:
       UPLOAD_FOLDER: /app/uploads
       UPLOAD_USER:
       UPLOAD_PASSWORD:
+      PUBLIC_VALHALLA_URL: http://localhost:8002
     volumes:
       - ./data/uploads:/app/uploads
     ports:
@@ -63,6 +64,20 @@ services:
     networks:
       - wanderer
     restart: unless-stopped
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./data/valhalla:/custom_files
+    environment:
+      - tile_urls=https://download.geofabrik.de/europe/germany-latest.osm.pbf
+      - use_tiles_ignore_pbf=True
+      - force_rebuild=False
+      - force_rebuild_elevation=False
+      - build_elevation=True
+      - build_admins=True
+      - build_time_zones=True
 
 networks:
   wanderer:
