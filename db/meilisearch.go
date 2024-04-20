@@ -22,7 +22,8 @@ func indexRecord(r *models.Record, client *meilisearch.Client) error {
 			"difficulty":     r.Get("difficulty"),
 			"category":       r.Get("category"),
 			"completed":      len(r.GetStringSlice("summit_logs")) > 0,
-			"created":        r.GetDateTime("created"),
+			"date":           r.GetDateTime("date").Time().Unix(),
+			"created":        r.GetDateTime("created").Time().Unix(),
 			"public":         r.GetBool("public"),
 			"_geo": map[string]float64{
 				"lat": r.GetFloat("lat"),

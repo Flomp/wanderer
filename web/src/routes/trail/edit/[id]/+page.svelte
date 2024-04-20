@@ -471,7 +471,7 @@
             type="file"
             name="gpx"
             id="fileInput"
-            accept=".gpx,.kml,.tcx"
+            accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML"
             style="display: none;"
             on:change={handleFileSelection}
         />

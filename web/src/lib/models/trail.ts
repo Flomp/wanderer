@@ -101,6 +101,8 @@ interface TrailFilter {
     elevationGainMin: number;
     elevationGainMax: number;
     elevationGainLimit: number;
+    startDate?: string;
+    endDate?: string;
     completed?: boolean;
     sort: "name" | "distance" | "elevation_gain" | "created";
     sortOrder: "+" | "-"

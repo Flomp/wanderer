@@ -10,9 +10,9 @@
     import type { RadioItem } from "../base/radio_group.svelte";
     import RadioGroup from "../base/radio_group.svelte";
     import Search, { type SearchItem } from "../base/search.svelte";
-    import Slider from "../base/slider.svelte";
     import type { SelectItem } from "../base/select.svelte";
-    import { page } from "$app/stores";
+    import Slider from "../base/slider.svelte";
+    import Datepicker from "../base/datepicker.svelte";
 
     export let categories: Category[];
     export let filterExpanded: boolean = true;
@@ -238,6 +238,23 @@
                         : ""}</span
                 >
             </div>
+            <hr class="my-4 border-separator" />
+
+            <div class="space-y-2">
+                <Datepicker
+                    name="startDate"
+                    label="After"
+                    bind:value={filter.startDate}
+                    on:change={update}
+                ></Datepicker>
+                <Datepicker
+                    name="endDate"
+                    label="Before"
+                    bind:value={filter.endDate}
+                    on:change={update}
+                ></Datepicker>
+            </div>
+
             <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">{$_("completion-status")}</p>
             <RadioGroup

@@ -34,30 +34,8 @@ export async function trails_index(data: { perPage: number, random?: boolean, f:
 }
 
 export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    let filterText: string = `distance >= ${filter.distanceMin} AND elevation_gain >= ${filter.elevationGainMin}`
+    let filterText: string = buildFilterText(filter, true);
 
-    if (filter.distanceMax < filter.distanceLimit) {
-        filterText += ` AND distance <= ${filter.distanceMax}`
-    }
-
-    if (filter.elevationGainMax < filter.elevationGainLimit) {
-        filterText += ` AND elevation_gain <= ${filter.elevationGainMax}`
-    }
-
-    filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
-
-    if (filter.category.length > 0) {
-        filterText += ` AND category IN [${filter.category.join(",")}]`;
-    }
-    if (filter.completed !== undefined) {
-        filterText += ` AND completed = ${filter.completed}`;
-    }
-    if (filter.near.lat && filter.near.lon) {
-        filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
-    }
-    if (filter.near.lat && filter.near.lon) {
-        filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
-    }
     let r = await f("/api/v1/search/trails", {
         method: "POST",
         body: JSON.stringify({ q: filter.q, options: { filter: filterText, hitsPerPage: 21, page: page } }),
@@ -98,24 +76,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     let filterText: string = "";
 
     if (filter) {
-        filterText += `distance >= ${filter.distanceMin} AND elevation_gain >= ${filter.elevationGainMin}`;
-
-        if (filter.distanceMax < filter.distanceLimit) {
-            filterText += ` AND distance <= ${filter.distanceMax}`
-        }
-
-        if (filter.elevationGainMax < filter.elevationGainLimit) {
-            filterText += ` AND elevation_gain <= ${filter.elevationGainMax}`
-        }
-
-        filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
-
-        if (filter.category.length > 0) {
-            filterText += ` AND category IN [${filter.category.join(",")}]`;
-        }
-        if (filter.completed !== undefined) {
-            filterText += ` AND completed = ${filter.completed}`;
-        }
+        filterText = buildFilterText(filter, false);
     }
 
     let r = await fetch("/api/v1/search/trails", {
@@ -375,7 +336,7 @@ export async function trails_get_bounding_box(f: (url: RequestInfo | URL, config
         method: 'GET',
     })
 
-    if (r.ok) {        
+    if (r.ok) {
         return await r.json();
     } else {
         throw new ClientResponseError(await r.json())
@@ -391,6 +352,46 @@ export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?
     const gpxData = await response.text();
 
     return gpxData
+}
+
+function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
+    let filterText: string = "";
+
+    filterText += `distance >= ${filter.distanceMin} AND elevation_gain >= ${filter.elevationGainMin}`
+
+    if (filter.distanceMax < filter.distanceLimit) {
+        filterText += ` AND distance <= ${filter.distanceMax}`
+    }
+
+    if (filter.elevationGainMax < filter.elevationGainLimit) {
+        filterText += ` AND elevation_gain <= ${filter.elevationGainMax}`
+    }
+
+    filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
+
+    if(filter.startDate) {
+        filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`
+    }
+
+    if(filter.endDate) {
+        filterText += ` AND date <= ${new Date(filter.endDate).getTime() / 1000}`
+    }
+
+    if (filter.category.length > 0) {
+        filterText += ` AND category IN [${filter.category.join(",")}]`;
+    }
+    if (filter.completed !== undefined) {
+        filterText += ` AND completed = ${filter.completed}`;
+    }
+
+    if (filter.near.lat && filter.near.lon && includeGeo) {
+        filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
+    }
+    if (filter.near.lat && filter.near.lon && includeGeo) {
+        filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
+    }
+
+    return filterText
 }
 
 function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray: T[]) {
