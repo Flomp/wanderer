@@ -38,7 +38,7 @@
 
     const tabs = [
         $_("description"),
-        $_("waypoints"),
+        $_("waypoints", { values: { n: 2 } }),
         $_("photos"),
         $_("summit-book"),
         ...($currentUser ? [$_("comment", { values: { n: 2 } })] : []),

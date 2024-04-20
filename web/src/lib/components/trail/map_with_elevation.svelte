@@ -14,14 +14,15 @@
     export let map: Map | null = null;
     export let options = {};
     export let graticule: AutoGraticule | null = null;
+    export let crosshair: boolean = false;
 
     const dispatch = createEventDispatcher();
 
     let L: any;
     let controlElevation: any;
 
-    $: if (trail?.expand.gpx_data && controlElevation) { 
-        controlElevation.clear();       
+    $: if (trail?.expand.gpx_data !== undefined && controlElevation) {
+        controlElevation.clear();
         controlElevation.load(trail.expand.gpx_data);
     }
 
@@ -31,7 +32,9 @@
         await import("leaflet.awesome-markers");
         //@ts-ignore
         await import("$lib/vendor/leaflet-elevation/src/index.js");
-        const AutoGraticule = (await import("$lib/vendor/leaflet-graticule/leaflet-auto-graticule")).default;
+        const AutoGraticule = (
+            await import("$lib/vendor/leaflet-graticule/leaflet-auto-graticule")
+        ).default;
 
         map = L.map("map", { preferCanvas: true }).setView(
             [trail?.lat ?? 0, trail?.lon ?? 0],
@@ -41,6 +44,10 @@
 
         map!.on("zoomend", function () {
             dispatch("zoomend", map);
+        });
+
+        map!.on("click", function (e) {
+            dispatch("click", e);
         });
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -99,7 +106,7 @@
                     iconColor: "white",
                 }),
             },
-            graticule: false
+            graticule: false,
         };
 
         const elevation_options = Object.assign(
@@ -115,16 +122,21 @@
             markers.push(marker);
         }
 
-        if(elevation_options.graticule) {
+        if (elevation_options.graticule) {
             graticule = new AutoGraticule();
             graticule.addTo(map!);
         }
-       
     });
 </script>
 
 <div id="map-container" class="flex flex-col">
-    <div id="map" class="rounded-xl z-0 basis-full"></div>
+    <div
+        id="map"
+        class="rounded-xl z-0 basis-full"
+        style={crosshair
+            ? "position: relative; outline-style: none;cursor: crosshair !important"
+            : "position: relative; outline-style: none;"}
+    ></div>
     <div class="flex items-center justify-between">
         <slot />
         <div class="basis-[300px] flex-grow flex-shrink-0" id="elevation"></div>

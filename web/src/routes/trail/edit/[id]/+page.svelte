@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { PUBLIC_VALHALLA_URL } from "$env/static/public";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";
@@ -30,6 +31,11 @@
         trails_create,
         trails_update,
     } from "$lib/stores/trail_store";
+    import {
+        calculateRouteBetween,
+        clearRoute,
+        route,
+    } from "$lib/stores/valhalla_store";
     import { waypoint } from "$lib/stores/waypoint_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
@@ -41,7 +47,7 @@
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
-    import type { Map } from "leaflet";
+    import type { LatLng, LeafletMouseEvent, Map } from "leaflet";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { array, number, object, string } from "yup";
@@ -62,6 +68,8 @@
     let photoFiles: File[] = [];
 
     let gpxFile: File | Blob | null = null;
+
+    let drawingActive = false;
 
     const trailSchema = object<Trail>({
         id: string().optional(),
@@ -152,7 +160,7 @@
 
     onMount(async () => {
         L = (await import("leaflet")).default;
-        await import("leaflet.awesome-markers");     
+        await import("leaflet.awesome-markers");
     });
 
     function openFileBrowser() {
@@ -327,6 +335,48 @@
             });
         }
     }
+
+    function startDrawing() {
+        $form.expand.gpx_data = "";
+        clearRoute();
+        drawingActive = true;
+    }
+
+    function stopDrawing() {
+        drawingActive = false;
+    }
+
+    async function handleMapClick(e: LeafletMouseEvent) {
+        if (!drawingActive) {
+            return;
+        }
+        const waypointCount = $form.expand.waypoints.length;
+        const wp = new Waypoint(e.latlng.lat, e.latlng.lng, {
+            name: `${$_("waypoints", { values: { n: 1 } })} ${waypointCount + 1}`,
+            icon: waypointCount ? undefined : "circle-half-stroke",
+        });
+        saveWaypoint(wp);
+
+        if (waypointCount >= 1) {
+            const previousWaypoint = $form.expand.waypoints[waypointCount - 1];
+            try {
+                await calculateRouteBetween(
+                    previousWaypoint.lat,
+                    previousWaypoint.lon,
+                    e.latlng.lat,
+                    e.latlng.lng,
+                );
+
+                $form.expand.gpx_data = route.toString();
+            } catch (e) {
+                show_toast({
+                    text: "Error calculating route",
+                    icon: "close",
+                    type: "error",
+                });
+            }
+        }
+    }
 </script>
 
 <svelte:head>
@@ -342,9 +392,21 @@
         on:submit={handleSubmit}
     >
         <h3 class="text-xl font-semibold">{$_("pick-a-trail")}</h3>
-        <button class="btn-primary" type="button" on:click={openFileBrowser}
-            >{$_("upload-file")}</button
+        <Button
+            primary={true}
+            type="button"
+            disabled={drawingActive}
+            on:click={openFileBrowser}>{$_("upload-file")}</Button
         >
+        {#if PUBLIC_VALHALLA_URL}
+            <button
+                class="btn-primary"
+                type="button"
+                on:click={drawingActive ? stopDrawing : startDrawing}
+            >
+                {drawingActive ? $_("stop-drawing") : $_("draw-on-map")}</button
+            >
+        {/if}
         <input
             type="file"
             name="gpx"
@@ -459,7 +521,9 @@
         <Toggle name="public" label={$_("public")} bind:value={$form.public}
         ></Toggle>
         <hr class="border-separator" />
-        <h3 class="text-xl font-semibold">{$_("waypoints")}</h3>
+        <h3 class="text-xl font-semibold">
+            {$_("waypoints", { values: { n: 2 } })}
+        </h3>
         <ul>
             {#each $form.expand.waypoints ?? [] as waypoint, i}
                 <li on:mouseenter={() => openMarkerPopup(waypoint)}>
@@ -549,7 +613,13 @@
             {loading}>{$_("save-trail")}</Button
         >
     </form>
-    <MapWithElevation trail={$form} bind:map></MapWithElevation>
+    <MapWithElevation
+        trail={$form}
+        crosshair={drawingActive}
+        options={{ hotline: false }}
+        bind:map
+        on:click={(e) => handleMapClick(e.detail)}
+    ></MapWithElevation>
 </main>
 <WaypointModal
     bind:openModal={openWaypointModal}
@@ -563,11 +633,11 @@
 ></ListSelectModal>
 
 <style>
-    #map {
+    :global(#map) {
         height: calc(400px);
     }
     @media only screen and (min-width: 768px) {
-        #map,
+        :global(#map),
         form {
             height: calc(100vh - 124px);
         }

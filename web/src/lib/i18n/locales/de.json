@@ -40,6 +40,7 @@
   "distance": "Distanz",
   "documentation": "Dokumentation",
   "download-gpx": "GPX herunterladen",
+  "draw-on-map": "",
   "dutch": "Niederländisch",
   "easy": "Einfach",
   "edit": "Bearbeiten",
@@ -128,6 +129,7 @@
   "show-on-map": "Auf der Karte anzeigen",
   "slogan": "Speichere deine Abenteuer!",
   "sort": "Sortieren",
+  "stop-drawing": "",
   "summit-book": "Gipfelbuch",
   "text": "Text",
   "trail": "{n, plural, =1 {Route} other {Routen}}",
@@ -136,7 +138,7 @@
   "upload-file": "Datei hochladen",
   "upload-gpx": "GPX hochladen",
   "username": "Nutzername",
-  "waypoints": "Wegpunkte",
+  "waypoints": "{n, plural, =1 {Wegpunkt} other {Wegpunkte}}",
   "welcome_to": "Willkommen bei",
   "wrong-username-or-password": "Falscher Nutzername oder falsches Passwort"
 }

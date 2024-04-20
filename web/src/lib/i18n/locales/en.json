@@ -40,6 +40,7 @@
   "distance": "Distance",
   "documentation": "Documentation",
   "download-gpx": "Download GPX",
+  "draw-on-map": "Draw on map",
   "dutch": "Dutch",
   "easy": "Easy",
   "edit": "Edit",
@@ -128,6 +129,7 @@
   "show-on-map": "Show on map",
   "slogan": "Save your adventures!",
   "sort": "Sort",
+  "stop-drawing": "Stop drawing",
   "summit-book": "Summit Book",
   "text": "Text",
   "trail": "{n, plural, =1 {Trail} other {Trails}}",
@@ -136,7 +138,7 @@
   "upload-file": "Upload file",
   "upload-gpx": "Upload GPX",
   "username": "Username",
-  "waypoints": "Waypoints",
+  "waypoints": "{n, plural, =1 {Waypoint} other {Waypoints}}",
   "welcome_to": "Welcome to",
   "wrong-username-or-password": "Wrong username or password"
 }
