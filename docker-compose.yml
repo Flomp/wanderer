@@ -71,7 +71,7 @@ services:
     volumes:
       - ./data/valhalla:/custom_files
     environment:
-      - tile_urls=https://download.geofabrik.de/europe/germany-latest.osm.pbf https://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf
+      - tile_urls=https://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf
       - use_tiles_ignore_pbf=True
       - force_rebuild=False
       - force_rebuild_elevation=False

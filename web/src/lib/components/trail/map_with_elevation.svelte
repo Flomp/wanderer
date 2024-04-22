@@ -38,7 +38,7 @@
 
         map = L.map("map", { preferCanvas: true }).setView(
             [trail?.lat ?? 0, trail?.lon ?? 0],
-            3,
+            16,
         );
         map!.attributionControl.setPrefix(false);
 

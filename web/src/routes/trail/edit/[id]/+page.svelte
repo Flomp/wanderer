@@ -32,8 +32,11 @@
         trails_update,
     } from "$lib/stores/trail_store";
     import {
+        appendToRoute,
         calculateRouteBetween,
         clearRoute,
+        deleteFromRoute,
+        editRoute,
         route,
     } from "$lib/stores/valhalla_store";
     import { waypoint } from "$lib/stores/waypoint_store";
@@ -47,7 +50,7 @@
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
-    import type { LatLng, LeafletMouseEvent, Map } from "leaflet";
+    import type { LeafletMouseEvent, Map } from "leaflet";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { array, number, object, string } from "yup";
@@ -161,6 +164,9 @@
     onMount(async () => {
         L = (await import("leaflet")).default;
         await import("leaflet.awesome-markers");
+
+        $form.lat = 47.74604748696788;
+        $form.lon = 11.588988304138185;
     });
 
     function openFileBrowser() {
@@ -242,9 +248,7 @@
             openWaypointModal();
         } else if (e.detail.value === "delete") {
             currentWaypoint.marker?.remove();
-            $form.expand.waypoints.splice(index, 1);
-            $form.waypoints.splice(index, 1);
-            $form.expand.waypoints = $form.expand.waypoints;
+            deleteWaypoint(index);
         }
     }
 
@@ -252,6 +256,34 @@
         const mapCenter = map.getCenter();
         waypoint.set(new Waypoint(mapCenter.lat, mapCenter.lng));
         openWaypointModal();
+    }
+
+    function deleteWaypoint(index: number) {
+        $form.expand.waypoints.splice(index, 1);
+        $form.waypoints.splice(index, 1);
+        $form.expand.waypoints = $form.expand.waypoints;
+
+        if (drawingActive) {
+            if (index == 0) {
+                deleteFromRoute(index);
+                $form.expand.gpx_data = route.toString();
+                const nextWaypoint = $form.expand.waypoints[index];
+                nextWaypoint.icon = "circle-half-stroke";
+                saveWaypoint(nextWaypoint);
+            } else if (index == $form.expand.waypoints.length) {
+                deleteFromRoute(index - 1);
+                $form.expand.gpx_data = route.toString();
+
+                if ($form.expand.waypoints.length > 1) {
+                    const previousWaypoint = $form.expand.waypoints[index - 1];
+                    previousWaypoint.icon = "flag-checkered";
+                    saveWaypoint(previousWaypoint);
+                }
+            } else {
+                deleteFromRoute(index - 1);
+                recalculateRoute(index);
+            }
+        }
     }
 
     function saveWaypoint(savedWaypoint: Waypoint) {
@@ -270,12 +302,18 @@
         const marker = createMarkerFromWaypoint(L, savedWaypoint, (event) => {
             var marker = event.target;
             var position = marker.getLatLng();
-            const editableWaypoint = $form.expand.waypoints.find(
+            const editableWaypointIndex = $form.expand.waypoints.findIndex(
                 (w) => w.id == savedWaypoint.id,
             );
+            const editableWaypoint =
+                $form.expand.waypoints[editableWaypointIndex];
             editableWaypoint!.lat = position.lat;
             editableWaypoint!.lon = position.lng;
             $form.expand.waypoints = [...$form.expand.waypoints];
+
+            if (drawingActive) {
+                recalculateRoute(editableWaypointIndex);
+            }
         });
 
         marker.addTo(map);
@@ -327,7 +365,6 @@
             await lists_index();
         } catch (e) {
             console.error(e);
-
             show_toast({
                 type: "error",
                 icon: "close",
@@ -353,22 +390,29 @@
         const waypointCount = $form.expand.waypoints.length;
         const wp = new Waypoint(e.latlng.lat, e.latlng.lng, {
             name: `${$_("waypoints", { values: { n: 1 } })} ${waypointCount + 1}`,
-            icon: waypointCount ? undefined : "circle-half-stroke",
+            icon: waypointCount ? "flag-checkered" : "circle-half-stroke",
         });
-        saveWaypoint(wp);
-
-        if (waypointCount >= 1) {
+        if (waypointCount == 0) {
+            saveWaypoint(wp);
+        } else {
             const previousWaypoint = $form.expand.waypoints[waypointCount - 1];
             try {
-                await calculateRouteBetween(
+                const routeWaypoints = await calculateRouteBetween(
                     previousWaypoint.lat,
                     previousWaypoint.lon,
                     e.latlng.lat,
                     e.latlng.lng,
                 );
+                appendToRoute(routeWaypoints);
+                saveWaypoint(wp);
 
+                if (waypointCount > 1) {
+                    previousWaypoint.icon = "circle";
+                    saveWaypoint(previousWaypoint);
+                }
                 $form.expand.gpx_data = route.toString();
             } catch (e) {
+                console.error(e);
                 show_toast({
                     text: "Error calculating route",
                     icon: "close",
@@ -376,6 +420,38 @@
                 });
             }
         }
+    }
+
+    async function recalculateRoute(waypointIndex: number) {
+        const waypoint = $form.expand.waypoints[waypointIndex];
+        let nextWaypoints;
+        let previousWaypoints;
+        if (waypointIndex < $form.expand.waypoints.length - 1) {
+            const nextWaypoint = $form.expand.waypoints[waypointIndex + 1];
+
+            nextWaypoints = await calculateRouteBetween(
+                waypoint.lat,
+                waypoint.lon,
+                nextWaypoint.lat,
+                nextWaypoint.lon,
+            );
+        }
+        if (waypointIndex > 0) {
+            const previousWaypoint = $form.expand.waypoints[waypointIndex - 1];
+            previousWaypoints = await calculateRouteBetween(
+                previousWaypoint.lat,
+                previousWaypoint.lon,
+                waypoint.lat,
+                waypoint.lon,
+            );
+        }
+        if (nextWaypoints) {
+            editRoute(waypointIndex, nextWaypoints);
+        }
+        if (previousWaypoints) {
+            editRoute(waypointIndex - 1, previousWaypoints);
+        }
+        $form.expand.gpx_data = route.toString();
     }
 </script>
 
@@ -616,7 +692,12 @@
     <MapWithElevation
         trail={$form}
         crosshair={drawingActive}
-        options={{ hotline: false }}
+        options={{
+            hotline: false,
+            autofitBounds: false,
+            trkStart: false,
+            trkEnd: false,
+        }}
         bind:map
         on:click={(e) => handleMapClick(e.detail)}
     ></MapWithElevation>

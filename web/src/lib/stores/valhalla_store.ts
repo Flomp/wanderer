@@ -1,13 +1,17 @@
-import { ValhallaRoute, type ValhallaResponse } from "$lib/models/valhalla";
+import GPX from "$lib/models/gpx/gpx";
+import type Track from "$lib/models/gpx/track";
+import TrackSegment from "$lib/models/gpx/track-segment";
+import Waypoint from "$lib/models/gpx/waypoint";
+import { type ValhallaResponse } from "$lib/models/valhalla";
 import { ClientResponseError } from "pocketbase";
 
 
-
-export const route: ValhallaRoute = new ValhallaRoute();
+const emtpyTrack: Track = { trkseg: [] }
+export let route: GPX = new GPX({ trk: [emtpyTrack] });
 
 
 export function clearRoute() {
-    route.geometry.coordinates = [];
+    route = new GPX({ trk: [emtpyTrack] });
 }
 
 export async function calculateRouteBetween(startLat: number, startLon: number, endLat: number, endLon: number) {
@@ -21,16 +25,30 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
         throw new ClientResponseError(await r.json())
     }
     const response: ValhallaResponse = await r.json();
+    const points = decodeShape(response.trip.legs[0].shape);
+    const waypoints = points.map((p) => new Waypoint({ $: { lat: p[0], lon: p[1] } }))
 
-    appendToRoute(response);
+    return waypoints
 }
 
-function appendToRoute(valhallaResponse: any) {
-    const routeGeometry = decodeShape(valhallaResponse.trip.legs[0].shape);
+export async function appendToRoute(waypoints: Waypoint[]) {
+    const segment = new TrackSegment({ trkpt: [] })
 
-    for (const point of routeGeometry) {
-        route.geometry.coordinates.push([point[1], point[0]])
+    for (const wpt of waypoints) {
+        segment.trkpt!.push(wpt)
     }
+    route.trk?.at(0)?.trkseg?.push(segment);
+}
+
+export async function editRoute(index: number, waypoints: Waypoint[]) {
+    const segment = route.trk?.at(0)?.trkseg?.at(index)
+    if (segment) {
+        segment.trkpt = waypoints
+    }
+}
+
+export function deleteFromRoute(index: number) {
+    route.trk?.at(0)?.trkseg?.splice(index, 1);
 }
 
 
