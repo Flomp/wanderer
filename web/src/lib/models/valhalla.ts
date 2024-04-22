@@ -1,4 +1,4 @@
-interface ValhallaResponse {
+interface ValhallaRouteResponse {
     trip: {
         legs: {
             shape: string;
@@ -6,4 +6,8 @@ interface ValhallaResponse {
     };
 }
 
-export { type ValhallaResponse }
+interface ValhallaHeightResponse {
+    height: number[];
+}
+
+export { type ValhallaRouteResponse, type ValhallaHeightResponse }

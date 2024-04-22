@@ -182,9 +182,8 @@
             return;
         }
 
-        $form.expand.waypoints = [];
-        $form.waypoints = [];
-
+        clearWaypoints();
+        clearRoute();
         var reader = new FileReader();
 
         reader.readAsText(selectedFile);
@@ -205,6 +204,10 @@
             try {
                 $form = await gpx2trail(gpxData);
                 $form.expand.gpx_data = gpxData;
+
+                for (const waypoint of $form.expand.waypoints) {
+                    saveWaypoint(waypoint);
+                }
             } catch (e) {
                 console.log(e);
 
@@ -232,6 +235,14 @@
 
             $form.location = closestCity.name;
         };
+    }
+
+    function clearWaypoints() {
+        for (const waypoint of $form.expand.waypoints) {
+            waypoint.marker?.remove();
+        }
+        $form.expand.waypoints = [];
+        $form.waypoints = [];
     }
 
     function openMarkerPopup(waypoint: Waypoint) {
@@ -266,13 +277,13 @@
         if (drawingActive) {
             if (index == 0) {
                 deleteFromRoute(index);
-                $form.expand.gpx_data = route.toString();
+                updateTrailWithRouteData();
                 const nextWaypoint = $form.expand.waypoints[index];
                 nextWaypoint.icon = "circle-half-stroke";
                 saveWaypoint(nextWaypoint);
             } else if (index == $form.expand.waypoints.length) {
                 deleteFromRoute(index - 1);
-                $form.expand.gpx_data = route.toString();
+                updateTrailWithRouteData();
 
                 if ($form.expand.waypoints.length > 1) {
                     const previousWaypoint = $form.expand.waypoints[index - 1];
@@ -296,7 +307,6 @@
             $form.expand.waypoints[editedWaypointIndex] = savedWaypoint;
         } else {
             savedWaypoint.id = cryptoRandomString({ length: 15 });
-
             $form.expand.waypoints = [...$form.expand.waypoints, savedWaypoint];
         }
         const marker = createMarkerFromWaypoint(L, savedWaypoint, (event) => {
@@ -374,9 +384,11 @@
     }
 
     function startDrawing() {
-        $form.expand.gpx_data = "";
-        clearRoute();
         drawingActive = true;
+        if (!route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.length) {
+            $form.expand.gpx_data = "";
+            clearWaypoints();
+        }
     }
 
     function stopDrawing() {
@@ -410,7 +422,7 @@
                     previousWaypoint.icon = "circle";
                     saveWaypoint(previousWaypoint);
                 }
-                $form.expand.gpx_data = route.toString();
+                updateTrailWithRouteData();
             } catch (e) {
                 console.error(e);
                 show_toast({
@@ -451,6 +463,14 @@
         if (previousWaypoints) {
             editRoute(waypointIndex - 1, previousWaypoints);
         }
+        updateTrailWithRouteData();
+    }
+
+    function updateTrailWithRouteData() {
+        const totals = route.getTotals();
+        $form.distance = totals.distance;
+        $form.duration = totals.duration;
+        $form.elevation_gain = totals.elevationGain;
         $form.expand.gpx_data = route.toString();
     }
 </script>
@@ -475,12 +495,19 @@
             on:click={openFileBrowser}>{$_("upload-file")}</Button
         >
         {#if PUBLIC_VALHALLA_URL}
+            <div class="flex gap-4 items-center w-full">
+                <hr class="basis-full border-input-border" />
+                <span class="text-gray-500 uppercase">{$_("or")}</span>
+                <hr class="basis-full border-input-border" />
+            </div>
             <button
                 class="btn-primary"
                 type="button"
                 on:click={drawingActive ? stopDrawing : startDrawing}
             >
-                {drawingActive ? $_("stop-drawing") : $_("draw-on-map")}</button
+                {drawingActive
+                    ? $_("stop-drawing")
+                    : $_("draw-a-route")}</button
             >
         {/if}
         <input
@@ -693,10 +720,11 @@
         trail={$form}
         crosshair={drawingActive}
         options={{
-            hotline: false,
+            hotline: true,
             autofitBounds: false,
             trkStart: false,
             trkEnd: false,
+            speed: false,
         }}
         bind:map
         on:click={(e) => handleMapClick(e.detail)}

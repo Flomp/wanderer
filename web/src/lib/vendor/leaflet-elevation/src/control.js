@@ -325,7 +325,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 					case 'LineString': return this._addGeoJSONData(geom.coordinates, d.properties);
 					case 'MultiLineString': return _.each(geom.coordinates, (coords, i) => this._addGeoJSONData(coords, d.properties, i));
 					case 'Point':
-					default: return console.warn('Unsopperted GeoJSON feature geometry type:' + geom.type);
+					default: return console.warn('Unsupported GeoJSON feature geometry type:' + geom.type);
 				}
 			}
 		}

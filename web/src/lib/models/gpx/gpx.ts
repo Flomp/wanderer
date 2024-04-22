@@ -1,9 +1,9 @@
 import * as xml2js from 'isomorphic-xml2js';
 import Metadata from './metadata';
-import Waypoint from './waypoint';
 import Route from './route';
 import Track from './track';
-import { removeEmpty, allDatesToISOString } from './utils';
+import { allDatesToISOString, calculateDistance, removeEmpty } from './utils';
+import Waypoint from './waypoint';
 
 const defaultAttributes = {
   version: '1.1',
@@ -72,9 +72,59 @@ export default class GPX {
     removeEmpty(this);
   }
 
+  getTotals() {
+    let totalElevationGain = 0;
+    let totalDuration = 0;
+    let totalDistance = 0;
+
+    for (const track of this.trk ?? []) {
+      for (const segment of track.trkseg ?? []) {
+        const points = segment.trkpt ?? [];
+
+        if (points.length >= 2) {
+          const startTime = points[0].time;
+          const endTime = points[points.length - 1].time
+
+          if (startTime && endTime) {
+            totalDuration += endTime.getTime() - startTime.getTime();
+          }
+        }
+
+        const pointLength = points.length
+        for (let i = 1; i < pointLength; i++) {
+          const prevPoint = points[i - 1];
+          const point = points[i];
+          const elevation = point.ele ?? 0
+          const previousElevation = prevPoint.ele ?? 0
+          const elevationDiff = elevation - previousElevation;
+          if (elevationDiff > 0) {
+            totalElevationGain += elevationDiff;
+          }
+
+          const distance = calculateDistance(
+            prevPoint.$.lat ?? 0,
+            prevPoint.$.lon ?? 0,
+            point.$.lat ?? 0,
+            point.$.lon ?? 0,
+          );
+          totalDistance += distance;
+        }
+      }
+    }
+
+    return { distance: totalDistance, elevationGain: totalElevationGain, duration: totalDuration }
+  }
+
   static parse(gpxString: string): Promise<GPX | Error> {
     return new Promise<GPX | Error>((resolve, reject) => xml2js.parseString(gpxString, {
-      explicitArray: false
+      explicitArray: false,
+      attrValueProcessors: [(str: string | number) => {
+        if (!isNaN(Number(str))) {
+          str = Number.isInteger(Number(str)) ? parseInt(String(str), 10) : parseFloat(String(str));
+        }
+        return str;
+      }
+      ]
     }, (err, xml) => {
       if (err) {
         reject(err);

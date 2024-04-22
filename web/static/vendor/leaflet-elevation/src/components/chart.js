@@ -531,7 +531,7 @@ export var Chart = L.Control.Elevation.Chart = L.Class.extend({
 				.attr("width", x2 - x1 )
 				.attr("height", this._height())
 				.attr('class', 'gap')
-				.attr('fill-opacity', '0.8')
+				.attr('fill-opacity', '0.0')
 				.attr("fill", 'black');  // hide = black (mask)
 		});
 	},

@@ -2,7 +2,7 @@ import GPX from "$lib/models/gpx/gpx";
 import type Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import Waypoint from "$lib/models/gpx/waypoint";
-import { type ValhallaResponse } from "$lib/models/valhalla";
+import { type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
 import { ClientResponseError } from "pocketbase";
 
 
@@ -20,13 +20,21 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
         "locations": [{ "lat": startLat, "lon": startLon }, { "lat": endLat, "lon": endLon }],
         "costing": "pedestrian", "costing_options": { "pedestrian": { "max_hiking_difficulty": 6, "use_ferry": 0 } }
     }
-    const r = await fetch("/api/v1/valhalla", { method: "POST", body: JSON.stringify(requestBody) })
+    let r = await fetch("/api/v1/valhalla/route", { method: "POST", body: JSON.stringify(requestBody) })
+
     if (!r.ok) {
         throw new ClientResponseError(await r.json())
     }
-    const response: ValhallaResponse = await r.json();
-    const points = decodeShape(response.trip.legs[0].shape);
-    const waypoints = points.map((p) => new Waypoint({ $: { lat: p[0], lon: p[1] } }))
+    const routeResponse: ValhallaRouteResponse = await r.json();
+    const shape = routeResponse.trip.legs[0].shape
+    r = await fetch("/api/v1/valhalla/height", { method: "POST", body: JSON.stringify({ encoded_polyline: shape }) })
+
+    if (!r.ok) {
+        throw new ClientResponseError(await r.json())
+    }
+    const heightResponse: ValhallaHeightResponse = await r.json()
+    const points = decodeShape(shape);
+    const waypoints = points.map((p, i) => new Waypoint({ $: { lat: p[0], lon: p[1] }, ele: heightResponse.height[i] }))
 
     return waypoints
 }
