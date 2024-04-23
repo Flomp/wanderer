@@ -7,13 +7,13 @@ import { ClientResponseError } from "pocketbase";
 export async function PUT(event: RequestEvent) {
     try {
         const data = await event.request.blob();
-        const gpx = await data.text();
-        if (!gpx.length) {
+        const gpxString = await data.text();
+        if (!gpxString.length) {
             throw new ClientResponseError({ status: 400, response: { message: "Empty file" } })
         }
         let trail: Trail;
         try {
-            trail = await gpx2trail(gpx);
+            trail = (await gpx2trail(gpxString)).trail;
         } catch (e: any) {
             throw new ClientResponseError({ status: 400, response: { message: "Invalid GPX file" } })
         }

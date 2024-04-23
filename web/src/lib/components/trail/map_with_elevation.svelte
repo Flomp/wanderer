@@ -21,9 +21,14 @@
     let L: any;
     let controlElevation: any;
 
-    $: if (trail?.expand.gpx_data !== undefined && controlElevation) {
+    $: gpxData = trail?.expand.gpx_data;
+    $: if (gpxData && controlElevation) {       
         controlElevation.clear();
-        controlElevation.load(trail.expand.gpx_data);
+        controlElevation.load(gpxData);
+    }
+
+    $: if(options) {        
+        controlElevation?.updateOptions(options)    
     }
 
     onMount(async () => {
@@ -38,7 +43,7 @@
 
         map = L.map("map", { preferCanvas: true }).setView(
             [trail?.lat ?? 0, trail?.lon ?? 0],
-            16,
+            3,
         );
         map!.attributionControl.setPrefix(false);
 
@@ -77,9 +82,9 @@
             ruler: false,
             legend: true,
             // Toggle "leaflet-almostover" integration
-            almostOver: true,
+            almostOver: false,
             // Toggle "leaflet-distance-markers" integration
-            distanceMarkers: false,
+            distanceMarkers: { lazy: false, distance: false, direction: true, offset: 500 },
             // Toggle "leaflet-edgescale" integration
             edgeScale: false,
             // Toggle "leaflet-hotline" integration
@@ -91,11 +96,14 @@
             wptLabels: false,
             preferCanvas: true,
             trkStart: {
+                interactive: false,
+                className: "hihi",
                 icon: L.AwesomeMarkers.icon({
                     icon: "circle-half-stroke",
                     prefix: "fa",
                     markerColor: "cadetblue",
                     iconColor: "white",
+                    className: "awesome-marker pointer-events-none"
                 }),
             },
             trkEnd: {
@@ -104,9 +112,11 @@
                     prefix: "fa",
                     markerColor: "cadetblue",
                     iconColor: "white",
+                    className: "awesome-marker pointer-events-none"
                 }),
             },
             graticule: false,
+            drawing: false
         };
 
         const elevation_options = Object.assign(

@@ -50,6 +50,8 @@ export var Options = {
 	time: true,
 	timeFactor: 3600,
 	timestamps: false,
+	showStartEnd: true,
+	mapTooltip: true,
 	trkStart: { className: 'start-marker', radius: 6, weight: 2, color: '#fff', fillColor: '#00d800', fillOpacity: 1, interactive: false },
 	trkEnd: { className: 'end-marker', radius: 6, weight: 2, color: '#fff', fillColor: '#ff0606', fillOpacity: 1, interactive: false },
 	waypoints: true,

@@ -2,16 +2,21 @@ import GPX from "$lib/models/gpx/gpx";
 import type Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import Waypoint from "$lib/models/gpx/waypoint";
-import { type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
+import { type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
 import { ClientResponseError } from "pocketbase";
 
 
 const emtpyTrack: Track = { trkseg: [] }
 export let route: GPX = new GPX({ trk: [emtpyTrack] });
-
+export let anchors: ValhallaAnchor[] = [];
 
 export function clearRoute() {
     route = new GPX({ trk: [emtpyTrack] });
+    anchors = [];
+}
+
+export function setRoute(newRoute: GPX) {
+    route = newRoute
 }
 
 export async function calculateRouteBetween(startLat: number, startLon: number, endLat: number, endLon: number) {

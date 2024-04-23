@@ -1,5 +1,5 @@
-import * as _ from './utils';
 import { Options } from './options';
+import * as _ from './utils';
 
 // "leaflet-i18n" fallback
 if (!L._ || !L.i18n) {
@@ -25,6 +25,15 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	__LSUMMARY: '/vendor/leaflet-elevation/src/components/summary.js',
 	__modulesFolder: '/vendor/leaflet-elevation/src/handlers/',
 	__btnIcon: '/vendor/leaflet-elevation/images/elevation.svg',
+
+	updateOptions(options) {
+		Object.assign(this.options, options)
+		if (!this.options.showStartEnd) {
+			this._circleMarkers.remove();
+		} else if (this._data.length) {
+			this._circleMarkers.addTo(this._map);
+		}
+	},
 
 	/*
 	 * Add data to the diagram either from GPX or GeoJSON and update the axis domain and data
@@ -171,7 +180,6 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	 * Initialize chart control "options" and "container".
 	 */
 	initialize(opts) {
-
 		// opts = L.setOptions(this, opts);
 
 		// Fixes: https://github.com/Raruto/leaflet-elevation/pull/240
@@ -197,7 +205,6 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 		if (opts.distanceMarkers === true) opts.distanceMarkers = Options.distanceMarkers;
 		if (opts.trkStart) this._start.addTo(this._circleMarkers);
 		if (opts.trkEnd) this._end.addTo(this._circleMarkers);
-
 
 		this._markedSegments.setStyle(opts.polylineSegments);
 
@@ -488,7 +495,9 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			]).then(() => {
 				if (this.options.polyline) {
 					this._layers.addLayer(layer.addTo(map)); // hotfix for: https://github.com/Raruto/leaflet-elevation/issues/233
-					this._circleMarkers.addTo(map);
+					if (this.options.showStartEnd) {
+						this._circleMarkers.addTo(map);
+					}
 				}
 				if (this.options.autofitBounds) {
 					this.fitBounds(layer.getBounds());
@@ -1254,7 +1263,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	 * Update the position/height indicator marker drawn onto the map
 	 */
 	_updateMarker(item) {
-		if (this._marker) {
+		if (this._marker && this.options.mapTooltip) {
 			this._marker.update({
 				map: this._map,
 				item: item,

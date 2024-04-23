@@ -47,7 +47,7 @@ export async function gpx2trail(gpxString: string) {
     trail.elevation_gain = totals.elevationGain;
     trail.distance = totals.distance
 
-    return trail
+    return {gpx: gpx, trail: trail}
 }
 
 export function fromKML(kmlData: string) {

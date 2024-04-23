@@ -1,5 +1,5 @@
 import type { Waypoint } from "$lib/models/waypoint";
-import type { Icon, LeafletEvent, Map, Marker } from "leaflet";
+import type { Icon, LatLng, LeafletEvent, Map, Marker } from "leaflet";
 
 export function createMarkerFromWaypoint(L: any, waypoint: Waypoint, onDragEnd?: (event: LeafletEvent) => void): Marker {
     const fontAwesomeIcon = L.AwesomeMarkers.icon({
@@ -28,8 +28,33 @@ export function createMarkerFromWaypoint(L: any, waypoint: Waypoint, onDragEnd?:
     if (onDragEnd) {
         marker.on("dragend", onDragEnd);
     }
-    
+
     return marker;
+}
+
+export function createAnchorMarker(L: any, lat: number, lon: number, index: number, onDeleteClick: () => void, onDragEnd: (event: LeafletEvent) => void): Marker {
+
+    const anchorIconElement = document.createElement("span")
+    anchorIconElement.textContent = "" + index
+    const anchorIcon = L.divIcon({
+        html: anchorIconElement,
+        iconSize: [24, 24],
+        className: "leaflet-anchor"
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "btn-icon fa fa-trash text-red-500";
+    deleteButton.addEventListener("click", onDeleteClick)
+    const marker = L.marker([lat, lon], {
+        icon: anchorIcon,
+        draggable: true,
+    })
+        .bindPopup(
+            deleteButton
+        );
+    marker.on("dragend", onDragEnd);
+
+    return marker
 }
 
 export function calculatePixelPerMeter(map: Map, meters: number) {
@@ -65,7 +90,7 @@ export function calculateScaleFactor(map: Map) {
     );
 
     const screenMetersPer100Pixels = _pxTOmm()(100) / 1000;
-        
+
     const scaleFactor = realWorlMetersPer100Pixels / screenMetersPer100Pixels
 
     return scaleFactor
