@@ -139,7 +139,7 @@
     });
 </script>
 
-<div id="map-container" class="flex flex-col">
+<div id="map-container" class="flex flex-col h-full">
     <div
         id="map"
         class="rounded-xl z-0 basis-full"

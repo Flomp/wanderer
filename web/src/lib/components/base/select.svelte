@@ -12,13 +12,13 @@
     export let value: any;
     export let items: SelectItem[] = [];
     export let label: string = "";
+    export let disabled: boolean = false;
 
     const dispatch = createEventDispatcher();
 
     function onChange(target: any) {
-        dispatch("change", target?.value)
+        dispatch("change", target?.value);
     }
-
 </script>
 
 <div>
@@ -30,6 +30,8 @@
     <select
         {name}
         class="bg-input-background h-10 w-full px-4 border-r-8 border-transparent outline outline-1 outline-input-border rounded-md focus:outline-input-border-focus transition-colors"
+        class:text-gray-500={disabled}
+        {disabled}
         bind:value
         on:change={(e) => onChange(e.target)}
     >

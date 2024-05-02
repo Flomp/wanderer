@@ -56,7 +56,7 @@ services:
       UPLOAD_FOLDER: /app/uploads
       UPLOAD_USER:
       UPLOAD_PASSWORD:
-      PUBLIC_VALHALLA_URL: http://localhost:8002
+      PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de
     volumes:
       - ./data/uploads:/app/uploads
     ports:

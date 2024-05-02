@@ -60,6 +60,8 @@
     import type { DivIcon, LatLng, LeafletMouseEvent, Map } from "leaflet";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import { backInOut } from "svelte/easing";
+    import { fade, scale } from "svelte/transition";
     import { array, number, object, string } from "yup";
 
     export let data: { trail: Trail };
@@ -97,6 +99,15 @@
         gpx: string().optional(),
         description: string().optional(),
     });
+
+    const modesOfTransport = [
+        { text: "Hiking", value: "pedestrian" },
+        { text: "Cycling", value: "bicycle" },
+        { text: "Driving", value: "auto" },
+    ];
+    let selectedModeOfTransport = modesOfTransport[0].value;
+
+    let autoRouting = true;
 
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
         initialValues: data.trail,
@@ -141,6 +152,20 @@
                     });
                 }
 
+                if (
+                    (!$form.lat || !$form.lon) &&
+                    route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
+                ) {
+                    $form.lat = route.trk
+                        ?.at(0)
+                        ?.trkseg?.at(0)
+                        ?.trkpt?.at(0)?.$.lat;
+                    $form.lon = route.trk
+                        ?.at(0)
+                        ?.trkseg?.at(0)
+                        ?.trkpt?.at(0)?.$.lon;
+                }
+
                 if (!submittedTrail.id) {
                     const createdTrail = await trails_create(
                         submittedTrail,
@@ -180,8 +205,6 @@
         L = (await import("leaflet")).default;
         await import("leaflet.awesome-markers");
 
-        // $form.lat = 47.74604748696788;
-        // $form.lon = 11.588988304138185;
         clearAnchorMarker();
         clearRoute();
 
@@ -446,6 +469,8 @@
                     previousAnchor.lon,
                     e.latlng.lat,
                     e.latlng.lng,
+                    selectedModeOfTransport,
+                    autoRouting,
                 );
                 appendToRoute(routeWaypoints);
                 addAnchor(e.latlng.lat, e.latlng.lng);
@@ -537,6 +562,8 @@
                 anchor.lon,
                 nextAnchor.lat,
                 nextAnchor.lon,
+                selectedModeOfTransport,
+                autoRouting,
             );
         }
         if (anchorIndex > 0) {
@@ -546,6 +573,8 @@
                 previousAnchor.lon,
                 anchor.lat,
                 anchor.lon,
+                selectedModeOfTransport,
+                autoRouting,
             );
         }
         if (nextRouteSegment) {
@@ -808,19 +837,33 @@
             {loading}>{$_("save-trail")}</Button
         >
     </form>
-    <MapWithElevation
-        trail={$form}
-        crosshair={drawingActive}
-        options={{
-            autofitBounds: !drawingActive,
-            mapTooltip: !drawingActive,
-            speed: !drawingActive,
-            speedFactor: drawingActive ? 0 : 1,
-            showStartEnd: !drawingActive,
-        }}
-        bind:map
-        on:click={(e) => handleMapClick(e.detail)}
-    ></MapWithElevation>
+    <div class="relative">
+        {#if drawingActive}
+            <div
+                class="absolute top-0 left-16 z-50 p-4 my-2 rounded-xl bg-background space-y-4"
+                in:scale={{ easing: backInOut }}
+                out:scale={{ easing: backInOut }}
+            >
+                <Toggle bind:value={autoRouting} label="Enable auto-routing"
+                ></Toggle>
+                <Select items={modesOfTransport} bind:value={selectedModeOfTransport} disabled={!autoRouting}
+                ></Select>
+            </div>
+        {/if}
+        <MapWithElevation
+            trail={$form}
+            crosshair={drawingActive}
+            options={{
+                autofitBounds: !drawingActive,
+                mapTooltip: !drawingActive,
+                speed: !drawingActive,
+                speedFactor: drawingActive ? 0 : 1,
+                showStartEnd: !drawingActive,
+            }}
+            bind:map
+            on:click={(e) => handleMapClick(e.detail)}
+        ></MapWithElevation>
+    </div>
 </main>
 <WaypointModal
     bind:openModal={openWaypointModal}

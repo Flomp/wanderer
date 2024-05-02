@@ -29,7 +29,7 @@ export async function gpx2trail(gpxString: string) {
     const totals = gpx.getTotals()
 
     const points = gpx.trk?.at(0)?.trkseg?.at(0)?.trkpt
-    const startPoint = points?.at(0);
+    const startPoint = points?.at(0);    
     if (startPoint) {
         trail.lat = startPoint.$.lat
         trail.lon = startPoint.$.lon
