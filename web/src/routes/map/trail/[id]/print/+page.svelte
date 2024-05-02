@@ -493,7 +493,7 @@
             loading={printLoading}
             extraClasses="mt-2"
             primary={true}
-            on:click={print}>Print!</Button
+            on:click={print}>{$_("print")}!</Button
         >
     </div>
 
@@ -535,9 +535,7 @@
                         >
                             <span
                                 ><i class="fa fa-left-right mr-2"
-                                ></i>{formatDistance(
-                                    $trail.distance,
-                                )}</span
+                                ></i>{formatDistance($trail.distance)}</span
                             >
                             <span
                                 ><i class="fa fa-up-down mr-2"

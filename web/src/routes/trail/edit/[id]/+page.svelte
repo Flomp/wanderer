@@ -101,9 +101,9 @@
     });
 
     const modesOfTransport = [
-        { text: "Hiking", value: "pedestrian" },
-        { text: "Cycling", value: "bicycle" },
-        { text: "Driving", value: "auto" },
+        { text: $_('hiking'), value: "pedestrian" },
+        { text: $_('cycling'), value: "bicycle" },
+        { text: $_('driving'), value: "auto" },
     ];
     let selectedModeOfTransport = modesOfTransport[0].value;
 

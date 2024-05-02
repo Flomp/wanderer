@@ -1,3 +1,16 @@
+# v0.5.0
+
+## ⚠️ Breaking changes ⚠️
+- This version updates the index pattern of the meilisearch index. Please delete your `data.ms` folder before launching wanderer. The indices will be rebuilt on launch. Otherwise trail filtering will no longer work.
+
+## Features
+- Trails can now be filtered by date
+- Elevation, slope and speed graphs are now also visible when creating a new trail
+- When creating a new trail you now have the option to create a new route from scratch without uploading a GPX file. Press the "Draw a route" button and plan your new route directly in wanderer. We use [valhalla](https://github.com/valhalla/valhalla) and their associated free [hosted service](https://gis-ops.com/global-open-valhalla-server-online/) to calculate the routes. To activate the feature make sure to set the PUBLIC_VALHALLA_URL environment variable on you wanderer-web service. See the current [docker-compose.yml](https://github.com/Flomp/wanderer/blob/main/docker-compose.yml) for a working configuration.
+
+## Bug fixes
+- Uploaded trails will now have a date if it can be parsed from the file
+
 # v0.4.0
 ## Features
 

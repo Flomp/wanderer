@@ -357,14 +357,14 @@ export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?
 function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
     let filterText: string = "";
 
-    filterText += `distance >= ${filter.distanceMin} AND elevation_gain >= ${filter.elevationGainMin}`
+    filterText += `distance >= ${Math.floor(filter.distanceMin)} AND elevation_gain >= ${Math.floor(filter.elevationGainMin)}`
 
     if (filter.distanceMax < filter.distanceLimit) {
-        filterText += ` AND distance <= ${filter.distanceMax}`
+        filterText += ` AND distance <= ${Math.ceil(filter.distanceMax)}`
     }
 
     if (filter.elevationGainMax < filter.elevationGainLimit) {
-        filterText += ` AND elevation_gain <= ${filter.elevationGainMax}`
+        filterText += ` AND elevation_gain <= ${Math.ceil(filter.elevationGainMax)}`
     }
 
     filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
