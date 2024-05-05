@@ -79,7 +79,7 @@
                     weight: 5,
                 },
                 gpx_options: {
-                    parseElements: ["track"] as any,
+                    parseElements: ["track", "route"] as any,
                 },
                 marker_options: {
                     startIcon: L.AwesomeMarkers.icon({
@@ -93,7 +93,7 @@
                     shadowUrl: "",
                 },
             })
-                .on("loaded", function (e) {
+                .on("loaded", function (e) {                   
                     map.fitBounds(e.target.getBounds());
                 })
                 .addTo(map);

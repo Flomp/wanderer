@@ -17,7 +17,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	__TOGEOJSON: '/vendor/leaflet-elevation/libs/togeojson.umd.js',
 	__LGEOMUTIL: '/vendor/leaflet-elevation/libs/leaflet.geometryutil.js',
 	__LALMOSTOVER: '/vendor/leaflet-elevation/libs/leaflet.almostover.js',
-	__LHOTLINE: '/vendor/leaflet-elevation/libs/leaflet-hotline.min.js',
+	__LHOTLINE: '/vendor/leaflet-elevation/libs/leaflet-hotline.js',
 	__LDISTANCEM: '/vendor/leaflet-elevation/libs/leaflet-distance-marker.min.js',
 	__LEDGESCALE: '/vendor/leaflet-elevation/libs/leaflet-edgescale.min.js',
 	__LCHART: '/vendor/leaflet-elevation/src/components/chart.js',
@@ -452,7 +452,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			.then(() => {
 				layer.eachLayer((trkseg) => {
 					if (trkseg.feature.geometry.type != "Point") {
-						let geo = L.geoJson(trkseg.toGeoJSON(), { coordsToLatLng: (coords) => L.latLng(coords[0], coords[1], coords[2] * (this.options.altitudeFactor || 1)) });
+						let geo = L.geoJson(trkseg.toGeoJSON(), { coordsToLatLng: (coords) => L.latLng(coords[0], coords[1], (coords[2] * (this.options.altitudeFactor || 1)) || 0) });
 						let line = L.hotline(geo.toGeoJSON().features[0].geometry.coordinates, {
 							renderer: L.Hotline.renderer(),
 							min: isFinite(this.track_info[prop + '_min']) ? this.track_info[prop + '_min'] : 0,

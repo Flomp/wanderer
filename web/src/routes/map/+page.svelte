@@ -211,7 +211,7 @@
                     weight: 5,
                 },
                 gpx_options: {
-                    parseElements: ["track"],
+                    parseElements: ["track", "route"],
                 },
                 marker_options: {
                     startIcon: L.AwesomeMarkers.icon({

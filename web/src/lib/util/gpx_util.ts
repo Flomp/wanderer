@@ -28,15 +28,17 @@ export async function gpx2trail(gpxString: string) {
 
     const totals = gpx.getTotals()
 
-    const points = gpx.trk?.at(0)?.trkseg?.at(0)?.trkpt
-    const startPoint = points?.at(0);    
+    const trackPoints = gpx.trk?.at(0)?.trkseg?.at(0)?.trkpt
+    const routePoints = gpx.rte?.at(0)?.rtept;    
+
+    const startPoint = trackPoints?.at(0) ?? routePoints?.at(0);    
     if (startPoint) {
         trail.lat = startPoint.$.lat
         trail.lon = startPoint.$.lon
-    }
+    }    
 
-    const startTime = points?.at(0)?.time;
-    const endTime = points?.at((points?.length ?? 1) - 1)?.time
+    const startTime = trackPoints?.at(0)?.time;
+    const endTime = trackPoints?.at((trackPoints?.length ?? 1) - 1)?.time
 
     if (startTime && endTime && !trail.date) {
         trail.date = startTime.toISOString()
