@@ -8,7 +8,7 @@ export default class Metadata {
   desc: string;
   time: Date;
   keywords: string;
-  extensions: string;
+  extensions?: string;
   author?: Person;
   link?: Link[];
   bounds?: Bounds;
@@ -18,7 +18,7 @@ export default class Metadata {
     desc: string,
     time: string,
     keywords: string,
-    extensions: string,
+    extensions?: string,
     author?: Person,
     link?: Link | Link[],
     bounds?: Bounds,

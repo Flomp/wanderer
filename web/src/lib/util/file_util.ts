@@ -17,3 +17,14 @@ export function readAsDataURLAsync(file: File) {
         fr.readAsDataURL(file);
     });
 }
+
+export function saveAs(data: Blob, fileName: string) {
+    var a = document.createElement("a") as HTMLAnchorElement;
+    a.setAttribute("style", "display: none");
+    document.body.appendChild(a);
+    const url = window.URL.createObjectURL(data);
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    window.URL.revokeObjectURL(url);
+};

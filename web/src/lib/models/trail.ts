@@ -61,7 +61,7 @@ class Trail {
         this.id = params?.id;
         this.name = name;
         this.location = params?.location;
-        this.date = params?.date;
+        this.date = params?.date ?? new Date().toISOString().split('T')[0];
         this.public = params?.public ?? false
         this.distance = params?.distance;
         this.elevation_gain = params?.elevation_gain;

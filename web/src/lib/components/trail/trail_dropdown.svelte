@@ -9,17 +9,22 @@
     } from "$lib/stores/list_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { trails_delete } from "$lib/stores/trail_store";
-    import { getFileURL } from "$lib/util/file_util";
+    import { trail2gpx } from "$lib/util/gpx_util";
+    import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
+    import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import ConfirmModal from "../confirm_modal.svelte";
     import ListSelectModal from "../list/list_select_modal.svelte";
-    import { _ } from "svelte-i18n";
+    import TrailExportModal from "./trail_export_modal.svelte";
+    import JSZip from "jszip";
+    import { getFileURL, saveAs } from "$lib/util/file_util";
 
     export let trail: Trail;
     export let mode: "overview" | "map";
 
     let openConfirmModal: () => void;
     let openListSelectModal: () => void;
+    let openExportModal: () => void;
 
     const dropdownItems: DropdownItem[] = [
         mode == "overview"
@@ -34,7 +39,7 @@
         ...(trail.gpx
             ? [
                   {
-                      text: $_("download-gpx"),
+                      text: $_("export"),
                       value: "download",
                       icon: "download",
                   },
@@ -65,7 +70,7 @@
         } else if (item.value == "print") {
             goto(`/map/trail/${trail.id}/print`);
         } else if (item.value == "download") {
-            downloadURI(getFileURL(trail, trail.gpx), trail.gpx!);
+            openExportModal();
         } else if (item.value == "edit") {
             goto(`/trail/edit/${trail.id}`);
         } else if (item.value == "delete") {
@@ -73,13 +78,46 @@
         }
     }
 
-    function downloadURI(uri: string, name: string) {
-        var link = document.createElement("a");
-        link.setAttribute("download", name);
-        link.href = uri;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+    async function exportTrail(exportSettings: {
+        fileFormat: "gpx" | "json";
+        photos: boolean;
+        summitLog: boolean;
+    }) {
+        try {
+            let fileData: string = await trail2gpx(trail);            
+            if (exportSettings.fileFormat == "json") {
+                fileData = JSON.stringify(gpx(new DOMParser().parseFromString(fileData, "text/xml")));
+            }
+            const zip = new JSZip();
+            zip.file(`${trail.name}.${exportSettings.fileFormat}`, fileData);
+            if (exportSettings.photos) {
+                const photoFolder = zip.folder($_("photos"));
+                for (const photo of trail.photos) {
+                    const photoURL = getFileURL(trail, photo);
+                    const photoBlob = await fetch(photoURL).then((response) =>
+                        response.blob(),
+                    );
+                    const photoData = new File([photoBlob], photo);
+                    photoFolder?.file(photo, photoData, { base64: true });
+                }
+            }
+            if(exportSettings.summitLog) {
+                let summitLogString = ""
+                for (const summitLog of trail.expand.summit_logs) {
+                    summitLogString += `${summitLog.date},${summitLog.text}\n`
+                }
+                zip.file(`${trail.name} - ${$_("summit-book")}.csv`, summitLogString)
+            }
+            const blob = await zip.generateAsync({ type: "blob" });
+            saveAs(blob, `${trail.name}.zip`);
+        } catch (e) {
+            console.error(e);
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: $_("error-exporting-trail"),
+            });
+        }
     }
 
     async function deleteTrail() {
@@ -137,3 +175,7 @@
     bind:openModal={openListSelectModal}
     on:change={(e) => handleListSelection(e.detail)}
 ></ListSelectModal>
+<TrailExportModal
+    bind:openModal={openExportModal}
+    on:export={(e) => exportTrail(e.detail)}
+></TrailExportModal>

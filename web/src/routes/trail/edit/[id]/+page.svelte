@@ -101,9 +101,9 @@
     });
 
     const modesOfTransport = [
-        { text: $_('hiking'), value: "pedestrian" },
-        { text: $_('cycling'), value: "bicycle" },
-        { text: $_('driving'), value: "auto" },
+        { text: $_("hiking"), value: "pedestrian" },
+        { text: $_("cycling"), value: "bicycle" },
+        { text: $_("driving"), value: "auto" },
     ];
     let selectedModeOfTransport = modesOfTransport[0].value;
 
@@ -383,6 +383,11 @@
 
         marker.addTo(map);
         savedWaypoint.marker = marker;
+    }
+
+    function beforSummitLogModalOpen() {
+        summitLog.set(new SummitLog(new Date().toISOString().split('T')[0]));
+        openSummitLogModal();
     }
 
     function saveSummitLog(e: CustomEvent<SummitLog>) {
@@ -791,7 +796,7 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={openSummitLogModal}
+            on:click={beforSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
         {#if $lists.length}
@@ -846,7 +851,10 @@
             >
                 <Toggle bind:value={autoRouting} label="Enable auto-routing"
                 ></Toggle>
-                <Select items={modesOfTransport} bind:value={selectedModeOfTransport} disabled={!autoRouting}
+                <Select
+                    items={modesOfTransport}
+                    bind:value={selectedModeOfTransport}
+                    disabled={!autoRouting}
                 ></Select>
             </div>
         {/if}

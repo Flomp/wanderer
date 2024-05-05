@@ -42,6 +42,7 @@
     "crypto-random-string": "^5.0.0",
     "isomorphic-xml2js": "^0.1.3",
     "jspdf": "^2.5.1",
+    "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "leaflet-gpx": "^1.7.0",
     "leaflet.awesome-markers": "^2.0.5",
