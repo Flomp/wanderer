@@ -1,3 +1,12 @@
+# v0.5.1
+## Features
+- You can now export trails as GPX or GEOJson files. Optionally you can include photos and summit book entries of the trail. This replaces the "Download GPX" function in previous versions.
+
+## Bug fixes
+- Fixed a bug that wouldprevent users from creating multiple summit log entries with out reloading the page
+- wanderer now takes the `<rte>` tag into account when displaying a trail on the map
+- A trails date attribute is now the current date by default
+
 # v0.5.0
 
 ## ⚠️ Breaking changes ⚠️

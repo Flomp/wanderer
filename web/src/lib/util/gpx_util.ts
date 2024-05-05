@@ -42,7 +42,7 @@ export async function gpx2trail(gpxString: string) {
     const startTime = trackPoints?.at(0)?.time;
     const endTime = trackPoints?.at((trackPoints?.length ?? 1) - 1)?.time
 
-    if (startTime && endTime && !trail.date) {
+    if (startTime && endTime) {
         trail.date = startTime.toISOString()
             .substring(0, 10);
     }
