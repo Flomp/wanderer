@@ -4,13 +4,14 @@
   The trail catalogue that makes your GPS data searchable
 </h4>
 
-wanderer is a self-hosted trail database. You can upload your recorded tracks and add various metadata to create an easily searchable catalogue. 
+wanderer is a self-hosted trail database. You can upload your recorded tracks or create new ones and add various metadata to build an easily searchable catalogue. 
 
 ## Core Features
 
 ![Screenshot of wanderer](docs/imgs/features.png)
 
 - Manage your trails
+- Plan new routes
 - Extensive map integration and visualization
 - Share trails with other people and explore theirs
 - Advanced filter and search functionality
@@ -43,7 +44,7 @@ Please check the [wiki](https://github.com/Flomp/wanderer/wiki) for the complete
 ## Contributing
 
 Help is welcome at any time. If you are not sure where you can start check the [roadmap](https://github.com/users/Flomp/projects/2/views/1) for features in the backlog.
-If you would like to contribute a translation, you can do so [here](https://translate.codeberg.org/projects/wanderer/wanderer/)
+If you would like to contribute a translation, you can do so [here](https://translate.codeberg.org/projects/wanderer/wanderer/).
 
 ## License
 This project is licensed under the AGPLv3 License. See the [LICENSE](LICENSE) file for the full license text.
