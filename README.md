@@ -4,6 +4,13 @@
   The trail catalogue that makes your GPS data searchable
 </h4>
 
+<p align="center">
+
+[![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/flomp/wanderer-web/latest)](https://github.com/Flomp/wanderer/)
+[![GitHub Repo stars](https://img.shields.io/github/stars/flomp/wanderer?style=social)](https://github.com/Flomp/wanderer/)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
+
+</p>
 wanderer is a self-hosted trail database. You can upload your recorded tracks or create new ones and add various metadata to build an easily searchable catalogue. 
 
 ## Core Features
@@ -36,6 +43,10 @@ The first startup can take up to 90 seconds after which you can access the front
 > ⚠️ if you are using wanderer in a production environment make sure to change the MEILI_MASTER_KEY variable.
 
 You can also run wanderer on bare-metal. Check out the [documentation](https://github.com/Flomp/wanderer/wiki/Installation#from-source) for a detailed how-to guide.
+
+## Support wanderer
+
+If you like wanderer and would like to give something back you can donate over [here](https://www.buymeacoffee.com/wanderertrails).
 
 ## Documentation
 
