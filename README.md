@@ -6,7 +6,7 @@
 
 [![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/flomp/wanderer-web/latest)](https://github.com/Flomp/wanderer/)
 [![GitHub Repo stars](https://img.shields.io/github/stars/flomp/wanderer?style=social)](https://github.com/Flomp/wanderer/)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
+[![Buy Me A Coffee](https://img.shields.io/badge/Support-wanderer-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
 
 </div>
 
