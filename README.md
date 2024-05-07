@@ -1,16 +1,15 @@
-<h4 align="center">
+<div align="center">
+
   <img src="web/static/svgs/logo_text_two_line_dark.svg" height="256" width="256">
 
-  The trail catalogue that makes your GPS data searchable
-</h4>
-
-<p align="center">
+  <h4>The trail catalogue that makes your GPS data searchable</h4>
 
 [![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/flomp/wanderer-web/latest)](https://github.com/Flomp/wanderer/)
 [![GitHub Repo stars](https://img.shields.io/github/stars/flomp/wanderer?style=social)](https://github.com/Flomp/wanderer/)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
 
-</p>
+</div>
+
 wanderer is a self-hosted trail database. You can upload your recorded tracks or create new ones and add various metadata to build an easily searchable catalogue. 
 
 ## Core Features
