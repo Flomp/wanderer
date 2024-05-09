@@ -23,6 +23,21 @@ export async function users_create(user: User) {
     await settings_create(settings);
 }
 
+export async function users_search(q: string) {
+    let r = await fetch('/api/v1/user?' + new URLSearchParams({
+        "filter": `username~"${q}"`,
+    }), {
+        method: 'GET',
+    })
+    const response = await r.json()
+
+    if (r.ok) {
+        return response.items;
+    } else {
+        throw new ClientResponseError(response)
+    }
+}
+
 export async function users_auth_methods(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<AuthMethodsList> {
     const r = await f('/api/v1/auth/oauth', {
         method: 'GET',

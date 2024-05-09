@@ -16,7 +16,7 @@ export async function gpx2trail(gpxString: string) {
 
     const trail = new Trail("");
 
-    trail.name = gpx.metadata?.name ?? "";
+    trail.name = gpx.metadata?.name ?? `trail-${new Date().toISOString()}`;
 
     trail.description = gpx.metadata?.desc;
 

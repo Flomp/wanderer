@@ -18,6 +18,7 @@
     import TrailExportModal from "./trail_export_modal.svelte";
     import JSZip from "jszip";
     import { getFileURL, saveAs } from "$lib/util/file_util";
+    import TrailShareModal from "./trail_share_modal.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map";
@@ -25,6 +26,7 @@
     let openConfirmModal: () => void;
     let openListSelectModal: () => void;
     let openExportModal: () => void;
+    let openShareModal: () => void;
 
     const dropdownItems: DropdownItem[] = [
         mode == "overview"
@@ -47,6 +49,7 @@
             : []),
         { text: $_("print"), value: "print", icon: "print" },
         { text: $_("add-to-list"), value: "list", icon: "bookmark" },
+        { text: $_("share"), value: "share", icon: "share" },
         { text: $_("edit"), value: "edit", icon: "pen" },
         { text: $_("delete"), value: "delete", icon: "trash" },
     ];
@@ -69,6 +72,8 @@
                 ?.focus();
         } else if (item.value == "print") {
             goto(`/map/trail/${trail.id}/print`);
+        } else if (item.value == "share") {           
+            openShareModal();
         } else if (item.value == "download") {
             openExportModal();
         } else if (item.value == "edit") {
@@ -84,9 +89,11 @@
         summitLog: boolean;
     }) {
         try {
-            let fileData: string = await trail2gpx(trail);            
+            let fileData: string = await trail2gpx(trail);
             if (exportSettings.fileFormat == "json") {
-                fileData = JSON.stringify(gpx(new DOMParser().parseFromString(fileData, "text/xml")));
+                fileData = JSON.stringify(
+                    gpx(new DOMParser().parseFromString(fileData, "text/xml")),
+                );
             }
             const zip = new JSZip();
             zip.file(`${trail.name}.${exportSettings.fileFormat}`, fileData);
@@ -101,12 +108,15 @@
                     photoFolder?.file(photo, photoData, { base64: true });
                 }
             }
-            if(exportSettings.summitLog) {
-                let summitLogString = ""
+            if (exportSettings.summitLog) {
+                let summitLogString = "";
                 for (const summitLog of trail.expand.summit_logs) {
-                    summitLogString += `${summitLog.date},${summitLog.text}\n`
+                    summitLogString += `${summitLog.date},${summitLog.text}\n`;
                 }
-                zip.file(`${trail.name} - ${$_("summit-book")}.csv`, summitLogString)
+                zip.file(
+                    `${trail.name} - ${$_("summit-book")}.csv`,
+                    summitLogString,
+                );
             }
             const blob = await zip.generateAsync({ type: "blob" });
             saveAs(blob, `${trail.name}.zip`);
@@ -179,3 +189,4 @@
     bind:openModal={openExportModal}
     on:export={(e) => exportTrail(e.detail)}
 ></TrailExportModal>
+<TrailShareModal bind:openModal={openShareModal}></TrailShareModal>
