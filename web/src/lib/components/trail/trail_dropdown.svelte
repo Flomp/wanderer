@@ -19,6 +19,8 @@
     import JSZip from "jszip";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import TrailShareModal from "./trail_share_modal.svelte";
+    import { currentUser } from "$lib/stores/user_store";
+    import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
     export let mode: "overview" | "map";
@@ -27,6 +29,10 @@
     let openListSelectModal: () => void;
     let openExportModal: () => void;
     let openShareModal: () => void;
+
+    const allowEdit =
+        trail.author == $currentUser?.id ||
+        trail.expand.trail_share_via_trail?.some((s) => s.permission == "edit");
 
     const dropdownItems: DropdownItem[] = [
         mode == "overview"
@@ -49,9 +55,15 @@
             : []),
         { text: $_("print"), value: "print", icon: "print" },
         { text: $_("add-to-list"), value: "list", icon: "bookmark" },
-        { text: $_("share"), value: "share", icon: "share" },
-        { text: $_("edit"), value: "edit", icon: "pen" },
-        { text: $_("delete"), value: "delete", icon: "trash" },
+        ...(trail.author != pb.authStore.model?.id
+            ? []
+            : [{ text: $_("share"), value: "share", icon: "share" }]),
+        ...(allowEdit
+            ? [{ text: $_("edit"), value: "edit", icon: "pen" }]
+            : []),
+        ...(trail.author == $currentUser?.id
+            ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
+            : []),
     ];
 
     async function handleDropdownClick(item: { text: string; value: any }) {
@@ -72,7 +84,7 @@
                 ?.focus();
         } else if (item.value == "print") {
             goto(`/map/trail/${trail.id}/print`);
-        } else if (item.value == "share") {           
+        } else if (item.value == "share") {
             openShareModal();
         } else if (item.value == "download") {
             openExportModal();
@@ -189,4 +201,4 @@
     bind:openModal={openExportModal}
     on:export={(e) => exportTrail(e.detail)}
 ></TrailExportModal>
-<TrailShareModal bind:openModal={openShareModal}></TrailShareModal>
+<TrailShareModal {trail} bind:openShareModal></TrailShareModal>

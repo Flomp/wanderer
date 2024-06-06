@@ -8,6 +8,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/meilisearch/meilisearch-go"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
@@ -16,6 +17,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 
 	_ "pocketbase/migrations"
+	"pocketbase/util"
 )
 
 func main() {
@@ -38,11 +40,11 @@ func main() {
 		searchRules := map[string]interface{}{
 			"cities500": map[string]string{},
 			"trails": map[string]string{
-				"filter": "public = true OR author = " + userId,
+				"filter": "public = true OR author = " + userId + " OR shares = " + userId,
 			},
 		}
 
-		if token, err := generateMeilisearchToken(searchRules, client); err != nil {
+		if token, err := util.GenerateMeilisearchToken(searchRules, client); err != nil {
 			return err
 		} else {
 			record.Set("token", token)
@@ -56,14 +58,14 @@ func main() {
 	})
 
 	app.OnRecordAfterCreateRequest("trails").Add(func(e *core.RecordCreateEvent) error {
-		if err := indexRecord(e.Record, client); err != nil {
+		if err := util.IndexTrail(e.Record, client); err != nil {
 			return err
 		}
 		return nil
 	})
 
 	app.OnRecordAfterUpdateRequest("trails").Add(func(e *core.RecordUpdateEvent) error {
-		if err := indexRecord(e.Record, client); err != nil {
+		if err := util.UpdateTrail(e.Record, client); err != nil {
 			return err
 		}
 		return nil
@@ -71,6 +73,34 @@ func main() {
 
 	app.OnRecordAfterDeleteRequest("trails").Add(func(e *core.RecordDeleteEvent) error {
 		if _, err := client.Index("trails").DeleteDocument(e.Record.Id); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	app.OnRecordAfterCreateRequest("trail_share").Add(func(e *core.RecordCreateEvent) error {
+		trailId := e.Record.GetString("trail")
+		shares, err := app.Dao().FindRecordsByExpr("trail_share",
+			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trailId}),
+		)
+		if err != nil {
+			return err
+		}
+		userIds := []string{}
+		for _, r := range shares {
+			userIds = append(userIds, r.GetString("user"))
+		}
+
+		if err := util.UpdateTrailShares(trailId, userIds, client); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	app.OnRecordAfterDeleteRequest("trail_share").Add(func(e *core.RecordDeleteEvent) error {
+		trailId := e.Record.GetString("trail")
+
+		if err := util.UpdateTrailShares(trailId, []string{}, client); err != nil {
 			return err
 		}
 		return nil
@@ -85,7 +115,7 @@ func main() {
 				},
 			}
 
-			if token, err := generateMeilisearchToken(searchRules, client); err != nil {
+			if token, err := util.GenerateMeilisearchToken(searchRules, client); err != nil {
 				return err
 			} else {
 				return c.JSON(http.StatusOK, map[string]string{"token": token})
@@ -127,7 +157,7 @@ func main() {
 		for _, trail := range trails {
 			log.Println(trail)
 
-			if err := indexRecord(trail, client); err != nil {
+			if err := util.IndexTrail(trail, client); err != nil {
 				return err
 			}
 		}

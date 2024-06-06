@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     import type { Trail } from "$lib/models/trail";
     import { getFileURL } from "$lib/util/file_util";
     import {
@@ -8,6 +7,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
+    import TrailShareInfo from "./trail_share_info.svelte";
 
     export let trail: Trail;
 
@@ -23,20 +23,26 @@
         <img class="h-28 w-28 object-cover rounded-xl" src={thumbnail} alt="" />
     </div>
     <div class="min-w-0 basis-full">
-        <h4 class="font-semibold text-lg">
-            {trail.name}{#if trail.public}
+        <div class="flex items-center gap-4">
+            <h4 class="font-semibold text-lg">
+                {trail.name}
+            </h4>
+            {#if trail.public}
                 <span class="tooltip ml-3" data-title={$_("public")}>
                     <i class="fa fa-globe"></i>
                 </span>
             {/if}
-        </h4>
+            {#if trail.expand?.trail_share_via_trail?.length}
+                <TrailShareInfo {trail}></TrailShareInfo>
+            {/if}
+        </div>
         {#if trail.date}
             <p class="text-xs text-gray-500 mb-3">
                 {new Date(trail.date).toLocaleDateString(undefined, {
                     month: "long",
                     day: "2-digit",
                     year: "numeric",
-                    timeZone: 'UTC'
+                    timeZone: "UTC",
                 })}
             </p>
         {/if}
@@ -54,12 +60,12 @@
         <div class="flex mt-1 gap-4 text-sm text-gray-500">
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
-                    trail.distance
+                    trail.distance,
                 )}</span
             >
             <span
                 ><i class="fa fa-up-down mr-2"></i>{formatElevation(
-                    trail.elevation_gain
+                    trail.elevation_gain,
                 )}</span
             >
             <span

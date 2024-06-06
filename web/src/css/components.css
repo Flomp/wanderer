@@ -40,6 +40,7 @@
 
 .tooltip {
     position: relative;
+    z-index: 10;
 }
 
 .tooltip:before,
@@ -74,6 +75,7 @@
     display: inline-block;
     width: 32px;
     height: 32px;
+    margin-top: 6px;
 }
 
 .spinner:after {

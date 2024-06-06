@@ -8,6 +8,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
+    import TrailShareInfo from "./trail_share_info.svelte";
 
     export let trail: Trail;
 
@@ -22,20 +23,25 @@
     on:mouseleave
     role="listitem"
 >
-    {#if trail.public}
-        <div
-            class=" top-4 right-4 z-10 tooltip"
-            style="position: absolute!important"
-            data-title={$_("public")}
-        >
-            <i class="fa fa-globe"></i>
-        </div>
-    {/if}
     <div
         class="relative w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl"
     >
         <img src={thumbnail} alt="" />
     </div>
+    {#if trail.public || trail.expand?.trail_share_via_trail?.length}
+        <div
+            class="flex absolute top-4 right-4 w-8 h-8 rounded-full items-center justify-center bg-background text-content"
+        >
+            {#if trail.public}
+                <span class="tooltip" data-title={$_("public")}>
+                    <i class="fa fa-globe"></i>
+                </span>
+            {/if}
+            {#if trail.expand?.trail_share_via_trail?.length}
+                <TrailShareInfo {trail}></TrailShareInfo>
+            {/if}
+        </div>
+    {/if}
     <div class="p-4">
         <div>
             <h4 class="font-semibold text-lg">{trail.name}</h4>
@@ -45,7 +51,7 @@
                         month: "long",
                         day: "2-digit",
                         year: "numeric",
-                        timeZone: 'UTC'
+                        timeZone: "UTC",
                     })}
                 </p>
             {/if}
@@ -65,12 +71,12 @@
         <div class="flex mt-1 gap-4 text-sm text-gray-500 whitespace-nowrap">
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
-                    trail.distance
+                    trail.distance,
                 )}</span
             >
             <span
                 ><i class="fa fa-up-down mr-2"></i>{formatElevation(
-                    trail.elevation_gain
+                    trail.elevation_gain,
                 )}</span
             >
             <span

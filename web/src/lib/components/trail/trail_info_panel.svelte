@@ -31,6 +31,7 @@
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
+    import TrailShareInfo from "./trail_share_info.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" = "map";
@@ -93,7 +94,7 @@
                     shadowUrl: "",
                 },
             })
-                .on("loaded", function (e) {                   
+                .on("loaded", function (e) {
                     map.fitBounds(e.target.getBounds());
                 })
                 .addTo(map);
@@ -152,14 +153,31 @@
 </script>
 
 <div
-    class="trail-info-panel max-w-5xl mx-auto border border-input-border rounded-3xl overflow-x-hidden h-full"
+    class="trail-info-panel max-w-5xl mx-auto border border-input-border rounded-3xl h-full"
 >
     <div class="trail-info-panel-header sticky -top-44 z-10">
         <section class="relative h-80">
-            <img class="w-full h-80" src={thumbnail} alt="" />
+            <img class="w-full h-80 rounded-3xl" src={thumbnail} alt="" />
             <div
                 class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
             ></div>
+            {#if trail.public || trail.expand?.trail_share_via_trail?.length}
+            <div
+                class="flex absolute top-8 right-10 w-8 h-8 rounded-full items-center justify-center bg-white text-primary"
+            >
+                {#if trail.public}
+                    <span
+                        class="tooltip text-2xl"
+                        data-title={$_("public")}
+                    >
+                        <i class="fa fa-globe"></i>
+                    </span>
+                {/if}
+                {#if trail.expand?.trail_share_via_trail?.length}
+                    <TrailShareInfo {trail} large={true}></TrailShareInfo>
+                {/if}
+            </div>
+            {/if}
             <div
                 class="flex absolute justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
             >
@@ -193,7 +211,7 @@
                         </h3>
                     </div>
                 </div>
-                {#if $currentUser && $currentUser.id == trail.author}
+                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand.trail_share_via_trail?.length}
                     <TrailDropdown {trail} {mode}></TrailDropdown>
                 {/if}
             </div>

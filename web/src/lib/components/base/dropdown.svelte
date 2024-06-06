@@ -8,6 +8,7 @@
 
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
+    import { fly } from "svelte/transition";
 
     export let items: DropdownItem[] = [];
     export let size: string = "regular";
@@ -30,26 +31,38 @@
         dispatch("change", item);
         closeMenu();
     }
+
+    function handleWindowClick(e: MouseEvent) {
+        if ((e.target as HTMLElement).parentElement?.classList.contains("dropdown-toggle")) {
+            return;
+        }
+
+        isOpen = false;
+    }
 </script>
 
-<svelte:window on:mouseup={() => (isOpen = false)} />
+<svelte:window on:mouseup={handleWindowClick} />
 
 <div class="dropdown relative">
-    <slot {toggleMenu}>
-        <button
-            class="btn-icon flex items-center justify-center"
-            on:click={toggleMenu}
-            type="button"
-        >
-            <i class="fa fa-ellipsis-vertical text-{size}"></i>
-        </button>
-    </slot>
+    <div class="dropdown-toggle">
+        <slot {toggleMenu}>
+            <button
+                class="btn-icon flex items-center justify-center"
+                on:click={toggleMenu}
+                type="button"
+            >
+                <i class="fa fa-ellipsis-vertical text-{size}"></i>
+            </button>
+        </slot>
+    </div>
 
     {#if isOpen}
         <ul
             class="menu absolute bg-menu-background border border-input-border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-hidden mt-2"
             class:none={isOpen}
             style="z-index: 1001"
+            in:fly={{ y: -10, duration: 150 }}
+            out:fly={{ y: -10, duration: 150 }}
         >
             {#each items as item}
                 <li

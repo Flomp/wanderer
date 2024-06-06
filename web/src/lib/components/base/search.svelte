@@ -97,7 +97,9 @@
                     on:mousedown|stopPropagation={() => handleItemClick(item)}
                     on:keydown|stopPropagation={() => handleItemClick(item)}
                 >
-                    <i class="fa fa-{item.icon} mr-6"></i>
+                    <slot name="item-header" {item}>
+                        <i class="fa fa-{item.icon} mr-6"></i>
+                    </slot>
 
                     <div>
                         <p>{item.text}</p>

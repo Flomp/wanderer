@@ -28,7 +28,7 @@
     class="relative w-full {size} max-h-full rounded-xl text-content"
 >
     <!-- Modal content -->
-    <div class="relative bg-background shadow">
+    <div class="relative bg-background shadow rounded-xl">
         <!-- Modal header -->
         <div
             class="flex items-center justify-between p-4 md:p-5 border-b border-separator rounded-t"

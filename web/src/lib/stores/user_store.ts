@@ -24,8 +24,8 @@ export async function users_create(user: User) {
 }
 
 export async function users_search(q: string) {
-    let r = await fetch('/api/v1/user?' + new URLSearchParams({
-        "filter": `username~"${q}"`,
+    let r = await fetch('/api/v1/user/anonymous?' + new URLSearchParams({
+        "filter": `username~"${q}"&&id!="${pb.authStore.model?.id}"`,
     }), {
         method: 'GET',
     })
@@ -33,6 +33,19 @@ export async function users_search(q: string) {
 
     if (r.ok) {
         return response.items;
+    } else {
+        throw new ClientResponseError(response)
+    }
+}
+
+export async function users_show(id: string) {
+    let r = await fetch(`/api/v1/user/anonymous/${id}`, {
+        method: 'GET',
+    })
+    const response = await r.json()
+
+    if (r.ok) {
+        return response;
     } else {
         throw new ClientResponseError(response)
     }

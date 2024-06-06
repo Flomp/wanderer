@@ -1,6 +1,7 @@
 import type { Category } from "./category";
 import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
+import type { TrailShare } from "./trail_share";
 import type { Waypoint } from "./waypoint";
 
 class Trail {
@@ -28,6 +29,7 @@ class Trail {
         summit_logs: SummitLog[]
         comments_via_trail: Comment[]
         gpx_data?: string
+        trail_share_via_trail?: TrailShare[]
     }
     tags?: string[];
     description?: string;
@@ -52,6 +54,7 @@ class Trail {
             waypoints?: Waypoint[],
             summit_logs?: SummitLog[],
             comments?: Comment[],
+            shares?: TrailShare[],
             tags?: string[],
             description?: string
             created?: string
@@ -78,7 +81,8 @@ class Trail {
             category: params?.category,
             waypoints: params?.waypoints ?? [],
             summit_logs: params?.summit_logs ?? [],
-            comments_via_trail: params?.comments ?? []
+            comments_via_trail: params?.comments ?? [],
+            trail_share_via_trail: params?.shares ?? []
         }
         this.tags = params?.tags ?? []
         this.description = params?.description ?? "";
