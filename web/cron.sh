@@ -18,9 +18,9 @@ login() {
 
     # Check if login was successful (look for "200 OK" in response headers)
     if [ $? -eq 0 ] && [ "$(echo "$response" | grep -c "token")" -eq 1 ]; then
-        echo "$(date +"%T"): Login successful. Cookie obtained." > /proc/1/fd/1
+        echo "[INFO] [$(date +"%T")]: Login successful. Cookie obtained." > /proc/1/fd/1
     else
-        echo "$(date +"%T"): Login failed. Unable to obtain cookie." > /proc/1/fd/1
+        echo "[ERROR] [$(date +"%T")]: Login failed. Unable to obtain cookie." > /proc/1/fd/1
         exit 1
     fi
 }
@@ -36,16 +36,16 @@ upload_and_delete() {
     
     # Check if API call was successful (status code 200)
     if [ $? -eq 0 ] && [ "$(echo "$response" | grep -c "author")" -eq 1 ]; then
-        echo "$(date +"%T"): File $file uploaded successfully." > /proc/1/fd/1
+        echo "[INFO] [$(date +"%T")]: File $file uploaded successfully." > /proc/1/fd/1
         # Delete the file
         rm "$file"
-        echo "File $file deleted."
+        echo "[INFO] [$(date +"%T")]: File $file deleted."
     else
         echo $response
-        echo "$(date +"%T"): Failed to upload file $file." > /proc/1/fd/1
+        echo "[ERROR] [$(date +"%T")]: Failed to upload file $file." > /proc/1/fd/1
     fi
 }
- echo "$(date +"%T"): Starting auto-upload" > /proc/1/fd/1
+echo "[INFO] [$(date +"%T")]: Starting auto-upload" > /proc/1/fd/1
 # Login to obtain cookie
 login "$USERNAME" "$PASSWORD"
 
@@ -57,4 +57,4 @@ for file in "$UPLOAD_FOLDER"/*; do
     fi
 done
 
-echo "$(date +"%T"): Auto-upload completed" > /proc/1/fd/1
+echo "[INFO] [$(date +"%T")]: Auto-upload completed" > /proc/1/fd/1

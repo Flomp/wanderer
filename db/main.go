@@ -157,7 +157,7 @@ func main() {
 		for _, trail := range trails {
 			log.Println(trail)
 
-			if err := util.IndexTrail(trail, client); err != nil {
+			if err := util.UpdateTrail(trail, client); err != nil {
 				return err
 			}
 		}

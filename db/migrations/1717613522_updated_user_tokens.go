@@ -19,10 +19,18 @@ func init() {
 	})
 
 	m.Register(func(db dbx.Builder) error {
+		_, err := client.Index("trails").UpdateFilterableAttributes(&[]string{
+			"_geo", "author", "category", "completed", "date", "difficulty", "distance", "elevation_gain", "public", "shares",
+		})
+
+		if err != nil {
+			return err
+		}
+
 		dao := daos.New(db)
 
 		var usernames []string
-		err := db.NewQuery("SELECT username FROM users").Column(&usernames)
+		err = db.NewQuery("SELECT username FROM users").Column(&usernames)
 
 		if err != nil {
 			return err

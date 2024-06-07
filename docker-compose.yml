@@ -54,8 +54,8 @@ services:
       PUBLIC_POCKETBASE_URL: http://db:8090
       PUBLIC_DISABLE_SIGNUP: false
       UPLOAD_FOLDER: /app/uploads
-      UPLOAD_USER: Flomp
-      UPLOAD_PASSWORD: 12345678
+      UPLOAD_USER:
+      UPLOAD_PASSWORD:
       PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de
     volumes:
       - ./data/uploads:/app/uploads
