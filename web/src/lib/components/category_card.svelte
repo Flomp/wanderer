@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Category } from "$lib/models/category";
     import { getFileURL } from "$lib/util/file_util";
-
+    import { _ } from "svelte-i18n";
     export let category: Category;
 </script>
 
@@ -17,7 +17,7 @@
         class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
     ></div>
     <h5 class="absolute text-white font-bold bottom-4 left-4 text-xl">
-        {category.name}
+        {$_(category.name)}
     </h5>
 </div>
 

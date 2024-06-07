@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     import type { Trail } from "$lib/models/trail";
     import { getFileURL } from "$lib/util/file_util";
     import {
