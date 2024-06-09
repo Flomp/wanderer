@@ -1,0 +1,50 @@
+---
+title: Welcome to wanderer
+description: The self-hosted trail database
+template: splash
+hero:
+  title: |
+    Welcome to <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span>
+  tagline: <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span> is a self-hosted trail database. You can upload your recorded GPS tracks or create new ones and add various metadata to build an easily searchable catalogue.
+  image:
+    file: ../../assets/logo_dark.svg
+  actions:
+    - text: Read the docs
+      link: /guides/example/
+      icon: right-arrow
+      variant: primary
+    - text: Visit the demo
+      link: https://demo.wanderer.sh
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import Button from '../../components/button.svelte';
+
+## Features
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="mt-4">
+    <Card title="Manage your trails" icon="pencil">
+      Upload your trails from multiple file formats (like GPX or TCX) or plan a new trail directly in <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span> with the route drawing tool.
+
+      [Learn more →]()
+    </Card>
+  </div>
+	<Card title="Advanced filters and search" icon="magnifier">
+		<span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span> comes with extensive filter and search functionality right out of the box, so you can focus only on the trails relevant to you.
+	</Card>
+	<Card title="Full API support" icon="open-book">
+		Use <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span>'s API to interact with your trail data directly and automate the tasks that you don't want to do manually.
+
+    [API reference →]()
+	</Card>
+</div>
+
+## Contributing
+
+Help is welcome at any time. Check out the [GitHub repository](https://github.com/Flomp/wanderer). to get started. If you are not sure where you can help, check the [roadmap](https://github.com/users/Flomp/projects/2) for features in the backlog. If you would like to contribute a translation, you can do so [here](https://crowdin.com/project/wanderer).
+
+## Support <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span>
+
+<span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span> is a passion project and will always stay free and open-source. If you like <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span> and want to support it's development you can make a small donation and [buy me a coffee](https://buymeacoffee.com/wanderertrails).
