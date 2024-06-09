@@ -10,7 +10,7 @@ hero:
     file: ../../assets/logo_dark.svg
   actions:
     - text: Read the docs
-      link: /guides/example/
+      link: /getting-started/installation/
       icon: right-arrow
       variant: primary
     - text: Visit the demo
@@ -19,7 +19,8 @@ hero:
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
-import Button from '../../components/button.svelte';
+
+![Mockups of wanderer on laptop, tablet and phone](../../assets/hero.png)
 
 ## Features
 
@@ -34,10 +35,21 @@ import Button from '../../components/button.svelte';
 	<Card title="Advanced filters and search" icon="magnifier">
 		<span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span> comes with extensive filter and search functionality right out of the box, so you can focus only on the trails relevant to you.
 	</Card>
-	<Card title="Full API support" icon="open-book">
-		Use <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span>'s API to interact with your trail data directly and automate the tasks that you don't want to do manually.
+  <Card title="Automatic import" icon="seti:folder">
+		Simply upload all your trails in one go with <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span>'s automatic import feature.
+
+    [Learn more →]()
+	</Card>
+	<Card title="Full API support" icon="seti:json">
+		Use <span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span>'s API to interact with your trail data directly and automate the tasks you don't want to do manually.
 
     [API reference →]()
+	</Card>
+  <Card title="Privacy friendly" icon="approve-check">
+		<span class="-tracking-[0.075em] s-y_bCXRrkrYfP">wanderer</span> is self-hosted and open-source. Your data stays on your machine and your machine only.
+	</Card>
+  <Card title="i18n" icon="translate">
+		We currently support 8 different languages, with plans to add more in the near future.
 	</Card>
 </div>
 

@@ -142,7 +142,7 @@
 <div id="map-container" class="flex flex-col h-full">
     <div
         id="map"
-        class="rounded-xl z-0 basis-full"
+        class="rounded-xl z-0 basis-full min-h-72"
         style={crosshair
             ? "position: relative; outline-style: none;cursor: crosshair !important"
             : "position: relative; outline-style: none;"}

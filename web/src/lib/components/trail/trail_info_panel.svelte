@@ -271,7 +271,7 @@
     >
         <Tabs {tabs} bind:activeTab></Tabs>
     </section>
-    <section class="trail-info-panel-content px-8 overflow-y-scroll" style="height: calc(100% - 394px)">
+    <section class="trail-info-panel-content px-8 overflow-y-scroll" style="height: calc(100% - 420px)">
         <div
             class="grid grid-cols-1 my-4 gap-8"
             class:md:grid-cols-[1fr_18rem]={mode == "overview"}

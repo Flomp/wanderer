@@ -1,0 +1,13 @@
+@import 'tailwindcss/utilities';
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+
+.card {
+    @apply rounded-xl
+}
+
+
+.card .icon {
+    background-color: transparent!important;
+    border-color: var(--sl-color-text)!important
+}
