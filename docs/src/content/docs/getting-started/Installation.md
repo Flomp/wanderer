@@ -100,7 +100,7 @@ The standard configuration makes all three services publically available by forw
 By default, wanderer uses two volumes. One for meilisearch indices and one for all PocketBase data. In the default configuration, the data is stored in volumes. However, if you prefer to use bind mounts you can simply adapt the configuration accordingly.
 
 ### Environment
-The default configuration contains all necessary environment variables. However, there are more options that allow you to modify how the backend and index operate. For more details, you can take a look at the respective section of the [documentation](https://github.com/Flomp/wanderer/wiki/Configuration).
+The default configuration contains all necessary environment variables. However, there are more options that allow you to modify how the backend and index operate. For more details, you can take a look at the respective section of the [documentation](/getting-started/configuration).
 
 :::caution
 Ensure that you change the `MEILI_MASTER_KEY` to a different value if you plan to use wanderer in a production environment.
@@ -177,7 +177,7 @@ To update wanderer to the newest version simply run `git pull origin main` and r
 ## Verify the installation
 No matter which installation method you chose, you should now be able to access wanderer on localhost:3000.
 
-:::note[Bootstrapping]
+:::note
 On the first launch, wanderer will create a rather large city index with over 200,000 entries in meilisearch. This process happens automatically but can take up to 2 minutes to complete. During this time the search functionality might not yet work properly. 
 :::
 

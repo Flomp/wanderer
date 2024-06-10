@@ -254,7 +254,7 @@
         {/each}
     </ul>
     <div id="map" class="rounded-xl z-0" class:hidden={!showMap}></div>
-    <div class:hidden={showMap}>
+    <div class="min-w-0" class:hidden={showMap}>
         <TrailList
             bind:filter
             trails={$list.expand?.trails ?? []}

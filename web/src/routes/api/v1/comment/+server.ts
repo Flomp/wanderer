@@ -8,6 +8,7 @@ export async function GET(event: RequestEvent) {
     try {
         const r: Comment[] = await pb.collection('comments').getFullList<Comment>({
             expand: "author",
+            filter: filter,
             sort: "-created",
         })
 

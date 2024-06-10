@@ -8,7 +8,7 @@ export const comments: Writable<Comment[]> = writable([])
 
 export async function comments_index(trail: Trail) {
     let r = await fetch('/api/v1/comment?' + new URLSearchParams({
-        filter: `trail = ${trail.id}`,
+        filter: `trail="${trail.id}"`,
     }), {
         method: 'GET',
     })
