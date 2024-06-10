@@ -14,13 +14,11 @@
     "@astrojs/node": "^8.2.6",
     "@astrojs/starlight": "^0.24.0",
     "@astrojs/starlight-tailwind": "^2.0.3",
-    "@astrojs/svelte": "^5.5.0",
     "@astrojs/tailwind": "^5.1.0",
     "@fontsource/ibm-plex-mono": "^5.0.13",
     "@fontsource/ibm-plex-sans": "^5.0.20",
     "astro": "^4.8.6",
     "sharp": "^0.32.5",
-    "svelte": "^4.2.18",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.4.5"
   }

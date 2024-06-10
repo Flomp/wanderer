@@ -17,7 +17,7 @@ export default defineConfig({
       github: 'https://github.com/flomp/wanderer'
     },
     components: {
-      Footer: '/src/components/Footer.astro'
+      Footer: './src/components/footer.astro'
     },
     sidebar: [{
       label: 'Getting Started',

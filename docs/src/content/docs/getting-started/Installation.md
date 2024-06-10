@@ -18,7 +18,7 @@ This is the easiest and most convenient way to install wanderer. After cloning t
 If you are not hosting wanderer at `http://localhost:3000` make sure to change `ORIGIN` environment variable to `http(s)://<your_domain>:<your_port>`. Otherwise you will run into CORS errors.
 :::
 
-```docker-compose
+```yml
 version: '3'
 
 x-common-env: &cenv
