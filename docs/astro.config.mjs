@@ -33,7 +33,11 @@ export default defineConfig({
         {
           label: 'Local development',
           link: '/getting-started/local-development/'
-        }
+        },
+        {
+          label: 'Changelog',
+          link: '/getting-started/changelog/'
+        },
       ]
     },
     {
