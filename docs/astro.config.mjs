@@ -1,7 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
-import svelte from "@astrojs/svelte";
 
 import node from "@astrojs/node";
 
@@ -18,7 +17,7 @@ export default defineConfig({
       github: 'https://github.com/flomp/wanderer'
     },
     components: {
-      Footer: './src/components/Footer.astro'
+      Footer: '/src/components/Footer.astro'
     },
     sidebar: [{
       label: 'Getting Started',
