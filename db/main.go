@@ -54,6 +54,22 @@ func main() {
 			}
 		}
 
+		collection, err := app.Dao().FindCollectionByNameOrId("settings")
+		if err != nil {
+			return err
+		}
+
+		settings := models.NewRecord(collection)
+
+		settings.Set("language", "en")
+		settings.Set("unit", "metric")
+		settings.Set("mapFocus", "trails")
+		settings.Set("user", record.Id)
+
+		if err := app.Dao().SaveRecord(settings); err != nil {
+			return err
+		}
+
 		return nil
 	})
 

@@ -3,6 +3,13 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.6.1
+### Bug fixes
+- Fixes a bug that would show wrong comments under a trail
+- Fixes an overflow issue in list views
+- Settings are now created properly when signing up with OAuth
+- Fixes a bug that caused properly named trails to get a generic name
+
 ## v0.6.0
 ### Features
 - You can now share trails with other users by selecting "Share" from the trail contextmenu. You can set the permission level as "View" or "Edit".

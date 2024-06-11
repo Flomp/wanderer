@@ -19,8 +19,7 @@ export async function users_create(user: User) {
 
     const createdUser: User = await r.json();
 
-    const settings = new Settings("metric", "en", "trails", createdUser.id!)
-    await settings_create(settings);
+    return createdUser;
 }
 
 export async function users_search(q: string) {
