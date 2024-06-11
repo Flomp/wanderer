@@ -8,13 +8,16 @@
 [![GitHub Repo stars](https://img.shields.io/github/stars/flomp/wanderer?style=social)](https://github.com/Flomp/wanderer/)
 [![Buy Me A Coffee](https://img.shields.io/badge/Support-wanderer-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
 
+
+[![Try the demo](https://img.shields.io/badge/Try_the_demo-EF2D5E?style=for-the-badge&logoColor=white&logo=rocket&color=2a56f1&labelColor=242734)](https://wanderer.to)
+
 </div>
 
 wanderer is a self-hosted trail database. You can upload your recorded tracks or create new ones and add various metadata to build an easily searchable catalogue. 
 
 ## Core Features
 
-![Screenshot of wanderer](docs/src/assets/features.png)
+![Screenshot of wanderer](docs/src/assets/hero.png)
 
 - Manage your trails
 - Plan new routes
