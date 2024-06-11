@@ -22,7 +22,7 @@
     let hideDemoHint = false;
 </script>
 
-{#if PUBLIC_IS_DEMO && !hideDemoHint}
+{#if PUBLIC_IS_DEMO === "true" && !hideDemoHint}
     <div
         class="flex items-center justify-between bg-amber-200 text-center p-4 text-sm"
         out:slide
