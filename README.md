@@ -9,7 +9,7 @@
 [![Buy Me A Coffee](https://img.shields.io/badge/Support-wanderer-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
 
 
-[![Try the demo](https://img.shields.io/badge/Try_the_demo-EF2D5E?style=for-the-badge&logoColor=white&logo=rocket&color=2a56f1&labelColor=242734)](https://wanderer.to)
+[![Try the demo](https://img.shields.io/badge/Try_the_demo-EF2D5E?style=for-the-badge&logoColor=white&logo=rocket&color=2a56f1&labelColor=242734)](https://demo.wanderer.to)
 
 </div>
 
