@@ -6,9 +6,10 @@
     import TextField from "$lib/components/base/text_field.svelte";
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
+    import type { User } from "$lib/models/user";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
-    import { login, type User } from "$lib/stores/user_store";
+    import { login } from "$lib/stores/user_store";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import { ClientResponseError, type AuthProviderInfo } from "pocketbase";
     import { _ } from "svelte-i18n";

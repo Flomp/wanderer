@@ -1,6 +1,6 @@
 <script lang="ts">
     import { beforeNavigate, goto } from "$app/navigation";
-    import { PUBLIC_IS_DEMO } from "$env/static/public";
+    import { env } from "$env/dynamic/public";
     import Toast from "$lib/components/base/toast.svelte";
     import Footer from "$lib/components/footer.svelte";
     import NavBar from "$lib/components/nav_bar.svelte";
@@ -22,7 +22,7 @@
     let hideDemoHint = false;
 </script>
 
-{#if PUBLIC_IS_DEMO === "true" && !hideDemoHint}
+{#if env.PUBLIC_IS_DEMO === "true" && !hideDemoHint}
     <div
         class="flex items-center justify-between bg-amber-200 text-center p-4 text-sm"
         out:slide
