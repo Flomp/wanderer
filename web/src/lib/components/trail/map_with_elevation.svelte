@@ -27,6 +27,9 @@
 
     $: gpxData = trail?.expand.gpx_data;
     $: if (gpxData && controlElevation) {
+        controlElevation.updateOptions({
+            autofitBounds: true,
+        });
         controlElevation.clear();
         controlElevation.load(gpxData);
     }

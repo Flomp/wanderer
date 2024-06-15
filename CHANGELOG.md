@@ -1,3 +1,15 @@
+# v0.7.0
+## Features
+- Trail sort and sort direction are now remembered through a page reload
+- You can now pick between OpenStreetMaps and OpenTopoMaps tiles
+- The gradient track line can now display altitude, slope, and speed
+- A waypoint's coordinates can now be inferred from a photo's EXIF data
+
+## Docs
+
+- Added a guide for custom categories
+
+
 # v0.6.1
 ## Bug fixes
 - Fixes a bug that would show wrong comments under a trail
