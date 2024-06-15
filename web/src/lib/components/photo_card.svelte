@@ -5,11 +5,16 @@
     export let src: string;
     export let isThumbnail: boolean = false;
     export let showThumbnailControls: boolean = true;
+    export let showExifControls: boolean = false;
 
     const dispatch = createEventDispatcher();
 
     function handleThumbnailClick() {
         dispatch("thumbnail", src);
+    }
+
+    function handleExifClick() {
+        dispatch("exif", src);
     }
 
     function handleDeleteClick() {
@@ -38,7 +43,15 @@
                 ><i class="fa fa-file-image text-primary"></i></button
             >
         {/if}
-
+        {#if showExifControls}
+            <button
+                type="button"
+                class="tooltip"
+                data-title={$_("get-position-from-exif")}
+                on:click={handleExifClick}
+                ><i class="fa fa-magnifying-glass-location text-primary"></i></button
+            >
+        {/if}
         <button
             class="tooltip"
             data-title={$_("delete")}

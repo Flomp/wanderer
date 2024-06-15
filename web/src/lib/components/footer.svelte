@@ -13,13 +13,13 @@
         <h5 class="font-semibold">Resources</h5>
         <ul class="mt-4 text-sm">
             <li>
-                <a href="/docs/api/index.html"
-                    >{$_("api-documentation")}</a
+                <a href="https://wanderer.to/getting-started/installation/"
+                    >{$_("documentation")}</a
                 >
             </li>
             <li>
-                <a href="https://github.com/Flomp/wanderer/wiki"
-                    >{$_("documentation")}</a
+                <a href="/wanderer.to/api-reference/auth"
+                    >{$_("api-documentation")}</a
                 >
             </li>
             <li><a href="https://pocketbase.io/">PocketBase</a></li>
@@ -30,16 +30,16 @@
         <h5 class="font-semibold">wanderer</h5>
         <ul class="mt-4 text-sm">
             <li>
-                <a href="https://github.com/Flomp/wanderer/wiki"
-                    >{$_("about")}</a
-                >
+                <a href="https://wanderer.to">{$_("about")}</a>
             </li>
             <li>
-                <a href="https://github.com/Flomp/wanderer/wiki/Basic-usage"
-                    >{$_("features")}</a
+                <a href="https://wanderer.to/#features">{$_("features")}</a>
+            </li>
+            <li>
+                <a href="https://wanderer.to/getting-started/changelog/"
+                    >{$_("changelog")}</a
                 >
             </li>
-            <li>{$_("changelog")}</li>
             <li>
                 <a href="https://github.com/Flomp/wanderer/blob/main/LICENSE"
                     >{$_("license")}</a

@@ -64,9 +64,39 @@
         map = L.map("map").setView([0, 0], 4);
         map.attributionControl.setPrefix(false);
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: "© OpenStreetMap contributors",
-        }).addTo(map);
+        const baseLayer = L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                attribution: "© OpenStreetMap contributors",
+            },
+        );
+
+        const topoLayer = L.tileLayer(
+            "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png ",
+            {
+                attribution: "© OpenStreetMap contributors",
+            },
+        );
+
+        const baseMaps = {
+            OpenStreetMaps: baseLayer,
+            OpenTopoMaps: topoLayer,
+        };
+
+        L.control.layers(baseMaps).addTo(map);
+
+        switch (localStorage.getItem("layer")) {
+            case "OpenTopoMaps":
+                topoLayer.addTo(map);
+                break;
+            default:
+                baseLayer.addTo(map);
+                break;
+        }
+
+        map.on("baselayerchange", function (e) {
+            localStorage.setItem("layer", e.name);
+        });
 
         map.on("moveend", async (e) => {
             const bounds = map.getBounds();

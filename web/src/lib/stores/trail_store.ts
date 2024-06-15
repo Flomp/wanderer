@@ -38,7 +38,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
     let r = await f("/api/v1/search/trails", {
         method: "POST",
-        body: JSON.stringify({ q: filter.q, options: { filter: filterText, hitsPerPage: 21, page: page } }),
+        body: JSON.stringify({ q: filter.q, options: { filter: filterText, sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`], hitsPerPage: 21, page: page } }),
     });
 
     const result = await r.json();
@@ -369,11 +369,11 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
 
     filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
 
-    if(filter.startDate) {
+    if (filter.startDate) {
         filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`
     }
 
-    if(filter.endDate) {
+    if (filter.endDate) {
         filterText += ` AND date <= ${new Date(filter.endDate).getTime() / 1000}`
     }
 

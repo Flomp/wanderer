@@ -68,10 +68,10 @@
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     role="presentation"
-                    on:mouseup|stopPropagation={() => handleItemClick(item)}
+                    on:mousedown|stopPropagation={() => handleItemClick(item)}
                 >
                     {#if item.icon}
-                        <i class="fa fa-{item.icon} mr-3"></i>
+                        <i class="fa-regular fa-{item.icon} mr-3"></i>
                     {/if}
                     <span class="whitespace-nowrap">{item.text}</span>
                 </li>
