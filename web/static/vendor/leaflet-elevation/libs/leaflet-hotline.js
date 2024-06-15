@@ -195,7 +195,7 @@ https://github.com/iosphere/Leaflet.hotline/
          * @returns {Array.<number>} The RGB values as an array [r, g, b]
          */
         getRGBForValue: function (value) {
-            var valueRelative = Math.min(Math.max((value - this._min) / (this._max - this._min), 0), 0.999);
+            var valueRelative = Math.min(Math.max((value - this._min) / (this._max - this._min), 0), 0.999) || 0;
             var paletteIndex = Math.floor(valueRelative * 256) * 4;
 
             return [

@@ -95,3 +95,12 @@ export function calculateScaleFactor(map: Map) {
 
     return scaleFactor
 }
+
+export function convertDMSToDD(dms: Number[], direction: "N" | "O" | "S" | "W") {
+    var dd = dms[0].valueOf() + dms[1].valueOf() / 60 + dms[2].valueOf() / (60 * 60);
+
+    if (direction == "S" || direction == "W") {
+        dd = dd * -1;
+    }
+    return dd;
+}

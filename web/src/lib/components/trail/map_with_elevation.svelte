@@ -8,6 +8,8 @@
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { createEventDispatcher, onMount } from "svelte";
+    import { _ } from "svelte-i18n";
+    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
     export let trail: Trail | null;
     export let markers: Marker[] = [];
@@ -22,14 +24,21 @@
     let controlElevation: any;
 
     $: gpxData = trail?.expand.gpx_data;
-    $: if (gpxData && controlElevation) {       
+    $: if (gpxData && controlElevation) {
         controlElevation.clear();
         controlElevation.load(gpxData);
     }
 
-    $: if(options) {        
-        controlElevation?.updateOptions(options)    
+    $: if (options) {
+        controlElevation?.updateOptions(options);
     }
+
+    const hotlineSwitcherItems: DropdownItem[] = [
+        { text: $_("altitude"), value: "altitude" },
+        { text: $_("slope"), value: "slope" },
+        { text: $_("speed"), value: "speed" },
+        { text: $_("off"), value: false },
+    ];
 
     onMount(async () => {
         L = (await import("leaflet")).default;
@@ -55,9 +64,39 @@
             dispatch("click", e);
         });
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: "© OpenStreetMap contributors",
-        }).addTo(map);
+        const baseLayer = L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                attribution: "© OpenStreetMap contributors",
+            },
+        );
+
+        const topoLayer = L.tileLayer(
+            "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png ",
+            {
+                attribution: "© OpenStreetMap contributors",
+            },
+        );
+
+        const baseMaps = {
+            OpenStreetMaps: baseLayer,
+            OpenTopoMaps: topoLayer,
+        };
+
+        L.control.layers(baseMaps).addTo(map);
+
+        switch (localStorage.getItem("layer")) {
+            case "OpenTopoMaps":
+                topoLayer.addTo(map);
+                break;
+            default:
+                baseLayer.addTo(map);
+                break;
+        }
+
+        map!.on("baselayerchange", function (e) {
+            localStorage.setItem("layer", e.name);
+        });
 
         const default_elevation_options = {
             height: 200,
@@ -84,11 +123,16 @@
             // Toggle "leaflet-almostover" integration
             almostOver: false,
             // Toggle "leaflet-distance-markers" integration
-            distanceMarkers: { lazy: false, distance: false, direction: true, offset: 500 },
+            distanceMarkers: {
+                lazy: false,
+                distance: false,
+                direction: true,
+                offset: 500,
+            },
             // Toggle "leaflet-edgescale" integration
             edgeScale: false,
             // Toggle "leaflet-hotline" integration
-            hotline: true,
+            hotline: "altitude",
             // Display track datetimes: true || false
             timestamps: false,
             waypoints: false,
@@ -103,7 +147,7 @@
                     prefix: "fa",
                     markerColor: "cadetblue",
                     iconColor: "white",
-                    className: "awesome-marker pointer-events-none"
+                    className: "awesome-marker pointer-events-none",
                 }),
             },
             trkEnd: {
@@ -112,11 +156,11 @@
                     prefix: "fa",
                     markerColor: "cadetblue",
                     iconColor: "white",
-                    className: "awesome-marker pointer-events-none"
+                    className: "awesome-marker pointer-events-none",
                 }),
             },
             graticule: false,
-            drawing: false
+            drawing: false,
         };
 
         const elevation_options = Object.assign(
@@ -137,16 +181,37 @@
             graticule.addTo(map!);
         }
     });
+
+    function switchHotline(metric: "altitude" | "slope" | "speed" | false) {
+        controlElevation.updateOptions({ hotline: metric, autofitBounds: false });
+        controlElevation.clear();
+        controlElevation.load(gpxData);
+    }
 </script>
 
 <div id="map-container" class="flex flex-col h-full">
     <div
         id="map"
-        class="rounded-xl z-0 basis-full min-h-72"
+        class="rounded-xl z-0 basis-full min-h-96 md:min-h-0"
         style={crosshair
             ? "position: relative; outline-style: none;cursor: crosshair !important"
             : "position: relative; outline-style: none;"}
-    ></div>
+    >
+        <div class="absolute top-20 right-3 text-sm" style="z-index: 500">
+            <Dropdown
+                items={hotlineSwitcherItems}
+                on:change={(e) => switchHotline(e.detail.value)}
+                let:toggleMenu={openDropdown}
+            >
+                <button
+                    class="rounded-sm bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-11 w-11"
+                    on:click={openDropdown}
+                >
+                    <i class="fa fa-route text-lg"></i>
+                </button>
+            </Dropdown>
+        </div>
+    </div>
     <div class="flex items-center justify-between">
         <slot />
         <div class="basis-[300px] flex-grow flex-shrink-0" id="elevation"></div>

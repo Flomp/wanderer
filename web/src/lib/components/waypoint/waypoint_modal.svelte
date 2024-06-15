@@ -4,6 +4,7 @@
 
     import { waypoint } from "$lib/stores/waypoint_store";
     import { icons } from "$lib/util/icon_util";
+    import EXIF from "$lib/vendor/exif-js/exif";
     import { createForm } from "$lib/vendor/svelte-form-lib/index";
     import { util } from "$lib/vendor/svelte-form-lib/util";
     import { _ } from "svelte-i18n";
@@ -12,6 +13,9 @@
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
     import PhotoPicker from "../trail/photo_picker.svelte";
+    import { convertDMSToDD } from "$lib/util/leaflet_util";
+    import { show_toast } from "$lib/stores/toast_store";
+
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -20,9 +24,9 @@
     const { form, errors, handleChange, handleSubmit } = createForm<Waypoint>({
         initialValues: $waypoint,
         validationSchema: waypointSchema,
-        onSubmit: async (submittedWaypoint) => {           
-            dispatch("save", submittedWaypoint);        
-                
+        onSubmit: async (submittedWaypoint) => {
+            dispatch("save", submittedWaypoint);
+
             closeModal!();
         },
     });
@@ -35,6 +39,26 @@
                   .filter((i) => i.includes($form.icon ?? ""))
                   .map((i) => ({ text: i, value: i, icon: i }))
             : [];
+
+    function getCoordinatesFromPhoto(src: string) {
+        EXIF.getData({ src: src }, function (p) {
+            const lat = EXIF.getTag(p, "GPSLatitude");
+            const latDir = EXIF.getTag(p, "GPSLatitudeRef");
+            const lon = EXIF.getTag(p, "GPSLongitude");
+            const lonDir = EXIF.getTag(p, "GPSLongitudeRef");
+
+            if (lat && lon) {
+                $form.lat = convertDMSToDD(lat, latDir);
+                $form.lon = convertDMSToDD(lon, lonDir);
+            } else {
+                show_toast({
+                    text: "No GPS data in image",
+                    icon: "close",
+                    type: "error",
+                });
+            }
+        });
+    }
 </script>
 
 <Modal
@@ -102,9 +126,11 @@
             <PhotoPicker
                 id="waypoint"
                 parent={$form}
+                on:exif={(e) => getCoordinatesFromPhoto(e.detail)}
                 bind:photos={$form.photos}
                 bind:photoFiles={$form._photos}
                 showThumbnailControls={false}
+                showExifControls={true}
             ></PhotoPicker>
         </div>
     </form>

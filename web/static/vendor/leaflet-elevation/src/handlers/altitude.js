@@ -16,7 +16,7 @@ export function Altitude() {
 		required: this.options.slope,
 		meta: 'z',
 		unit: altitude.label,
-		statsName: 'elevation',
+		statsName: 'altitude',
 		deltaMax: this.options.altitudeDeltaMax,
 		clampRange: this.options.altitudeRange,
 		// init: ({point}) => {

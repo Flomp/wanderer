@@ -452,8 +452,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			.then(() => {
 				layer.eachLayer((trkseg) => {
 					if (trkseg.feature.geometry.type != "Point") {
-						let geo = L.geoJson(trkseg.toGeoJSON(), { coordsToLatLng: (coords) => L.latLng(coords[0], coords[1], (coords[2] * (this.options.altitudeFactor || 1)) || 0) });
-						let line = L.hotline(geo.toGeoJSON().features[0].geometry.coordinates, {
+						let line = L.hotline(this._data.map(m => [m.x, m.y, m[prop] || 0]), {
 							renderer: L.Hotline.renderer(),
 							min: isFinite(this.track_info[prop + '_min']) ? this.track_info[prop + '_min'] : 0,
 							max: isFinite(this.track_info[prop + '_max']) ? this.track_info[prop + '_max'] : 1,
@@ -1037,7 +1036,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			// check and fix missing data on last added point
 			if (i > 0 && isNaN(prev[attr])) {
 				if (!isNaN(lastValid[attr]) && !isNaN(curr[attr])) {
-					prev[attr] = (lastValid[attr] + curr[attr]) / 2;
+					prev[attr] = _.round((lastValid[attr] + curr[attr]) / 2, props.decimals);
 				} else if (!isNaN(lastValid[attr])) {
 					prev[attr] = lastValid[attr];
 				} else if (!isNaN(curr[attr])) {

@@ -8,6 +8,7 @@
     export let parent: { [key: string]: any };
     export let thumbnail: number = 0;
     export let showThumbnailControls: boolean = true;
+    export let showExifControls: boolean = false;
 
     let photoPreviews: string[] = [];
 
@@ -15,7 +16,7 @@
         (photoFiles ?? []).map(async (f) => {
             return await readAsDataURLAsync(f);
         }),
-    ).then((v) => {       
+    ).then((v) => {
         photoPreviews = v;
     });
 
@@ -59,7 +60,7 @@
             if (!photoFiles) {
                 photoFiles = [];
             }
-            photoFiles = [...photoFiles, file]
+            photoFiles = [...photoFiles, file];
         }
     }
 
@@ -117,7 +118,9 @@
                 on:delete={() => handlePhotoDelete(i)}
                 isThumbnail={thumbnail === i}
                 on:thumbnail={() => makePhotoThumbnail(i)}
+                on:exif
                 {showThumbnailControls}
+                {showExifControls}
             ></PhotoCard>
         </div>
     {/each}
