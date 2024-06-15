@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { browser } from "$app/environment";
     import { beforeNavigate, goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import { env } from "$env/dynamic/public";
     import Toast from "$lib/components/base/toast.svelte";
     import Footer from "$lib/components/footer.svelte";
@@ -11,10 +13,8 @@
     import "../css/app.css";
     import "../css/components.css";
     import "../css/theme.css";
-    import { page } from "$app/stores";
     import { onMount } from "svelte";
 
-    
     beforeNavigate((n) => {
         if (!$currentUser && isRouteProtected(n.to?.url?.pathname ?? "")) {
             n.cancel();
@@ -22,13 +22,19 @@
         }
     });
 
+    onMount(() => {
+        if ($page.data.origin != location.origin) {
+            showWarning = true;
+        }
+    });
+
     let hideDemoHint = false;
-    let hideWarning = false;
+    let showWarning = false;
 </script>
 
 {#if env.PUBLIC_IS_DEMO === "true" && !hideDemoHint}
     <div
-        class="flex items-center justify-between bg-amber-200 text-center p-4 text-sm"
+        class="flex items-center justify-between bg-amber-200 text-center p-4 text-sm text-black"
         out:slide
     >
         <div></div>
@@ -42,14 +48,21 @@
     </div>
 {/if}
 
-{#if $page.data.warnings?.length && !hideWarning}
+{#if showWarning}
     <div
-        class="flex items-center justify-between bg-red-200 text-center p-4 text-sm"
+        class="flex items-center justify-between bg-red-200 text-center p-4 text-sm text-black"
         out:slide
     >
         <div></div>
-        <span>{@html $page.data.warnings[0]} </span>
-        <button class="btn-icon self-end" on:click={() => (hideWarning = true)}
+        <p>
+            You are accessing wanderer from <span class="font-mono bg-gray-100"
+                >{location.origin}</span
+            >
+            but your ORIGIN environment variable is set to
+            <span class="font-mono bg-gray-100">{$page.data.origin}</span>. This
+            may cause errors.
+        </p>
+        <button class="btn-icon self-end" on:click={() => (showWarning = false)}
             ><i class="fa fa-close"></i></button
         >
     </div>

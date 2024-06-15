@@ -1,3 +1,11 @@
+# v0.7.1
+## Features
+- A warning is now displayed if the ORIGIN environment variable is misconfigured
+  
+## Bug fixes
+- Fixes login for http connections
+- Trails are now properly sorted across all pages
+
 # v0.7.0
 ## Features
 - Trail sort and sort direction are now remembered through a page reload
