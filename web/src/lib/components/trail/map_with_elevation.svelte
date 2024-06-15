@@ -23,6 +23,8 @@
     let L: any;
     let controlElevation: any;
 
+    let selectedMetric: "altitude" | "slope" | "speed" | false = "altitude";
+
     $: gpxData = trail?.expand.gpx_data;
     $: if (gpxData && controlElevation) {
         controlElevation.clear();
@@ -33,11 +35,27 @@
         controlElevation?.updateOptions(options);
     }
 
-    const hotlineSwitcherItems: DropdownItem[] = [
-        { text: $_("altitude"), value: "altitude" },
-        { text: $_("slope"), value: "slope" },
-        { text: $_("speed"), value: "speed" },
-        { text: $_("off"), value: false },
+    $: hotlineSwitcherItems = [
+        {
+            text: $_("altitude"),
+            value: "altitude",
+            icon: selectedMetric == "altitude" ? "square-check" : "square",
+        },
+        {
+            text: $_("slope"),
+            value: "slope",
+            icon: selectedMetric == "slope" ? "square-check" : "square",
+        },
+        {
+            text: $_("speed"),
+            value: "speed",
+            icon: selectedMetric == "speed" ? "square-check" : "square",
+        },
+        {
+            text: $_("off"),
+            value: false,
+            icon: selectedMetric == false ? "square-check" : "square",
+        },
     ];
 
     onMount(async () => {
@@ -183,7 +201,11 @@
     });
 
     function switchHotline(metric: "altitude" | "slope" | "speed" | false) {
-        controlElevation.updateOptions({ hotline: metric, autofitBounds: false });
+        controlElevation.updateOptions({
+            hotline: metric,
+            autofitBounds: false,
+        });
+        selectedMetric = metric;
         controlElevation.clear();
         controlElevation.load(gpxData);
     }
@@ -204,7 +226,7 @@
                 let:toggleMenu={openDropdown}
             >
                 <button
-                    class="rounded-sm bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-11 w-11"
+                    class="rounded-md border-2 border-black border-opacity-30 bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
                     on:click={openDropdown}
                 >
                     <i class="fa fa-route text-lg"></i>
