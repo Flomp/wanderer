@@ -116,6 +116,9 @@
             localStorage.setItem("layer", e.name);
         });
 
+        const localMetric = localStorage.getItem("gradient") as any ?? "altitude";
+        selectedMetric = localMetric === "false" ? false : localMetric;
+
         const default_elevation_options = {
             height: 200,
 
@@ -150,7 +153,7 @@
             // Toggle "leaflet-edgescale" integration
             edgeScale: false,
             // Toggle "leaflet-hotline" integration
-            hotline: "altitude",
+            hotline: selectedMetric,
             // Display track datetimes: true || false
             timestamps: false,
             waypoints: false,
@@ -206,6 +209,7 @@
             autofitBounds: false,
         });
         selectedMetric = metric;
+        localStorage.setItem("gradient", metric.toString());
         controlElevation.clear();
         controlElevation.load(gpxData);
     }
