@@ -48,6 +48,10 @@ export default defineConfig({
       }, {
         label: 'Lists',
         link: '/guides/lists/'
+      },
+      {
+        label: 'Custom categories',
+        link: '/guides/custom-categories/'
       }, {
         label: 'Import/Export',
         link: '/guides/import-export/'
