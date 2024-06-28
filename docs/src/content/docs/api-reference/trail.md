@@ -520,21 +520,29 @@ HTTP Status Code **200**
 
 |Name|Type|Required|Restrictions|Title|description|
 |---|---|---|---|---|---|
-|» name|string|true|none||none|
-|» public|boolean|true|none||none|
-|» difficulty|string|true|none||none|
-|» lat|number|true|none||none|
-|» lon|number|true|none||none|
-|» thumbnail|integer|true|none||none|
-|» photos|[string]|true|none||none|
-|» waypoints|[string]|true|none||none|
-|» summit_logs|[string]|true|none||none|
-|» expand|object|true|none||none|
-|»» waypoints|[string]|true|none||none|
-|»» summit_logs|[string]|true|none||none|
-|» tags|[string]|true|none||none|
-|» description|string|true|none||none|
 |» author|string|true|none||none|
+|» category|string|true|none||none|
+|» collectionId|string|true|none||none|
+|» collectionName|string|true|none||none|
+|» created|string|true|none||none|
+|» date|string|true|none||none|
+|» description|string|true|none||none|
+|» difficulty|string|true|none||none|
+|» distance|number|true|none||none|
+|» duration|number|true|none||none|
+|» elevation_gain|number|true|none||none|
+|» gpx|string|true|none||none|
+|» id|string|true|none||none|
+|» lat|number|true|none||none|
+|» location|string|true|none||none|
+|» lon|number|true|none||none|
+|» name|string|true|none||none|
+|» photos|[string]|true|none||none|
+|» public|boolean|true|none||none|
+|» summit_logs|[string]|true|none||none|
+|» thumbnail|integer|true|none||none|
+|» updated|string|true|none||none|
+|» waypoints|[string]|true|none||none|
 
 HTTP Status Code **400**
 

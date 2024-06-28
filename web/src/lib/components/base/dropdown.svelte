@@ -71,7 +71,7 @@
                     on:mousedown|stopPropagation={() => handleItemClick(item)}
                 >
                     {#if item.icon}
-                        <i class="fa-regular fa-{item.icon} mr-3"></i>
+                        <i class="fa fa-{item.icon} mr-3"></i>
                     {/if}
                     <span class="whitespace-nowrap">{item.text}</span>
                 </li>

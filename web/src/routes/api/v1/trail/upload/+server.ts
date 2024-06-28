@@ -19,7 +19,7 @@ export async function PUT(event: RequestEvent) {
         }
 
         try {
-            await trails_create(trail, [], data, event.fetch);
+            trail = await trails_create(trail, [], data, event.fetch);
         } catch (e: any) {
             console.log(e);
 
