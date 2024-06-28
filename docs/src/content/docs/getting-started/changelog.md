@@ -3,6 +3,11 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.7.2
+### Bug fixes
+- Icons in dropdown menus are now displaying properly again
+- The trail id is now returned when using the upload API endpoint
+
 ## v0.7.1
 ### Features
 - A warning is now displayed if the ORIGIN environment variable is misconfigured
