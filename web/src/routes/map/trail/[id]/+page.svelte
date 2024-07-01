@@ -16,16 +16,16 @@
     <title>{$trail.name} | {$_("map")} | wanderer</title>
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[458px_1fr] gap-x-1 gap-y-4">
-    <div id="trail-details">
-        <TrailInfoPanel trail={$trail} {markers}></TrailInfoPanel>
+    <TrailInfoPanel trail={$trail} {markers}></TrailInfoPanel>
+    <div id="trail-details" class=" sticky top-0">
+        <MapWithElevation trail={$trail} bind:markers></MapWithElevation>
     </div>
-    <MapWithElevation trail={$trail} bind:markers></MapWithElevation>
 </main>
 
 <style>
     @media only screen and (min-width: 768px) {
         #trail-details {
-            height: calc(100vh - 124px);
+            max-height: calc(100vh - 124px);
         }
     }
 </style>

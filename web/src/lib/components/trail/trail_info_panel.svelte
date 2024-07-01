@@ -161,7 +161,7 @@
 </script>
 
 <div
-    class="trail-info-panel max-w-5xl mx-auto border border-input-border rounded-3xl h-full"
+    class="trail-info-panel mx-auto border border-input-border rounded-3xl h-full" style="max-width: min(100%, 64rem)"
 >
     <div class="trail-info-panel-header">
         <section class="relative h-80">
@@ -214,7 +214,7 @@
                             </h3>
                         {/if}
                         <h3 class="text-lg">
-                            <i class="fa fa-person-hiking mr-2"></i>
+                            <i class="fa fa-gauge mr-2"></i>
                             {$_(trail.difficulty ?? "?")}
                         </h3>
                     </div>
@@ -271,7 +271,7 @@
     >
         <Tabs {tabs} bind:activeTab></Tabs>
     </section>
-    <section class="trail-info-panel-content px-8 overflow-y-scroll" style="height: calc(100% - 420px)">
+    <section class="trail-info-panel-content px-8">
         <div
             class="grid grid-cols-1 my-4 gap-8"
             class:md:grid-cols-[1fr_18rem]={mode == "overview"}

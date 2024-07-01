@@ -51,7 +51,7 @@
                 <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
             {/if}
             <h5>
-                <i class="fa fa-person-hiking mr-3"></i>{$_(
+                <i class="fa fa-gauge mr-3"></i>{$_(
                     trail.difficulty ?? "?",
                 )}
             </h5>

@@ -17,16 +17,16 @@
     onMount(() => {
         if (window.innerWidth < 768) {
             filterExpanded = false;
-        }        
+        }
     });
 
-    async function handleFilterUpdate() {        
+    async function handleFilterUpdate() {
         const response = await trails_search_filter(filter, 1);
         pagination.page = response.page;
         pagination.totalPages = response.totalPages;
     }
 
-    async function paginate(page: number) {       
+    async function paginate(page: number) {
         pagination.page = page;
         const response = await trails_search_filter(filter, page);
     }

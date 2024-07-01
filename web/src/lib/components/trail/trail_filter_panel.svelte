@@ -122,7 +122,7 @@
     }
 </script>
 
-<div class="trail-filter sticky top-4 p-8 border border-input-border rounded-xl self-start">
+<div class="trail-filter p-8 border border-input-border rounded-xl">
     {#if showTrailSearch}
         <div class="flex gap-2 items-center">
             <div class="basis-full">

@@ -268,7 +268,7 @@
             <h4 class="font-semibold text-lg">${trail.name}</h4>
             <div class="flex gap-x-4">
             ${trail.location ? `<h5><i class="fa fa-location-dot mr-2"></i>${trail.location}</h5>` : ""}
-            <h5><i class="fa fa-person-hiking mr-2"></i>${$_(trail.difficulty as string)}</h5>
+            <h5><i class="fa fa-gauge mr-2"></i>${$_(trail.difficulty as string)}</h5>
             </div>
             <div class="flex mt-2 gap-4 text-sm text-gray-500"><span class="shrink-0"><i
                         class="fa fa-left-right mr-2"></i>${formatDistance(
@@ -353,7 +353,7 @@
             {/if}
         </div>
 
-        {#if !showMap || (browser && window.innerWidth >= 768)}
+        {#if !showFilter && (!showMap || (browser && window.innerWidth >= 768))}
             {#if $trails.length == 0}
                 <EmptyStateSearch></EmptyStateSearch>
             {/if}

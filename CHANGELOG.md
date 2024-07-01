@@ -1,3 +1,17 @@
+# v0.7.3
+## Features
+- Adds support for FIT files
+  
+## Bug fixes
+- Fixes display issue for the filter panel in the map view
+
+## Translations
+- adds Italian translation (thanks to [lukasitaly](https://github.com/lukasitaly))
+  
+## Bug fixes
+- Icons in dropdown menus are now displaying properly again
+- The trail id is now returned when using the upload API endpoint
+
 # v0.7.2
 ## Bug fixes
 - Icons in dropdown menus are now displaying properly again

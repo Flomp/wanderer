@@ -3,6 +3,17 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.7.3
+### Features
+- Adds support for FIT files
+  
+### Bug fixes
+- Fixes display issue for the filter panel in the map view
+
+### Translations
+- adds Italian translation (thanks to [lukasitaly](https://github.com/lukasitaly))
+  
+
 ## v0.7.2
 ### Bug fixes
 - Icons in dropdown menus are now displaying properly again
