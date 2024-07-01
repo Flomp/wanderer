@@ -2,14 +2,14 @@
 class Settings {
   id?: string;
   unit?: "metric" | "imperial";
-  language?: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt" | "zh";
+  language?: "en" | "de" | "fr" | "hu"| "it" | "nl" | "pl" | "pt" | "zh";
   mapFocus?: "trails" | "location";
   location?: { name: string, lat: number, lon: number };
   user?: string;
 
   constructor(
     unit: "metric" | "imperial",
-    language: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt" | "zh",
+    language: "en" | "de" | "fr" | "hu"| "it" | "nl" | "pl" | "pt" | "zh",
     mapFocus: "trails" | "location",
     user: string,
     params?: {

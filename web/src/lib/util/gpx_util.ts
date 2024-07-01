@@ -1,11 +1,16 @@
 import GPX from "$lib/models/gpx/gpx";
 import { Trail } from "$lib/models/trail";
-import { Waypoint } from "$lib/models/waypoint";
+import { Waypoint, waypointSchema } from "$lib/models/waypoint";
 import { currentUser } from "$lib/stores/user_store";
 import GeoJsonToGpx from "$lib/vendor/geoJSONToGPX";
 import { kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON";
 import cryptoRandomString from "crypto-random-string";
 import { get } from "svelte/store";
+//@ts-ignore
+import EasyFit from "easy-fit"
+import Track from "$lib/models/gpx/track";
+import TrackSegment from "$lib/models/gpx/track-segment";
+import GPXWaypoint from "$lib/models/gpx/waypoint";
 
 export async function gpx2trail(gpxString: string) {
     const gpx = await GPX.parse(gpxString);
@@ -16,7 +21,7 @@ export async function gpx2trail(gpxString: string) {
 
     const trail = new Trail("");
 
-    trail.name = gpx.metadata?.name || gpx.trk?.at(0)?.name || gpx.rte?.at(0)?.name ||  `trail-${new Date().toISOString()}`;
+    trail.name = gpx.metadata?.name || gpx.trk?.at(0)?.name || gpx.rte?.at(0)?.name || `trail-${new Date().toISOString()}`;
 
     trail.description = gpx.metadata?.desc;
 
@@ -72,13 +77,13 @@ export async function trail2gpx(trail: Trail) {
         author: { name: trail.author ?? "", email: get(currentUser)?.email ?? "" }
     }
 
-    if(!gpx.wpt) {
+    if (!gpx.wpt) {
         gpx.wpt = [];
     }
 
     for (const wp of trail.expand.waypoints) {
         const gpxWpt = gpx.wpt.find((w) => w.$.lat == wp.lat && w.$.lon == wp.lon)
-        if(!gpxWpt) {
+        if (!gpxWpt) {
             gpx.wpt.push({
                 $: {
                     lat: wp.lat,
@@ -124,4 +129,43 @@ export function fromTCX(tcxData: string) {
     }
     const gpx = GeoJsonToGpx(geojson as any, options)
     return new XMLSerializer().serializeToString(gpx)
+}
+
+export async function fromFIT(fitData: ArrayBuffer) {
+    const easyFit = new EasyFit({
+    });
+    return new Promise<string>((resolve, reject) => easyFit.parse(fitData, function (error: string, data: any) {
+
+        if (error) {
+            console.log(error);
+            reject(error)
+        }
+        console.log(data);
+
+        const gpx = new GPX({
+            metadata: {
+                name: "",
+                desc: "",
+                time: data.activity?.timestamp ?? new Date(),
+                keywords: "wanderer"
+            },
+            trk: [
+                new Track({
+                    trkseg: new TrackSegment({
+                        trkpt: data.records.flatMap((d => {
+                            return (d.position_lat && d.position_long) ? new GPXWaypoint({
+                                $: { lat: d.position_lat, lon: d.position_long },
+                                time: d.timestamp,
+                                ele: d.altitude
+
+                            }) : []
+                        }))
+                    })
+                })
+            ]
+        });
+        console.log(gpx);
+
+        resolve(gpx.toString());
+    }));
 }

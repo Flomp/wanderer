@@ -60,9 +60,10 @@ GET /trail/{id}
   "category": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
+  "date": "2019-08-24",
   "description": "string",
-  "difficulty": "string",
+  "difficulty": "easy",
   "distance": 0,
   "duration": 0,
   "elevation_gain": 0,
@@ -80,7 +81,7 @@ GET /trail/{id}
     "string"
   ],
   "thumbnail": 0,
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "waypoints": [
     "string"
   ]
@@ -104,12 +105,13 @@ HTTP Status Code **200**
 |» category|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
+|» date|string(date)|true|none||none|
 |» description|string|true|none||none|
 |» difficulty|string|true|none||none|
-|» distance|integer|true|none||none|
-|» duration|integer|true|none||none|
-|» elevation_gain|integer|true|none||none|
+|» distance|number|true|none||none|
+|» duration|number|true|none||none|
+|» elevation_gain|number|true|none||none|
 |» gpx|string|true|none||none|
 |» id|string|true|none||none|
 |» lat|number|true|none||none|
@@ -120,8 +122,16 @@ HTTP Status Code **200**
 |» public|boolean|true|none||none|
 |» summit_logs|[string]|true|none||none|
 |» thumbnail|integer|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» waypoints|[string]|true|none||none|
+
+#### Enum
+
+|Name|Value|
+|---|---|
+|difficulty|easy|
+|difficulty|moderate|
+|difficulty|hard|
 
 HTTP Status Code **404**
 
@@ -151,7 +161,18 @@ POST /trail/{id}
 
 ```json
 {
-  "name": "string"
+  "name": "string",
+  "category": "string",
+  "description": "string",
+  "difficulty": "easy",
+  "distance": 0,
+  "duration": 0,
+  "elevation_gain": 0,
+  "lat": 0,
+  "location": "string",
+  "lon": 0,
+  "public": true,
+  "thumbnail": 0
 }
 ```
 
@@ -163,6 +184,25 @@ POST /trail/{id}
 |Content-Type|header|string| yes |none|
 |body|body|object| no |none|
 |» name|body|string| yes |none|
+|» category|body|string| no |none|
+|» description|body|string| no |none|
+|» difficulty|body|string| no |none|
+|» distance|body|number| no |none|
+|» duration|body|number| no |none|
+|» elevation_gain|body|number| no |none|
+|» lat|body|number| no |none|
+|» location|body|string| no |none|
+|» lon|body|number| no |none|
+|» public|body|boolean| no |none|
+|» thumbnail|body|integer| no |none|
+
+#### Enum
+
+|Name|Value|
+|---|---|
+|» difficulty|easy|
+|» difficulty|moderate|
+|» difficulty|hard|
 
 > Response Examples
 
@@ -174,9 +214,10 @@ POST /trail/{id}
   "category": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
+  "date": "2019-08-24",
   "description": "string",
-  "difficulty": "string",
+  "difficulty": "easy",
   "distance": 0,
   "duration": 0,
   "elevation_gain": 0,
@@ -223,7 +264,7 @@ POST /trail/{id}
     "string"
   ],
   "thumbnail": 0,
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "waypoints": [
     "string"
   ]
@@ -247,12 +288,13 @@ HTTP Status Code **200**
 |» category|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
+|» date|string(date)|true|none||none|
 |» description|string|true|none||none|
 |» difficulty|string|true|none||none|
-|» distance|integer|true|none||none|
-|» duration|integer|true|none||none|
-|» elevation_gain|integer|true|none||none|
+|» distance|number|true|none||none|
+|» duration|number|true|none||none|
+|» elevation_gain|number|true|none||none|
 |» expand|object|true|none||none|
 |»» category|object|true|none||none|
 |»»» collectionId|string|true|none||none|
@@ -285,8 +327,16 @@ HTTP Status Code **200**
 |» public|boolean|true|none||none|
 |» summit_logs|[string]|true|none||none|
 |» thumbnail|integer|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» waypoints|[string]|true|none||none|
+
+#### Enum
+
+|Name|Value|
+|---|---|
+|difficulty|easy|
+|difficulty|moderate|
+|difficulty|hard|
 
 HTTP Status Code **404**
 
@@ -476,34 +526,35 @@ string
 
 ```json
 {
-  "name": "string",
-  "public": true,
-  "difficulty": "string",
+  "author": "string",
+  "category": "string",
+  "collectionId": "string",
+  "collectionName": "string",
+  "created": "2019-08-24T14:15:22Z",
+  "date": "2019-08-24",
+  "description": "string",
+  "difficulty": "easy",
+  "distance": 0,
+  "duration": 0,
+  "elevation_gain": 0,
+  "gpx": "string",
+  "id": "string",
   "lat": 0,
+  "location": "string",
   "lon": 0,
-  "thumbnail": 0,
+  "name": "string",
   "photos": [
     "string"
   ],
-  "waypoints": [
-    "string"
-  ],
+  "public": true,
   "summit_logs": [
     "string"
   ],
-  "expand": {
-    "waypoints": [
-      "string"
-    ],
-    "summit_logs": [
-      "string"
-    ]
-  },
-  "tags": [
+  "thumbnail": 0,
+  "updated": "2019-08-24T14:15:22Z",
+  "waypoints": [
     "string"
-  ],
-  "description": "string",
-  "author": "string"
+  ]
 }
 ```
 
@@ -524,8 +575,8 @@ HTTP Status Code **200**
 |» category|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
-|» date|string|true|none||none|
+|» created|string(date-time)|true|none||none|
+|» date|string(date)|true|none||none|
 |» description|string|true|none||none|
 |» difficulty|string|true|none||none|
 |» distance|number|true|none||none|
@@ -541,8 +592,16 @@ HTTP Status Code **200**
 |» public|boolean|true|none||none|
 |» summit_logs|[string]|true|none||none|
 |» thumbnail|integer|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» waypoints|[string]|true|none||none|
+
+#### Enum
+
+|Name|Value|
+|---|---|
+|difficulty|easy|
+|difficulty|moderate|
+|difficulty|hard|
 
 HTTP Status Code **400**
 

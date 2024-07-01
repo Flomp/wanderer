@@ -50,7 +50,7 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromKML, fromTCX, gpx2trail } from "$lib/util/gpx_util";
+    import { fromFIT, fromKML, fromTCX, gpx2trail } from "$lib/util/gpx_util";
     import {
         createAnchorMarker,
         createMarkerFromWaypoint,
@@ -221,7 +221,37 @@
         document.getElementById("fileInput")!.click();
     }
 
-    function handleFileSelection() {
+    async function parseFile(file: File) {
+        const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+        let gpxData = "";
+        
+        if (fileExtension !== "fit") {
+            const fileContent = await file.text();
+            if (fileContent.includes("http://www.opengis.net/kml")) {
+                gpxData = fromKML(fileContent);
+                gpxFile = new Blob([gpxData], {
+                    type: "application/gpx+xml",
+                });
+                return gpxData;
+            } else if (fileContent.includes("TrainingCenterDatabase")) {
+                gpxData = fromTCX(fileContent);
+                gpxFile = new Blob([gpxData], {
+                    type: "application/gpx+xml",
+                });
+            } else {
+                gpxData = fileContent;
+                gpxFile = file;
+            }
+        } else {
+            const fileContent = await file.arrayBuffer();
+            gpxData = await fromFIT(fileContent);
+        }
+
+        return gpxData
+    }
+
+    async function handleFileSelection() {
         const selectedFile = (
             document.getElementById("fileInput") as HTMLInputElement
         ).files?.[0];
@@ -235,61 +265,45 @@
         clearRoute();
         drawingActive = false;
         overwriteGPX = false;
-        var reader = new FileReader();
 
-        reader.readAsText(selectedFile);
+        let gpxData = await parseFile(selectedFile);
 
-        reader.onload = async function (e) {
-            let gpxData = "";
-            const fileContent = e.target?.result as string;
-            if (fileContent.includes("http://www.opengis.net/kml")) {
-                gpxData = fromKML(e.target?.result as string);
-                gpxFile = new Blob([gpxData], { type: "application/gpx+xml" });
-            } else if (fileContent.includes("TrainingCenterDatabase")) {
-                gpxData = fromTCX(e.target?.result as string);
-                gpxFile = new Blob([gpxData], { type: "application/gpx+xml" });
-            } else {
-                gpxData = fileContent;
-                gpxFile = selectedFile;
+        try {
+            const parseResult = await gpx2trail(gpxData);
+            $form = parseResult.trail;
+            $form.expand.gpx_data = gpxData;
+            $form.category = $categories[0].id;
+
+            setRoute(parseResult.gpx);
+            initRouteAnchors(parseResult.gpx);
+
+            for (const waypoint of $form.expand.waypoints) {
+                saveWaypoint(waypoint);
             }
-            try {
-                const parseResult = await gpx2trail(gpxData);
-                $form = parseResult.trail;
-                $form.expand.gpx_data = gpxData;
+        } catch (e) {
+            console.log(e);
 
-                setRoute(parseResult.gpx);
-                initRouteAnchors(parseResult.gpx);
-
-                for (const waypoint of $form.expand.waypoints) {
-                    saveWaypoint(waypoint);
-                }
-            } catch (e) {
-                console.log(e);
-
-                show_toast({
-                    icon: "close",
-                    type: "error",
-                    text: $_("error-reading-file"),
-                });
-                return;
-            }
-            const r = await fetch("/api/v1/search/cities500", {
-                method: "POST",
-                body: JSON.stringify({
-                    q: "",
-                    options: {
-                        filter: [
-                            `_geoRadius(${$form.lat}, ${$form.lon}, 10000)`,
-                        ],
-                        sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
-                        limit: 1,
-                    },
-                }),
+            show_toast({
+                icon: "close",
+                type: "error",
+                text: $_("error-reading-file"),
             });
-            const closestCity = (await r.json()).hits[0];
+            return;
+        }
+        const r = await fetch("/api/v1/search/cities500", {
+            method: "POST",
+            body: JSON.stringify({
+                q: "",
+                options: {
+                    filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
+                    sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
+                    limit: 1,
+                },
+            }),
+        });
+        const closestCity = (await r.json()).hits[0];
 
-            $form.location = closestCity.name;
-        };
+        $form.location = closestCity.name;
     }
 
     function clearWaypoints() {
@@ -386,7 +400,7 @@
     }
 
     function beforSummitLogModalOpen() {
-        summitLog.set(new SummitLog(new Date().toISOString().split('T')[0]));
+        summitLog.set(new SummitLog(new Date().toISOString().split("T")[0]));
         openSummitLogModal();
     }
 
@@ -640,7 +654,7 @@
             type="file"
             name="gpx"
             id="fileInput"
-            accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML"
+            accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
             style="display: none;"
             on:change={handleFileSelection}
         />

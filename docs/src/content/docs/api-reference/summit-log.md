@@ -20,11 +20,11 @@ GET /summit-log/{id}
 {
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
-  "date": "string",
+  "created": "2019-08-24T14:15:22Z",
+  "date": "2019-08-24",
   "id": "string",
   "text": "string",
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -43,11 +43,11 @@ HTTP Status Code **200**
 |---|---|---|---|---|---|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
-|» date|string|true|none||none|
+|» created|string(date-time)|true|none||none|
+|» date|string(date)|true|none||none|
 |» id|string|true|none||none|
 |» text|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **404**
 
@@ -77,7 +77,8 @@ POST /summit-log/{id}
 
 ```json
 {
-  "name": "string"
+  "date": "2019-08-24",
+  "text": "string"
 }
 ```
 
@@ -88,7 +89,8 @@ POST /summit-log/{id}
 |id|path|string| yes |none|
 |Content-Type|header|string| yes |none|
 |body|body|object| no |none|
-|» name|body|string| yes |none|
+|» date|body|string(date)| yes |none|
+|» text|body|string| no |none|
 
 > Response Examples
 
@@ -98,11 +100,11 @@ POST /summit-log/{id}
 {
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
-  "date": "string",
+  "created": "2019-08-24T14:15:22Z",
+  "date": "2019-08-24",
   "id": "string",
   "text": "string",
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -121,11 +123,11 @@ HTTP Status Code **200**
 |---|---|---|---|---|---|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
-|» date|string|true|none||none|
+|» created|string(date-time)|true|none||none|
+|» date|string(date)|true|none||none|
 |» id|string|true|none||none|
 |» text|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **404**
 
@@ -252,7 +254,7 @@ PUT /summit-log
 
 ```json
 {
-  "date": "string",
+  "date": "2019-08-24",
   "text": "string"
 }
 ```
@@ -262,8 +264,8 @@ PUT /summit-log
 |Name|Location|Type|Required|Description|
 |---|---|---|---|---|
 |body|body|object| no |none|
-|» date|body|string| yes |none|
-|» text|body|string| yes |none|
+|» date|body|string(date)| yes |none|
+|» text|body|string| no |none|
 
 > Response Examples
 
@@ -273,11 +275,11 @@ PUT /summit-log
 {
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
-  "date": "string",
+  "created": "2019-08-24T14:15:22Z",
+  "date": "2019-08-24",
   "id": "string",
   "text": "string",
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -296,11 +298,11 @@ HTTP Status Code **200**
 |---|---|---|---|---|---|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
-|» date|string|true|none||none|
+|» created|string(date-time)|true|none||none|
+|» date|string(date)|true|none||none|
 |» id|string|true|none||none|
 |» text|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **400**
 

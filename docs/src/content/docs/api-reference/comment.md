@@ -21,7 +21,7 @@ GET /comment/{id}
   "author": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "expand": {
     "author": {
       "avatar": "string",
@@ -41,7 +41,7 @@ GET /comment/{id}
   "rating": 0,
   "text": "string",
   "trail": "string",
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -61,7 +61,7 @@ HTTP Status Code **200**
 |» author|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» expand|object|true|none||none|
 |»» author|object|true|none||none|
 |»»» avatar|string|true|none||none|
@@ -79,7 +79,7 @@ HTTP Status Code **200**
 |» rating|integer|true|none||none|
 |» text|string|true|none||none|
 |» trail|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **404**
 
@@ -135,12 +135,12 @@ POST /comment/{id}
   "author": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "id": "string",
   "rating": 0,
   "text": "string",
   "trail": "string",
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -160,12 +160,12 @@ HTTP Status Code **200**
 |» author|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» id|string|true|none||none|
 |» rating|integer|true|none||none|
 |» text|string|true|none||none|
 |» trail|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **404**
 
@@ -348,12 +348,12 @@ PUT /comment
   "author": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "id": "string",
   "rating": 0,
   "text": "string",
   "trail": "string",
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -373,12 +373,12 @@ HTTP Status Code **200**
 |» author|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» id|string|true|none||none|
 |» rating|integer|true|none||none|
 |» text|string|true|none||none|
 |» trail|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **400**
 

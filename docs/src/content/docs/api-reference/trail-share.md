@@ -20,11 +20,11 @@ GET /trail-share/{id}
 {
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "id": "string",
-  "permission": "string",
+  "permission": "view",
   "trail": "string",
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "user": "string"
 }
 ```
@@ -44,12 +44,19 @@ HTTP Status Code **200**
 |---|---|---|---|---|---|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» id|string|true|none||none|
 |» permission|string|true|none||none|
 |» trail|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» user|string|true|none||none|
+
+#### Enum
+
+|Name|Value|
+|---|---|
+|permission|view|
+|permission|edit|
 
 HTTP Status Code **404**
 
@@ -111,11 +118,11 @@ POST /trail-share/{id}
 {
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "id": "string",
-  "permission": "string",
+  "permission": "view",
   "trail": "string",
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "user": "string"
 }
 ```
@@ -135,12 +142,19 @@ HTTP Status Code **200**
 |---|---|---|---|---|---|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» id|string|true|none||none|
 |» permission|string|true|none||none|
 |» trail|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» user|string|true|none||none|
+
+#### Enum
+
+|Name|Value|
+|---|---|
+|permission|view|
+|permission|edit|
 
 HTTP Status Code **404**
 
@@ -315,11 +329,11 @@ PUT /trail-share
 {
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "id": "string",
-  "permission": "string",
+  "permission": "view",
   "trail": "string",
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "user": "string"
 }
 ```
@@ -339,12 +353,19 @@ HTTP Status Code **200**
 |---|---|---|---|---|---|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» id|string|true|none||none|
 |» permission|string|true|none||none|
 |» trail|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» user|string|true|none||none|
+
+#### Enum
+
+|Name|Value|
+|---|---|
+|permission|view|
+|permission|edit|
 
 HTTP Status Code **400**
 

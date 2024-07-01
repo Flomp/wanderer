@@ -21,7 +21,7 @@ GET /waypoint/{id}
   "author": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "description": "string",
   "icon": "string",
   "id": "string",
@@ -31,7 +31,7 @@ GET /waypoint/{id}
   "photos": [
     "string"
   ],
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -51,15 +51,15 @@ HTTP Status Code **200**
 |» author|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» description|string|true|none||none|
 |» icon|string|true|none||none|
 |» id|string|true|none||none|
-|» lat|integer|true|none||none|
-|» lon|integer|true|none||none|
+|» lat|number|true|none||none|
+|» lon|number|true|none||none|
 |» name|string|true|none||none|
 |» photos|[string]|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **404**
 
@@ -89,7 +89,11 @@ POST /waypoint/{id}
 
 ```json
 {
-  "name": "string"
+  "name": "string",
+  "description": "string",
+  "lat": 0,
+  "lon": 0,
+  "icon": "string"
 }
 ```
 
@@ -100,7 +104,11 @@ POST /waypoint/{id}
 |id|path|string| yes |none|
 |Content-Type|header|string| yes |none|
 |body|body|object| no |none|
-|» name|body|string| yes |none|
+|» name|body|string| no |none|
+|» description|body|string| no |none|
+|» lat|body|number| yes |none|
+|» lon|body|number| yes |none|
+|» icon|body|string| no |none|
 
 > Response Examples
 
@@ -111,7 +119,7 @@ POST /waypoint/{id}
   "author": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "description": "string",
   "icon": "string",
   "id": "string",
@@ -121,7 +129,7 @@ POST /waypoint/{id}
   "photos": [
     "string"
   ],
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -141,15 +149,15 @@ HTTP Status Code **200**
 |» author|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» description|string|true|none||none|
 |» icon|string|true|none||none|
 |» id|string|true|none||none|
-|» lat|integer|true|none||none|
-|» lon|integer|true|none||none|
+|» lat|number|true|none||none|
+|» lon|number|true|none||none|
 |» name|string|true|none||none|
 |» photos|[string]|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **404**
 
@@ -305,8 +313,8 @@ PUT /waypoint
 |» name|body|string| no |none|
 |» description|body|string| no |none|
 |» author|body|string| yes |none|
-|» lat|body|integer| yes |none|
-|» lon|body|integer| yes |none|
+|» lat|body|number| yes |none|
+|» lon|body|number| yes |none|
 |» icon|body|string| no |none|
 
 > Response Examples
@@ -318,7 +326,7 @@ PUT /waypoint
   "author": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "description": "string",
   "icon": "string",
   "id": "string",
@@ -328,7 +336,7 @@ PUT /waypoint
   "photos": [
     "string"
   ],
-  "updated": "string"
+  "updated": "2019-08-24T14:15:22Z"
 }
 ```
 
@@ -348,15 +356,15 @@ HTTP Status Code **200**
 |» author|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» description|string|true|none||none|
 |» icon|string|true|none||none|
 |» id|string|true|none||none|
-|» lat|integer|true|none||none|
-|» lon|integer|true|none||none|
+|» lat|number|true|none||none|
+|» lon|number|true|none||none|
 |» name|string|true|none||none|
 |» photos|[string]|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 
 HTTP Status Code **400**
 
@@ -377,4 +385,3 @@ HTTP Status Code **400**
 |»»» message|string|true|none||none|
 |»»» data|object|true|none||none|
 |» name|string|true|none||none|
-

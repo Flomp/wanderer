@@ -9,12 +9,12 @@
     import "leaflet/dist/leaflet.css";
     import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
-    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
+    import Dropdown from "../base/dropdown.svelte";
 
     export let trail: Trail | null;
     export let markers: Marker[] = [];
     export let map: Map | null = null;
-    export let options = {};
+    export let options: any = {};
     export let graticule: AutoGraticule | null = null;
     export let crosshair: boolean = false;
 
@@ -28,7 +28,7 @@
     $: gpxData = trail?.expand.gpx_data;
     $: if (gpxData && controlElevation) {
         controlElevation.updateOptions({
-            autofitBounds: true,
+            autofitBounds: options.autofitBounds ?? true,
         });
         controlElevation.clear();
         controlElevation.load(gpxData);

@@ -57,19 +57,12 @@ GET /user/{id}
   "avatar": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "email": "string",
   "emailVisibility": true,
   "id": "string",
-  "language": "string",
-  "location": {
-    "lat": 0,
-    "lon": 0,
-    "name": "string"
-  },
   "token": "string",
-  "unit": "string",
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "username": "string",
   "verified": true
 }
@@ -91,18 +84,12 @@ HTTP Status Code **200**
 |» avatar|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» email|string|true|none||none|
 |» emailVisibility|boolean|true|none||none|
 |» id|string|true|none||none|
-|» language|string|true|none||none|
-|» location|object|true|none||none|
-|»» lat|number|true|none||none|
-|»» lon|number|true|none||none|
-|»» name|string|true|none||none|
 |» token|string|true|none||none|
-|» unit|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» username|string|true|none||none|
 |» verified|boolean|true|none||none|
 
@@ -153,19 +140,12 @@ POST /user/{id}
   "avatar": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "email": "string",
   "emailVisibility": true,
   "id": "string",
-  "language": "string",
-  "location": {
-    "lat": 0,
-    "lon": 0,
-    "name": "string"
-  },
   "token": "string",
-  "unit": "string",
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "username": "string",
   "verified": true
 }
@@ -187,18 +167,12 @@ HTTP Status Code **200**
 |» avatar|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» email|string|true|none||none|
 |» emailVisibility|boolean|true|none||none|
 |» id|string|true|none||none|
-|» language|string|true|none||none|
-|» location|object|true|none||none|
-|»» lat|number|true|none||none|
-|»» lon|number|true|none||none|
-|»» name|string|true|none||none|
 |» token|string|true|none||none|
-|» unit|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» username|string|true|none||none|
 |» verified|boolean|true|none||none|
 
@@ -311,14 +285,11 @@ PUT /user
   "avatar": "string",
   "collectionId": "string",
   "collectionName": "string",
-  "created": "string",
+  "created": "2019-08-24T14:15:22Z",
   "emailVisibility": true,
   "id": "string",
-  "language": "string",
-  "location": null,
   "token": "string",
-  "unit": "string",
-  "updated": "string",
+  "updated": "2019-08-24T14:15:22Z",
   "username": "string",
   "verified": true
 }
@@ -340,14 +311,11 @@ HTTP Status Code **200**
 |» avatar|string|true|none||none|
 |» collectionId|string|true|none||none|
 |» collectionName|string|true|none||none|
-|» created|string|true|none||none|
+|» created|string(date-time)|true|none||none|
 |» emailVisibility|boolean|true|none||none|
 |» id|string|true|none||none|
-|» language|string|true|none||none|
-|» location|null|true|none||none|
 |» token|string|true|none||none|
-|» unit|string|true|none||none|
-|» updated|string|true|none||none|
+|» updated|string(date-time)|true|none||none|
 |» username|string|true|none||none|
 |» verified|boolean|true|none||none|
 
