@@ -8,6 +8,16 @@
 
 
 .card .icon {
-    background-color: transparent!important;
-    border-color: var(--sl-color-text)!important
+    background-color: transparent !important;
+    border-color: var(--sl-color-text) !important
+}
+
+@media (min-width: 50rem) {
+    .hero {
+        grid-template-columns: 7fr 7fr;
+    }
+
+    .hero>.hero-html {
+        width: 100%;
+    }
 }
