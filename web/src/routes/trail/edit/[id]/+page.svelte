@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from "$app/stores";
     import { PUBLIC_VALHALLA_URL } from "$env/static/public";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
@@ -50,18 +51,18 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromFIT, fromKML, fromTCX, gpx2trail } from "$lib/util/gpx_util";
+    import { fromFIT, fromKML, fromTCX, gpx2trail, isFITFile } from "$lib/util/gpx_util";
     import {
         createAnchorMarker,
         createMarkerFromWaypoint,
     } from "$lib/util/leaflet_util";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
-    import type { DivIcon, LatLng, LeafletMouseEvent, Map } from "leaflet";
+    import type { DivIcon, LeafletMouseEvent, Map } from "leaflet";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
-    import { fade, scale } from "svelte/transition";
+    import { scale } from "svelte/transition";
     import { array, number, object, string } from "yup";
 
     export let data: { trail: Trail };
@@ -110,7 +111,10 @@
     let autoRouting = true;
 
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
-        initialValues: data.trail,
+        initialValues: {
+            ...data.trail,
+            category: $page.data.settings?.category || $categories[0].id,
+        },
         validationSchema: trailSchema,
         onError: (errors) => {
             if (errors.name) {
@@ -225,9 +229,10 @@
         const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
         let gpxData = "";
-        
-        if (fileExtension !== "fit") {
-            const fileContent = await file.text();
+        const fileContent = await file.text();
+        const fileBuffer = await file.arrayBuffer();
+
+        if (!isFITFile(fileBuffer)) {
             if (fileContent.includes("http://www.opengis.net/kml")) {
                 gpxData = fromKML(fileContent);
                 gpxFile = new Blob([gpxData], {
@@ -244,11 +249,13 @@
                 gpxFile = file;
             }
         } else {
-            const fileContent = await file.arrayBuffer();
-            gpxData = await fromFIT(fileContent);
+            gpxData = await fromFIT(fileBuffer);
+            gpxFile = new Blob([gpxData], {
+                type: "application/gpx+xml",
+            });
         }
 
-        return gpxData
+        return gpxData;
     }
 
     async function handleFileSelection() {
@@ -272,7 +279,7 @@
             const parseResult = await gpx2trail(gpxData);
             $form = parseResult.trail;
             $form.expand.gpx_data = gpxData;
-            $form.category = $categories[0].id;
+            $form.category = $page.data.settings.category || $categories[0].id;
 
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
@@ -399,7 +406,7 @@
         savedWaypoint.marker = marker;
     }
 
-    function beforSummitLogModalOpen() {
+    function beforeSummitLogModalOpen() {
         summitLog.set(new SummitLog(new Date().toISOString().split("T")[0]));
         openSummitLogModal();
     }
@@ -810,7 +817,7 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={beforSummitLogModalOpen}
+            on:click={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
         {#if $lists.length}

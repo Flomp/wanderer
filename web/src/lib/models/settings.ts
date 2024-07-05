@@ -5,6 +5,8 @@ class Settings {
   language?: "en" | "de" | "fr" | "hu"| "it" | "nl" | "pl" | "pt" | "zh";
   mapFocus?: "trails" | "location";
   location?: { name: string, lat: number, lon: number };
+  category?: string;
+  tilesets?: {name: string, url: string}[]
   user?: string;
 
   constructor(
@@ -13,7 +15,9 @@ class Settings {
     mapFocus: "trails" | "location",
     user: string,
     params?: {
-      location: { name: string, lat: number, lon: number }
+      location?: { name: string, lat: number, lon: number }
+      category?: string
+      tilesets?: {name: string, url: string}[]
     }
   ) {
     this.unit = unit;
@@ -21,6 +25,8 @@ class Settings {
     this.mapFocus = mapFocus;
     this.user = user;
     this.location = params?.location;
+    this.category = params?.category;
+    this.tilesets = params?.tilesets ?? [];
   }
 }
 

@@ -107,20 +107,20 @@ export async function users_update(user: User | { [K in keyof User]?: User[K] },
         throw new ClientResponseError(await r.json())
     }
 
-
-    const formData = new FormData();
-
     if (avatar) {
+        const formData = new FormData();
+
         formData.append("avatar", avatar);
-    }
 
-    r = await fetch(`/api/v1/user/${user.id!}/file`, {
-        method: 'POST',
-        body: formData,
-    })
 
-    if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        r = await fetch(`/api/v1/user/${user.id!}/file`, {
+            method: 'POST',
+            body: formData,
+        })
+
+        if (!r.ok) {
+            throw new ClientResponseError(await r.json())
+        }
     }
 
     const model: User = await r.json();

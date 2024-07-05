@@ -10,10 +10,19 @@ export async function GET(event: RequestEvent) {
     const filter = event.url.searchParams.get("filter") ?? "";
 
     try {
-        const r = await pb.collection('trails')
-            .getList<Trail>(parseInt(page), parseInt(perPage), { expand: expand ?? "", sort: sort ?? "", filter: filter ?? "" })
+        let r;
+        if (parseInt(perPage) < 0) {
+            r = {
+                items: await pb.collection('trails')
+                    .getFullList<Trail>({ expand: expand, sort: sort, filter: filter })
+            }
+        } else {
+            r = await pb.collection('trails')
+                .getList<Trail>(parseInt(page), parseInt(perPage), { expand: expand ?? "", sort: sort ?? "", filter: filter ?? "" })
+        }
+
         return json(r)
-    } catch (e: any) {        
+    } catch (e: any) {
         throw error(e.status, e);
     }
 }

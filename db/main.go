@@ -15,6 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/pocketbase/pocketbase/tools/hook"
 
 	_ "pocketbase/migrations"
 	"pocketbase/util"
@@ -120,6 +121,20 @@ func main() {
 			return err
 		}
 		return nil
+	})
+
+	app.OnRecordBeforeRequestEmailChangeRequest("users").Add(func(e *core.RecordRequestEmailChangeEvent) error {
+		form := forms.NewRecordEmailChangeRequest(app, e.Record)
+		if err := e.HttpContext.Bind(form); err != nil {
+			return err
+		}
+		e.Record.Set("email", form.NewEmail)
+
+		if err := app.Dao().SaveRecord(e.Record); err != nil {
+			return err
+		}
+
+		return hook.StopPropagation
 	})
 
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {

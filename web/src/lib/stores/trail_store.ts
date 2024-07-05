@@ -15,11 +15,11 @@ export const trail: Writable<Trail> = writable(new Trail(""));
 
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
-export async function trails_index(data: { perPage: number, random?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> } = { perPage: 30, random: false, f: fetch }) {
-    const r = await data.f('/api/v1/trail?' + new URLSearchParams({
-        "per-page": data.perPage.toString(),
+export async function trails_index(perPage: number = 21, random: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const r = await f('/api/v1/trail?' + new URLSearchParams({
+        "per-page": perPage.toString(),
         expand: "category,waypoints,summit_logs",
-        sort: data.random ? "@random" : ""
+        sort: random ? "@random" : ""
     }), {
         method: 'GET',
     })
@@ -334,6 +334,22 @@ export async function trails_get_filter_values(f: (url: RequestInfo | URL, confi
 export async function trails_get_bounding_box(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
     const r = await f('/api/v1/trail/bounding-box', {
         method: 'GET',
+    })
+
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
+}
+
+export async function trails_upload(file: File, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
+    const r = await f('/api/v1/trail/upload', {
+        headers: {
+            "Content-Type": "multipart/form-data"
+        },
+        method: 'PUT',
+        body: file
     })
 
     if (r.ok) {

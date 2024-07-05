@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import { Settings } from "$lib/models/settings";
     import type { Trail } from "$lib/models/trail";
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
@@ -93,33 +94,39 @@
         );
 
         const topoLayer = L.tileLayer(
-            "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png ",
+            "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
             {
                 attribution: "© OpenStreetMap contributors",
             },
         );
 
-        const baseMaps = {
+        const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-        };
+            ...($page.data.settings as Settings).tilesets?.reduce<
+                Record<string, string>
+            >((t, current) => {
+                t[current.name] = L.tileLayer(current.url);
+                return t;
+            }, {}),
+        };        
 
         L.control.layers(baseMaps).addTo(map);
 
-        switch (localStorage.getItem("layer")) {
-            case "OpenTopoMaps":
-                topoLayer.addTo(map);
-                break;
-            default:
-                baseLayer.addTo(map);
-                break;
+        const layerPreference = localStorage.getItem("layer")
+
+        if (layerPreference && Object.keys(baseMaps).includes(layerPreference)) {
+            baseMaps[layerPreference].addTo(map!)
+        }else {
+            baseLayer.addTo(map)
         }
 
         map!.on("baselayerchange", function (e) {
             localStorage.setItem("layer", e.name);
         });
 
-        const localMetric = localStorage.getItem("gradient") as any ?? "altitude";
+        const localMetric =
+            (localStorage.getItem("gradient") as any) ?? "altitude";
         selectedMetric = localMetric === "false" ? false : localMetric;
 
         const default_elevation_options = {

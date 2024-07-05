@@ -15,7 +15,7 @@ A route is the GPS data of a trail. There are two main ways that a user can prov
 
 #### Upload a file
 
-Click the `Upload file` button and choose a file. The file must be either in GPX, TCX, or KML format. Once you have selected a file you will see a couple of things happen: 
+Click the `Upload file` button and choose a file. The file must be either in GPX, FIT, TCX, or KML format. Once you have selected a file you will see a couple of things happen: 
 - the map will display and focus on your track. 
 - the elevation profile and speed charts (if your file contains that information) will be updated accordingly. 
 - in the left-hand panel information like the trail name, location, and distance will be displayed.

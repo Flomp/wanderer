@@ -4,7 +4,7 @@ import { lists_index } from "$lib/stores/list_store";
 import { trails_show } from "$lib/stores/trail_store";
 import { error, type Load } from "@sveltejs/kit";
 
-export const load: Load = async ({ params, fetch }) => {
+export const load: Load = async ({ params, fetch, data }) => {
     if (!params.id) {
         return error(400, "Bad Request")
     }

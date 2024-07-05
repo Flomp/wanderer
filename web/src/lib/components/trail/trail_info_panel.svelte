@@ -161,7 +161,7 @@
 </script>
 
 <div
-    class="trail-info-panel mx-auto border border-input-border rounded-3xl h-full" style="max-width: min(100%, 64rem)"
+    class="trail-info-panel mx-auto border border-input-border rounded-3xl h-full" style="max-width: min(100%, 64rem);"
 >
     <div class="trail-info-panel-header">
         <section class="relative h-80">

@@ -18,7 +18,7 @@
     ];
 
     const dropdownItems = [
-        { text: $_("profile"), value: "profile", icon: "user" },
+        { text: $_("settings"), value: "settings", icon: "cog" },
         { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
     ];
 
@@ -79,8 +79,8 @@
         if (item.value == "logout") {
             logout();
             window.location.href = "/";
-        } else if (item.value == "profile") {
-            goto("/profile");
+        } else if (item.value == "settings") {
+            goto("/settings/account");
         }
     }
 </script>
@@ -203,11 +203,11 @@
                 let:toggleMenu={openDropdown}
             >
                 <button
-                    class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 w-10"
+                    class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors max-h-11 aspect-square"
                     on:click={openDropdown}
                 >
                     <img
-                        class="rounded-full"
+                        class="rounded-full w-full h-full"
                         src={getFileURL($currentUser, $currentUser.avatar) ||
                             `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
                         alt="avatar"

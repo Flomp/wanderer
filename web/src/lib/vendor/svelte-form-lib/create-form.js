@@ -134,7 +134,9 @@ export const createForm = (config) => {
               return clearErrorsAndSubmit(values);
             } else {
               errors.set(error);
-              onError(error)
+              if(onError) {
+                onError(error)
+              }
               isSubmitting.set(false);
             }
           })
@@ -156,7 +158,9 @@ export const createForm = (config) => {
                 yupErrors.inner.map((error) =>
                   util.set(updatedErrors, error.path, error.message),
                 );
-                onError(updatedErrors)
+                if(onError) {
+                  onError(updatedErrors)
+                }
                 errors.set(updatedErrors);
               }
               isSubmitting.set(false);
