@@ -143,13 +143,13 @@
         <div class="space-y-6">
             <h3 class="text-2xl font-semibold">{$_("import")}</h3>
             <button
-                class="drop-area relative h-64 w-full border border-content border-dashed rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
+                class="drop-area relative h-64 w-full p-4 border border-content border-dashed rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                 style="--progress: {$uploadProgress}%"
                 on:click={openFileBrowser}
                 on:dragover={handleDragOver}
                 on:drop={handleDrop}
             >
-                Select or drag GPX, FIT, KML or TCX files here...
+                {$_('import-hint')}
             </button>
 
             <input

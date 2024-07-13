@@ -6,9 +6,9 @@
 
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
+    export let title: string = $_("export");
 
     const dispatch = createEventDispatcher();
-
 
     const fileFormats = [
         { text: "GPX", value: "gpx" },
@@ -21,20 +21,13 @@
         summitLog: false,
     };
 
-
     function exportTrail() {
         dispatch("export", exportSettings);
         closeModal!();
     }
 </script>
 
-<Modal
-    id="export-modal"
-    title="Export trail"
-    size="max-w-sm"
-    bind:openModal
-    bind:closeModal
->
+<Modal id="export-modal" {title} size="max-w-sm" bind:openModal bind:closeModal>
     <div slot="content">
         <div class="mb-3">
             <Select

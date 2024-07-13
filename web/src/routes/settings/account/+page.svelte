@@ -79,18 +79,6 @@
         }));
     }
 
-    async function handleSearchClick(item: SearchItem) {
-        citySearchQuery = item.text;
-        await settings_update({
-            id: settings?.id!,
-            location: {
-                name: item.value.name,
-                lat: item.value.lat,
-                lon: item.value.lon,
-            },
-        });
-    }
-
     async function handleAvatarSelection() {
         const files = (
             document.getElementById("avatarInput") as HTMLInputElement
@@ -103,13 +91,6 @@
         await users_update($currentUser!, files[0]);
     }
 
-    async function handleUnitSelection(e: RadioItem) {
-        await settings_update({
-            id: settings!.id,
-            unit: e.value as "imperial" | "metric",
-        });
-    }
-
     async function handleLanguageSelection(
         value: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt",
     ) {
@@ -117,13 +98,6 @@
         await settings_update({
             id: settings!.id,
             language: value,
-        });
-    }
-
-    async function handleMapFocusSelection(value: "trails" | "location") {
-        await settings_update({
-            id: settings!.id,
-            mapFocus: value,
         });
     }
 
@@ -229,35 +203,6 @@
                         on:change={(e) => handleLanguageSelection(e.detail)}
                     ></Select>
                 </div>
-                <!--<div>
-                    <h5 class="font-medium mb-1">{$_("units")}</h5>
-                    <RadioGroup
-                        name="unit"
-                        items={units}
-                        selected={settings?.unit == "metric" ? 0 : 1}
-                        on:change={(e) => handleUnitSelection(e.detail)}
-                    ></RadioGroup>
-                </div>
-                <div>
-                    <h5 class="font-medium mb-1">Focus map on</h5>
-
-                    <Select
-                        items={mapFocus}
-                        bind:value={selectedMapFocus}
-                        on:change={(e) => handleMapFocusSelection(e.detail)}
-                    ></Select>
-                    {#if selectedMapFocus == "location"}
-                        <div class="mt-3">
-                            <Search
-                                items={searchDropdownItems}
-                                placeholder="{$_('search-cities')}..."
-                                bind:value={citySearchQuery}
-                                on:update={(e) => searchCities(e.detail)}
-                                on:click={(e) => handleSearchClick(e.detail)}
-                            ></Search>
-                        </div>
-                    {/if}
-                </div> -->
                 <hr class="border-input-border" />
                 <div class="space-y-4">
                     <h4 class="text-xl text-red-400">{$_("danger-zone")}</h4>

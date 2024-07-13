@@ -50,7 +50,7 @@
 
 <Modal
     id="password-modal"
-    size="max-w-xl"
+    size="max-w-sm"
     title={$_("change-password")}
     bind:openModal={_openModal}
     bind:closeModal

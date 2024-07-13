@@ -36,6 +36,6 @@ docker exec -it wanderer-web run-parts /etc/periodic/15min
 
 ## Export
 
-Currently, wanderer supports exporting only for single trails. A bulk export feature is planned for the near future.
+To export a single trail head over to `/trails` and select the trail you want to export. From the ⋮ menu select "Export". You can export the route data either in GPX or in GeoJSON format. Furthermore, you can choose whether you want to include the photos and the summit book of the trail. In any case, wanderer will create a ZIP archive with all the data that is then downloaded.
 
-To export a trail head over to `/trails` and select the trail you want to export. From the ⋮ menu select "Export". You can export the route data either in GPX or in GeoJSON format. Furthermore, you can choose whether you want to include the photos and the summit book of the trail. In any case, wanderer will create a ZIP archive with all the data that is then downloaded.
+You can also export all of your trails at once. To do so, head over to `/settings/export` and click "Export all trails". The other steps remain analogous to exporting a single trail.

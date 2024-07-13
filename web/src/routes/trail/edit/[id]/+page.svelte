@@ -189,7 +189,7 @@
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: "Trail saved successfully.",
+                    text: $_('trail-saved-successfully'),
                 });
             } catch (e) {
                 console.error(e);
@@ -197,7 +197,7 @@
                 show_toast({
                     type: "error",
                     icon: "close",
-                    text: "Error saving trail.",
+                    text: $_('error-saving-trail'),
                 });
             } finally {
                 loading = false;
@@ -766,7 +766,7 @@
             name="category"
             label={$_("category")}
             bind:value={$form.category}
-            items={$categories.map((c) => ({ text: c.name, value: c.id }))}
+            items={$categories.map((c) => ({ text: $_(c.name), value: c.id }))}
         ></Select>
         <Toggle name="public" label={$_("public")} bind:value={$form.public}
         ></Toggle>

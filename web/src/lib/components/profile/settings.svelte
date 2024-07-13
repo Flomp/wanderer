@@ -1,21 +1,21 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import type { DropdownItem } from "../base/dropdown.svelte";
-
+    import { _ } from "svelte-i18n";
     export let selected: number;
 
     const items: DropdownItem[] = [
-        { text: "My Account", value: "/settings/account" },
-        { text: "Display", value: "/settings/display" },
-        { text: "Import/Export", value: "/settings/export" },
-        { text: "Help", value: "https://wanderer.to" },
+        { text: $_("my-account"), value: "/settings/account" },
+        { text: $_("display"), value: "/settings/display" },
+        { text: `${$_("import")}/${$_("export")}`, value: "/settings/export" },
+        { text: $_('help'), value: "https://wanderer.to" },
     ];
 
     function handleItemClick(item: DropdownItem) {
-        if(item.text != "Help") {
+        if (item.text != "Help") {
             goto(item.value);
-        }else {
-            window.open(item.value, '_blank');
+        } else {
+            window.open(item.value, "_blank");
         }
     }
 </script>

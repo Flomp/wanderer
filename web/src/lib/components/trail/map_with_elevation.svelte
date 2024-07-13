@@ -43,22 +43,22 @@
         {
             text: $_("altitude"),
             value: "altitude",
-            icon: selectedMetric == "altitude" ? "square-check" : "square",
+            icon: selectedMetric == "altitude" ? "circle-dot" : "circle",
         },
         {
             text: $_("slope"),
             value: "slope",
-            icon: selectedMetric == "slope" ? "square-check" : "square",
+            icon: selectedMetric == "slope" ? "circle-dot" : "circle",
         },
         {
             text: $_("speed"),
             value: "speed",
-            icon: selectedMetric == "speed" ? "square-check" : "square",
+            icon: selectedMetric == "speed" ? "circle-dot" : "circle",
         },
         {
             text: $_("off"),
             value: false,
-            icon: selectedMetric == false ? "square-check" : "square",
+            icon: selectedMetric == false ? "circle-dot" : "circle",
         },
     ];
 
