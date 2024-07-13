@@ -202,17 +202,22 @@
                 on:change={(e) => handleDropdownClick(e.detail)}
                 let:toggleMenu={openDropdown}
             >
-                <button
-                    class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors max-h-11 aspect-square"
-                    on:click={openDropdown}
-                >
-                    <img
-                        class="rounded-full w-full h-full"
-                        src={getFileURL($currentUser, $currentUser.avatar) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
-                        alt="avatar"
-                    />
-                </button>
+                <div class="flex items-center">
+                    <button
+                        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 aspect-square"
+                        on:click={openDropdown}
+                    >
+                        <img
+                            class="rounded-full w-full h-full"
+                            src={getFileURL(
+                                $currentUser,
+                                $currentUser.avatar,
+                            ) ||
+                                `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                            alt="avatar"
+                        />
+                    </button>
+                </div>
             </Dropdown>
         </div>
     {:else}
