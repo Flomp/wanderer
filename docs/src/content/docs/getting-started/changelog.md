@@ -3,6 +3,19 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.8.0
+### Features
+- The settings page layout got a complete visual overhaul
+- You can now change your email and password from the web UI
+- You can import GPX, KML, TCX, and FIT files directly through the UI or using the API
+- Exporting all trails at once is now possible on the settings page
+- Additional custom map tile sets can now be added via the settings page
+
+### Bug fixes
+- Added multiple missing translations
+- The hotline metric selector icons are now radio buttons instead of checkboxes
+
+
 ## v0.7.3
 ### Features
 - Adds support for FIT files
