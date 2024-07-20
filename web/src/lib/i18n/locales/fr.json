@@ -19,7 +19,7 @@
   "basic-info": "Informations de base",
   "can": "can",
   "cancel": "Annuler",
-  "card": "{n, plural, =1 {Carte} other {Cartes}}",
+  "card": "{n, plural, =1 {Tuile} other {Tuiles}}",
   "categories": "Catégories",
   "category": "Catégorie",
   "change": "Changement",
