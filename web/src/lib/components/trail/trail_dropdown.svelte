@@ -54,7 +54,9 @@
               ]
             : []),
         { text: $_("print"), value: "print", icon: "print" },
-        { text: $_("add-to-list"), value: "list", icon: "bookmark" },
+        ...(trail.author != pb.authStore.model?.id
+            ? []
+            : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
         ...(trail.author != pb.authStore.model?.id
             ? []
             : [{ text: $_("share"), value: "share", icon: "share" }]),

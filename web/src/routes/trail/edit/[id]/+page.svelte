@@ -51,7 +51,13 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromFIT, fromKML, fromTCX, gpx2trail, isFITFile } from "$lib/util/gpx_util";
+    import {
+        fromFIT,
+        fromKML,
+        fromTCX,
+        gpx2trail,
+        isFITFile,
+    } from "$lib/util/gpx_util";
     import {
         createAnchorMarker,
         createMarkerFromWaypoint,
@@ -113,7 +119,10 @@
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
         initialValues: {
             ...data.trail,
-            category: $page.data.settings?.category || $categories[0].id,
+            category:
+                data.trail.category ||
+                $page.data.settings?.category ||
+                $categories[0].id,
         },
         validationSchema: trailSchema,
         onError: (errors) => {
@@ -189,7 +198,7 @@
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: $_('trail-saved-successfully'),
+                    text: $_("trail-saved-successfully"),
                 });
             } catch (e) {
                 console.error(e);
@@ -197,7 +206,7 @@
                 show_toast({
                     type: "error",
                     icon: "close",
-                    text: $_('error-saving-trail'),
+                    text: $_("error-saving-trail"),
                 });
             } finally {
                 loading = false;

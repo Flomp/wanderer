@@ -103,22 +103,23 @@
         const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-            ...($page.data.settings as Settings).tilesets?.reduce<
-                Record<string, string>
-            >((t, current) => {
+            ...($page.data.settings as Settings)?.tilesets?.reduce< Record<string, string>>((t, current) => {
                 t[current.name] = L.tileLayer(current.url);
                 return t;
             }, {}),
-        };        
+        };
 
         L.control.layers(baseMaps).addTo(map);
 
-        const layerPreference = localStorage.getItem("layer")
+        const layerPreference = localStorage.getItem("layer");
 
-        if (layerPreference && Object.keys(baseMaps).includes(layerPreference)) {
-            baseMaps[layerPreference].addTo(map!)
-        }else {
-            baseLayer.addTo(map)
+        if (
+            layerPreference &&
+            Object.keys(baseMaps).includes(layerPreference)
+        ) {
+            baseMaps[layerPreference].addTo(map!);
+        } else {
+            baseLayer.addTo(map);
         }
 
         map!.on("baselayerchange", function (e) {
