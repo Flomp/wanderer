@@ -10,7 +10,7 @@ export function formatTimeHHMM(minutes?: number) {
 
     const h = (minutes - m) / 60;
 
-    return (h < 10 ? "0" : "") + h.toString() + "h " + (m < 10 ? "0" : "") + Math.round(m).toString() + "m";
+    return (h < 10 ? "0" : "") + h.toString() + "h " + (Math.round(m) < 10 ? "0" : "") + Math.round(m).toString() + "m";
 }
 
 export function formatDistance(meters?: number) {
