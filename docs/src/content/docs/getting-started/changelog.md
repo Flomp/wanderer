@@ -3,6 +3,16 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.8.1
+### Features
+- Public and shared trails can now be exported and printed
+
+### Bug fixes
+- Correctly adds the xmlns header to exported GPX files
+- Fixes detail view for shared and public trails
+- Fixes bug that caused the default category to be re-applied when editing a trail
+
+
 ## v0.8.0
 ### Features
 - The settings page layout got a complete visual overhaul
