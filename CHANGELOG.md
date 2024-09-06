@@ -1,3 +1,13 @@
+# v0.8.2
+## Features
+- The pagination is now available at top and bottom
+- HEIC image format is now supported
+- Exporting only a trail without summit logs or photos will create a single file instead of a ZIP folder
+- The current page is now remembered when navigating back to the trail overview
+
+## Bug fixes
+- Fixed map height when viewing a trail in detail view
+
 # v0.8.1
 ## Features
 - Public and shared trails can now be exported and printed
