@@ -35,19 +35,19 @@
 
     onMount(() => {
         const storedDisplayOption = localStorage.getItem("displayOption");
-        const storedSort= localStorage.getItem("sort");
-        const storedSortOrder= localStorage.getItem("sort_order");
+        const storedSort = localStorage.getItem("sort");
+        const storedSortOrder = localStorage.getItem("sort_order");
 
         if (storedDisplayOption) {
             selectedDisplayOption = storedDisplayOption;
         }
-        if(storedSort) {
-            filter.sort = storedSort as typeof filter.sort
+        if (storedSort) {
+            filter.sort = storedSort as typeof filter.sort;
         }
-        if(storedSortOrder) {
-            filter.sortOrder = storedSortOrder as typeof filter.sortOrder
+        if (storedSortOrder) {
+            filter.sortOrder = storedSortOrder as typeof filter.sortOrder;
         }
-        if(storedSort || storedSortOrder) {                        
+        if (storedSort || storedSortOrder) {
             dispatch("update", filter);
         }
     });
@@ -57,7 +57,7 @@
     }
 
     function setSort() {
-        localStorage.setItem("sort", filter.sort)
+        localStorage.setItem("sort", filter.sort);
         dispatch("update", filter);
     }
 
@@ -67,7 +67,7 @@
         } else {
             filter.sortOrder = "+";
         }
-        localStorage.setItem("sort_order", filter.sortOrder)
+        localStorage.setItem("sort_order", filter.sortOrder);
         dispatch("update", filter);
     }
 </script>
@@ -130,6 +130,11 @@
             </a>
         {/each}
     </div>
+    <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        on:pagination
+    ></Pagination>
 </div>
 
 <style>

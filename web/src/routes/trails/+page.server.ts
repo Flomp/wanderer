@@ -26,9 +26,11 @@ export const load: ServerLoad = async ({ params, locals, url, fetch }) => {
     if (paramCategory) {
         filter.category.push(paramCategory);
     }
-    const response = await trails_search_filter(filter, 1, fetch);
-    await categories_index(fetch)
+    const page = url.searchParams.get("page") ?? "1";
 
+    const response = await trails_search_filter(filter, parseInt(page), fetch);
+    await categories_index(fetch)
+    
     return {
         filter: filter, pagination: { page: response.page, totalPages: response.totalPages }
     };

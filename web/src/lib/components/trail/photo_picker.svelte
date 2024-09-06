@@ -1,5 +1,6 @@
 <script lang="ts">
     import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import { onMount } from "svelte";
     import PhotoCard from "../photo_card.svelte";
 
     export let id: string;
@@ -42,7 +43,7 @@
         document.getElementById(`${id}-photo-input`)!.click();
     }
 
-    function handlePhotoSelection(files?: FileList | null) {
+    async function handlePhotoSelection(files?: FileList | null) {
         if (!files) {
             files = (
                 document.getElementById(`${id}-photo-input`) as HTMLInputElement
@@ -54,13 +55,25 @@
         }
 
         for (const file of files) {
+            let photoFile = file;
             if (!file.type.startsWith("image")) {
                 continue;
+            } else if (file.type === "image/heic") {
+                const heic2any = (await import("heic2any")).default
+                photoFile = new File(
+                    [
+                        (await heic2any({
+                            blob: file,
+                            toType: "image/jpeg",
+                        })) as Blob,
+                    ],
+                    file.name,
+                );
             }
             if (!photoFiles) {
                 photoFiles = [];
             }
-            photoFiles = [...photoFiles, file];
+            photoFiles = [...photoFiles, photoFile];
         }
     }
 

@@ -14,6 +14,8 @@
     $: thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail])
         : "/imgs/default_thumbnail.webp";
+
+    $: trailIsShared = (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 </script>
 
 <div
@@ -27,12 +29,18 @@
     >
         <img src={thumbnail} alt="" />
     </div>
-    {#if trail.public || trail.expand?.trail_share_via_trail?.length}
+    {#if trail.public || trailIsShared}
         <div
-            class="flex absolute top-4 right-4 w-8 h-8 rounded-full items-center justify-center bg-background text-content"
+            class="flex absolute top-4 right-4 {trail.public && trailIsShared
+                ? 'w-14'
+                : 'w-8'} h-8 rounded-full items-center justify-center bg-background text-content"
         >
             {#if trail.public}
-                <span class="tooltip" data-title={$_("public")}>
+                <span
+                    class="tooltip"
+                    class:mr-2={trail.public && trailIsShared}
+                    data-title={$_("public")}
+                >
                     <i class="fa fa-globe"></i>
                 </span>
             {/if}

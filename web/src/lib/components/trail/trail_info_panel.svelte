@@ -47,6 +47,9 @@
         ...($currentUser ? [$_("comment", { values: { n: 2 } })] : []),
     ];
 
+    const trailIsShared =
+        (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
+
     let map: Map;
 
     let activeTab = 0;
@@ -161,7 +164,8 @@
 </script>
 
 <div
-    class="trail-info-panel mx-auto border border-input-border rounded-3xl h-full" style="max-width: min(100%, 64rem);"
+    class="trail-info-panel mx-auto border border-input-border rounded-3xl h-full"
+    style="max-width: min(100%, 64rem);"
 >
     <div class="trail-info-panel-header">
         <section class="relative h-80">
@@ -169,19 +173,23 @@
             <div
                 class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
             ></div>
-            {#if trail.public || trail.expand?.trail_share_via_trail?.length}
+            {#if trail.public || trailIsShared}
                 <div
-                    class="flex absolute top-8 right-10 w-8 h-8 rounded-full items-center justify-center bg-white text-primary"
+                    class="flex absolute top-8 right-6 {trail.public &&
+                    trailIsShared
+                        ? 'w-16'
+                        : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
                 >
                     {#if trail.public}
                         <span
                             class="tooltip text-2xl"
+                            class:mr-3={trail.public && trailIsShared}
                             data-title={$_("public")}
                         >
                             <i class="fa fa-globe"></i>
                         </span>
                     {/if}
-                    {#if trail.expand?.trail_share_via_trail?.length}
+                    {#if trailIsShared}
                         <TrailShareInfo {trail} large={true}></TrailShareInfo>
                     {/if}
                 </div>
@@ -266,9 +274,7 @@
             <hr class="border-separator" />
         {/if}
     </div>
-    <section
-        class="trail-info-panel-tabs px-4 py-2 bg-background sticky top-0"
-    >
+    <section class="trail-info-panel-tabs px-4 py-2 bg-background sticky top-0">
         <Tabs {tabs} bind:activeTab></Tabs>
     </section>
     <section class="trail-info-panel-content px-8">

@@ -35,7 +35,7 @@ export async function trails_index(perPage: number = 21, random: boolean = false
 
 export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     let filterText: string = buildFilterText(filter, true);
-
+    
     let r = await f("/api/v1/search/trails", {
         method: "POST",
         body: JSON.stringify({ q: filter.q, options: { filter: filterText, sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`], hitsPerPage: 21, page: page } }),

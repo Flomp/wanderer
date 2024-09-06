@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { goto } from "$app/navigation";
     import { page } from "$app/stores";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
@@ -21,7 +22,7 @@
     });
 
     async function handleFilterUpdate() {
-        const response = await trails_search_filter(filter, 1);
+        const response = await trails_search_filter(filter, pagination.page);
         pagination.page = response.page;
         pagination.totalPages = response.totalPages;
     }
@@ -29,6 +30,8 @@
     async function paginate(page: number) {
         pagination.page = page;
         const response = await trails_search_filter(filter, page);
+        $page.url.searchParams.set("page", page.toString());
+        goto(`?${$page.url.searchParams.toString()}`);
     }
 </script>
 
@@ -37,7 +40,7 @@
 </svelte:head>
 
 <main
-    class="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 max-w-7xl mx-6 md:mx-auto"
+    class="grid grid-cols-1 md:grid-cols-[300px_1fr] items-start gap-8 max-w-7xl mx-6 md:mx-auto"
 >
     <TrailFilterPanel
         categories={$categories}
