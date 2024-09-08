@@ -509,7 +509,7 @@
         >
             <div class="basis-full">
                 <MapWithElevation
-                    trail={$trail}
+                    trails={[$trail]}
                     options={{
                         theme: "gray-theme",
                         slope: false,

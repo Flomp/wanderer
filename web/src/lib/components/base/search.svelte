@@ -46,6 +46,7 @@
     function handleItemClick(item: SearchItem) {
         searching = false;
         dispatch("click", item);
+        clear();
     }
 
     function clear() {
@@ -60,6 +61,7 @@
     </span>
     {#if value.length > 0}
         <button
+            type="button"
             class="btn-icon absolute top-1/2 -translate-y-1/2 right-0 mr-2"
             on:click={clear}
             in:fade={{ duration: 150 }}

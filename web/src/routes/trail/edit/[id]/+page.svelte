@@ -889,7 +889,7 @@
             </div>
         {/if}
         <MapWithElevation
-            trail={$form}
+            trails={[$form]}
             crosshair={drawingActive}
             options={{
                 autofitBounds: !drawingActive,

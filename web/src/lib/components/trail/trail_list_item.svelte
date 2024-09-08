@@ -17,7 +17,7 @@
 </script>
 
 <li
-    class="flex gap-8 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
+    class="flex gap-8 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors items-center"
 >
     <div class="shrink-0">
         <img class="h-28 w-28 object-cover rounded-xl" src={thumbnail} alt="" />

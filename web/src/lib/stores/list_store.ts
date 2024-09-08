@@ -32,6 +32,23 @@ export async function lists_index(filter?: ListFilter, f: (url: RequestInfo | UR
 
 }
 
+export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const r = await f(`/api/v1/list/${id}`, {
+        method: 'GET',
+    })
+    const response = await r.json()
+
+    if (!r.ok) {
+        throw new ClientResponseError(response)
+    }
+
+
+    list.set(response);
+
+    return response;
+
+}
+
 export async function lists_create(list: List, avatar?: File) {
     if (!pb.authStore.model) {
         throw new Error("Unauthenticated");

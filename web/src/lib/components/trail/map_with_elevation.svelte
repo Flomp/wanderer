@@ -5,38 +5,40 @@
     import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
-    import type { Map, Marker } from "leaflet";
+    import type { Layer, Map, Marker, Polyline } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Dropdown from "../base/dropdown.svelte";
 
-    export let trail: Trail | null;
+    export let trails: Trail[];
     export let markers: Marker[] = [];
     export let map: Map | null = null;
     export let options: any = {};
     export let graticule: AutoGraticule | null = null;
     export let crosshair: boolean = false;
+    export let activeTrailIndex: number = 0;
 
     const dispatch = createEventDispatcher();
 
     let L: any;
-    let controlElevation: any;
+    let gpxGroup: any;
 
     let selectedMetric: "altitude" | "slope" | "speed" | false = "altitude";
 
-    $: gpxData = trail?.expand.gpx_data;
-    $: if (gpxData && controlElevation) {
-        controlElevation.updateOptions({
+    $: gpxData = trails.map((t) => t.expand.gpx_data);
+    $: if (gpxData && gpxGroup) {
+        gpxGroup._elevation.updateOptions({
             autofitBounds: options.autofitBounds ?? true,
         });
-        controlElevation.clear();
-        controlElevation.load(gpxData);
+        gpxGroup.clear();
+        gpxGroup._tracks = gpxData;
+        gpxGroup.addTracks();
     }
 
-    $: if (options) {
-        controlElevation?.updateOptions(options);
+    $: if (options && gpxGroup) {
+        gpxGroup._elevation.updateOptions(options);
     }
 
     $: hotlineSwitcherItems = [
@@ -66,14 +68,21 @@
         L = (await import("leaflet")).default;
         await import("leaflet-gpx");
         await import("leaflet.awesome-markers");
-        //@ts-ignore
         await import("$lib/vendor/leaflet-elevation/src/index.js");
+        await import("$lib/vendor/leaflet-elevation/libs/leaflet-gpxgroup");
+
         const AutoGraticule = (
             await import("$lib/vendor/leaflet-graticule/leaflet-auto-graticule")
         ).default;
 
-        map = L.map("map", { preferCanvas: true }).setView(
-            [trail?.lat ?? 0, trail?.lon ?? 0],
+        map = L.map("map", {
+            preferCanvas: true,
+            plugins: ["/vendor/leaflet-elevation/libs/leaflet-gpxgroup.js"],
+        }).setView(
+            [
+                trails.at(activeTrailIndex)?.lat ?? 0,
+                trails.at(activeTrailIndex)?.lon ?? 0,
+            ],
             3,
         );
         map!.attributionControl.setPrefix(false);
@@ -103,7 +112,9 @@
         const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-            ...($page.data.settings as Settings)?.tilesets?.reduce< Record<string, string>>((t, current) => {
+            ...($page.data.settings as Settings)?.tilesets?.reduce<
+                Record<string, string>
+            >((t, current) => {
                 t[current.name] = L.tileLayer(current.url);
                 return t;
             }, {}),
@@ -159,7 +170,7 @@
                 lazy: false,
                 distance: false,
                 direction: true,
-                offset: 500,
+                offset: 1000,
             },
             // Toggle "leaflet-edgescale" integration
             edgeScale: false,
@@ -171,26 +182,6 @@
             wptIcons: false,
             wptLabels: false,
             preferCanvas: true,
-            trkStart: {
-                interactive: false,
-                className: "hihi",
-                icon: L.AwesomeMarkers.icon({
-                    icon: "circle-half-stroke",
-                    prefix: "fa",
-                    markerColor: "cadetblue",
-                    iconColor: "white",
-                    className: "awesome-marker pointer-events-none",
-                }),
-            },
-            trkEnd: {
-                icon: L.AwesomeMarkers.icon({
-                    icon: "flag-checkered",
-                    prefix: "fa",
-                    markerColor: "cadetblue",
-                    iconColor: "white",
-                    className: "awesome-marker pointer-events-none",
-                }),
-            },
             graticule: false,
             drawing: false,
         };
@@ -200,13 +191,34 @@
             options,
         );
 
-        controlElevation = L.control.elevation(elevation_options).addTo(map);
+        gpxGroup = L.gpxGroup(gpxData, {
+            points: [],
+            // points_options: opts.points,
+            elevation: true,
+            elevation_options: elevation_options,
+            flyToBounds: true,
+            distanceMarkers: true,
+        });
 
-        for (const waypoint of trail?.expand.waypoints ?? []) {
-            const marker = createMarkerFromWaypoint(L, waypoint);
-            marker.addTo(map!);
-            markers.push(marker);
-        }
+        const markerLayerGroup = L.layerGroup().addTo(map);
+
+        gpxGroup.on("selection_changed", ({ polyline }: { polyline: any }) => {
+            markerLayerGroup.clearLayers();
+
+            activeTrailIndex = polyline.options.index ?? 0;
+
+            if (polyline._selected) {
+                for (const waypoint of trails.at(activeTrailIndex)?.expand
+                    .waypoints ?? []) {
+                    const marker = createMarkerFromWaypoint(L, waypoint);
+                    marker.addTo(markerLayerGroup!);
+                    markers.push(marker);
+                }
+            }
+        });
+
+        gpxGroup.addTo(map);
+        // controlElevation = L.control.elevation(elevation_options).addTo(map);
 
         if (elevation_options.graticule) {
             graticule = new AutoGraticule();
@@ -215,14 +227,15 @@
     });
 
     function switchHotline(metric: "altitude" | "slope" | "speed" | false) {
-        controlElevation.updateOptions({
+        gpxGroup._elevation.updateOptions({
             hotline: metric,
             autofitBounds: false,
         });
         selectedMetric = metric;
         localStorage.setItem("gradient", metric.toString());
-        controlElevation.clear();
-        controlElevation.load(gpxData);
+        gpxGroup.clear();
+        gpxGroup._tracks = gpxData;
+        gpxGroup.addTracks();
     }
 </script>
 

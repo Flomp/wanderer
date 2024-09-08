@@ -15,6 +15,7 @@ export class List {
     constructor(name: string, trails: Trail[], params?: { description?: string, avatar?: string, author?: string }) {
         this.name = name;
         this.expand = { trails: trails };
+        this.trails = trails.map(t => t.id!);
         this.description = params?.description;
         this.avatar = params?.description;
         this.author = params?.author;

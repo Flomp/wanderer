@@ -13,7 +13,7 @@
 </script>
 
 <div
-    class="flex items-center gap-6 p-4 hover:bg-menu-item-background-hover rounded-xl transition-colors cursor-pointer"
+    class="flex items-start gap-6 p-4 hover:bg-menu-item-background-hover rounded-xl transition-colors cursor-pointer"
     class:bg-menu-item-background-hover={active}
 >
     {#if list.avatar}
@@ -29,11 +29,22 @@
             <i class="fa fa-table-list text-5xl"></i>
         </div>
     {/if}
-    <div class="self-start min-w-0 w-full">
-        <div class="flex justify-between items-center ">
-            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis">{list.name}</h5>
+    <div class="self-start min-w-0 w-full transition-transform">
+        <div class="flex justify-between items-center">
+            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis">
+                {list.name}
+            </h5>
             <Dropdown items={dropdownItems} on:change></Dropdown>
         </div>
-        <p class="text-gray-500 text-sm mr-8">{list.description}</p>
+        <p
+            class="text-gray-500 text-sm mr-8 whitespace-pre-wrap {active
+                ? ''
+                : 'max-h-24 overflow-hidden text-ellipsis'}"
+        >
+            {!active ? list.description?.substring(0, 100) : list.description}
+            {#if ((list.description?.length ?? 0) > 100) && !active}
+                ...
+            {/if}
+        </p>
     </div>
 </div>

@@ -446,7 +446,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 			}) : Promise.resolve();
 	},
 
-	_initHotLine(layer) {
+	_initHotLine(layer, target = this._hotline) {
 		let prop = typeof this.options.hotline == 'string' ? this.options.hotline : 'elevation';
 		return this.options.hotline ? this.import(/* @vite-ignore */this.__LHOTLINE)
 			.then(() => {
@@ -464,7 +464,9 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 							weight: 5,
 							outlineColor: '#000000',
 							outlineWidth: 1
-						}).addTo(this._hotline);
+						}).addTo(target);
+						console.log(this._data);
+						
 						let alpha = trkseg.options.style && trkseg.options.style.opacity || 1;
 						trkseg.on('add remove', ({ type }) => {
 							trkseg.setStyle({ opacity: (type == 'add' ? 0 : alpha) });
@@ -536,16 +538,20 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 
 		L.Canvas.include({
 			_fillStroke(ctx, layer) {
-				if (control._layers.hasLayer(layer)) {
+				let options = layer.options;
 
-					let options = layer.options;
 
-					options.color = color.line || color.area || theme;
+				if (control._layers.hasLayer(layer) || options.isGroupLayer) {
+
+
+					if (!options.isGroupLayer) {
+						options.color = color.line || color.area || theme;
+					}
 					options.stroke = !!options.color;
 
 					oldProto.call(this, ctx, layer);
 
-					if (options.stroke && options.weight !== 0) {
+					if (!options.highlighted && options.stroke && options.weight !== 0) {
 						let oldVal = ctx.globalCompositeOperation || 'source-over';
 						ctx.globalCompositeOperation = 'destination-over'
 						ctx.strokeStyle = color.outline || '#FFF';
