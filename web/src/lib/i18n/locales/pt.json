@@ -106,6 +106,7 @@
   "license": "Licença",
   "link-copied": "Link copied!",
   "list": "{n, plural, =1 {Lista} other {Listas}}",
+  "list-saved-successfully": "List saved successfully",
   "location": "Localização",
   "login": "Login",
   "login-details": "Login details",
