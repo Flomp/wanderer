@@ -106,6 +106,7 @@
   "license": "开源协议",
   "link-copied": "Link copied!",
   "list": "{n, plural, =1 {列表} other {列表}}",
+  "list-saved-successfully": "List saved successfully",
   "location": "地点",
   "login": "登录",
   "login-details": "Login details",
