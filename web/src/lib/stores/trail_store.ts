@@ -157,7 +157,7 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
 
     trail.set(response);
 
-    return response;
+    return response as Trail;
 }
 
 export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {

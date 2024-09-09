@@ -38,18 +38,17 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 	/*
 	 * Add data to the diagram either from GPX or GeoJSON and update the axis domain and data
 	 */
-	addData(d, layer) {
-		this.import(this.__D3)
-			.then(() => {
-				if (this._modulesLoaded) {
-					layer = layer ?? (d.on && d);
-					this._addData(d);
-					this._addLayer(layer);
-					this._fireEvt("eledata_added", { data: d, layer: layer, track_info: this.track_info });
-				} else {
-					this.once('modules_loaded', () => this.addData(d, layer));
-				}
-			});
+	async addData(d, layer) {
+		await this.import(this.__D3)
+
+		if (this._modulesLoaded) {
+			layer = layer ?? (d.on && d);
+			this._addData(d);
+			this._addLayer(layer);
+			this._fireEvt("eledata_added", { data: d, layer: layer, track_info: this.track_info });
+		} else {
+			this.once('modules_loaded', () => this.addData(d, layer));
+		}
 	},
 
 	/**
@@ -450,10 +449,14 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 		let prop = typeof this.options.hotline == 'string' ? this.options.hotline : 'elevation';
 		return this.options.hotline ? this.import(/* @vite-ignore */this.__LHOTLINE)
 			.then(() => {
+				const map = this._map
+				map.createPane('hotline');
+				map.getPane('hotline').style.pointerEvents = 'none';
+
 				layer.eachLayer((trkseg) => {
 					if (trkseg.feature.geometry.type != "Point") {
 						let line = L.hotline(this._data.map(m => [m.x, m.y, m[prop] || 0]), {
-							renderer: L.Hotline.renderer(),
+							renderer: L.Hotline.renderer({pane: "hotline"}),
 							min: isFinite(this.track_info[prop + '_min']) ? this.track_info[prop + '_min'] : 0,
 							max: isFinite(this.track_info[prop + '_max']) ? this.track_info[prop + '_max'] : 1,
 							palette: {
@@ -465,8 +468,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 							outlineColor: '#000000',
 							outlineWidth: 1
 						}).addTo(target);
-						console.log(this._data);
-						
+												
 						let alpha = trkseg.options.style && trkseg.options.style.opacity || 1;
 						trkseg.on('add remove', ({ type }) => {
 							trkseg.setStyle({ opacity: (type == 'add' ? 0 : alpha) });

@@ -106,6 +106,7 @@
   "license": "License",
   "link-copied": "",
   "list": "{n, plural, =1 {Lista} other {Listák}}",
+  "list-saved-successfully": "",
   "location": "Helyszín",
   "login": "Bejelentkezés",
   "login-details": "",

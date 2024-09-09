@@ -2,41 +2,53 @@
     import { page } from "$app/stores";
     import { Settings } from "$lib/models/settings";
     import type { Trail } from "$lib/models/trail";
-    import { createMarkerFromWaypoint, endIcon, startIcon } from "$lib/util/leaflet_util";
+    import { getFileURL } from "$lib/util/file_util";
+    import {
+        formatDistance,
+        formatElevation,
+        formatTimeHHMM,
+    } from "$lib/util/format_util";
+    import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
-    import type { Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Dropdown from "../base/dropdown.svelte";
 
-    export let trail: Trail | null;
-    export let markers: Marker[] = [];
-    export let map: Map | null = null;
+    export let trails: Trail[];
+    export let map: any | null = null;
     export let options: any = {};
-    export let graticule: AutoGraticule | null = null;
-    export let crosshair: boolean = false;
+    export let activeTrailIndex: number | null = 0;
 
     const dispatch = createEventDispatcher();
 
     let L: any;
-    let controlElevation: any;
+    let gpxGroup: any;
 
     let selectedMetric: "altitude" | "slope" | "speed" | false = "altitude";
 
-    $: gpxData = trail?.expand.gpx_data;
-    $: if (gpxData && controlElevation) {        
-        controlElevation.updateOptions({
+    $: gpxData = trails.map((t) => t.expand.gpx_data);
+    $: if (
+        gpxData &&
+        gpxGroup &&
+        map &&
+        (gpxData.length != gpxGroup._tracks.length ||
+            gpxGroup?._tracks[0] !== gpxData[0])
+    ) {
+        if (gpxData.length == 0) {
+            map?.setView([0, 0], 4);
+        }
+        gpxGroup._elevation.updateOptions({
             autofitBounds: options.autofitBounds ?? true,
         });
-        controlElevation.clear();
-        controlElevation.load(gpxData);
+        gpxGroup.clear();
+        gpxGroup._tracks = gpxData;
+        gpxGroup.addTracks();
     }
 
-    $: if (options) {
-        controlElevation?.updateOptions(options);
+    $: if (options && gpxGroup) {
+        gpxGroup._elevation.updateOptions(options);
     }
 
     $: hotlineSwitcherItems = [
@@ -66,14 +78,21 @@
         L = (await import("leaflet")).default;
         await import("leaflet-gpx");
         await import("leaflet.awesome-markers");
-        //@ts-ignore
         await import("$lib/vendor/leaflet-elevation/src/index.js");
+        await import("$lib/vendor/leaflet-elevation/libs/leaflet-gpxgroup");
+
         const AutoGraticule = (
             await import("$lib/vendor/leaflet-graticule/leaflet-auto-graticule")
         ).default;
 
-        map = L.map("map", { preferCanvas: true }).setView(
-            [trail?.lat ?? 0, trail?.lon ?? 0],
+        map = L.map("map", {
+            preferCanvas: true,
+            plugins: ["/vendor/leaflet-elevation/libs/leaflet-gpxgroup.js"],
+        }).setView(
+            [
+                trails.at(activeTrailIndex ?? 0)?.lat ?? 0,
+                trails.at(activeTrailIndex ?? 0)?.lon ?? 0,
+            ],
             3,
         );
         map!.attributionControl.setPrefix(false);
@@ -82,7 +101,7 @@
             dispatch("zoomend", map);
         });
 
-        map!.on("click", function (e) {
+        map!.on("click", function (e: any) {
             dispatch("click", e);
         });
 
@@ -103,7 +122,9 @@
         const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-            ...($page.data.settings as Settings)?.tilesets?.reduce< Record<string, string>>((t, current) => {
+            ...($page.data.settings as Settings)?.tilesets?.reduce<
+                Record<string, string>
+            >((t, current) => {
                 t[current.name] = L.tileLayer(current.url);
                 return t;
             }, {}),
@@ -122,7 +143,7 @@
             baseLayer.addTo(map);
         }
 
-        map!.on("baselayerchange", function (e) {
+        map!.on("baselayerchange", function (e: any) {
             localStorage.setItem("layer", e.name);
         });
 
@@ -159,7 +180,7 @@
                 lazy: false,
                 distance: false,
                 direction: true,
-                offset: 500,
+                offset: 1000,
             },
             // Toggle "leaflet-edgescale" integration
             edgeScale: false,
@@ -171,14 +192,6 @@
             wptIcons: false,
             wptLabels: false,
             preferCanvas: true,
-            trkStart: {
-                interactive: false,
-                className: "hihi",
-                icon: startIcon()
-            },
-            trkEnd: {
-                icon: endIcon(),
-            },
             graticule: false,
             drawing: false,
         };
@@ -188,29 +201,95 @@
             options,
         );
 
-        controlElevation = L.control.elevation(elevation_options).addTo(map);
+        gpxGroup = L.gpxGroup(gpxData, {
+            points: [],
+            // points_options: opts.points,
+            elevation: true,
+            elevation_options: elevation_options,
+            flyToBounds: true,
+            distanceMarkers: true,
+            removeElevationOnDeselect: options.removeElevationOnDeselect,
+        });
 
-        for (const waypoint of trail?.expand.waypoints ?? []) {
-            const marker = createMarkerFromWaypoint(L, waypoint);
-            marker.addTo(map!);
-            markers.push(marker);
-        }
+        const markerLayerGroup = L.layerGroup().addTo(map);
 
-        if (elevation_options.graticule) {
-            graticule = new AutoGraticule();
-            graticule.addTo(map!);
-        }
+        gpxGroup.on("selection_changed", ({ polyline }: { polyline: any }) => {
+            markerLayerGroup.clearLayers();
+
+            activeTrailIndex = null;
+
+            if (polyline._selected) {
+                activeTrailIndex = polyline.options.index;
+                for (const waypoint of trails.at(activeTrailIndex!)?.expand
+                    .waypoints ?? []) {
+                    const marker = createMarkerFromWaypoint(L, waypoint);
+                    marker.addTo(markerLayerGroup!);
+                }
+            }
+        });
+
+        gpxGroup.on("clear", () => {
+            markerLayerGroup.clearLayers();
+            activeTrailIndex = null;
+        });
+
+        gpxGroup.on("route_loaded", ({ route }: { route: any }) => {
+            
+            const trail = trails.find((t) => gpxGroup?._hashCode(t.expand.gpx_data) == route.options.hash)
+
+            if (!trail) {
+                return;
+            }
+            const thumbnail = trail.photos.length
+                ? getFileURL(trail, trail.photos[trail.thumbnail])
+                : "/imgs/default_thumbnail.webp";
+            route.bindPopup(
+                `<a href="/trail/view/${trail.id}" data-sveltekit-preload-data="false">
+    <li class="flex items-center gap-4 cursor-pointer text-black max-w-80">
+        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
+        </div>
+        <div>
+            <h4 class="font-semibold text-lg">${trail.name}</h4>
+            <div class="flex gap-x-4">
+            ${trail.location ? `<h5><i class="fa fa-location-dot mr-2"></i>${trail.location}</h5>` : ""}
+            <h5><i class="fa fa-gauge mr-2"></i>${$_(trail.difficulty as string)}</h5>
+            </div>
+            <div class="flex mt-2 gap-4 text-sm text-gray-500 flex-wrap"><span class="shrink-0"><i
+                        class="fa fa-left-right mr-2"></i>${formatDistance(
+                            trail.distance,
+                        )}</span> <span class="shrink-0"><i class="fa fa-up-down mr-2"></i>${formatElevation(
+                            trail.elevation_gain,
+                        )}</span> <span class="shrink-0"><i class="fa fa-clock mr-2"></i>${formatTimeHHMM(
+                            trail.duration,
+                        )}</span></div>
+        </div>
+    </li>
+</a>`,
+            );
+        });
+
+        gpxGroup.addTo(map);
     });
 
+    export function selectTrail(index: number) {
+        gpxGroup.select(index);
+    }
+
     function switchHotline(metric: "altitude" | "slope" | "speed" | false) {
-        controlElevation.updateOptions({
+        if (metric === selectedMetric) {
+            return;
+        }
+        gpxGroup._elevation.updateOptions({
             hotline: metric,
-            autofitBounds: false,
         });
+        gpxGroup.options.flyToBounds = false;
         selectedMetric = metric;
         localStorage.setItem("gradient", metric.toString());
-        controlElevation.clear();
-        controlElevation.load(gpxData);
+        gpxGroup.clear();
+        gpxGroup._tracks = gpxData;
+        gpxGroup.addTracks();
+
+        gpxGroup.options.flyToBounds = true;
     }
 </script>
 
@@ -218,9 +297,7 @@
     <div
         id="map"
         class="rounded-xl z-0 basis-full min-h-96 md:min-h-0"
-        style={crosshair
-            ? "position: relative; outline-style: none;cursor: crosshair !important"
-            : "position: relative; outline-style: none;"}
+        style="position: relative; outline-style: none;"
     >
         <div class="absolute top-20 right-3 text-sm" style="z-index: 500">
             <Dropdown

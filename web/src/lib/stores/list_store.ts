@@ -4,6 +4,7 @@ import { pb } from "$lib/pocketbase";
 import { getFileURL } from "$lib/util/file_util";
 import { ClientResponseError } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
+import { fetchGPX } from "./trail_store";
 
 export const lists: Writable<List[]> = writable([])
 export const list: Writable<List> = writable(new List("", []))
@@ -37,6 +38,12 @@ export async function lists_show(id: string, f: (url: RequestInfo | URL, config?
         method: 'GET',
     })
     const response = await r.json()
+
+    for (const trail of response.expand.trails) {
+        const gpxData: string = await fetchGPX(trail);
+        trail.expand.gpx_data = gpxData;
+    }
+
 
     if (!r.ok) {
         throw new ClientResponseError(response)

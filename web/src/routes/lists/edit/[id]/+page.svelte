@@ -10,8 +10,8 @@
     } from "$lib/components/base/search.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
-    import MapWithElevation from "$lib/components/trail/map_with_elevation.svelte";
-    import TrailListItem from "$lib/components/trail/trail_list_item.svelte";
+    import MapWithElevationMultiple from "$lib/components/trail/map_with_elevation_multiple.svelte";
+    import type { Trail } from "$lib/models/trail.js";
     import { trails_show } from "$lib/stores/trail_store";
     import { getFileURL } from "$lib/util/file_util.js";
     import {
@@ -19,18 +19,41 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import type { Trail } from "$lib/models/trail.js";
+    import { lists_create, lists_update } from "$lib/stores/list_store.js";
+    import { show_toast } from "$lib/stores/toast_store.js";
+    import { onMount } from "svelte";
 
     export let data;
 
     let previewURL = "";
     let searchDropdownItems: SearchItem[] = [];
 
+    let activeTrailIndex: number | null = null;
+
+    let map: MapWithElevationMultiple;
+
+    let loading: boolean = false;
+
     const { form, errors, handleChange, handleSubmit } = createForm<List>({
         initialValues: data.list!,
         validationSchema: listSchema,
         onSubmit: async (submittedList) => {
-            (document.getElementById("avatar") as HTMLInputElement).value = "";
+            const avatarFile = (
+                document.getElementById("avatar") as HTMLInputElement
+            ).files![0];
+            loading = true;
+            if ($form.id) {
+                await lists_update($form, avatarFile);
+            } else {
+                await lists_create($form, avatarFile);
+            }
+            loading = false;
+
+            show_toast({
+                type: "success",
+                icon: "check",
+                text: $_("list-saved-successfully"),
+            });
         },
     });
 
@@ -77,7 +100,7 @@
 
     async function handleSearchClick(item: SearchItem) {
         const trail = await trails_show(item.value, true);
-        $form.trails?.push(trail);
+        $form.trails?.push(trail.id!);
         $form.expand!.trails = [...$form.expand!.trails, trail];
     }
 
@@ -155,9 +178,13 @@
             items={searchDropdownItems}
         ></Search>
         {#if $form.expand?.trails.length}
-            {#each $form.expand?.trails ?? [] as trail}
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            {#each $form.expand?.trails ?? [] as trail, i}
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
                 <div
                     class="flex gap-4 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors items-center"
+                    class:border-primary={i == activeTrailIndex}
+                    on:click={() => map.selectTrail(i)}
                 >
                     <div class="shrink-0">
                         <img
@@ -213,9 +240,17 @@
                 >No routes added</span
             >
         {/if}
-        <Button primary={true} large={true} type="submit" extraClasses="mb-2"
-            >{$_("save-list")}</Button
+        <Button
+            primary={true}
+            large={true}
+            type="submit"
+            extraClasses="mb-2"
+            {loading}>{$_("save-list")}</Button
         >
     </form>
-    <MapWithElevation trails={$form.expand?.trails ?? []}></MapWithElevation>
+    <MapWithElevationMultiple
+        trails={$form.expand?.trails ?? []}
+        bind:activeTrailIndex
+        bind:this={map}
+    ></MapWithElevationMultiple>
 </main>

@@ -1,17 +1,24 @@
 import type { Waypoint } from "$lib/models/waypoint";
-import type { Icon, LatLng, LeafletEvent, Map, Marker } from "leaflet";
+import type { LeafletEvent, Map, Marker } from "leaflet";
+
+export const startIcon = () => L.divIcon({
+    html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-bullseye -translate-x-1/2"></i>',
+    className: 'start-icon'
+});
+export const endIcon = () => L.divIcon({
+    html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-flag-checkered -translate-x-1/2"></i>',
+    className: 'end-icon'
+});
 
 export function createMarkerFromWaypoint(L: any, waypoint: Waypoint, onDragEnd?: (event: LeafletEvent) => void): Marker {
-    const fontAwesomeIcon = L.AwesomeMarkers.icon({
-        icon: waypoint.icon,
-        prefix: "fa",
-        markerColor: "cadetblue",
-        iconColor: "white",
-    }) as Icon;
+    const icon = L.divIcon({
+        html: `<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-${waypoint.icon}"></i>`,
+        className: 'waypoint-icon'
+    });
 
     const marker = L.marker([waypoint.lat, waypoint.lon], {
         title: waypoint.name,
-        icon: fontAwesomeIcon,
+        icon: icon,
         draggable: onDragEnd != null,
         meta: {
             waypointName: waypoint.name

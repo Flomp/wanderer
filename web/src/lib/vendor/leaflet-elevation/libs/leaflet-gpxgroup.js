@@ -110,6 +110,8 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     this._hotline = L.featureGroup();
     this._elevation = L.control.elevation(this.options.elevation_options);
 
+    this._routes = [];
+
     this.options.points.forEach((poi) =>
       L
         .marker(poi.latlng, { icon: L.icon(this.options.points_options.icon) })
@@ -123,9 +125,9 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
   },
 
   addTo: function (map) {
+    this._hotline.addTo(map);
     this._layers.addTo(map);
     this._markers.addTo(map);
-    this._hotline.addTo(map);
 
     this._map = map;
 
@@ -137,23 +139,37 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     this._tracks.forEach(this._addTrack, this);
 
   },
+
+  select(index) {
+    if (index > this._routes.length - 1) {
+      return
+    }
+
+    this.setSelection(this._routes[index])
+  },
   _addTrack: function (track) {
     if (track instanceof Object) {
       this._loadGeoJSON(track);
     } else {
       this._elevation._parseFromString(track)
-        .then(geojson => this._loadGeoJSON(geojson, track.split('/').pop().split('#')[0].split('?')[0]))
+        .then(geojson => this._loadGeoJSON(geojson, this._hashCode(track), track.split('/').pop().split('#')[0].split('?')[0]))
     }
   },
 
+  _hashCode: (s) => s.split('').reduce((a,b) => (((a << 5) - a) + b.charCodeAt(0))|0, 0),
+
   clear: function () {
     this._elevation.clear()
+    this._elevation.remove();
     this._clearLayers();
     this._clearLayers(this._markers);
     this._clearLayers(this._hotline)
     this._count = 0;
     this._loadedCount = 0;
     this._tracks = []
+    this._routes = []
+
+    this.fire('clear')
   },
 
   _clearLayers(l) {
@@ -164,8 +180,9 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     }
   },
 
-  _loadGeoJSON: function (geojson, fallbackName) {
-    if (geojson) {
+  _loadGeoJSON: function (geojson, hash, fallbackName) {
+    if (geojson) {    
+      geojson.hash = hash  
       geojson.name = geojson.name || (geojson[0] && geojson[0].properties.name) || fallbackName;
       this._loadRoute(geojson);
     }
@@ -180,14 +197,14 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
       weight: 5,
       distanceMarkers: this.options.distanceMarkers_options,
     };
-
+    
     var route = L.geoJson(data, {
       name: data.name || '',
       style: (feature) => line_style,
       distanceMarkers: line_style.distanceMarkers,
       originalStyle: line_style,
       isGroupLayer: true,
-      index: this._count - 1,
+      hash: data.hash,
       filter: feature => feature.geometry.type != "Point",
     });
 
@@ -196,6 +213,8 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
       route.addTo(this._layers);
 
       route.eachLayer((layer) => this._onEachRouteLayer(route, layer));
+
+      
       this._onEachRouteLoaded(route);
     });
 
@@ -204,6 +223,8 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
   _onEachRouteLayer: function (route, layer) {
     var polyline = layer;
 
+    this._routes.push(route)
+
     route.on('selected', L.bind(this._onRouteSelected, this, route, polyline));
 
     polyline.on('mouseover', L.bind(this._onRouteMouseOver, this, route, polyline));
@@ -211,15 +232,14 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     polyline.on('click', L.bind(this._onRouteClick, this, route, polyline));
 
     const startIcon = L.divIcon({
-      html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-bullseye"></i>',
+      html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-bullseye -translate-x-1/2"></i>',
       className: 'start-icon'
     });
     const endIcon = L.divIcon({
-      html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-flag-checkered"></i>',
+      html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-flag-checkered -translate-x-1/2"></i>',
       className: 'end-icon'
     });
-    const latlngs = polyline.getLatLngs();
-
+    const latlngs = polyline.getLatLngs();    
 
     if (this._loadedCount == 0) {
       L.marker(latlngs[0], { icon: startIcon }).addTo(this._markers)
@@ -280,26 +300,35 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     }
   },
 
-  _onSelectionChanged: function (e) {
+  _onSelectionChanged: async function (e) {
     var elevation = this._elevation;
     var eleDiv = elevation.getContainer();
     var route = this.getSelection();
     var hotline = this._hotline;
 
-    elevation.clear();
+    hotline.clearLayers();
 
     if (route && route.isSelected()) {
+      elevation.clear();
+
       if (!eleDiv) {
         elevation.addTo(this._map);
+        this._map.invalidateSize()
       }
-      route.getLayers().forEach(function (layer) {
+      for (const layer of route.getLayers()) {
         if (layer instanceof L.Polyline) {
-          elevation.addData(layer, false);
+          await elevation.addData(layer, false);
         }
-      });
+      }
+      await elevation._initHotLine(route, this._hotline)
+
+      this._map.flyToBounds(route.getBounds(), { duration: 0.25, easeLinearity: 0.25, noMoveStart: true });
+
+
     } else {
       if (eleDiv) {
         elevation.remove();
+        this._map.invalidateSize()
       }
     }
   },
