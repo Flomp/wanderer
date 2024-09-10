@@ -250,6 +250,7 @@
     </form>
     <MapWithElevationMultiple
         trails={$form.expand?.trails ?? []}
+        options={{flyToBounds: true}}
         bind:activeTrailIndex
         bind:this={map}
     ></MapWithElevationMultiple>

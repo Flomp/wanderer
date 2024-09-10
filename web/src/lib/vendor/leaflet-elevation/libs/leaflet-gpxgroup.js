@@ -226,7 +226,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
 
 
     this._elevation.import([this._elevation.__LGEOMUTIL, this._elevation.__LDISTANCEM]).then(() => {
-      route.addTo(this._layers);
+      route.addTo(this._layers);      
 
       route.eachLayer((layer) => this._onEachRouteLayer(route, layer));
 
@@ -255,7 +255,9 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
       html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-flag-checkered -translate-x-1/2"></i>',
       className: 'end-icon'
     });
-    const latlngs = polyline.getLatLngs();
+    const latlngs = polyline.getLatLngs().flat(1);
+
+    polyline.setLatLngs(latlngs);
 
     if (this._loadedCount == 0 || !this.options.itinerary) {
       L.marker(latlngs[0], { icon: startIcon }).addTo(this._markers)

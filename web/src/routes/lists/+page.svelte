@@ -19,9 +19,7 @@
     } from "$lib/stores/list_store";
     import { fetchGPX } from "$lib/stores/trail_store";
     import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type {
-        Map
-    } from "leaflet";
+    import type { Map } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
 
@@ -100,16 +98,14 @@
     <ul
         class="list-list mx-4 md:mx-auto rounded-xl border border-input-border max-w-full overflow-y-scroll"
     >
-        <div class="flex gap-x-4 items-center p-4 top-0 sticky bg-background z-50">
-            <button
-                class="flex w-full items-center gap-4 hover:bg-menu-item-background-hover transition-colors rounded-xl p-4 cursor-pointer"
-                on:click={() => goto("/lists/edit/new")}
+        <div
+            class="flex gap-x-4 items-center justify-between p-4 top-0 sticky bg-background z-50"
+        >
+            <a
+                class="btn-primary btn-large text-center mx-4"
+                href="/lists/edit/new"
+                ><i class="fa fa-plus mr-2"></i>{$_("new-list")}</a
             >
-                <i class="fa fa-plus text-xl aspect-square"></i>
-                <h5 id="create-list-button" class="text-xl font-semibold">
-                    {$_("create-new-list")}
-                </h5>
-            </button>
             <button type="button" class="btn-icon" on:click={toggleMap}
                 ><i class="fa-regular fa-{showMap ? 'rectangle-list' : 'map'}"
                 ></i></button
@@ -135,7 +131,10 @@
         {/each}
     </ul>
     <div class:hidden={!showMap}>
-        <MapWithElevationMultiple trails={$list.expand?.trails ?? []} bind:map options={{itinerary: true, flyToBounds: true}}
+        <MapWithElevationMultiple
+            trails={$list.expand?.trails ?? []}
+            bind:map
+            options={{ itinerary: true, flyToBounds: true }}
         ></MapWithElevationMultiple>
     </div>
     <div class="min-w-0" class:hidden={showMap}>

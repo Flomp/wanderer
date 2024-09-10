@@ -816,7 +816,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 				}
 			},
 			onEachFeature: (feature, layer) => feature.geometry && feature.geometry.type != 'Point' && this.addData(feature, layer),
-		});
+		});		
 
 		this.import(this.__D3).then(() => {
 			this._initMapIntegrations(layer);
