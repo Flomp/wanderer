@@ -40,7 +40,6 @@
 
 .tooltip {
     position: relative;
-    z-index: 10;
 }
 
 .tooltip:before,
@@ -52,6 +51,7 @@
 
     transform: translate3d(0, -10px, 0);
     transition: all .15s ease-in-out;
+    z-index: 10;
 }
 
 .tooltip:before {

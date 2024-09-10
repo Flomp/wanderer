@@ -135,7 +135,7 @@
         {/each}
     </ul>
     <div class:hidden={!showMap}>
-        <MapWithElevationMultiple trails={$list.expand?.trails ?? []} bind:map
+        <MapWithElevationMultiple trails={$list.expand?.trails ?? []} bind:map options={{itinerary: true, flyToBounds: true}}
         ></MapWithElevationMultiple>
     </div>
     <div class="min-w-0" class:hidden={showMap}>

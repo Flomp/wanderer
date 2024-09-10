@@ -147,6 +147,23 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
 
     this.setSelection(this._routes[index])
   },
+
+  openPopup(index) {
+    if (index > this._routes.length - 1) {
+      return
+    }
+
+    this._routes[index].openPopup();
+  },
+
+  closePopup(index) {
+    if (index > this._routes.length - 1) {
+      return
+    }
+
+    this._routes[index].closePopup();
+  },
+
   _addTrack: function (track) {
     if (track instanceof Object) {
       this._loadGeoJSON(track);
@@ -156,7 +173,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     }
   },
 
-  _hashCode: (s) => s.split('').reduce((a,b) => (((a << 5) - a) + b.charCodeAt(0))|0, 0),
+  _hashCode: (s) => s.split('').reduce((a, b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0),
 
   clear: function () {
     this._elevation.clear()
@@ -181,8 +198,8 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
   },
 
   _loadGeoJSON: function (geojson, hash, fallbackName) {
-    if (geojson) {    
-      geojson.hash = hash  
+    if (geojson) {
+      geojson.hash = hash
       geojson.name = geojson.name || (geojson[0] && geojson[0].properties.name) || fallbackName;
       this._loadRoute(geojson);
     }
@@ -190,14 +207,13 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
 
   _loadRoute: function (data) {
     if (!data) return;
-
     var line_style = {
-      color: this._uniqueColors(this._tracks.length)[this._count++],
+      color: this._hashToColor(data.hash),
       opacity: 0.75,
       weight: 5,
       distanceMarkers: this.options.distanceMarkers_options,
     };
-    
+
     var route = L.geoJson(data, {
       name: data.name || '',
       style: (feature) => line_style,
@@ -214,7 +230,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
 
       route.eachLayer((layer) => this._onEachRouteLayer(route, layer));
 
-      
+
       this._onEachRouteLoaded(route);
     });
 
@@ -239,9 +255,9 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
       html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-flag-checkered -translate-x-1/2"></i>',
       className: 'end-icon'
     });
-    const latlngs = polyline.getLatLngs();    
+    const latlngs = polyline.getLatLngs();
 
-    if (this._loadedCount == 0) {
+    if (this._loadedCount == 0 || !this.options.itinerary) {
       L.marker(latlngs[0], { icon: startIcon }).addTo(this._markers)
     }
 
@@ -333,18 +349,25 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     }
   },
 
-  _uniqueColors: function (count) {
-    return count === 1 ? ['#0058ca'] : new Array(count).fill(null).map((_, i) => this._hsvToHex(i * (1 / count), 1, 0.7));
-  },
+  _hashToColor(hash) {
+    // Ensure hash is a positive integer
+    hash = Math.abs(hash);
 
-  _hsvToHex: function (h, s, v) {
-    var i = Math.floor(h * 6);
-    var f = h * 6 - i;
-    var p = v * (1 - s);
-    var q = v * (1 - f * s);
-    var t = v * (1 - (1 - f) * s);
-    var rgb = { 0: [v, t, p], 1: [q, v, p], 2: [p, v, t], 3: [p, q, v], 4: [t, p, v], 5: [v, p, q] }[i % 6];
-    return rgb.map(d => d * 255).reduce((hex, byte) => hex + ((byte >> 4) & 0x0F).toString(16) + (byte & 0x0F).toString(16), "#");
+    // Define the maximum brightness (e.g., 200 ensures the color is not too light)
+    const maxBrightness = 200;
+
+    // Convert the hash to a color in a reduced RGB range to prevent light colors
+    const r = (hash >> 16) & 0xFF; // Extract the red component
+    const g = (hash >> 8) & 0xFF;  // Extract the green component
+    const b = hash & 0xFF;         // Extract the blue component
+
+    // Adjust the RGB values to be within the allowed range (0 to maxBrightness)
+    const red = Math.floor((r / 255) * maxBrightness);
+    const green = Math.floor((g / 255) * maxBrightness);
+    const blue = Math.floor((b / 255) * maxBrightness);
+
+    // Format as HEX color
+    return `#${(1 << 24 | red << 16 | green << 8 | blue).toString(16).slice(1).toUpperCase()}`;
   },
 
   removeFrom: function (map) {

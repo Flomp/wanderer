@@ -81,10 +81,6 @@
         await import("$lib/vendor/leaflet-elevation/src/index.js");
         await import("$lib/vendor/leaflet-elevation/libs/leaflet-gpxgroup");
 
-        const AutoGraticule = (
-            await import("$lib/vendor/leaflet-graticule/leaflet-auto-graticule")
-        ).default;
-
         map = L.map("map", {
             preferCanvas: true,
             plugins: ["/vendor/leaflet-elevation/libs/leaflet-gpxgroup.js"],
@@ -95,6 +91,8 @@
             ],
             3,
         );
+
+        dispatch("init", map);
         map!.attributionControl.setPrefix(false);
 
         map!.on("zoomend", function () {
@@ -103,6 +101,10 @@
 
         map!.on("click", function (e: any) {
             dispatch("click", e);
+        });
+
+        map!.on("moveend", function (e: any) {
+            dispatch("moveend", e);
         });
 
         const baseLayer = L.tileLayer(
@@ -203,12 +205,11 @@
 
         gpxGroup = L.gpxGroup(gpxData, {
             points: [],
-            // points_options: opts.points,
             elevation: true,
             elevation_options: elevation_options,
-            flyToBounds: true,
+            flyToBounds: options.flyToBounds,
             distanceMarkers: true,
-            removeElevationOnDeselect: options.removeElevationOnDeselect,
+            itinerary: options.itinerary,
         });
 
         const markerLayerGroup = L.layerGroup().addTo(map);
@@ -234,8 +235,11 @@
         });
 
         gpxGroup.on("route_loaded", ({ route }: { route: any }) => {
-            
-            const trail = trails.find((t) => gpxGroup?._hashCode(t.expand.gpx_data) == route.options.hash)
+            const trail = trails.find(
+                (t) =>
+                    gpxGroup?._hashCode(t.expand.gpx_data) ==
+                    route.options.hash,
+            );
 
             if (!trail) {
                 return;
@@ -275,6 +279,14 @@
         gpxGroup.select(index);
     }
 
+    export function openPopup(index: number) {
+        gpxGroup.openPopup(index);
+    }
+
+    export function closePopup(index: number) {
+        gpxGroup.closePopup(index);
+    }
+
     function switchHotline(metric: "altitude" | "slope" | "speed" | false) {
         if (metric === selectedMetric) {
             return;
@@ -293,10 +305,10 @@
     }
 </script>
 
-<div id="map-container" class="flex flex-col h-full">
+<div id="map-container" class="h-full relative">
     <div
         id="map"
-        class="rounded-xl z-0 basis-full min-h-96 md:min-h-0"
+        class="rounded-xl z-0 h-full min-h-96 md:min-h-0"
         style="position: relative; outline-style: none;"
     >
         <div class="absolute top-20 right-3 text-sm" style="z-index: 500">
@@ -314,8 +326,5 @@
             </Dropdown>
         </div>
     </div>
-    <div class="flex items-center justify-between">
-        <slot />
-        <div class="basis-[300px] flex-grow flex-shrink-0" id="elevation"></div>
-    </div>
+    <div class="absolute bottom-0 bg-background/80 w-full" id="elevation"></div>
 </div>
