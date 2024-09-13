@@ -21,7 +21,7 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { createMarkerFromWaypoint } from "$lib/util/leaflet_util";
+    import { createMarkerFromWaypoint, endIcon, startIcon } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import type { Icon, Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
@@ -92,13 +92,9 @@
                     parseElements: ["track", "route"] as any,
                 },
                 marker_options: {
-                    startIcon: L.AwesomeMarkers.icon({
-                        icon: "circle-half-stroke",
-                        prefix: "fa",
-                        markerColor: "cadetblue",
-                        iconColor: "white",
-                    }) as Icon,
+                    startIcon: startIcon() as any,
                     startIconUrl: "",
+                    endIcon: endIcon() as any,
                     endIconUrl: "",
                     shadowUrl: "",
                 },

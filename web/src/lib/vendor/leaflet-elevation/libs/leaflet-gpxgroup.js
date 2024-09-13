@@ -248,11 +248,11 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     polyline.on('click', L.bind(this._onRouteClick, this, route, polyline));
 
     const startIcon = L.divIcon({
-      html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-bullseye -translate-x-1/2"></i>',
+      html: '<i class="p-2 text-white bg-gray-500 rounded-full fa fa-bullseye -translate-x-1/2"></i>',
       className: 'start-icon'
     });
     const endIcon = L.divIcon({
-      html: '<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-flag-checkered -translate-x-1/2"></i>',
+      html: '<i class="p-2 text-white bg-gray-500 rounded-full fa fa-flag-checkered -translate-x-1/2"></i>',
       className: 'end-icon'
     });
     const latlngs = polyline.getLatLngs().flat(1);

@@ -139,7 +139,7 @@
             closeBtn: false,
             followMarker: true,
             autofitBounds: true,
-            imperial: $page.data.settings?.unit == "imperial" ?? false,
+            imperial: $page.data.settings.unit == "imperial",
             reverseCoords: false,
             acceleration: false,
             slope: true,
