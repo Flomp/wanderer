@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { List } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import type { User } from "$lib/models/user";
     import { pb } from "$lib/pocketbase";
@@ -7,31 +8,30 @@
     import { _ } from "svelte-i18n";
     import { fly, slide } from "svelte/transition";
 
-    export let trail: Trail;
+    export let subject: Trail | List;
     export let large: boolean = false;
+    export let type: "trail" | "list"
+
+    const shareData = type == "trail" ? (subject as Trail).expand.trail_share_via_trail : (subject as List).expand?.list_share_via_list
 
     let showInfo: boolean = false;
-
     let loading: boolean = false;
-
     let infoLoaded: boolean = false;
-
-    let trailIsOwned: boolean = trail.author == pb.authStore.model?.id;
-
+    let subjectIsOwned: boolean = subject.author == pb.authStore.model?.id;
     let author: User;
 
     async function fetchInfo() {
         if (!infoLoaded) {
             loading = true;
             loading = false;
-            if (trailIsOwned) {
-                for (const share of trail.expand.trail_share_via_trail ?? []) {
+            if (subjectIsOwned) {
+                for (const share of shareData ?? []) {
                     share.expand = {
                         user: await users_show(share.user),
                     };
                 }
             } else {
-                author = await users_show(trail.author!);
+                author = await users_show(subject.author!);
             }
 
             infoLoaded = true;
@@ -57,9 +57,9 @@
             >
             {#if loading}
                 <div class="spinner spinner-dark"></div>
-            {:else if infoLoaded && trail.expand.trail_share_via_trail}
-                {#if trailIsOwned}
-                    {#each trail.expand.trail_share_via_trail as share}
+            {:else if infoLoaded && shareData}
+                {#if subjectIsOwned}
+                    {#each shareData as share}
                         {#if share.expand}
                             <li>
                                 <div class="flex items-center mr-8">
@@ -109,7 +109,7 @@
                             {$_("you-can")}
                         </p>
                         <p class="whitespace-nowrap">
-                            {#if trail.expand.trail_share_via_trail[0].permission == "view"}
+                            {#if shareData[0].permission == "view"}
                                 <i class="fa fa-eye mr-1"></i>
                                 {$_("view")}
                             {:else}

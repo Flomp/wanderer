@@ -5,6 +5,7 @@
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import ListCard from "$lib/components/list/list_card.svelte";
     import ListModal from "$lib/components/list/list_modal.svelte";
+    import ListShareModal from "$lib/components/list/list_share_modal.svelte";
     import MapWithElevationMultiple from "$lib/components/trail/map_with_elevation_multiple.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import { List } from "$lib/models/list";
@@ -28,6 +29,7 @@
 
     let openListModal: () => void;
     let openConfirmModal: () => void;
+    let openShareModal: () => void;
 
     let filter: TrailFilter = $page.data.filter;
     let listToBeDeleted: List | null = null;
@@ -60,7 +62,11 @@
     ) {
         const item = e.detail;
 
-        if (item.value == "edit") {
+        if (item.value == "share") {
+            list.set(currentList);
+            await tick();
+            openShareModal();
+        } else if (item.value == "edit") {
             goto("/lists/edit/" + currentList.id);
         } else if (item.value == "delete") {
             openConfirmModal();
@@ -91,19 +97,14 @@
 <svelte:head>
     <title>{$_("list", { values: { n: 2 } })} | wanderer</title>
 </svelte:head>
-<main
-    class="grid grid-cols-1 md:grid-cols-[430px_1fr] gap-4 lg:gap-4 mx-4"
-    style="height: calc(100vh - 124px)"
->
+<main class="grid grid-cols-1 md:grid-cols-[430px_1fr] gap-4 lg:gap-4 mx-4">
     <ul
-        class="list-list mx-4 md:mx-auto rounded-xl border border-input-border max-w-full overflow-y-scroll"
+        class="list-list mx-4 md:mx-auto rounded-xl border border-input-border max-h-full"
     >
         <div
-            class="flex gap-x-4 items-center justify-between p-4 top-0 sticky bg-background z-50"
+            class="flex gap-x-4 items-center justify-between p-4 bg-background z-50 rounded-xl"
         >
-            <a
-                class="btn-primary btn-large text-center mx-4"
-                href="/lists/edit/new"
+            <a class="btn-primary btn-large text-center" href="/lists/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-list")}</a
             >
             <button type="button" class="btn-icon" on:click={toggleMap}
@@ -113,24 +114,24 @@
         </div>
 
         <hr class="border-separator mb-2" />
-        {#each $lists as item, i}
-            <li
-                class="list-list-item"
-                on:click={() => setCurrentList(item)}
-                role="presentation"
-            >
-                <ListCard
-                    list={item}
-                    on:change={(e) => handleDropdownClick(e, item)}
-                    active={item.id === $list.id}
-                ></ListCard>
-                {#if i != $lists.length - 1}
-                    <hr class="border-separator my-2" />
-                {/if}
-            </li>
-        {/each}
+
+        <div class="px-4">
+            {#each $lists as item, i}
+                <li
+                    class="list-list-item my-1"
+                    on:click={() => setCurrentList(item)}
+                    role="presentation"
+                >
+                    <ListCard
+                        list={item}
+                        on:change={(e) => handleDropdownClick(e, item)}
+                        active={item.id === $list.id}
+                    ></ListCard>
+                </li>
+            {/each}
+        </div>
     </ul>
-    <div class:hidden={!showMap}>
+    <div id="trail-map" class="sticky top-[62px]" class:hidden={!showMap}>
         <MapWithElevationMultiple
             trails={$list.expand?.trails ?? []}
             bind:map
@@ -151,10 +152,13 @@
         bind:openModal={openConfirmModal}
         on:confirm={deleteList}
     ></ConfirmModal>
+    <ListShareModal list={$list} bind:openShareModal></ListShareModal>
 </main>
 
 <style>
-    #map {
-        min-height: 600px;
+    @media only screen and (min-width: 768px) {
+        #trail-map {
+            height: calc(100vh - 124px);
+        }
     }
 </style>

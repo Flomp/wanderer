@@ -33,7 +33,7 @@
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
-    import TrailShareInfo from "./trail_share_info.svelte";
+    import ShareInfo from "../share_info.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" = "map";
@@ -190,7 +190,7 @@
                         </span>
                     {/if}
                     {#if trailIsShared}
-                        <TrailShareInfo {trail} large={true}></TrailShareInfo>
+                        <ShareInfo type="trail" subject={trail} large={true}></ShareInfo>
                     {/if}
                 </div>
             {/if}

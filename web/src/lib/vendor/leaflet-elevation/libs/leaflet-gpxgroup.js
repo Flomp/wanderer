@@ -167,7 +167,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
   _addTrack: function (track) {
     if (track instanceof Object) {
       this._loadGeoJSON(track);
-    } else {
+    } else if (track !== undefined) {
       this._elevation._parseFromString(track)
         .then(geojson => this._loadGeoJSON(geojson, this._hashCode(track), track.split('/').pop().split('#')[0].split('?')[0]))
     }
@@ -226,7 +226,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
 
 
     this._elevation.import([this._elevation.__LGEOMUTIL, this._elevation.__LDISTANCEM]).then(() => {
-      route.addTo(this._layers);      
+      route.addTo(this._layers);
 
       route.eachLayer((layer) => this._onEachRouteLayer(route, layer));
 
@@ -355,17 +355,18 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     // Ensure hash is a positive integer
     hash = Math.abs(hash);
 
-    // Define the maximum brightness (e.g., 200 ensures the color is not too light)
-    const maxBrightness = 200;
+    // Define the maximum brightness to ensure the color is not too light
+    const maxBrightness = 250;
 
-    // Convert the hash to a color in a reduced RGB range to prevent light colors
+    // Convert the hash to a color in a reduced RGB range to prevent light and green colors
     const r = (hash >> 16) & 0xFF; // Extract the red component
     const g = (hash >> 8) & 0xFF;  // Extract the green component
     const b = hash & 0xFF;         // Extract the blue component
 
-    // Adjust the RGB values to be within the allowed range (0 to maxBrightness)
+    // Adjust the green value to avoid greenish colors
+    // Reducing the green component significantly to avoid strong green shades
+    const green = Math.floor((g / 255) * (maxBrightness * 0.5)); // Reduce green component range
     const red = Math.floor((r / 255) * maxBrightness);
-    const green = Math.floor((g / 255) * maxBrightness);
     const blue = Math.floor((b / 255) * maxBrightness);
 
     // Format as HEX color

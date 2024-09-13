@@ -1,5 +1,6 @@
 import { List } from "$lib/models/list";
 import { lists_show } from "$lib/stores/list_store";
+import { getFileURL } from "$lib/util/file_util";
 import { error, type Load } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";
 
@@ -11,11 +12,13 @@ export const load: Load = async ({ params, fetch, data }) => {
     let list: List;
     if (params.id === "new") {
         list = new List("", []);
-        return { list: list }
+        return { list: list, previewUrl: "" }
     } else {
         try {
             list = await lists_show(params.id, fetch);
-            return { list: list }
+            const previewURL = getFileURL(list, list.avatar);
+
+            return { list: list, previewUrl: previewURL }
 
         } catch (e) {
             if (e instanceof ClientResponseError) {

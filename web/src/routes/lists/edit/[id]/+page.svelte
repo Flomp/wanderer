@@ -12,6 +12,8 @@
     import Textarea from "$lib/components/base/textarea.svelte";
     import MapWithElevationMultiple from "$lib/components/trail/map_with_elevation_multiple.svelte";
     import type { Trail } from "$lib/models/trail.js";
+    import { lists_create, lists_update } from "$lib/stores/list_store.js";
+    import { show_toast } from "$lib/stores/toast_store.js";
     import { trails_show } from "$lib/stores/trail_store";
     import { getFileURL } from "$lib/util/file_util.js";
     import {
@@ -19,13 +21,16 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { lists_create, lists_update } from "$lib/stores/list_store.js";
-    import { show_toast } from "$lib/stores/toast_store.js";
-    import { onMount } from "svelte";
+    import {
+        trail_share_create,
+        trail_share_index,
+    } from "$lib/stores/trail_share_store.js";
+    import { TrailShare } from "$lib/models/trail_share.js";
+    import ConfirmModal from "$lib/components/confirm_modal.svelte";
 
     export let data;
 
-    let previewURL = "";
+    let previewURL = data.previewUrl ?? "";
     let searchDropdownItems: SearchItem[] = [];
 
     let activeTrailIndex: number | null = null;
@@ -33,6 +38,10 @@
     let map: MapWithElevationMultiple;
 
     let loading: boolean = false;
+
+    let newShares: TrailShare[] = [];
+
+    let openConfirmModal: () => void;
 
     const { form, errors, handleChange, handleSubmit } = createForm<List>({
         initialValues: data.list!,
@@ -42,18 +51,34 @@
                 document.getElementById("avatar") as HTMLInputElement
             ).files![0];
             loading = true;
-            if ($form.id) {
-                await lists_update($form, avatarFile);
-            } else {
-                await lists_create($form, avatarFile);
+            try {
+                if ($form.id) {
+                    await lists_update($form, avatarFile);
+                    await findNewTrailShares();
+                    if (!newShares.length) {
+                        show_toast({
+                            type: "success",
+                            icon: "check",
+                            text: $_("list-saved-successfully"),
+                        });
+                    }
+                } else {
+                    await lists_create($form, avatarFile);
+                    show_toast({
+                        type: "success",
+                        icon: "check",
+                        text: $_("list-saved-successfully"),
+                    });
+                }
+            } catch (e) {
+                show_toast({
+                    type: "error",
+                    icon: "close",
+                    text: $_("error-saving-list"),
+                });
+            } finally {
+                loading = false;
             }
-            loading = false;
-
-            show_toast({
-                type: "success",
-                icon: "check",
-                text: $_("list-saved-successfully"),
-            });
         },
     });
 
@@ -88,14 +113,14 @@
 
         const response = await r.json();
 
-        searchDropdownItems = response.results[0].hits.map(
-            (t: Record<string, any>) => ({
+        searchDropdownItems = response.results[0].hits
+            .filter((h: List) => !$form.trails?.includes(h.id!))
+            .map((t: Record<string, any>) => ({
                 text: t.name,
                 description: `${t.location ?? "-"}`,
                 value: t.id,
                 icon: "route",
-            }),
-        );
+            }));
     }
 
     async function handleSearchClick(item: SearchItem) {
@@ -110,12 +135,57 @@
             (t) => t.id !== trail.id,
         );
     }
+
+    async function findNewTrailShares() {
+        const usersWithAccess: string[] = [
+            $form.author!,
+            ...($form.expand?.list_share_via_list ?? []).map((s) => s.user),
+        ];
+        for (const userId of usersWithAccess) {
+            const existingTrailShares = await trail_share_index({
+                user: userId,
+            });
+            for (const trail of $form.expand?.trails ?? []) {
+                if (trail.author == userId) {
+                    continue;
+                }
+                const trailShare = existingTrailShares.find(
+                    (s) => s.trail == trail.id,
+                );
+                if (!trailShare) {
+                    newShares.push(new TrailShare(userId, trail.id!, "view"));
+                }
+            }
+        }
+
+        if (newShares.length) {
+            openConfirmModal();
+        }
+    }
+
+    async function updateTrailShares() {
+        for (const newShare of newShares) {
+            await trail_share_create(newShare);
+        }
+        newShares = [];
+        show_toast({
+            type: "success",
+            icon: "check",
+            text: $_("list-saved-successfully"),
+        });
+    }
 </script>
 
+<svelte:head>
+    <title
+        >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-list")} | wanderer</title
+    >
+</svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[440px_1fr]">
     <form
         id="list-form"
-        class="overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0"
+        class="flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0 overflow-y-scroll"
+        style="max-height: calc(100vh - 124px)"
         on:submit={handleSubmit}
     >
         <h2 class="text-2xl font-semibold">
@@ -248,10 +318,28 @@
             {loading}>{$_("save-list")}</Button
         >
     </form>
-    <MapWithElevationMultiple
-        trails={$form.expand?.trails ?? []}
-        options={{flyToBounds: true}}
-        bind:activeTrailIndex
-        bind:this={map}
-    ></MapWithElevationMultiple>
+    <div id="trail-map" class="max-h-full">
+        <MapWithElevationMultiple
+            trails={$form.expand?.trails ?? []}
+            options={{ flyToBounds: true }}
+            bind:activeTrailIndex
+            bind:this={map}
+        ></MapWithElevationMultiple>
+    </div>
 </main>
+
+<ConfirmModal
+    text={$_('list-share-warning-update')}
+    title={$_("confirm-share")}
+    action="confirm"
+    bind:openModal={openConfirmModal}
+    on:confirm={updateTrailShares}
+></ConfirmModal>
+
+<style>
+    @media only screen and (min-width: 768px) {
+        #trail-map {
+            height: calc(100vh - 124px);
+        }
+    }
+</style>

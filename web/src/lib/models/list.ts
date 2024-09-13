@@ -1,5 +1,6 @@
 import { object, string } from "yup";
 import type { Trail } from "./trail";
+import type { ListShare } from "./list_share";
 
 export class List {
     id?: string;
@@ -9,6 +10,8 @@ export class List {
     trails?: string[];
     expand?: {
         trails: Trail[]
+        list_share_via_list?: ListShare[]
+
     }
     author?: string;
 

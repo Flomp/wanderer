@@ -7,7 +7,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
-    import TrailShareInfo from "./trail_share_info.svelte";
+    import ShareInfo from "../share_info.svelte";
 
     export let trail: Trail;
 
@@ -45,7 +45,7 @@
                 </span>
             {/if}
             {#if trail.expand?.trail_share_via_trail?.length}
-                <TrailShareInfo {trail}></TrailShareInfo>
+                <ShareInfo type="trail" subject={trail}></ShareInfo>
             {/if}
         </div>
     {/if}

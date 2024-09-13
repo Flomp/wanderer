@@ -1,15 +1,21 @@
 <script lang="ts">
     import Modal from "$lib/components/base/modal.svelte";
-    import type { Trail } from "$lib/models/trail";
+    import type { List } from "$lib/models/list";
+    import { ListShare } from "$lib/models/list_share";
     import { TrailShare } from "$lib/models/trail_share";
     import type { User } from "$lib/models/user";
+    import {
+        list_share_create,
+        list_share_delete,
+        list_share_index,
+        list_share_update,
+        shares,
+    } from "$lib/stores/list_share_store";
     import { show_toast } from "$lib/stores/toast_store";
     import {
-        shares,
         trail_share_create,
         trail_share_delete,
         trail_share_index,
-        trail_share_update,
     } from "$lib/stores/trail_share_store";
     import { users_search } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
@@ -19,17 +25,20 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
+    import { useFBO } from "@threlte/extras";
+    import { lists } from "$lib/stores/list_store";
 
     let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
     export function openShareModal() {
+        shares.set([]);
         fetchShares();
         if (openModal) {
             openModal();
         }
     }
 
-    export let trail: Trail;
+    export let list: List;
 
     const dispatch = createEventDispatcher();
 
@@ -75,40 +84,75 @@
         closeModal!();
     }
 
-    async function shareTrail(item: SelectItem) {
-        const share = new TrailShare(item.value.id, trail.id!, "view");
-        await trail_share_create(share);
+    async function shareTrails(userId: string) {
+        const existingTrailShares = await trail_share_index({ user: userId });
+        const trailIds = existingTrailShares.map((s) => s.trail);
+        for (const trailId of list.trails ?? []) {
+            if (!trailIds.includes(trailId)) {
+                const share = new TrailShare(userId, trailId, "view");
+                await trail_share_create(share);
+            }
+        }
+    }
+
+    async function shareList(item: SelectItem) {
+        const share = new ListShare(item.value.id, list.id!, "view");
+        await list_share_create(share);
+        await shareTrails(item.value.id);
         fetchShares();
     }
 
-    async function updateSharePermission(share:TrailShare, permission: "view"| "edit" ) {
+    async function updateSharePermission(
+        share: ListShare,
+        permission: "view" | "edit",
+    ) {
         share.permission = permission;
-        await trail_share_update(share);
+        await list_share_update(share);
     }
 
-    async function deleteShare(share: TrailShare) {
-        await trail_share_delete(share);
+    async function deleteTrailShares(userId: string) {
+        const existingTrailShares = await trail_share_index({ user: userId });
+        for (const trailId of list.trails ?? []) {
+            const shareToDelete = existingTrailShares.find(
+                (s) => s.trail == trailId,
+            );
+            if (shareToDelete) {
+                await trail_share_delete(shareToDelete);
+            }
+        }
+    }
+
+    async function deleteShare(share: ListShare) {
+        await list_share_delete(share);
+        // await deleteTrailShares(share.user);
         fetchShares();
     }
 
     async function fetchShares() {
         sharesLoading = true;
-        await trail_share_index({trail: trail.id!});
+        const fetchedShares = await list_share_index(list.id!);
+        list.expand = {
+            trails: list.expand?.trails ?? [],
+            list_share_via_list: fetchedShares,
+        };
         sharesLoading = false;
     }
 </script>
 
 <Modal
     id="share-modal"
-    title={$_('share-this-trail')}
+    title={$_("share-this-list")}
     size="max-w-sm overflow-visible"
     bind:openModal
     bind:closeModal
 >
     <div slot="content">
+        <p class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500">
+            {$_("list-share-warning")}
+        </p>
         <Search
             on:update={(e) => updateUsers(e.detail)}
-            on:click={(e) => shareTrail(e.detail)}
+            on:click={(e) => shareList(e.detail)}
             placeholder={`${$_("username")}`}
             items={searchItems}
         >
@@ -121,11 +165,11 @@
                 alt="avatar"
             />
         </Search>
-        <h4 class="font-semibold mt-4">{$_('shared-with')}</h4>
+        <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
         {#if $shares.length == 0}
             <p class="text-gray-500 text-center mt-2 text-sm">
-                {$_('trail-not-shared')}
+                {$_("list-not-shared")}
             </p>
         {:else}
             {#each $shares as share}
@@ -141,17 +185,22 @@
                             alt="avatar"
                         />
                         <p>{share.expand.user.username}</p>
-                        <span class="basis-full text-sm text-center text-gray-500">{$_('can')}</span>
+                        <span
+                            class="basis-full text-sm text-center text-gray-500"
+                            >{$_("can")}</span
+                        >
                         <div class="shrink-0">
                             <Select
                                 bind:value={share.permission}
                                 items={permissionSelectItems}
-                                on:change={(e) => updateSharePermission(share, e.detail)}
+                                on:change={(e) =>
+                                    updateSharePermission(share, e.detail)}
                             ></Select>
                         </div>
 
-                        <button class="btn-icon text-red-500"
-                        on:click={() => deleteShare(share)}
+                        <button
+                            class="btn-icon text-red-500"
+                            on:click={() => deleteShare(share)}
                             ><i class="fa fa-trash"></i></button
                         >
                     </div>

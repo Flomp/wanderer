@@ -5,9 +5,9 @@ import { writable, type Writable } from "svelte/store";
 export const shares: Writable<TrailShare[]> = writable([])
 
 
-export async function trail_share_index(trail: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trail_share_index(data: {trail?: string, user?: string}, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail-share?' + new URLSearchParams({
-        filter: `trail='${trail}'`,
+        filter: data.trail ? `trail='${data.trail}'` : data.user ? `user='${data.user}'` : '',
     }), {
         method: 'GET',
     })
@@ -20,7 +20,7 @@ export async function trail_share_index(trail: string, f: (url: RequestInfo | UR
 
     shares.set(response);
 
-    return shares;
+    return response;
 
 }
 
@@ -32,7 +32,7 @@ export async function trail_share_create(share: TrailShare) {
 
     if (!r.ok) {
         throw new ClientResponseError(await r.json())
-    }    
+    }
 }
 
 export async function trail_share_update(share: TrailShare) {

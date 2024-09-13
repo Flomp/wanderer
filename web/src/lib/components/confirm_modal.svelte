@@ -8,6 +8,7 @@
 
     export let title: string = "Confirm Deletion";
     export let text: string;
+    export let action: string = "delete";
 
     const dispatch = createEventDispatcher();
 
@@ -24,7 +25,7 @@
             >{$_("cancel")}</button
         >
         <button class="btn-danger" type="button" on:click={confirm} name="delete"
-            >{$_("delete")}</button
+            >{$_(action)}</button
         >
     </div></Modal
 >
