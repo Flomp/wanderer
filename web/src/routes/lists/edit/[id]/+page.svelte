@@ -130,10 +130,10 @@
     }
 
     function deleteTrail(trail: Trail) {
-        $form.trails?.filter((id) => id !== trail.id);
+        $form.trails = $form.trails?.filter((id) => id !== trail.id);
         $form.expand!.trails = $form.expand!.trails.filter(
             (t) => t.id !== trail.id,
-        );
+        );        
     }
 
     async function findNewTrailShares() {
@@ -185,7 +185,6 @@
     <form
         id="list-form"
         class="flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0 overflow-y-scroll"
-        style="max-height: calc(100vh - 124px)"
         on:submit={handleSubmit}
     >
         <h2 class="text-2xl font-semibold">
@@ -338,7 +337,7 @@
 
 <style>
     @media only screen and (min-width: 768px) {
-        #trail-map {
+        #trail-map, #list-form  {
             height: calc(100vh - 124px);
         }
     }

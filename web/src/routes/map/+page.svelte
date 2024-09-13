@@ -217,7 +217,7 @@
             {/each}
         {/if}
     </div>
-    <div class:hidden={!showMap && browser && window.innerWidth < 768}>
+    <div id="trail-map" class:hidden={!showMap && browser && window.innerWidth < 768}>
         <MapWithElevationMultiple
             on:moveend={handleMapMove}
             on:init={handleMapInit}
@@ -230,11 +230,11 @@
 </main>
 
 <style>
-    #map {
+    #trail-map {
         height: calc(100vh - 180px);
     }
     @media only screen and (min-width: 768px) {
-        #map,
+        #trail-map,
         #trail-list {
             height: calc(100vh - 124px);
         }

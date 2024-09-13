@@ -76,7 +76,7 @@
                 <Dropdown items={dropdownItems} on:change></Dropdown>
             {/if}
         </div>
-        <div class="flex mt-1 gap-4 text-sm text-gray-500 whitespace-nowrap">
+        <div class="flex mt-1 gap-x-4 text-sm text-gray-500 whitespace-nowrap flex-wrap">
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
                     cumulativeDistance,

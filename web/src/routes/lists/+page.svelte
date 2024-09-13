@@ -24,18 +24,26 @@
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
 
-    import { tick } from "svelte";
+    import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
 
     let openListModal: () => void;
     let openConfirmModal: () => void;
     let openShareModal: () => void;
 
-    let filter: TrailFilter = $page.data.filter;
     let listToBeDeleted: List | null = null;
 
     let map: Map;
     let showMap: boolean = true;
+
+    onMount(() => {
+        if ($page.url.searchParams.get("list")) {
+            const listToFocus = $lists.find((l) => l.id == $page.url.searchParams.get("list"));
+            if(listToFocus) {
+                setCurrentList(listToFocus);
+            }
+        }
+    });
 
     async function toggleMap() {
         showMap = !showMap;
@@ -99,7 +107,7 @@
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[430px_1fr] gap-4 lg:gap-4 mx-4">
     <ul
-        class="list-list mx-4 md:mx-auto rounded-xl border border-input-border max-h-full"
+        class="list-list md:mx-auto rounded-xl border border-input-border max-h-full"
     >
         <div
             class="flex gap-x-4 items-center justify-between p-4 bg-background z-50 rounded-xl"
@@ -139,11 +147,7 @@
         ></MapWithElevationMultiple>
     </div>
     <div class="min-w-0" class:hidden={showMap}>
-        <TrailList
-            bind:filter
-            trails={$list.expand?.trails ?? []}
-            on:update={async () => await lists_index()}
-        ></TrailList>
+        <TrailList trails={$list.expand?.trails ?? []}></TrailList>
     </div>
 
     <ListModal bind:openModal={openListModal} on:save={saveList}></ListModal>

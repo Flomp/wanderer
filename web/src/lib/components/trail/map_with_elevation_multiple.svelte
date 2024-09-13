@@ -36,9 +36,9 @@
         (gpxData.length != gpxGroup._tracks.length ||
             gpxGroup?._tracks[0] !== gpxData[0])
     ) {
-        if (gpxData.length == 0) {
-            map?.setView([0, 0], 4);
-        }
+        // if (gpxData.length == 0) {
+        //     map?.setView([0, 0], 4);
+        // }
         gpxGroup._elevation.updateOptions({
             autofitBounds: options.autofitBounds ?? true,
         });
@@ -162,7 +162,7 @@
             closeBtn: false,
             followMarker: true,
             autofitBounds: true,
-            imperial: $page.data.settings?.unit == "imperial" ?? false,
+            imperial: $page.data.settings?.unit == "imperial",
             reverseCoords: false,
             acceleration: false,
             slope: true,

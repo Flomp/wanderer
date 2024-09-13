@@ -5,12 +5,13 @@
     import { TrailShare } from "$lib/models/trail_share";
     import type { User } from "$lib/models/user";
     import {
-        list_share_create,
+    list_share_create,
         list_share_delete,
         list_share_index,
         list_share_update,
-        shares,
+        shares
     } from "$lib/stores/list_share_store";
+    import { lists } from "$lib/stores/list_store";
     import { show_toast } from "$lib/stores/toast_store";
     import {
         trail_share_create,
@@ -25,8 +26,6 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
-    import { useFBO } from "@threlte/extras";
-    import { lists } from "$lib/stores/list_store";
 
     let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
@@ -72,7 +71,7 @@
     }
 
     function copyURLToClipboard() {
-        navigator.clipboard.writeText(window.location.href);
+        navigator.clipboard.writeText(window.location.href.split('?')[0] + '?list=' + list.id);
 
         copyButtonText = $_("link-copied");
         setTimeout(() => (copyButtonText = $_("copy-link")), 3000);
@@ -135,6 +134,7 @@
             trails: list.expand?.trails ?? [],
             list_share_via_list: fetchedShares,
         };
+        lists.set($lists)
         sharesLoading = false;
     }
 </script>

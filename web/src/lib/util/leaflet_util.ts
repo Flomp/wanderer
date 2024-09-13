@@ -12,7 +12,7 @@ export const endIcon = () => L.divIcon({
 
 export function createMarkerFromWaypoint(L: any, waypoint: Waypoint, onDragEnd?: (event: LeafletEvent) => void): Marker {
     const icon = L.divIcon({
-        html: `<i class="px-2 py-2 text-white bg-gray-500 rounded-lg fa fa-${waypoint.icon}"></i>`,
+        html: `<i class="px-2 py-2 text-white bg-gray-500 rounded-full fa fa-${waypoint.icon}"></i>`,
         className: 'waypoint-icon'
     });
 

@@ -30,7 +30,7 @@ export const Elevation = L.Control.Elevation = L.Control.extend({
 		Object.assign(this.options, options)
 		if (!this.options.showStartEnd) {
 			this._circleMarkers.remove();
-		} else if (this._data.length) {
+		} else if (this._data.length && this._map) {
 			this._circleMarkers.addTo(this._map);
 		}
 	},
