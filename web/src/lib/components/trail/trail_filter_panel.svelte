@@ -157,7 +157,7 @@
                         on:change={() => setCategoryFilter(category)}
                     />
                     <label for="{category.name}-checkbox" class="ms-2 text-sm"
-                        >{category.name}</label
+                        >{$_(category.name)}</label
                     >
                 </div>
             {/each}

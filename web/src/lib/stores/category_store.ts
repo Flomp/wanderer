@@ -18,5 +18,5 @@ export async function categories_index(f: (url: RequestInfo | URL, config?: Requ
 
     categories.set(response);
 
-    return response;
+    return response as Category[];
 }

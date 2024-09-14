@@ -43,7 +43,7 @@
     class="grid grid-cols-1 md:grid-cols-[300px_1fr] items-start gap-8 max-w-7xl mx-6 md:mx-auto"
 >
     <TrailFilterPanel
-        categories={$categories}
+        categories={$page.data.categories}
         {filter}
         {filterExpanded}
         on:update={() => handleFilterUpdate()}

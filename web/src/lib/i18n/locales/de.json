@@ -111,7 +111,7 @@
   "list": "{n, plural, =1 {Liste} other {Listen}}",
   "list-not-shared": "",
   "list-saved-successfully": "",
-  "list-share-warning": "Sharing a list automatically shares all trails contained in it.",
+  "list-share-warning": "",
   "list-share-warning-update": "",
   "location": "Standort",
   "login": "Login",
