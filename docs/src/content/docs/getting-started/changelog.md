@@ -3,6 +3,17 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.9.0
+### Features
+- Complete visual overhaul of the list page
+- Lists can now be shared with other users
+- Updates visual style for waypoints
+
+### Bug fixes
+- Fixes a bug that caused categories not to load properly on page reload
+- Fixes icon picker suggestions for waypoints
+- Fixes a bug that would prevent public and shared trails from showing up in the overview
+
 ## v0.8.2
 ### Features
 - The pagination is now available at top and bottom

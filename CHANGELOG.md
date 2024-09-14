@@ -2,9 +2,12 @@
 ## Features
 - Complete visual overhaul of the list page
 - Lists can now be shared with other users
+- Updates visual style for waypoints
 
 ## Bug fixes
 - Fixes a bug that caused categories not to load properly on page reload
+- Fixes icon picker suggestions for waypoints
+- Fixes a bug that would prevent public and shared trails from showing up in the overview
 
 
 # v0.8.2
