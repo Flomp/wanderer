@@ -9,7 +9,7 @@ export class List {
     avatar?: string;
     trails?: string[];
     expand?: {
-        trails: Trail[]
+        trails?: Trail[]
         list_share_via_list?: ListShare[]
 
     }

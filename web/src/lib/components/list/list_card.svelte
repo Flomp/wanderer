@@ -6,43 +6,28 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
-    import { currentUser } from "$lib/stores/user_store";
     export let list: List;
     export let active: boolean = false;
 
-    $: cumulativeDistance = list.expand?.trails.reduce(
+    $: cumulativeDistance = list.expand?.trails?.reduce(
         (s, b) => s + b.distance!,
         0,
     );
 
-    $: cumulativeElevationGain = list.expand?.trails.reduce(
+    $: cumulativeElevationGain = list.expand?.trails?.reduce(
         (s, b) => s + b.elevation_gain!,
         0,
     );
 
-    $: cumulativeDuration = list.expand?.trails.reduce(
+    $: cumulativeDuration = list.expand?.trails?.reduce(
         (s, b) => s + b.duration!,
         0,
     );
 
     $: listIsShared = (list.expand?.list_share_via_list?.length ?? 0) > 0;
 
-    $: allowEdit =
-        list.author == $currentUser?.id ||
-        list.expand?.list_share_via_list?.some((s) => s.permission == "edit");
-
-    $: dropdownItems = [
-        ...(list.author == $currentUser?.id
-            ? [{ text: $_("share"), value: "share" }]
-            : []),
-        ...(allowEdit ? [{ text: $_("edit"), value: "edit" }] : []),
-        ...(list.author == $currentUser?.id
-            ? [{ text: $_("delete"), value: "delete" }]
-            : []),
-    ];
 </script>
 
 <div
@@ -72,9 +57,6 @@
             {#if listIsShared}
                 <ShareInfo type="list" subject={list}></ShareInfo>
             {/if}
-            {#if dropdownItems.length}
-                <Dropdown items={dropdownItems} on:change></Dropdown>
-            {/if}
         </div>
         <div class="flex mt-1 gap-x-4 text-sm text-gray-500 whitespace-nowrap flex-wrap">
             <span
@@ -94,9 +76,9 @@
             >
         </div>
         <p class="text-sm text-gray-500 mb-2">
-            {list.expand?.trails.length ?? 0}
+            {list.expand?.trails?.length ?? 0}
             {$_("trail", {
-                values: { n: list.expand?.trails.length ?? 0 },
+                values: { n: list.expand?.trails?.length ?? 0 },
             })}
         </p>
         <p

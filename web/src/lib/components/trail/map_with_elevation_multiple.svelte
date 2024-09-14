@@ -20,6 +20,7 @@
     export let map: any | null = null;
     export let options: any = {};
     export let activeTrailIndex: number | null = 0;
+    export let markers: any[] = [];
 
     const dispatch = createEventDispatcher();
 
@@ -28,7 +29,9 @@
 
     let selectedMetric: "altitude" | "slope" | "speed" | false = "altitude";
 
-    $: gpxData = trails.map((t) => t.expand.gpx_data);
+    $: gpxData = trails.map((t) => {
+        return { id: t.id, gpx: t.expand.gpx_data };
+    });
     $: if (
         gpxData &&
         gpxGroup &&
@@ -216,15 +219,20 @@
 
         gpxGroup.on("selection_changed", ({ polyline }: { polyline: any }) => {
             markerLayerGroup.clearLayers();
-
             activeTrailIndex = null;
+            markers = [];
 
             if (polyline._selected) {
-                activeTrailIndex = polyline.options.index;
+                activeTrailIndex = trails.findIndex(
+                    (t) => t.id ==
+                        polyline.options.id,
+                );
+
                 for (const waypoint of trails.at(activeTrailIndex!)?.expand
                     .waypoints ?? []) {
                     const marker = createMarkerFromWaypoint(L, waypoint);
                     marker.addTo(markerLayerGroup!);
+                    markers.push(marker);
                 }
             }
         });
@@ -237,8 +245,8 @@
         gpxGroup.on("route_loaded", ({ route }: { route: any }) => {
             const trail = trails.find(
                 (t) =>
-                    gpxGroup?._hashCode(t.expand.gpx_data) ==
-                    route.options.hash,
+                    t.id ==
+                    route.options.id,
             );
 
             if (!trail) {
@@ -275,16 +283,28 @@
         gpxGroup.addTo(map);
     });
 
-    export function selectTrail(index: number) {
-        gpxGroup.select(index);
+    export function highlightTrail(id: string) {
+        gpxGroup?.highlightTrack(id);
     }
 
-    export function openPopup(index: number) {
-        gpxGroup.openPopup(index);
+    export function unHighlightTrail(id: string) {
+        gpxGroup?.unHighlightTrack(id);
     }
 
-    export function closePopup(index: number) {
-        gpxGroup.closePopup(index);
+    export function selectTrail(id: string) {
+        gpxGroup?.select(id);
+    }
+
+    export function resetSelection() {
+        gpxGroup?.resetSelection();
+    }
+
+    export function openPopup(id: string) {
+        gpxGroup?.openPopup(id);
+    }
+
+    export function closePopup(id: string) {
+        gpxGroup?.closePopup(id);
     }
 
     function switchHotline(metric: "altitude" | "slope" | "speed" | false) {

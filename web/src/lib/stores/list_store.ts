@@ -7,8 +7,8 @@ import { writable, type Writable } from "svelte/store";
 import { fetchGPX } from "./trail_store";
 
 export const lists: Writable<List[]> = writable([])
-export const list: Writable<List> = writable(new List("", []))
-
+export const list: Writable<List | null> = writable(null)
+export const listTrail: Writable<Trail | null> = writable(null);
 
 export async function lists_index(filter?: ListFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/list?' + new URLSearchParams({
@@ -26,7 +26,7 @@ export async function lists_index(filter?: ListFilter, f: (url: RequestInfo | UR
     lists.set(fetchedLists);
 
     if (fetchedLists.length > 0) {
-        list.set(fetchedLists[0])
+        // list.set(fetchedLists[0])
     }
 
     return fetchedLists;
@@ -39,7 +39,7 @@ export async function lists_show(id: string, f: (url: RequestInfo | URL, config?
     })
     const response = await r.json()
 
-    for (const trail of response.expand.trails) {
+    for (const trail of response.expand?.trails ?? []) {
         const gpxData: string = await fetchGPX(trail);
         trail.expand.gpx_data = gpxData;
     }

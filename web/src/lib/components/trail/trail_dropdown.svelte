@@ -23,7 +23,7 @@
     import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
-    export let mode: "overview" | "map";
+    export let mode: "overview" | "map" | "list";
 
     let openConfirmModal: () => void;
     let openListSelectModal: () => void;

@@ -4,19 +4,18 @@
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import ListCard from "$lib/components/list/list_card.svelte";
-    import ListModal from "$lib/components/list/list_modal.svelte";
+    import ListPanel from "$lib/components/list/list_panel.svelte";
     import ListShareModal from "$lib/components/list/list_share_modal.svelte";
     import MapWithElevationMultiple from "$lib/components/trail/map_with_elevation_multiple.svelte";
+    import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import { List } from "$lib/models/list";
-    import type { TrailFilter } from "$lib/models/trail";
+    import type { Trail } from "$lib/models/trail";
     import {
         list,
         lists,
-        lists_create,
         lists_delete,
         lists_index,
-        lists_update,
     } from "$lib/stores/list_store";
     import { fetchGPX } from "$lib/stores/trail_store";
     import "$lib/vendor/leaflet-elevation/src/index.css";
@@ -27,136 +26,171 @@
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
 
-    let openListModal: () => void;
     let openConfirmModal: () => void;
     let openShareModal: () => void;
 
-    let listToBeDeleted: List | null = null;
-
     let map: Map;
+    let mapWithElevationMultiple: MapWithElevationMultiple;
+    let markers: any[];
     let showMap: boolean = true;
+
+    let selectedList: List | null = null;
+    let selectedTrail: Trail | null = null;
 
     onMount(() => {
         if ($page.url.searchParams.get("list")) {
-            const listToFocus = $lists.find((l) => l.id == $page.url.searchParams.get("list"));
-            if(listToFocus) {
+            const listToFocus = $lists.find(
+                (l) => l.id == $page.url.searchParams.get("list"),
+            );
+            if (listToFocus) {
                 setCurrentList(listToFocus);
             }
         }
     });
 
-    async function toggleMap() {
-        showMap = !showMap;
-        if (showMap) {
-            setCurrentList($list);
-            await tick();
-            map.invalidateSize();
-        }
-    }
-
-    async function saveList(e: CustomEvent<{ list: List; avatar?: File }>) {
-        const result = e.detail;
-        if (result.list.id) {
-            await lists_update(result.list, result.avatar);
-        } else {
-            await lists_create(result.list, result.avatar);
-        }
-        await lists_index();
-    }
-
-    async function handleDropdownClick(
-        e: CustomEvent<DropdownItem>,
-        currentList: List,
-    ) {
+    async function handleDropdownClick(e: CustomEvent<DropdownItem>) {
         const item = e.detail;
 
+        if (!selectedList) {
+            return;
+        }
         if (item.value == "share") {
-            list.set(currentList);
-            await tick();
             openShareModal();
         } else if (item.value == "edit") {
-            goto("/lists/edit/" + currentList.id);
+            goto("/lists/edit/" + selectedList.id);
         } else if (item.value == "delete") {
             openConfirmModal();
-            listToBeDeleted = currentList;
         }
     }
 
     async function deleteList() {
-        if (!listToBeDeleted) {
+        if (!selectedList) {
             return;
         }
-        await lists_delete(listToBeDeleted);
+        await lists_delete(selectedList);
         await lists_index();
-        listToBeDeleted = null;
+        selectedList = null;
     }
 
     async function setCurrentList(item: List) {
-        if (item.expand && item.expand.trails.length > 0) {
+        if (
+            item.expand &&
+            item.expand.trails &&
+            item.expand.trails.length > 0
+        ) {
             for (const trail of item.expand.trails) {
                 const gpxData: string = await fetchGPX(trail);
                 trail.expand.gpx_data = gpxData;
             }
         }
-        list.set(item);
+        selectedList = item;
+    }
+
+    function back() {
+        if (selectedTrail) {
+            selectedTrail = null;
+            mapWithElevationMultiple.resetSelection();
+        } else if (selectedList) {
+            selectedList = null;
+            map.flyTo([0, 0], 4, {
+                duration: 0.25,
+                easeLinearity: 0.25,
+                noMoveStart: true,
+            });
+        }
+    }
+
+    function selectTrail(trail: Trail) {
+        selectedTrail = trail;
+        mapWithElevationMultiple.selectTrail(trail.id!);        
+        window.scrollTo({ top: 0 });
+    }
+
+    function highlightTrail(trail: Trail) {
+        mapWithElevationMultiple.highlightTrail(trail.id!);
+    }
+
+    function unHighlightTrail(trail: Trail) {
+        mapWithElevationMultiple.unHighlightTrail(trail.id!);
     }
 </script>
 
 <svelte:head>
     <title>{$_("list", { values: { n: 2 } })} | wanderer</title>
 </svelte:head>
-<main class="grid grid-cols-1 md:grid-cols-[430px_1fr] gap-4 lg:gap-4 mx-4">
-    <ul
-        class="list-list md:mx-auto rounded-xl border border-input-border max-h-full"
+<main class="grid grid-cols-1 md:grid-cols-[430px_1fr] gap-4 lg:gap-4 md:mx-4">
+    <div
+        class="list-list md:mx-auto rounded-xl border border-input-border max-h-full w-full order-1 md:order-none"
     >
         <div
             class="flex gap-x-4 items-center justify-between p-4 bg-background z-50 rounded-xl"
         >
+            <button
+                class="btn-icon"
+                class:btn-disabled={!selectedList}
+                disabled={!selectedList}
+                on:click={back}><i class="fa fa-arrow-left"></i></button
+            >
             <a class="btn-primary btn-large text-center" href="/lists/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-list")}</a
             >
-            <button type="button" class="btn-icon" on:click={toggleMap}
+            <!-- <button type="button" class="btn-icon" on:click={toggleMap}
                 ><i class="fa-regular fa-{showMap ? 'rectangle-list' : 'map'}"
                 ></i></button
-            >
+            > -->
         </div>
 
-        <hr class="border-separator mb-2" />
+        <hr class="border-separator" />
 
-        <div class="px-4">
-            {#each $lists as item, i}
-                <li
-                    class="list-list-item my-1"
-                    on:click={() => setCurrentList(item)}
-                    role="presentation"
-                >
-                    <ListCard
-                        list={item}
-                        on:change={(e) => handleDropdownClick(e, item)}
-                        active={item.id === $list.id}
-                    ></ListCard>
-                </li>
-            {/each}
+        <div>
+            {#if !selectedList}
+                <div class="px-4 mt-2">
+                    {#each $lists as item, i}
+                        <div
+                            class="list-list-item my-1"
+                            on:click={() => setCurrentList(item)}
+                            role="presentation"
+                        >
+                            <ListCard list={item}></ListCard>
+                        </div>
+                    {/each}
+                </div>
+            {:else if selectedList && !selectedTrail}
+                <ListPanel
+                    list={selectedList}
+                    on:mouseenter={(e) => highlightTrail(e.detail.trail)}
+                    on:mouseleave={(e) => unHighlightTrail(e.detail.trail)}
+                    on:change={(e) => handleDropdownClick(e)}
+                    on:click={(e) => selectTrail(e.detail.trail)}
+                ></ListPanel>
+            {:else if selectedList && selectedTrail}
+                <TrailInfoPanel trail={selectedTrail} mode="list" {markers}
+                ></TrailInfoPanel>
+            {/if}
         </div>
-    </ul>
-    <div id="trail-map" class="sticky top-[62px]" class:hidden={!showMap}>
+    </div>
+    <div id="trail-map" class="md:sticky md:top-[62px]" class:hidden={!showMap}>
         <MapWithElevationMultiple
-            trails={$list.expand?.trails ?? []}
+            trails={selectedList?.expand?.trails ?? []}
             bind:map
+            bind:this={mapWithElevationMultiple}
+            bind:markers
             options={{ itinerary: true, flyToBounds: true }}
         ></MapWithElevationMultiple>
     </div>
     <div class="min-w-0" class:hidden={showMap}>
-        <TrailList trails={$list.expand?.trails ?? []}></TrailList>
+        <TrailList trails={selectedList?.expand?.trails ?? []}></TrailList>
     </div>
 
-    <ListModal bind:openModal={openListModal} on:save={saveList}></ListModal>
     <ConfirmModal
         text={$_("delete-list-confirm")}
         bind:openModal={openConfirmModal}
         on:confirm={deleteList}
     ></ConfirmModal>
-    <ListShareModal list={$list} bind:openShareModal></ListShareModal>
+    {#if selectedList}
+        <ListShareModal list={selectedList} bind:openShareModal
+        ></ListShareModal>
+    {/if}
 </main>
 
 <style>

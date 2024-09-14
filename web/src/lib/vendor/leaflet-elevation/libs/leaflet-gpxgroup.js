@@ -140,40 +140,62 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
 
   },
 
-  select(index) {
-    if (index > this._routes.length - 1) {
-      return
+  highlightTrack(id) {
+    const route = this._routes.find(r => r.options.id == id)
+    if (!route) {
+      return;
     }
-
-    this.setSelection(this._routes[index])
+    route.eachLayer((l) => {
+      this.highlight(route, l)
+    })
   },
 
-  openPopup(index) {
-    if (index > this._routes.length - 1) {
-      return
+  unHighlightTrack(id) {
+    const route = this._routes.find(r => r.options.id == id)
+    if (!route) {
+      return;
     }
-
-    this._routes[index].openPopup();
+    route.eachLayer((l) => {
+      this.unhighlight(route, l)
+    })
   },
 
-  closePopup(index) {
-    if (index > this._routes.length - 1) {
-      return
+  select(id) {
+    const route = this._routes.find(r => r.options.id == id)
+    if (!route) {
+      return;
     }
+    this.setSelection(route)
+  },
 
-    this._routes[index].closePopup();
+  resetSelection() {
+    this.setSelection(this._selected)
+    if (this.options.flyToBounds) {
+      this._map.flyToBounds(this.getBounds(), { duration: 0.25, easeLinearity: 0.25, noMoveStart: true });
+    }
+  },
+
+  openPopup(id) {
+    const route = this._routes.find(r => r.options.id == id)
+    if (!route) {
+      return;
+    }
+    route.openPopup();
+  },
+
+  closePopup(id) {
+    const route = this._routes.find(r => r.options.id == id)
+    if (!route) {
+      return;
+    }
+    route.closePopup();
   },
 
   _addTrack: function (track) {
-    if (track instanceof Object) {
-      this._loadGeoJSON(track);
-    } else if (track !== undefined) {
-      this._elevation._parseFromString(track)
-        .then(geojson => this._loadGeoJSON(geojson, this._hashCode(track), track.split('/').pop().split('#')[0].split('?')[0]))
-    }
-  },
+    this._elevation._parseFromString(track.gpx)
+      .then(geojson => this._loadGeoJSON(geojson, track.id, track.gpx.split('/').pop().split('#')[0].split('?')[0]))
 
-  _hashCode: (s) => s.split('').reduce((a, b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0),
+  },
 
   clear: function () {
     this._elevation.clear()
@@ -197,9 +219,9 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     }
   },
 
-  _loadGeoJSON: function (geojson, hash, fallbackName) {
+  _loadGeoJSON: function (geojson, id, fallbackName) {
     if (geojson) {
-      geojson.hash = hash
+      geojson.id = id
       geojson.name = geojson.name || (geojson[0] && geojson[0].properties.name) || fallbackName;
       this._loadRoute(geojson);
     }
@@ -208,7 +230,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
   _loadRoute: function (data) {
     if (!data) return;
     var line_style = {
-      color: this._hashToColor(data.hash),
+      color: this._stringToColor(data.id),
       opacity: 0.75,
       weight: 5,
       distanceMarkers: this.options.distanceMarkers_options,
@@ -220,7 +242,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
       distanceMarkers: line_style.distanceMarkers,
       originalStyle: line_style,
       isGroupLayer: true,
-      hash: data.hash,
+      id: data.id,
       filter: feature => feature.geometry.type != "Point",
     });
 
@@ -351,23 +373,20 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
     }
   },
 
-  _hashToColor(hash) {
-    // Ensure hash is a positive integer
-    hash = Math.abs(hash);
-
+  _stringToColor(input) {
     // Define the maximum brightness to ensure the color is not too light
-    const maxBrightness = 250;
+    const maxBrightness = 200;
 
-    // Convert the hash to a color in a reduced RGB range to prevent light and green colors
-    const r = (hash >> 16) & 0xFF; // Extract the red component
-    const g = (hash >> 8) & 0xFF;  // Extract the green component
-    const b = hash & 0xFF;         // Extract the blue component
+    // Divide the string into 3 parts (5 characters each)
+    const redPart = input.slice(0, 5);
+    const greenPart = input.slice(5, 10);
+    const bluePart = input.slice(10, 15);
 
-    // Adjust the green value to avoid greenish colors
-    // Reducing the green component significantly to avoid strong green shades
-    const green = Math.floor((g / 255) * (maxBrightness * 0.5)); // Reduce green component range
-    const red = Math.floor((r / 255) * maxBrightness);
-    const blue = Math.floor((b / 255) * maxBrightness);
+    // Calculate the red, green, and blue values by summing the char codes of the parts
+    const red = Math.floor((redPart.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 256) * (maxBrightness / 255));
+    const greenRaw = greenPart.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 256;
+    const green = Math.floor((greenRaw * 0.5) * (maxBrightness / 255)); // Reduce green to avoid greenish colors
+    const blue = Math.floor((bluePart.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 256) * (maxBrightness / 255));
 
     // Format as HEX color
     return `#${(1 << 24 | red << 16 | green << 8 | blue).toString(16).slice(1).toUpperCase()}`;

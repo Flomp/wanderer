@@ -20,7 +20,7 @@ export const load: Load = async ({ params, fetch, data }) => {
 
             return { list: list, previewUrl: previewURL }
 
-        } catch (e) {
+        } catch (e) {           
             if (e instanceof ClientResponseError) {
                 return error(e.status as any, e.message)
             }

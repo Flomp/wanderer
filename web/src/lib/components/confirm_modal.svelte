@@ -6,7 +6,7 @@
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
-    export let title: string = "Confirm Deletion";
+    export let title: string = $_('confirm-deletion');
     export let text: string;
     export let action: string = "delete";
 

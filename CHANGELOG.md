@@ -1,3 +1,12 @@
+# v0.9.0
+## Features
+- Complete visual overhaul of the list page
+- Lists can now be shared with other users
+
+## Bug fixes
+- Fixes a bug that caused categories not to load properly on page reload
+
+
 # v0.8.2
 ## Features
 - The pagination is now available at top and bottom

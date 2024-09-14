@@ -104,12 +104,12 @@
         );
     }
 
-    function handleTrailCardMouseEnter(index: number) {
-        mapWithElevation.openPopup(index)
+    function handleTrailCardMouseEnter(trail: Trail) {
+        mapWithElevation.openPopup(trail.id!)
     }
 
-    function handleTrailCardMouseLeave(index: number) {
-        mapWithElevation.closePopup(index)
+    function handleTrailCardMouseLeave(trail: Trail) {
+        mapWithElevation.closePopup(trail.id!)
     }
 
     async function handleFilterUpdate(filter: TrailFilter) {
@@ -210,8 +210,8 @@
                 <a href="map/trail/{trail.id}">
                     <TrailCard
                         {trail}
-                        on:mouseenter={() => handleTrailCardMouseEnter(i)}
-                        on:mouseleave={() => handleTrailCardMouseLeave(i)}
+                        on:mouseenter={() => handleTrailCardMouseEnter(trail)}
+                        on:mouseleave={() => handleTrailCardMouseLeave(trail)}
                     ></TrailCard>
                 </a>
             {/each}

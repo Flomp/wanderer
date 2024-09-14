@@ -126,14 +126,17 @@
     async function handleSearchClick(item: SearchItem) {
         const trail = await trails_show(item.value, true);
         $form.trails?.push(trail.id!);
-        $form.expand!.trails = [...$form.expand!.trails, trail];
+        $form.expand = {
+            trails: [...($form.expand?.trails ?? []), trail],
+            list_share_via_list: $form.expand?.list_share_via_list,
+        };
     }
 
     function deleteTrail(trail: Trail) {
         $form.trails = $form.trails?.filter((id) => id !== trail.id);
-        $form.expand!.trails = $form.expand!.trails.filter(
+        $form.expand!.trails = $form.expand!.trails!.filter(
             (t) => t.id !== trail.id,
-        );        
+        );
     }
 
     async function findNewTrailShares() {
@@ -174,6 +177,26 @@
             text: $_("list-saved-successfully"),
         });
     }
+
+    function moveTrail(trail: Trail, index: number, direction: 1 | -1) {
+        (document?.activeElement as HTMLElement).blur()
+
+        if (!$form.trails || !$form.expand || !$form.expand.trails) {
+            return;
+        }
+        const previousTrail = $form.expand?.trails?.at(index + direction);
+        const previousTrailId = $form.trails?.at(index + direction);
+
+        if (!previousTrail || !previousTrailId) {
+            return;
+        }
+
+        $form.expand!.trails![index] = previousTrail;
+        $form.expand!.trails![index + direction] = trail;
+
+        $form.trails[index] = previousTrailId;
+        $form.trails[index + direction] = trail.id!;
+    }
 </script>
 
 <svelte:head>
@@ -181,6 +204,7 @@
         >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-list")} | wanderer</title
     >
 </svelte:head>
+
 <main class="grid grid-cols-1 md:grid-cols-[440px_1fr]">
     <form
         id="list-form"
@@ -246,14 +270,15 @@
             placeholder="{$_('search-trails')}..."
             items={searchDropdownItems}
         ></Search>
-        {#if $form.expand?.trails.length}
-            <!-- svelte-ignore a11y-no-static-element-interactions -->
+        {#if $form.expand?.trails?.length}
             {#each $form.expand?.trails ?? [] as trail, i}
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
                 <div
                     class="flex gap-4 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors items-center"
-                    class:border-primary={i == activeTrailIndex}
-                    on:click={() => map.selectTrail(i)}
+                    class:bg-secondary-hover={i == activeTrailIndex}
+                    role="presentation"
+                    on:mouseenter={() => map.highlightTrail(trail.id ?? "")}
+                    on:mouseleave={() => map.unHighlightTrail(trail.id ?? "")}
+                    on:click={() => map.selectTrail(trail.id ?? "")}
                 >
                     <div class="shrink-0">
                         <img
@@ -268,17 +293,14 @@
                         />
                     </div>
                     <div class="basis-full">
-                        <div class="flex items-center justify-between">
-                            <h4 class="font-semibold text-lg">
-                                {trail.name}
-                            </h4>
-                            <span class="text-sm"
-                                ><i class="fa fa-gauge mr-2"></i>{$_(
-                                    trail.difficulty ?? "?",
-                                )}</span
-                            >
-                        </div>
-
+                        <h4 class="font-semibold text-lg">
+                            {trail.name}
+                        </h4>
+                        <span class="text-sm"
+                            ><i class="fa fa-gauge mr-2"></i>{$_(
+                                trail.difficulty ?? "?",
+                            )}</span
+                        >
                         <div class="flex mt-1 gap-4 text-sm text-gray-500">
                             <span
                                 ><i class="fa fa-left-right mr-2"
@@ -296,12 +318,34 @@
                             >
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        class="btn-icon text-red-500"
-                        on:click={() => deleteTrail(trail)}
-                        ><i class="fa fa-trash"></i></button
-                    >
+                    <div class="basis-0">
+                        {#if i > 0}
+                            <button
+                                on:click|stopPropagation={() =>
+                                    moveTrail(trail, i, -1)}
+                                type="button"
+                                class="btn-icon"
+                            >
+                                <i class="fa fa-chevron-up"></i>
+                            </button>
+                        {/if}
+                        {#if i < $form.expand?.trails?.length - 1}
+                            <button
+                                on:click|stopPropagation={() =>
+                                    moveTrail(trail, i, 1)}
+                                type="button"
+                                class="btn-icon"
+                            >
+                                <i class="fa fa-chevron-down"></i>
+                            </button>
+                        {/if}
+                        <button
+                            type="button"
+                            class="btn-icon text-red-500"
+                            on:click={() => deleteTrail(trail)}
+                            ><i class="fa fa-trash"></i></button
+                        >
+                    </div>
                 </div>
             {/each}
         {:else}
@@ -328,7 +372,7 @@
 </main>
 
 <ConfirmModal
-    text={$_('list-share-warning-update')}
+    text={$_("list-share-warning-update")}
     title={$_("confirm-share")}
     action="confirm"
     bind:openModal={openConfirmModal}
@@ -337,7 +381,8 @@
 
 <style>
     @media only screen and (min-width: 768px) {
-        #trail-map, #list-form  {
+        #trail-map,
+        #list-form {
             height: calc(100vh - 124px);
         }
     }

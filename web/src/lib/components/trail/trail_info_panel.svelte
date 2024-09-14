@@ -21,7 +21,11 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { createMarkerFromWaypoint, endIcon, startIcon } from "$lib/util/leaflet_util";
+    import {
+        createMarkerFromWaypoint,
+        endIcon,
+        startIcon,
+    } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import type { Icon, Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
@@ -36,7 +40,7 @@
     import ShareInfo from "../share_info.svelte";
 
     export let trail: Trail;
-    export let mode: "overview" | "map" = "map";
+    export let mode: "overview" | "map" | "list" = "map";
     export let markers: Marker[] = [];
 
     const tabs = [
@@ -116,6 +120,10 @@
         markers[i].openPopup();
     }
 
+    function closeMarkerPopup(i: number) {
+        markers[i].closePopup();
+    }
+
     async function toggleMapFullScreen() {
         goto(`/map/trail/${trail.id!}`);
     }
@@ -160,12 +168,19 @@
 </script>
 
 <div
-    class="trail-info-panel mx-auto border border-input-border rounded-3xl h-full"
+    class="trail-info-panel mx-auto {mode == 'list'
+        ? ''
+        : 'border border-input-border rounded-3xl'} h-full"
     style="max-width: min(100%, 64rem);"
 >
     <div class="trail-info-panel-header">
         <section class="relative h-80">
-            <img class="w-full h-80 rounded-t-3xl" src={thumbnail} alt="" />
+            <img
+                class="w-full h-80 "
+                class:rounded-t-3xl={mode !== "list"}
+                src={thumbnail}
+                alt=""
+            />
             <div
                 class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
             ></div>
@@ -186,7 +201,8 @@
                         </span>
                     {/if}
                     {#if trailIsShared}
-                        <ShareInfo type="trail" subject={trail} large={true}></ShareInfo>
+                        <ShareInfo type="trail" subject={trail} large={true}
+                        ></ShareInfo>
                     {/if}
                 </div>
             {/if}
@@ -286,7 +302,7 @@
             {#if activeTab == 1}
                 <ul>
                     {#each trail.expand.waypoints ?? [] as waypoint, i}
-                        <li on:mouseenter={() => openMarkerPopup(i)}>
+                        <li on:mouseenter={() => openMarkerPopup(i)} on:mouseleave={() => closeMarkerPopup(i)}>
                             <WaypointCard {waypoint}></WaypointCard>
                         </li>
                     {/each}
