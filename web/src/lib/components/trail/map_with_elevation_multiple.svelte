@@ -15,12 +15,14 @@
     import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Dropdown from "../base/dropdown.svelte";
+    import { trail } from "$lib/stores/trail_store";
 
     export let trails: Trail[];
     export let map: any | null = null;
     export let options: any = {};
     export let activeTrailIndex: number | null = 0;
     export let markers: any[] = [];
+    export let bindRoutePopup: boolean = true;
 
     const dispatch = createEventDispatcher();
 
@@ -222,10 +224,9 @@
             activeTrailIndex = null;
             markers = [];
 
-            if (polyline._selected) {
+            if (polyline && polyline._selected) {
                 activeTrailIndex = trails.findIndex(
-                    (t) => t.id ==
-                        polyline.options.id,
+                    (t) => t.id == polyline.options.id,
                 );
 
                 for (const waypoint of trails.at(activeTrailIndex!)?.expand
@@ -234,6 +235,11 @@
                     marker.addTo(markerLayerGroup!);
                     markers.push(marker);
                 }
+
+                dispatch(
+                    "select",
+                    trails.find((t) => t.id == polyline.options.id),
+                );
             }
         });
 
@@ -243,11 +249,7 @@
         });
 
         gpxGroup.on("route_loaded", ({ route }: { route: any }) => {
-            const trail = trails.find(
-                (t) =>
-                    t.id ==
-                    route.options.id,
-            );
+            const trail = trails.find((t) => t.id == route.options.id);
 
             if (!trail) {
                 return;
@@ -255,8 +257,9 @@
             const thumbnail = trail.photos.length
                 ? getFileURL(trail, trail.photos[trail.thumbnail])
                 : "/imgs/default_thumbnail.webp";
-            route.bindPopup(
-                `<a href="/trail/view/${trail.id}" data-sveltekit-preload-data="off">
+            if (bindRoutePopup) {
+                route.bindPopup(
+                    `<a href="/trail/view/${trail.id}" data-sveltekit-preload-data="off">
     <li class="flex items-center gap-4 cursor-pointer text-black max-w-80">
         <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
         </div>
@@ -277,7 +280,8 @@
         </div>
     </li>
 </a>`,
-            );
+                );
+            }
         });
 
         gpxGroup.addTo(map);

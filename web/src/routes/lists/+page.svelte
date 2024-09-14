@@ -86,7 +86,7 @@
         selectedList = item;
     }
 
-    function back() {
+    function back() {       
         if (selectedTrail) {
             selectedTrail = null;
             mapWithElevationMultiple.resetSelection();
@@ -102,7 +102,7 @@
 
     function selectTrail(trail: Trail) {
         selectedTrail = trail;
-        mapWithElevationMultiple.selectTrail(trail.id!);        
+        mapWithElevationMultiple.selectTrail(trail.id!);
         window.scrollTo({ top: 0 });
     }
 
@@ -175,6 +175,10 @@
             bind:map
             bind:this={mapWithElevationMultiple}
             bind:markers
+            on:select={(e) => {
+                selectedTrail = e.detail
+            }}
+            bindRoutePopup={false}
             options={{ itinerary: true, flyToBounds: true }}
         ></MapWithElevationMultiple>
     </div>
