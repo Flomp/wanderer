@@ -362,6 +362,7 @@ export const GpxGroup = L.GpxGroup = L.Class.extend({
       }
       await elevation._initHotLine(route, this._hotline)
 
+      
       this._map.flyToBounds(route.getBounds(), { duration: 0.25, easeLinearity: 0.25, noMoveStart: true });
 
 

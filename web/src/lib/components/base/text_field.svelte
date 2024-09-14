@@ -22,7 +22,9 @@
     {/if}
     <div class="flex items-center gap-2">
         {#if icon.length > 0}
-            <i class="fa fa-{icon}"></i>
+            <div class="w-6">
+                <i class="fa fa-{icon}"></i>
+            </div>
         {/if}
         <input
             {name}

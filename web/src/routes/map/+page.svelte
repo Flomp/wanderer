@@ -93,7 +93,7 @@
     }
 
     function handleSearchClick(item: SearchItem) {
-        map.setView([item.value._geo.lat, item.value._geo.lng], 12);
+        map.setView([item.value._geo.lat, item.value._geo.lng], 14);
     }
 
     async function searchTrails(northEast: LatLng, southWest: LatLng) {
@@ -130,7 +130,18 @@
     }
 
     function handleMapInit() {
-        if (settings && settings.mapFocus == "trails") {
+        if (
+            $page.url.searchParams.has("tl_lat") &&
+            $page.url.searchParams.has("tl_lon") &&
+            $page.url.searchParams.has("br_lat") &&
+            $page.url.searchParams.has("br_lon")
+        ) {
+            const boundingBox: LatLngBoundsExpression = [
+                [parseFloat($page.url.searchParams.get("br_lat")!), parseFloat($page.url.searchParams.get("tl_lon")!)],
+                [parseFloat($page.url.searchParams.get("tl_lat")!), parseFloat($page.url.searchParams.get("br_lon")!)],
+            ];
+            map.fitBounds(boundingBox);
+        } else if (settings && settings.mapFocus == "trails") {
             const boundingBox: LatLngBoundsExpression = [
                 [maxBoundingBox.max_lat, maxBoundingBox.min_lon],
                 [maxBoundingBox.min_lat, maxBoundingBox.max_lon],
@@ -206,8 +217,11 @@
             {#if $trails.length == 0}
                 <EmptyStateSearch></EmptyStateSearch>
             {/if}
-            {#each $trails as trail,i}
-                <a href="map/trail/{trail.id}">
+            {#each $trails as trail, i}
+                <a
+                    data-sveltekit-preload-data="off"
+                    href="map/trail/{trail.id}"
+                >
                     <TrailCard
                         {trail}
                         on:mouseenter={() => handleTrailCardMouseEnter(trail)}
@@ -217,7 +231,10 @@
             {/each}
         {/if}
     </div>
-    <div id="trail-map" class:hidden={!showMap && browser && window.innerWidth < 768}>
+    <div
+        id="trail-map"
+        class:hidden={!showMap && browser && window.innerWidth < 768}
+    >
         <MapWithElevationMultiple
             on:moveend={handleMapMove}
             on:init={handleMapInit}

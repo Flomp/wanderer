@@ -28,10 +28,11 @@
         await tick();
         const dropdownMenu = document.querySelector(".menu");
         if (dropdownMenu) {
-            let dropdownHTML = dropdownMenu.innerHTML;
-
-            for (const li of dropdownMenu.children) {
+            for (let i = 0; i < dropdownMenu.children.length; i++) {
+                const li = dropdownMenu.children[i];
                 const textNode = li.getElementsByTagName("p")[0];
+                textNode.innerHTML = items[i].text;
+
                 const text = textNode.innerText.replace(
                     new RegExp(value, "gi"),
                     (match) => `<strong>${match}</strong>`,

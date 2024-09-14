@@ -256,7 +256,7 @@
                 ? getFileURL(trail, trail.photos[trail.thumbnail])
                 : "/imgs/default_thumbnail.webp";
             route.bindPopup(
-                `<a href="/trail/view/${trail.id}" data-sveltekit-preload-data="false">
+                `<a href="/trail/view/${trail.id}" data-sveltekit-preload-data="off">
     <li class="flex items-center gap-4 cursor-pointer text-black max-w-80">
         <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
         </div>
