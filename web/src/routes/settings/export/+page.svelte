@@ -3,7 +3,11 @@
     import Settings from "$lib/components/profile/settings.svelte";
     import TrailExportModal from "$lib/components/trail/trail_export_modal.svelte";
     import { show_toast } from "$lib/stores/toast_store";
-    import { fetchGPX, trails_index, trails_upload } from "$lib/stores/trail_store";
+    import {
+        fetchGPX,
+        trails_index,
+        trails_upload,
+    } from "$lib/stores/trail_store";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
@@ -19,16 +23,25 @@
 
     let openExportModal: () => void;
 
+    let offerUpload: boolean = false;
+    let uploading: boolean = false;
+
     function openFileBrowser() {
         document.getElementById("file-input")!.click();
     }
 
     function handleDragOver(e: DragEvent) {
         e.preventDefault();
+        offerUpload = true;
+    }
+
+    function handleDragLeave(e: DragEvent) {
+        offerUpload = false;
     }
 
     function handleDrop(e: DragEvent) {
         e.preventDefault();
+        offerUpload = false;
         handleFileSelection(e.dataTransfer?.files);
     }
 
@@ -43,9 +56,14 @@
         }
 
         let errorsThrown = 0;
+        uploading = true;
+        let progress = 0;
         for (let i = 0; i < files.length; i++) {
+            
+
             const file = files[i];
             try {
+                uploadProgress.set(progress += 100 / (files.length * 2));
                 await trails_upload(file);
             } catch (e) {
                 errorsThrown += 1;
@@ -54,10 +72,16 @@
                     icon: "close",
                     text: `Error uploading file: ${file.name}`,
                 });
+            } finally {
+                uploadProgress.set(progress += 100 / (files.length * 2));
             }
-            $uploadProgress += (files.length / i) * 100;
-            setTimeout(() => {}, 3000);
         }
+
+        setTimeout(() => {
+            uploadProgress.set(0);
+            uploading = false;
+        }, 1000);
+
         if (errorsThrown == 0) {
             show_toast({
                 type: "success",
@@ -143,13 +167,18 @@
         <div class="space-y-6">
             <h3 class="text-2xl font-semibold">{$_("import")}</h3>
             <button
-                class="drop-area relative h-64 w-full p-4 border border-content border-dashed rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
+                class="drop-area relative h-64 w-full p-4 {uploading
+                    ? ''
+                    : 'border border-content border-dashed'} rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
+                class:bg-menu-item-background-hover={uploading}
+                class:border-2={offerUpload && !uploading}
                 style="--progress: {$uploadProgress}%"
                 on:click={openFileBrowser}
                 on:dragover={handleDragOver}
+                on:dragleave={handleDragLeave}
                 on:drop={handleDrop}
             >
-                {$_('import-hint')}
+                {$_("import-hint")}
             </button>
 
             <input
