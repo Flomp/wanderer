@@ -15,7 +15,8 @@ import * as xmldom from 'xmldom'
 import type { Feature, FeatureCollection, GeoJsonProperties, Position } from 'geojson';
 
 
-export async function gpx2trail(gpxString: string) {
+export async function gpx2trail(gpxString: string, fallbackName?: string) {
+   
     const gpx = await GPX.parse(gpxString);
 
     if (gpx instanceof Error) {
@@ -24,7 +25,7 @@ export async function gpx2trail(gpxString: string) {
 
     const trail = new Trail("");
 
-    trail.name = gpx.metadata?.name || gpx.trk?.at(0)?.name || gpx.rte?.at(0)?.name || `trail-${new Date().toISOString()}`;
+    trail.name = gpx.metadata?.name || gpx.trk?.at(0)?.name || gpx.rte?.at(0)?.name || fallbackName || `trail-${new Date().toISOString()}`;
 
     trail.description = gpx.metadata?.desc;
 

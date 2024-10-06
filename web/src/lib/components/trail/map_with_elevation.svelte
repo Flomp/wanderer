@@ -2,7 +2,11 @@
     import { page } from "$app/stores";
     import { Settings } from "$lib/models/settings";
     import type { Trail } from "$lib/models/trail";
-    import { createMarkerFromWaypoint, endIcon, startIcon } from "$lib/util/leaflet_util";
+    import {
+        createMarkerFromWaypoint,
+        endIcon,
+        startIcon,
+    } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
     import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
     import type { Map, Marker } from "leaflet";
@@ -27,7 +31,7 @@
     let selectedMetric: "altitude" | "slope" | "speed" | false = "altitude";
 
     $: gpxData = trail?.expand.gpx_data;
-    $: if (gpxData && controlElevation) {        
+    $: if (gpxData && controlElevation) {
         controlElevation.updateOptions({
             autofitBounds: options.autofitBounds ?? true,
         });
@@ -103,7 +107,9 @@
         const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-            ...($page.data.settings as Settings)?.tilesets?.reduce< Record<string, string>>((t, current) => {
+            ...($page.data.settings as Settings)?.tilesets?.reduce<
+                Record<string, string>
+            >((t, current) => {
                 t[current.name] = L.tileLayer(current.url);
                 return t;
             }, {}),
@@ -139,7 +145,7 @@
             closeBtn: false,
             followMarker: true,
             autofitBounds: true,
-            imperial: $page.data.settings.unit == "imperial",
+            imperial: ($page.data.settings?.unit ?? "metric") == "imperial",
             reverseCoords: false,
             acceleration: false,
             slope: true,
@@ -174,7 +180,7 @@
             trkStart: {
                 interactive: false,
                 className: "hihi",
-                icon: startIcon()
+                icon: startIcon(),
             },
             trkEnd: {
                 icon: endIcon(),

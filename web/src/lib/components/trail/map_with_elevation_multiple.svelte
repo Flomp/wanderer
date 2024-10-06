@@ -129,7 +129,7 @@
         const baseMaps: Record<string, L.TileLayer> = {
             OpenStreetMaps: baseLayer,
             OpenTopoMaps: topoLayer,
-            ...($page.data.settings as Settings)?.tilesets?.reduce<
+            ...($page.data?.settings as Settings)?.tilesets?.reduce<
                 Record<string, string>
             >((t, current) => {
                 t[current.name] = L.tileLayer(current.url);

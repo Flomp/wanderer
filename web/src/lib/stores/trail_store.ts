@@ -346,12 +346,14 @@ export async function trails_get_bounding_box(f: (url: RequestInfo | URL, config
 }
 
 export async function trails_upload(file: File, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
+    const fd = new FormData()
+
+    fd.append("name", file.name),
+    fd.append("file", file)
+    
     const r = await f('/api/v1/trail/upload', {
-        headers: {
-            "Content-Type": "multipart/form-data"
-        },
         method: 'PUT',
-        body: file
+        body: fd
     })
 
     if (r.ok) {

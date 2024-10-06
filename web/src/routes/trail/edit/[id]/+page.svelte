@@ -285,7 +285,7 @@
         let gpxData = await parseFile(selectedFile);
 
         try {
-            const parseResult = await gpx2trail(gpxData);
+            const parseResult = await gpx2trail(gpxData, selectedFile.name);
             $form = parseResult.trail;
             $form.expand.gpx_data = gpxData;
             $form.category = $page.data.settings.category || $categories[0].id;

@@ -6,9 +6,9 @@ import { ClientResponseError } from "pocketbase";
 
 export async function PUT(event: RequestEvent) {
     try {
-        const data = await event.request.blob();
-        const fileBuffer = await data.arrayBuffer();
-        const fileContent = await data.text();
+        const data = await event.request.formData();
+        const fileBuffer = await (data.get("file") as Blob).arrayBuffer();
+        const fileContent = await (data.get("file") as Blob).text();
         let gpxData = ""
         let gpxFile: Blob;
         if (isFITFile(fileBuffer)) {           
@@ -29,14 +29,14 @@ export async function PUT(event: RequestEvent) {
             });
         } else {
             gpxData = fileContent;
-            gpxFile = data
+            gpxFile = data.get("file") as Blob
         }
         if (!gpxData.length) {
             throw new ClientResponseError({ status: 400, response: { message: "Empty file" } })
         }
         let trail: Trail;
         try {
-            trail = (await gpx2trail(gpxData)).trail;
+            trail = (await gpx2trail(gpxData, data.get("name") as string | undefined)).trail;
         } catch (e: any) {
             throw new ClientResponseError({ status: 400, response: { message: "Invalid file" } })
         }
