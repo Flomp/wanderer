@@ -422,6 +422,8 @@
 
     function saveSummitLog(e: CustomEvent<SummitLog>) {
         const savedSummitLog = e.detail;
+        console.log(savedSummitLog);
+        
         let editedSummitLogIndex = $form.expand.summit_logs.findIndex(
             (s) => s.id == savedSummitLog.id,
         );
@@ -817,6 +819,7 @@
                 <li>
                     <SummitLogCard
                         {log}
+                        index={i}
                         mode="edit"
                         on:change={(e) => handleSummitLogMenuClick(log, i, e)}
                     ></SummitLogCard>

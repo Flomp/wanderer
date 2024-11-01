@@ -9,7 +9,8 @@
     import { date, object, string } from "yup";
     import Datepicker from "../base/datepicker.svelte";
     import Modal from "../base/modal.svelte";
-    import TextField from "../base/text_field.svelte";
+    import Textarea from "../base/textarea.svelte";
+    import TrailPicker from "../trail/trail_picker.svelte";
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -25,11 +26,18 @@
         initialValues: $summitLog,
         validationSchema: summitLogSchema,
         onSubmit: async (submittedValues) => {
+            if(!$form._gpx) {
+                $form.gpx = "";
+            }
             dispatch("save", submittedValues);
             closeModal!();
         },
     });
     $: form.set(util.cloneDeep($summitLog));
+
+    $: if ($summitLog._gpx) {
+        $form._gpx = $summitLog._gpx;
+    }
 </script>
 
 <Modal
@@ -46,7 +54,7 @@
         class="modal-content space-y-4"
         on:submit={handleSubmit}
     >
-        <div class="flex gap-4">
+        <div class="flex">
             <Datepicker
                 name="date"
                 label={$_("date")}
@@ -54,14 +62,22 @@
                 error={$errors.date}
                 on:change={handleChange}
             ></Datepicker>
+        </div>
+        <div class="flex gap-4">
+            <TrailPicker
+                bind:trailFile={$form._gpx}
+                bind:trailData={$form.expand.gpx_data}
+                label={$_("trail", { values: { n: 1 } })}
+            ></TrailPicker>
             <div class="basis-full">
-                <TextField
+                <Textarea
                     name="text"
+                    extraClasses="h-28"
                     label={$_("text")}
                     bind:value={$form.text}
                     error={$errors.text}
                     on:change={handleChange}
-                ></TextField>
+                ></Textarea>
             </div>
         </div>
     </form>

@@ -176,7 +176,7 @@
     <div class="trail-info-panel-header">
         <section class="relative h-80">
             <img
-                class="w-full h-80 "
+                class="w-full h-80"
                 class:rounded-t-3xl={mode !== "list"}
                 src={thumbnail}
                 alt=""
@@ -302,7 +302,10 @@
             {#if activeTab == 1}
                 <ul>
                     {#each trail.expand.waypoints ?? [] as waypoint, i}
-                        <li on:mouseenter={() => openMarkerPopup(i)} on:mouseleave={() => closeMarkerPopup(i)}>
+                        <li
+                            on:mouseenter={() => openMarkerPopup(i)}
+                            on:mouseleave={() => closeMarkerPopup(i)}
+                        >
                             <WaypointCard {waypoint}></WaypointCard>
                         </li>
                     {/each}
@@ -333,8 +336,8 @@
             {/if}
             {#if activeTab == 3}
                 <ul>
-                    {#each trail.expand.summit_logs ?? [] as log}
-                        <li><SummitLogCard {log}></SummitLogCard></li>
+                    {#each trail.expand.summit_logs ?? [] as log, i}
+                        <li><SummitLogCard {log} index={i}></SummitLogCard></li>
                     {/each}
                 </ul>
             {/if}

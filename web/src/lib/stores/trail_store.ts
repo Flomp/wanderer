@@ -152,6 +152,16 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
             response.expand = {};
         }
         response.expand.gpx_data = gpxData;
+
+
+        for (const log of response.expand.summit_logs) {
+            const gpxData: string = await fetchGPX(log, f);
+
+            if (!log.expand) {
+                log.expand = {};
+            }
+            log.expand.gpx_data = gpxData;
+        }
     }
 
     response.expand.waypoints = response.expand.waypoints || [];
@@ -349,8 +359,8 @@ export async function trails_upload(file: File, f: (url: RequestInfo | URL, conf
     const fd = new FormData()
 
     fd.append("name", file.name),
-    fd.append("file", file)
-    
+        fd.append("file", file)
+
     const r = await f('/api/v1/trail/upload', {
         method: 'PUT',
         body: fd
@@ -363,7 +373,7 @@ export async function trails_upload(file: File, f: (url: RequestInfo | URL, conf
     }
 }
 
-export async function fetchGPX(trail: Trail, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function fetchGPX(trail: { gpx: string } & Record<string, any>, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     if (!trail.gpx) {
         return "";
     }
