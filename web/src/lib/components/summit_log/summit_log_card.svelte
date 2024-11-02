@@ -133,7 +133,7 @@
                     >
                     <span
                         ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                            totals.duration,
+                            totals.duration / 1000 / 60,
                         )}</span
                     >
                 </div>

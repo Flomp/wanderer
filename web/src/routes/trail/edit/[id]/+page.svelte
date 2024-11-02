@@ -290,6 +290,12 @@
             $form.expand.gpx_data = gpxData;
             $form.category = $page.data.settings.category || $categories[0].id;
 
+            const log = new SummitLog(parseResult.trail.date as string, {})
+            log.expand.gpx_data = gpxData;
+            log._gpx = selectedFile;
+
+            $form.expand.summit_logs.push(log);
+
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
 
@@ -423,7 +429,7 @@
     function saveSummitLog(e: CustomEvent<SummitLog>) {
         const savedSummitLog = e.detail;
         console.log(savedSummitLog);
-        
+
         let editedSummitLogIndex = $form.expand.summit_logs.findIndex(
             (s) => s.id == savedSummitLog.id,
         );
@@ -763,22 +769,28 @@
             label={$_("describe-your-trail")}
             bind:value={$form.description}
         ></Textarea>
-        <Select
-            name="difficulty"
-            label={$_("difficulty")}
-            bind:value={$form.difficulty}
-            items={[
-                { text: $_("easy"), value: "easy" },
-                { text: $_("moderate"), value: "moderate" },
-                { text: $_("difficult"), value: "difficult" },
-            ]}
-        ></Select>
-        <Select
-            name="category"
-            label={$_("category")}
-            bind:value={$form.category}
-            items={$categories.map((c) => ({ text: $_(c.name), value: c.id }))}
-        ></Select>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4">
+            <Select
+                name="difficulty"
+                label={$_("difficulty")}
+                bind:value={$form.difficulty}
+                items={[
+                    { text: $_("easy"), value: "easy" },
+                    { text: $_("moderate"), value: "moderate" },
+                    { text: $_("difficult"), value: "difficult" },
+                ]}
+            ></Select>
+            <Select
+                name="category"
+                label={$_("category")}
+                bind:value={$form.category}
+                items={$categories.map((c) => ({
+                    text: $_(c.name),
+                    value: c.id,
+                }))}
+            ></Select>
+        </div>
+
         <Toggle name="public" label={$_("public")} bind:value={$form.public}
         ></Toggle>
         <hr class="border-separator" />

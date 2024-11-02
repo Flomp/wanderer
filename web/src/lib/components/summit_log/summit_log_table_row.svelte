@@ -98,7 +98,7 @@
     <td>
         {formatElevation(totals?.elevationGain)}
     </td><td>
-        {formatTimeHHMM(totals?.duration)}
+        {formatTimeHHMM(totals ? (totals?.duration / 1000 / 60) : undefined)}
     </td>
     <td>
         {#if log.text}
