@@ -165,7 +165,7 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     }
 
     response.expand.waypoints = response.expand.waypoints || [];
-    response.expand.summit_logs = response.expand.summit_logs || [];
+    response.expand.summit_logs = response.expand.summit_logs.sort((a: SummitLog, b: SummitLog) => Date.parse(a.date) - Date.parse(b.date)) || [];
 
     trail.set(response);
 

@@ -73,17 +73,17 @@
     }
 </script>
 
-<tr class="h-24 text-center">
+<tr class="text-center">
     <td>
         <button
             type="button"
             on:click={openMap}
-            class="h-24 aspect-square shrink-0 rounded-xl !bg-background"
+            class="h-20 aspect-square shrink-0 rounded-xl !bg-background"
             class:hidden={!log.expand.gpx_data}
             id="mini-map-{index}"
         ></button>
     </td>
-    <td
+    <td class:py-4={!log.text && !log.expand.gpx_data}
         >{new Date(log.date).toLocaleDateString(undefined, {
             month: "2-digit",
             day: "2-digit",
@@ -111,8 +111,11 @@
 </tr>
 {#if showText}
     <tr
-        ><td class="text-left text-sm whitespace-pre-wrap" colspan="6"
+        ><td class="text-left text-sm whitespace-pre-wrap pb-4" colspan="6"
             >{log.text}</td
         ></tr
     >
 {/if}
+<tr>
+    <td colspan="6"> <hr /> </td>
+</tr>

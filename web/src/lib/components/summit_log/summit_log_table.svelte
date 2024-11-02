@@ -36,7 +36,7 @@
         if (!log.expand.gpx_data) {
             return;
         }
-        
+
         layerGroup.clearLayers();
         const geoJson = gpx(
             new DOMParser().parseFromString(log.expand.gpx_data, "text/xml"),
@@ -78,7 +78,7 @@
                     });
 
                     layerGroup.addLayer(startMarker);
-                    layerGroup.addLayer(endMarker)
+                    layerGroup.addLayer(endMarker);
                 }
             },
             filter: (feature: any, layer: any) => {
