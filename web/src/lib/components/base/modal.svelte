@@ -2,10 +2,11 @@
     export let id: string;
     export let title: string;
     export let size: string = "max-w-2xl";
+    
     export function openModal() {
+        document.body.style.top = `-${window.scrollY}px`;
         document.body.style.position = "fixed";
         document.body.style.width = "100%";
-        document.body.style.top = `-${window.scrollY}px`;
 
         (document.getElementById(id) as HTMLDialogElement).showModal();
     }
@@ -25,10 +26,10 @@
     {id}
     tabindex="-1"
     aria-hidden="true"
-    class="relative w-full {size} max-h-full rounded-xl text-content"
+    class="w-full {size} max-h-full rounded-xl text-content"
 >
     <!-- Modal content -->
-    <div class="relative bg-background shadow rounded-xl">
+    <div class="bg-background shadow rounded-xl">
         <!-- Modal header -->
         <div
             class="flex items-center justify-between p-4 md:p-5 border-b border-separator rounded-t"

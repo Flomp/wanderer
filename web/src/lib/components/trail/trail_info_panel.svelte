@@ -38,6 +38,7 @@
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
     import ShareInfo from "../share_info.svelte";
+    import SummitLogTable from "../summit_log/summit_log_table.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
@@ -335,11 +336,10 @@
                 </div>
             {/if}
             {#if activeTab == 3}
-                <ul>
-                    {#each trail.expand.summit_logs ?? [] as log, i}
-                        <li><SummitLogCard {log} index={i}></SummitLogCard></li>
-                    {/each}
-                </ul>
+                <div class="overflow-x-scroll">
+                    <SummitLogTable summitLogs={trail.expand.summit_logs}
+                    ></SummitLogTable>
+                </div>
             {/if}
             {#if activeTab == 4}
                 <div>

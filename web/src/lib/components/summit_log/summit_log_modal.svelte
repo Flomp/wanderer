@@ -26,7 +26,7 @@
         initialValues: $summitLog,
         validationSchema: summitLogSchema,
         onSubmit: async (submittedValues) => {
-            if(!$form._gpx) {
+            if(!$form.expand.gpx_data) {
                 $form.gpx = "";
             }
             dispatch("save", submittedValues);
