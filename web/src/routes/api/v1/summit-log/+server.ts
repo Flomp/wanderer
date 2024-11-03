@@ -4,7 +4,10 @@ import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
     try {
-        const r: SummitLog[] = await pb.collection('summit_logs').getFullList<SummitLog>()
+        const r: SummitLog[] = await pb.collection('summit_logs').getFullList<SummitLog>({
+            expand: "trails_via_summit_logs.category",
+            sort: "+date"
+        })
         return json(r)
     } catch (e: any) {
         throw error(e.status, e);

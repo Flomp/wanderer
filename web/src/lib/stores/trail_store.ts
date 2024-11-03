@@ -153,8 +153,8 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
         }
         response.expand.gpx_data = gpxData;
 
-
-        for (const log of response.expand.summit_logs) {
+        
+        for (const log of response.expand.summit_logs ?? []) {
             const gpxData: string = await fetchGPX(log, f);
 
             if (!log.expand) {
@@ -165,7 +165,7 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     }
 
     response.expand.waypoints = response.expand.waypoints || [];
-    response.expand.summit_logs = response.expand.summit_logs.sort((a: SummitLog, b: SummitLog) => Date.parse(a.date) - Date.parse(b.date)) || [];
+    response.expand.summit_logs = response.expand.summit_logs?.sort((a: SummitLog, b: SummitLog) => Date.parse(a.date) - Date.parse(b.date)) || [];
 
     trail.set(response);
 

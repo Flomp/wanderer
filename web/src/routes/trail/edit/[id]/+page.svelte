@@ -428,7 +428,6 @@
 
     function saveSummitLog(e: CustomEvent<SummitLog>) {
         const savedSummitLog = e.detail;
-        console.log(savedSummitLog);
 
         let editedSummitLogIndex = $form.expand.summit_logs.findIndex(
             (s) => s.id == savedSummitLog.id,

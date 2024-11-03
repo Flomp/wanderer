@@ -4,6 +4,23 @@ import { ClientResponseError } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
+export const summitLogs: Writable<SummitLog[]> = writable([]);
+
+export async function summit_logs_index(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const r = await f('/api/v1/summit-log?', {
+        method: 'GET',
+    })
+
+    if (!r.ok) {
+        throw new ClientResponseError(await r.json())
+    }
+
+    const fetchedSummitLogs: SummitLog[] = await r.json();
+
+    summitLogs.set(fetchedSummitLogs);
+
+    return fetchedSummitLogs;
+}
 
 export async function summit_logs_create(summitLog: SummitLog) {
     summitLog.author = pb.authStore.model!.id

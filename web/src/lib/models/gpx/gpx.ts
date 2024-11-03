@@ -74,6 +74,7 @@ export default class GPX {
 
   getTotals() {
     let totalElevationGain = 0;
+    let totalElevationLoss = 0;
     let totalDuration = 0;
     let totalDistance = 0;
 
@@ -99,6 +100,8 @@ export default class GPX {
           const elevationDiff = elevation - previousElevation;
           if (elevationDiff > 0) {
             totalElevationGain += elevationDiff;
+          } else {
+            totalElevationLoss += Math.abs(elevationDiff)
           }
 
           const distance = calculateDistance(
@@ -112,7 +115,7 @@ export default class GPX {
       }
     }
 
-    return { distance: totalDistance, elevationGain: totalElevationGain, duration: totalDuration }
+    return { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss, duration: totalDuration }
   }
 
   static parse(gpxString: string): Promise<GPX | Error> {

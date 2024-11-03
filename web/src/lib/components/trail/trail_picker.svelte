@@ -3,7 +3,7 @@
     import "leaflet/dist/leaflet.css";
 
     import type { Map } from "leaflet";
-    import { onMount, tick } from "svelte";
+    import { createEventDispatcher, onMount, tick } from "svelte";
     export let trailFile: File | null;
     export let trailData: string | undefined;
     export let label: string = "";
@@ -11,6 +11,8 @@
     let map: Map;
     let L: any;
     let layer: any;
+
+    const dispatch = createEventDispatcher();
 
     $: if (trailData !== undefined) {
         showTrailOnMap();
@@ -39,6 +41,8 @@
         if (trailData) {
             trailFile = null;
             trailData = undefined;
+
+            dispatch("change", null)
         } else {
             document.getElementById("trail-input")!.click();
         }
@@ -56,6 +60,8 @@
 
         trailFile = files.item(0);
         trailData = await trailFile?.text();
+
+        dispatch("change", trailData);
     }
 
     async function showTrailOnMap() {

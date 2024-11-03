@@ -1,9 +1,7 @@
-import { Settings } from "$lib/models/settings";
 import type { User } from "$lib/models/user";
 import { pb } from "$lib/pocketbase";
 import { ClientResponseError, type AuthMethodsList } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
-import { settings_create } from "./settings_store";
 
 export const currentUser: Writable<User | null> = writable<User | null>()
 

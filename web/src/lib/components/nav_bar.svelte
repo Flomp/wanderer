@@ -18,6 +18,7 @@
     ];
 
     const dropdownItems = [
+        { text: $_("profile"), value: "profile", icon: "user" },
         { text: $_("settings"), value: "settings", icon: "cog" },
         { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
     ];
@@ -76,7 +77,9 @@
     });
 
     function handleDropdownClick(item: { text: string; value: any }) {
-        if (item.value == "logout") {
+        if (item.value == "profile") {
+            goto("/profile");
+        } else if (item.value == "logout") {
             logout();
             window.location.href = "/";
         } else if (item.value == "settings") {

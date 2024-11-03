@@ -2,7 +2,6 @@
     import type { SummitLog } from "$lib/models/summit_log";
     import "leaflet/dist/leaflet.css";
 
-    import GPX from "$lib/models/gpx/gpx";
     import {
         formatDistance,
         formatElevation,
@@ -11,15 +10,11 @@
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
     import type { Map } from "leaflet";
     import { createEventDispatcher, onMount } from "svelte";
+    import { _ } from "svelte-i18n";
 
     export let index: number;
     export let log: SummitLog;
-
-    let totals: {
-        distance: number;
-        elevationGain: number;
-        duration: number;
-    } | null = null;
+    export let showCategory: boolean = false;
 
     let map: Map;
 
@@ -47,13 +42,6 @@
             return;
         }
 
-        const gpxObject = await GPX.parse(log.expand.gpx_data);
-        if (gpxObject instanceof Error) {
-            throw gpxObject;
-        }
-
-        totals = gpxObject.getTotals();
-
         const geoJson = gpx(
             new DOMParser().parseFromString(log.expand.gpx_data, "text/xml"),
         );
@@ -78,12 +66,12 @@
         <button
             type="button"
             on:click={openMap}
-            class="h-20 aspect-square shrink-0 rounded-xl !bg-background"
+            class="h-20 aspect-square shrink-0 rounded-xl !bg-background hover:!bg-secondary-hover transition-colors"
             class:hidden={!log.expand.gpx_data}
             id="mini-map-{index}"
         ></button>
     </td>
-    <td class:py-4={!log.text && !log.expand.gpx_data}
+    <td class:py-4={!log.expand.gpx_data}
         >{new Date(log.date).toLocaleDateString(undefined, {
             month: "2-digit",
             day: "2-digit",
@@ -92,18 +80,30 @@
         })}</td
     >
     <td>
-        {formatDistance(totals?.distance)}
+        {formatDistance(log.distance)}
     </td>
 
     <td>
-        {formatElevation(totals?.elevationGain)}
-    </td><td>
-        {formatTimeHHMM(totals ? (totals?.duration / 1000 / 60) : undefined)}
+        {formatElevation(log.elevation_gain)}
     </td>
+    <td>
+        {formatElevation(log.elevation_loss)}
+    </td>
+    <td>
+        {formatTimeHHMM(log.duration)}
+    </td>
+    {#if showCategory}
+        <td>
+            {$_(
+                log.expand.trails_via_summit_logs?.at(0)?.expand.category
+                    ?.name ?? "-",
+            )}
+        </td>
+    {/if}
     <td>
         {#if log.text}
             <button on:click={() => (showText = !showText)} class="btn-icon"
-                ><i class="fa{showText ? '' : '-regular'} fa-message"
+                ><i class="fa{showText ? '' : '-regular'} fa-message text-gray-500"
                 ></i></button
             >
         {/if}
@@ -111,11 +111,12 @@
 </tr>
 {#if showText}
     <tr
-        ><td class="text-left text-sm whitespace-pre-wrap pb-4" colspan="6"
-            >{log.text}</td
+        ><td
+            class="text-left text-sm whitespace-pre-wrap pb-4"
+            colspan={showCategory ? 8 : 7}>{log.text}</td
         ></tr
     >
 {/if}
 <tr>
-    <td colspan="6"> <hr /> </td>
+    <td colspan={showCategory ? 8 : 7}> <hr class="border-input-border" /> </td>
 </tr>

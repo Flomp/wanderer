@@ -11,6 +11,7 @@
     import Modal from "../base/modal.svelte";
     import Textarea from "../base/textarea.svelte";
     import TrailPicker from "../trail/trail_picker.svelte";
+    import GPX from "$lib/models/gpx/gpx";
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -26,7 +27,7 @@
         initialValues: $summitLog,
         validationSchema: summitLogSchema,
         onSubmit: async (submittedValues) => {
-            if(!$form.expand.gpx_data) {
+            if (!$form.expand.gpx_data) {
                 $form.gpx = "";
             }
             dispatch("save", submittedValues);
@@ -37,6 +38,27 @@
 
     $: if ($summitLog._gpx) {
         $form._gpx = $summitLog._gpx;
+    }
+
+    async function handleTrailSelection(trailData: string | null) {
+        if (!trailData) {
+            $form.duration = undefined;
+            $form.elevation_gain = undefined;
+            $form.elevation_loss = undefined;
+            $form.distance = undefined;
+            return;
+        }
+        const gpxObject = await GPX.parse(trailData);
+        if (gpxObject instanceof Error) {
+            throw gpxObject;
+        }
+
+        const totals = gpxObject.getTotals();
+
+        $form.duration = totals.duration / 1000 / 60;
+        $form.elevation_gain = totals.elevationGain;
+        $form.elevation_loss = totals.elevationLoss;
+        $form.distance = totals.distance;
     }
 </script>
 
@@ -68,6 +90,7 @@
                 bind:trailFile={$form._gpx}
                 bind:trailData={$form.expand.gpx_data}
                 label={$_("trail", { values: { n: 1 } })}
+                on:change={(e) => handleTrailSelection(e.detail)}
             ></TrailPicker>
             <div class="basis-full">
                 <Textarea

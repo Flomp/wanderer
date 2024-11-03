@@ -28,12 +28,6 @@
         { text: $_("delete"), value: "delete" },
     ];
 
-    let totals: {
-        distance: number;
-        elevationGain: number;
-        duration: number;
-    } | null = null;
-
     onMount(async () => {
         if (!map) {
             await initMap();
@@ -65,13 +59,6 @@
             return;
         }
 
-        const gpxObject = await GPX.parse(log.expand.gpx_data);
-        if (gpxObject instanceof Error) {
-            throw gpxObject;
-        }
-
-        totals = gpxObject.getTotals();
-
         const geoJson = gpx(
             new DOMParser().parseFromString(log.expand.gpx_data, "text/xml"),
         );
@@ -79,7 +66,7 @@
             filter: (feature: any, layer: any) => {
                 return feature.geometry.type !== "Point";
             },
-        }).addTo(map)
+        }).addTo(map);
         map.fitBounds(layer.getBounds());
         map.invalidateSize();
     }
@@ -88,7 +75,6 @@
         if (layer) {
             map?.removeLayer(layer);
         }
-        totals = null;
     }
 </script>
 
@@ -117,24 +103,27 @@
                     <Dropdown items={dropdownItems} on:change></Dropdown>
                 {/if}
             </div>
-            {#if totals}
+            {#if log.distance || log.elevation_gain || log.elevation_loss || log.duration}
                 <div
                     class="flex mt-1 gap-x-4 text-sm text-gray-500 flex-wrap mb-2"
                 >
                     <span
                         ><i class="fa fa-left-right mr-2"></i>{formatDistance(
-                            totals.distance,
-                        )}</span
-                    >
-                    <span
-                        ><i class="fa fa-up-down mr-2"></i>{formatElevation(
-                            totals.elevationGain,
+                            log.distance,
                         )}</span
                     >
                     <span
                         ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                            totals.duration / 1000 / 60,
+                            log.duration,
                         )}</span
+                    >
+                    <span
+                        ><i class="fa fa-arrow-trend-up mr-2"
+                        ></i>{formatElevation(log.elevation_gain)}</span
+                    >
+                    <span
+                        ><i class="fa fa-arrow-trend-down mr-2"
+                        ></i>{formatElevation(log.elevation_loss)}</span
                     >
                 </div>
             {/if}

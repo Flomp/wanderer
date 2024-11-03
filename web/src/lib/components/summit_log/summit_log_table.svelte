@@ -8,28 +8,30 @@
     import type { Map } from "leaflet";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
     import { endIcon, startIcon } from "$lib/util/leaflet_util";
+    import { _ } from "svelte-i18n";
+    import MapWithElevation from "../trail/map_with_elevation.svelte";
+    import type { Trail } from "$lib/models/trail";
+    import { gpx2trail } from "$lib/util/gpx_util";
+
     export let summitLogs: SummitLog[];
+    export let showCategory: boolean = false;
 
     let openModal: () => void;
     let closeModal: () => void;
 
     let map: Map;
-    let L: any;
-    let layerGroup: any;
+
+    let trail: Trail | null = null;
 
     onMount(async () => {
-        L = (await import("leaflet")).default;
-
-        map = L.map("summit-log-table-map");
-        map.attributionControl.setPrefix(false);
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: "© OpenStreetMap contributors",
-        }).addTo(map);
-
-        layerGroup = L.layerGroup();
-
-        layerGroup.addTo(map);
+        // L = (await import("leaflet")).default;
+        // map = L.map("summit-log-table-map");
+        // map.attributionControl.setPrefix(false);
+        // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        //     attribution: "© OpenStreetMap contributors",
+        // }).addTo(map);
+        // layerGroup = L.layerGroup();
+        // layerGroup.addTo(map);
     });
 
     async function openMap(log: SummitLog) {
@@ -37,61 +39,14 @@
             return;
         }
 
-        layerGroup.clearLayers();
-        const geoJson = gpx(
-            new DOMParser().parseFromString(log.expand.gpx_data, "text/xml"),
-        );
-        const layer = L.geoJson(geoJson, {
-            onEachFeature: (feature: any, layer: any) => {
-                let startCoords, endCoords;
-
-                if (geoJson.features && geoJson.features.length > 0) {
-                    const geometry = geoJson.features[0].geometry;
-                    if (geometry.type === "LineString") {
-                        startCoords = geometry.coordinates[0];
-                        endCoords =
-                            geometry.coordinates[
-                                geometry.coordinates.length - 1
-                            ];
-                    } else if (geometry.type === "MultiLineString") {
-                        startCoords = (geometry as any).coordinates[0][0];
-                        endCoords = (geometry as any).coordinates[
-                            geometry.coordinates.length - 1
-                        ][
-                            (geometry as any).coordinates[
-                                geometry.coordinates.length - 1
-                            ].length - 1
-                        ];
-                    }
-                }
-
-                if (startCoords && endCoords) {
-                    const startMarker = L.marker(
-                        [startCoords[1], startCoords[0]],
-                        {
-                            icon: startIcon(),
-                        },
-                    );
-
-                    const endMarker = L.marker([endCoords[1], endCoords[0]], {
-                        icon: endIcon(),
-                    });
-
-                    layerGroup.addLayer(startMarker);
-                    layerGroup.addLayer(endMarker);
-                }
-            },
-            filter: (feature: any, layer: any) => {
-                return feature.geometry.type !== "Point";
-            },
-        }).addTo(map);
-
-        layerGroup.addLayer(layer);
+        trail = (await gpx2trail(log.expand.gpx_data)).trail;
+        trail.expand.gpx_data = log.expand.gpx_data;
 
         openModal();
         await tick();
-        map.fitBounds(layer.getBounds());
+
         map.invalidateSize();
+        return;
     }
 </script>
 
@@ -99,23 +54,41 @@
     <thead>
         <tr class="text-sm">
             <th class="w-24"></th>
-            <th>Date</th>
-            <th>Distance</th>
-            <th class="whitespace-nowrap">Elevation gain</th>
-            <th>Duration</th>
+            <th>{$_("date")}</th>
+            <th>{$_("distance")}</th>
+            <th>{$_("elevation-gain")}</th>
+            <th>{$_("elevation-loss")}</th>
+            <th>{$_("duration")}</th>
+            {#if showCategory}
+                <th>
+                    {$_("category")}
+                </th>
+            {/if}
             <th></th>
         </tr>
     </thead>
     <tbody>
         {#each summitLogs as log, i}
-            <SummitLogTableRow index={i} {log} on:open={() => openMap(log)}
+            <SummitLogTableRow
+                index={i}
+                {log}
+                on:open={() => openMap(log)}
+                {showCategory}
             ></SummitLogTableRow>
         {/each}
     </tbody>
 </table>
 
-<Modal id="summit-log-table-modal" title="" bind:openModal bind:closeModal>
-    <div slot="content" id="summit-log-table-map" class="h-96"></div>
+<Modal
+    id="summit-log-table-modal"
+    size="max-w-4xl"
+    title=""
+    bind:openModal
+    bind:closeModal
+>
+    <div slot="content" id="summit-log-table-map" class="h-[32rem]">
+        <MapWithElevation {trail} bind:map></MapWithElevation>
+    </div>
 </Modal>
 
 <style>

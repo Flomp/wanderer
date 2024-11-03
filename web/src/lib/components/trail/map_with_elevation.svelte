@@ -36,7 +36,7 @@
             autofitBounds: options.autofitBounds ?? true,
         });
         controlElevation.clear();
-        controlElevation.load(gpxData);
+        controlElevation.load(gpxData);        
     }
 
     $: if (options) {
