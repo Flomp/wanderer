@@ -15,10 +15,9 @@
     export let index: number;
     export let log: SummitLog;
     export let showCategory: boolean = false;
+    export let showTrail: boolean = false;
 
     let map: Map;
-
-    let showText: boolean = false;
 
     const dispatch = createEventDispatcher();
 
@@ -58,6 +57,20 @@
 
     function openMap() {
         dispatch("open", log);
+    }
+
+    function openText() {
+        dispatch("text", log);
+    }
+
+    function colCount() {
+        if (showCategory && showTrail) {
+            return 9;
+        } else if (showCategory || showTrail) {
+            return 8;
+        }
+
+        return 7;
     }
 </script>
 
@@ -100,23 +113,24 @@
             )}
         </td>
     {/if}
+    {#if showTrail}
+        <td>
+            <a
+                class="btn-icon aspect-square"
+                href="/trail/view/{log.expand.trails_via_summit_logs?.at(0)
+                    ?.id ?? ''}"
+                ><i class="fa fa-arrow-up-right-from-square px-[3px]"></i></a
+            >
+        </td>
+    {/if}
     <td>
         {#if log.text}
-            <button on:click={() => (showText = !showText)} class="btn-icon"
-                ><i class="fa{showText ? '' : '-regular'} fa-message text-gray-500"
-                ></i></button
+            <button on:click={openText} class="btn-icon"
+                ><i class="fa-regular fa-message"></i></button
             >
         {/if}
     </td>
 </tr>
-{#if showText}
-    <tr
-        ><td
-            class="text-left text-sm whitespace-pre-wrap pb-4"
-            colspan={showCategory ? 8 : 7}>{log.text}</td
-        ></tr
-    >
-{/if}
 <tr>
-    <td colspan={showCategory ? 8 : 7}> <hr class="border-input-border" /> </td>
+    <td colspan={colCount()}> <hr class="border-input-border" /> </td>
 </tr>

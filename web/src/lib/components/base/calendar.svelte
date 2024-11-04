@@ -2,7 +2,7 @@
 	import type { SummitLog } from "$lib/models/summit_log";
 	import { createEventDispatcher } from "svelte";
 	import { isSameDay, isToday } from "../../util/date_util";
-
+	import { _ } from "svelte-i18n";
 	export let logs: SummitLog[] = [];
 	export let colorMap: Record<string, string> = {};
 
@@ -15,6 +15,7 @@
 			start: Date;
 			end: Date;
 		};
+		click: Date;
 	}>();
 
 	const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -74,9 +75,11 @@
 					i + 1 - firstDay,
 				);
 				const today = isToday(date);
+
 				const logAtDate = logs.find((l) =>
 					isSameDay(date, new Date(l.date)),
 				);
+
 				a.push({ date: date, today: today, log: logAtDate });
 			}
 		}
@@ -108,6 +111,21 @@
 			end: new Date(currentYear, currentMonth + 1, 0),
 		});
 	}
+
+	function colorKey(i: number) {
+		return $_(
+			currentMonthArray[i]?.log?.expand.trails_via_summit_logs?.at(0)
+				?.expand?.category?.name ?? "",
+		);
+	}
+
+	function handleDateClick(date?: Date) {
+		if (!date) {
+			return;
+		}
+
+		dispatch("click", date);
+	}
 </script>
 
 <div class="calendar-header w-full flex items-center justify-between mb-6">
@@ -134,18 +152,14 @@
 	</div>
 	<div class="grid grid-cols-7 grid-rows-6" style="aspect-ratio: 1.17/1">
 		{#each { length: 42 } as _, i}
-			<div
-				class="calendar-day flex items-center justify-center rounded-xl cursor-pointer"
+			<button
+				class="calendar-day flex items-center justify-center rounded-xl"
+				on:click={() => handleDateClick(currentMonthArray[i]?.date)}
 				class:today={currentMonthArray[i]?.today}
-				style="background-color: {colorMap[
-					currentMonthArray[
-						i
-					]?.log?.expand.trails_via_summit_logs?.at(0)?.expand
-						?.category?.name ?? ''
-				] ?? ''}"
+				style="background-color: {colorMap[colorKey(i)] ?? ''}"
 			>
 				{currentMonthArray[i]?.date?.getDate() ?? ""}
-			</div>
+			</button>
 		{/each}
 	</div>
 </div>

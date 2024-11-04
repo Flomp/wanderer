@@ -26,5 +26,10 @@ class SummitLog {
   }
 }
 
+interface SummitLogFilter {
+  category: string[],
+  startDate?: string;
+  endDate?: string;
+}
 
-export { SummitLog };
+export { SummitLog, type SummitLogFilter };

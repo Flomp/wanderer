@@ -1,23 +1,23 @@
-import { summit_logs_index, summitLogs } from "$lib/stores/summit_log_store";
+import type { SummitLogFilter } from "$lib/models/summit_log";
+import { categories_index } from "$lib/stores/category_store";
+import { summit_logs_index } from "$lib/stores/summit_log_store";
 import { fetchGPX } from "$lib/stores/trail_store";
 import { type ServerLoad } from "@sveltejs/kit";
-import { get } from "svelte/store";
 
 export const load: ServerLoad = async ({ params, locals, fetch }) => {
-    const logs = await summit_logs_index(fetch);
 
-    for (const log of logs) {
-        if (!log.gpx) {
-            continue
-        }
-        const gpxData: string = await fetchGPX(log as any, fetch);
+    const date = new Date(), y = date.getFullYear(), m = date.getMonth();
+    const firstDay = new Date(y, m, 1);
+    const lastDay = new Date(y, m + 1, 0);
 
-        if (!log.expand) {
-            log.expand = {};
-        }
-        log.expand.gpx_data = gpxData;
+    const categories = await categories_index(fetch)
+
+    const filter: SummitLogFilter = {
+        startDate: firstDay.toISOString().slice(0, 10),
+        endDate: lastDay.toISOString().slice(0, 10),
+        category: []
     }
+    const logs = await summit_logs_index(filter, fetch);
 
-    console.log(logs);
-    
+    return {filter}
 };

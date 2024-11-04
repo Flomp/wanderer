@@ -243,13 +243,13 @@
             <div class="space-y-2">
                 <Datepicker
                     name="startDate"
-                    label="After"
+                    label={$_('after')}
                     bind:value={filter.startDate}
                     on:change={update}
                 ></Datepicker>
                 <Datepicker
                     name="endDate"
-                    label="Before"
+                    label={$_('before')}
                     bind:value={filter.endDate}
                     on:change={update}
                 ></Datepicker>

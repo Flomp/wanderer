@@ -1,13 +1,18 @@
-import { SummitLog } from "$lib/models/summit_log";
+import { SummitLog, type SummitLogFilter } from "$lib/models/summit_log";
 import { pb } from "$lib/pocketbase";
 import { ClientResponseError } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
+import { fetchGPX } from "./trail_store";
 
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
 export const summitLogs: Writable<SummitLog[]> = writable([]);
 
-export async function summit_logs_index(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const r = await f('/api/v1/summit-log?', {
+export async function summit_logs_index(filter?: SummitLogFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const filterText = filter ? buildFilterText(filter) : "";
+
+    const r = await f('/api/v1/summit-log?' + new URLSearchParams({
+        filter: filterText,
+    }), {
         method: 'GET',
     })
 
@@ -16,6 +21,18 @@ export async function summit_logs_index(f: (url: RequestInfo | URL, config?: Req
     }
 
     const fetchedSummitLogs: SummitLog[] = await r.json();
+
+    for (const log of fetchedSummitLogs) {
+        if (!log.gpx) {
+            continue
+        }
+        const gpxData: string = await fetchGPX(log as any, f);
+
+        if (!log.expand) {
+            log.expand = {};
+        }
+        log.expand.gpx_data = gpxData;
+    }
 
     summitLogs.set(fetchedSummitLogs);
 
@@ -94,4 +111,23 @@ export async function summit_logs_delete(summitLog: SummitLog) {
     } else {
         throw new ClientResponseError(await r.json())
     }
+}
+
+function buildFilterText(filter: SummitLogFilter,): string {
+    let filterText: string = "";
+
+    if (filter.category.length > 0) {
+        filterText += `trails_via_summit_logs.category != null && '${filter.category.join(",")}' ~ trails_via_summit_logs.category`;
+    }
+
+    if (filter.startDate) {
+        filterText += `${filter.category.length ? ' && ' : ''}date >= '${filter.startDate}'`
+    }
+
+    if (filter.endDate) {
+        filterText += `${filter.category.length || filter.startDate ? ' && ' : ''} date <= '${filter.endDate}'`
+    }
+
+    return filterText;
+
 }
