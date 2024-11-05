@@ -15,7 +15,6 @@
     import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Dropdown from "../base/dropdown.svelte";
-    import { trail } from "$lib/stores/trail_store";
 
     export let trails: Trail[];
     export let map: any | null = null;

@@ -122,9 +122,7 @@
 	function handleDateClick(date?: Date) {
 		if (!date) {
 			return;
-		}
-		console.log(date);
-		
+		}		
 		dispatch("click", date);
 	}
 </script>
@@ -151,7 +149,7 @@
 			</div>
 		{/each}
 	</div>
-	<div class="grid grid-cols-7 grid-rows-6" style="aspect-ratio: 1.17/1">
+	<div class="grid grid-cols-7 grid-rows-6 gap-1" style="aspect-ratio: 1.17/1">
 		{#each { length: 42 } as _, i}
 			<button
 				class="calendar-day flex items-center justify-center rounded-xl"

@@ -2,6 +2,7 @@
     import { writable } from "svelte/store";
     import type { SelectItem } from "./select.svelte";
     import { createEventDispatcher } from "svelte";
+    import {_} from "svelte-i18n"
 
     export let items: SelectItem[] = [];
     export let value: SelectItem[] = [];
@@ -38,7 +39,7 @@
         </label>
     {/if}
     <button
-        class="min-w-44 flex flex-wrap items-center gap-2 border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
+        class="min-w-44 flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
         on:click={() => (showDropdown = !showDropdown)}
     >
         {#if value.length === 0}
@@ -48,7 +49,7 @@
             <div
                 class="bg-primary text-white px-2 py-1 rounded-full flex items-center gap-1"
             >
-                <span class="text-sm">{item.text}</span>
+                <span class="text-sm">{$_(item.text)}</span>
                 <button
                     on:click|stopPropagation={() => removeItem(item)}
                     class="text-white hover:bg-primary-hover rounded-full w-4 h-4 flex items-center justify-center"
@@ -63,14 +64,14 @@
     {#if showDropdown}
         <div
             bind:this={dropdownRef}
-            class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto"
+            class="absolute z-10 mt-1 w-full bg-menu-background border border-input-border rounded-md max-h-40 overflow-y-auto"
         >
             {#each items as item}
                 <button
                     on:click={() => toggleItem(item)}
-                    class="px-3 py-2 hover:bg-blue-100 cursor-pointer flex justify-between items-center w-full"
+                    class="px-3 py-2 hover:bg-menu-item-background-hover cursor-pointer flex justify-between items-center w-full"
                 >
-                    <span>{item.text}</span>
+                    <span>{$_(item.text)}</span>
                     {#if value.includes(item)}
                         <div class="ml-auto">
                             <i class="fa fa-check"></i>

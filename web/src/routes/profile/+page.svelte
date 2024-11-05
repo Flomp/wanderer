@@ -144,7 +144,7 @@
                 (acc[date] || 0) + ((log as any)[barChartSelectedValue] ?? 0);
             if (barChartSelectedValue === "distance") {
                 acc[date] = acc[date] / 1000;
-            }else if(barChartSelectedValue === "duration") {
+            } else if (barChartSelectedValue === "duration") {
                 acc[date] = acc[date] / 60 / 60;
             }
             if ($page.data.settings?.unit !== "metric") {
@@ -228,10 +228,37 @@
 </svelte:head>
 
 <div
-    class="grid grid-cols-1 md:grid-cols-[356px_minmax(0,_1fr)] gap-y-4 items-start max-w-6xl mx-auto"
+    class="grid grid-cols-1 sm:grid-cols-[272px_minmax(0,_1fr)] md:grid-cols-[356px_minmax(0,_1fr)] gap-y-4 max-w-6xl mx-auto"
 >
+    {#if $currentUser}
+        <div class="flex items-center gap-x-6 h-full px-4">
+            <img
+                class="rounded-full w-16 aspect-square overflow-hidden"
+                src={getFileURL($currentUser, $currentUser.avatar) ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                alt="avatar"
+            />
+            <div>
+                <h4 class="text-2xl font-semibold col-start-2">
+                    {$currentUser.username}
+                </h4>
+                <p class="text-sm">
+                    <span class="text-gray-500">Joined:</span>
+                    {new Date($currentUser.created ?? "").toLocaleDateString(
+                        undefined,
+                        {
+                            month: "2-digit",
+                            day: "2-digit",
+                            year: "numeric",
+                            timeZone: "UTC",
+                        },
+                    )}
+                </p>
+            </div>
+        </div>
+    {/if}
     <div
-        class="flex flex-wrap md:flex-nowrap col-start-1 md:col-start-2 gap-x-4 justify-end"
+        class="flex flex-wrap md:flex-nowrap col-start-1 sm:col-start-2 gap-x-4 justify-end"
     >
         <MultiSelect
             on:change={(e) => updateFilterCategory(e.detail)}
@@ -250,105 +277,16 @@
             label={$_("before")}
         ></Datepicker>
     </div>
-    <div
-        class="border border-input-border rounded-xl p-6 lg:row-span-3 space-y-6 grow-0 md:mr-4"
-    >
-        {#if $currentUser}
-            <div class="flex items-center gap-x-6">
-                <img
-                    class="rounded-full w-24 aspect-square overflow-hidden"
-                    src={getFileURL($currentUser, $currentUser.avatar) ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
-                    alt="avatar"
-                />
-                <div>
-                    <h4 class="text-2xl font-semibold col-start-2">
-                        {$currentUser.username}
-                    </h4>
-                    <p class="text-sm">
-                        <span class="text-gray-500">Joined:</span>
-                        {new Date(
-                            $currentUser.created ?? "",
-                        ).toLocaleDateString(undefined, {
-                            month: "2-digit",
-                            day: "2-digit",
-                            year: "numeric",
-                            timeZone: "UTC",
-                        })}
-                    </p>
-                </div>
-            </div>
-        {/if}
-        <Calendar
-            on:click={(e) => handleDateClick(e.detail)}
-            logs={$summitLogs}
-            colorMap={categoryColorMap}
-        ></Calendar>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div
-            class="flex flex-col items-center gap-6 border border-input-border rounded-xl p-6"
-        >
-            <span class="text-gray-500 font-semibold text-lg self-start"
-                ><i class="fa fa-hashtag mr-3"></i>{$_("activity", {
-                    values: { n: 2 },
-                })}</span
-            >
-            <p class="text-4xl font-bold">{$summitLogs.length}</p>
+    <div class="space-y-4 grow-0 sm:mr-4">
+        <div class="border border-input-border rounded-xl p-6">
+            <Calendar
+                on:click={(e) => handleDateClick(e.detail)}
+                logs={$summitLogs}
+                colorMap={categoryColorMap}
+            ></Calendar>
         </div>
         <div
-            class="flex flex-col items-center gap-6 border border-input-border rounded-xl p-6"
-        >
-            <span class="text-gray-500 font-semibold text-lg self-start"
-                ><i class="fa fa-left-right mr-3"></i>{$_("distance")}</span
-            >
-            <p class="text-4xl font-bold">{formatDistance(totalDistance)}</p>
-        </div>
-
-        <div
-            class="flex flex-col items-center gap-6 border border-input-border rounded-xl p-6"
-        >
-            <span class="text-gray-500 font-semibold text-lg self-start"
-                ><i class="fa fa-clock mr-3"></i>{$_("duration")}</span
-            >
-            <p class="text-4xl font-bold">{formatTimeHHMM(totalDuration / 60)}</p>
-        </div>
-        <div
-            class="flex flex-col items-center gap-6 border border-input-border rounded-xl p-6"
-        >
-            <span class="text-gray-500 font-semibold text-lg self-start"
-                ><i class="fa fa-arrow-trend-up mr-3"></i>{$_(
-                    "elevation-gain",
-                )}</span
-            >
-            <p class="text-4xl font-bold">
-                {formatElevation(totalElevationGain)}
-            </p>
-        </div>
-        <div
-            class="flex flex-col items-center gap-6 border border-input-border rounded-xl p-6"
-        >
-            <span class="text-gray-500 font-semibold text-lg self-start"
-                ><i class="fa fa-arrow-trend-down mr-3"></i>{$_(
-                    "elevation-loss",
-                )}</span
-            >
-            <p class="text-4xl font-bold">
-                {formatElevation(totalElevationLoss)}
-            </p>
-        </div>
-        <div
-            class="flex flex-col items-center gap-6 border border-input-border rounded-xl p-6"
-        >
-            <span class="text-gray-500 font-semibold text-lg self-start"
-                ><i class="fa fa-arrow-trend-down mr-3"></i>{$_(
-                    "average-speed",
-                )}</span
-            >
-            <p class="text-4xl font-bold">{formatSpeed(averageSpeed)}</p>
-        </div>
-        <div
-            class="col-start-1 col-span-1 border border-input-border rounded-xl p-6 space-y-4"
+            class="border border-input-border rounded-xl p-6 space-y-4"
         >
             <span class="text-gray-500 font-semibold text-lg"
                 ><i class="fa fa-person-hiking mr-3"></i>{$_(
@@ -367,8 +305,74 @@
                 }}
             />
         </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
-            class="h-full md:col-span-2 space-y-2 border border-input-border rounded-xl p-6"
+            class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
+        >
+            <span class="text-gray-500 font-semibold text-lg self-start"
+                ><i class="fa fa-hashtag mr-3"></i>{$_("activity", {
+                    values: { n: 2 },
+                })}</span
+            >
+            <p class="text-3xl font-bold">{$summitLogs.length}</p>
+        </div>
+        <div
+            class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
+        >
+            <span class="text-gray-500 font-semibold text-lg self-start"
+                ><i class="fa fa-left-right mr-3"></i>{$_("distance")}</span
+            >
+            <p class="text-3xl font-bold">{formatDistance(totalDistance)}</p>
+        </div>
+
+        <div
+            class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
+        >
+            <span class="text-gray-500 font-semibold text-lg self-start"
+                ><i class="fa fa-clock mr-3"></i>{$_("duration")}</span
+            >
+            <p class="text-3xl font-bold">
+                {formatTimeHHMM(totalDuration / 60)}
+            </p>
+        </div>
+        <div
+            class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
+        >
+            <span class="text-gray-500 font-semibold text-lg self-start"
+                ><i class="fa fa-arrow-trend-up mr-3"></i>{$_(
+                    "elevation-gain",
+                )}</span
+            >
+            <p class="text-3xl font-bold">
+                {formatElevation(totalElevationGain)}
+            </p>
+        </div>
+        <div
+            class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
+        >
+            <span class="text-gray-500 font-semibold text-lg self-start"
+                ><i class="fa fa-arrow-trend-down mr-3"></i>{$_(
+                    "elevation-loss",
+                )}</span
+            >
+            <p class="text-3xl font-bold">
+                {formatElevation(totalElevationLoss)}
+            </p>
+        </div>
+        <div
+            class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
+        >
+            <span class="text-gray-500 font-semibold text-lg self-start"
+                ><i class="fa fa-arrow-trend-down mr-3"></i>{$_(
+                    "average-speed",
+                )}</span
+            >
+            <p class="text-3xl font-bold">{formatSpeed(averageSpeed)}</p>
+        </div>
+        <div
+            class="h-full sm:col-span-2 lg:col-span-3 space-y-2 border border-input-border rounded-xl p-6"
         >
             <div class="flex justify-between">
                 <span class="text-gray-500 font-semibold text-lg"
@@ -411,7 +415,7 @@
     </div>
 
     <div
-        class="col-span-1 md:col-span-2 border border-input-border rounded-xl p-6 space-y-6"
+        class="col-span-1 sm:col-span-2 border border-input-border rounded-xl p-6 space-y-6"
     >
         <span class="text-gray-500 font-semibold text-lg"
             ><i class="fa fa-table mr-3"></i>{$_("all-activities")}</span
