@@ -123,7 +123,8 @@
 		if (!date) {
 			return;
 		}
-
+		console.log(date);
+		
 		dispatch("click", date);
 	}
 </script>

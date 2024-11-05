@@ -114,7 +114,7 @@
                     >
                     <span
                         ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                            log.duration,
+                            log.duration ? log.duration / 60 : undefined,
                         )}</span
                     >
                     <span

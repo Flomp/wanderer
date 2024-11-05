@@ -58,9 +58,9 @@ export function formatSpeed(speed?: number) {
     const unit = get(page).data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
-        return `${Math.round(speed)} km/h`
+        return `${(speed * 3.6).toFixed(2)} km/h`
     } else {
-        const mph = speed * 0.621371;
+        const mph = speed * 3.6 * 0.621371;
 
         return `${Math.round(mph)} mp/h`;
     }

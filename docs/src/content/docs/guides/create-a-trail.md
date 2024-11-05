@@ -51,7 +51,7 @@ You can also add photos to the trail itself. If you add more than one photo you 
 
 ### Summit book
 
-If you do the same trail multiple times but do not want to create a new trail every time, you can simply make a new entry in the summit book to log the completion of the trail.
+If you do the same trail multiple times but do not want to create a new trail every time, you can simply make a new entry in the summit book to log the completion of the trail. By default a new summit log entry is created automatically when you upload a fail containing GPS data in the trail creation process. For subsequent entries to the summit book you can provide an individual file containing your route data for this particular completion of the trail.
 
 ## Save the trail
 

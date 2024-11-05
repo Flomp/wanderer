@@ -55,7 +55,7 @@
 
         const totals = gpxObject.getTotals();
 
-        $form.duration = totals.duration / 1000 / 60;
+        $form.duration = totals.duration / 1000;
         $form.elevation_gain = totals.elevationGain;
         $form.elevation_loss = totals.elevationLoss;
         $form.distance = totals.distance;

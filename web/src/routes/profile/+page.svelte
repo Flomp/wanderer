@@ -123,7 +123,7 @@
 
         switch (barChartSelectedValue) {
             case "duration":
-                return "min";
+                return "h";
             case "elevation_gain":
             case "elevation_loss":
                 return unit == "metric" ? "m" : "ft";
@@ -144,6 +144,8 @@
                 (acc[date] || 0) + ((log as any)[barChartSelectedValue] ?? 0);
             if (barChartSelectedValue === "distance") {
                 acc[date] = acc[date] / 1000;
+            }else if(barChartSelectedValue === "duration") {
+                acc[date] = acc[date] / 60 / 60;
             }
             if ($page.data.settings?.unit !== "metric") {
                 acc[date] =
@@ -193,7 +195,13 @@
     );
 
     $: averageSpeed =
-        totalDuration > 0 ? totalDistance / totalDuration : undefined;
+        totalDuration > 0
+            ? $summitLogs.reduce(
+                  (sum, log) =>
+                      sum + (log.distance && log.duration ? log.distance : 0),
+                  0,
+              ) / totalDuration
+            : undefined;
 
     function updateFilterCategory(categories: SelectItem[]) {
         filter.category = categories.map((c) => c.value);
@@ -201,10 +209,10 @@
     }
 
     function handleDateClick(date: Date) {
-        const datePlusN = new Date();
+        const datePlusN = date;
         datePlusN.setDate(date.getDate() + 1);
         filter.startDate = datePlusN.toISOString().slice(0, 10);
-        datePlusN.setDate(date.getDate() + 2);
+        datePlusN.setDate(date.getDate() + 1);
         filter.endDate = datePlusN.toISOString().slice(0, 10);
         loadSummitLogs();
     }
@@ -218,7 +226,6 @@
 <svelte:head>
     <title>{$_("profile")} | wanderer</title>
 </svelte:head>
-
 
 <div
     class="grid grid-cols-1 md:grid-cols-[356px_minmax(0,_1fr)] gap-y-4 items-start max-w-6xl mx-auto"
@@ -304,7 +311,7 @@
             <span class="text-gray-500 font-semibold text-lg self-start"
                 ><i class="fa fa-clock mr-3"></i>{$_("duration")}</span
             >
-            <p class="text-4xl font-bold">{formatTimeHHMM(totalDuration)}</p>
+            <p class="text-4xl font-bold">{formatTimeHHMM(totalDuration / 60)}</p>
         </div>
         <div
             class="flex flex-col items-center gap-6 border border-input-border rounded-xl p-6"
