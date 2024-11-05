@@ -1,3 +1,11 @@
+
+# v0.10.0
+## Features
+- A new summit log entry is now added automatically when uploading a new GPX file for a new or existing trail
+- GPX files can now be attached to summit logs
+- Adds a new profile page with filterable statistics derived from summit log GPX data
+- When importing a GPX file the filename will be used as a fallback
+  
 # v0.9.0
 ## Features
 - Complete visual overhaul of the list page

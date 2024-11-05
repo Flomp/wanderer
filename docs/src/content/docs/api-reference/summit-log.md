@@ -32,8 +32,8 @@ GET /summit-log/{id}
 
 |HTTP Status Code |Meaning|Description|Data schema|
 |---|---|---|---|
-|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|OK|Inline|
-|404|[Not Found](https://tools.ietf.org/html/rfc7231#section-6.5.4)|Record Not Found|Inline|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+|404|[Not Found](https://tools.ietf.org/html/rfc7231#section-6.5.4)|none|Inline|
 
 ### Responses Data Schema
 
@@ -112,8 +112,8 @@ POST /summit-log/{id}
 
 |HTTP Status Code |Meaning|Description|Data schema|
 |---|---|---|---|
-|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|OK|Inline|
-|404|[Not Found](https://tools.ietf.org/html/rfc7231#section-6.5.4)|Record Not Found|Inline|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+|404|[Not Found](https://tools.ietf.org/html/rfc7231#section-6.5.4)|none|Inline|
 
 ### Responses Data Schema
 
@@ -173,8 +173,8 @@ DELETE /summit-log/{id}
 
 |HTTP Status Code |Meaning|Description|Data schema|
 |---|---|---|---|
-|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|OK|Inline|
-|404|[Not Found](https://tools.ietf.org/html/rfc7231#section-6.5.4)|Record Not Found|Inline|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+|404|[Not Found](https://tools.ietf.org/html/rfc7231#section-6.5.4)|none|Inline|
 
 ### Responses Data Schema
 
@@ -204,6 +204,42 @@ HTTP Status Code **404**
 |»»» data|object|true|none||none|
 |» name|string|true|none||none|
 
+## POST file
+
+POST /summit-log/{id}/file
+
+> Body Parameters
+
+```yaml
+gpx: ""
+
+```
+
+### Params
+
+|Name|Location|Type|Required|Description|
+|---|---|---|---|---|
+|id|path|string| yes |none|
+|Content-Type|header|string| yes |none|
+|body|body|object| no |none|
+|» gpx|body|string(binary)| no |none|
+
+> Response Examples
+
+> 200 Response
+
+```json
+{}
+```
+
+### Responses
+
+|HTTP Status Code |Meaning|Description|Data schema|
+|---|---|---|---|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+
+### Responses Data Schema
+
 ## GET list
 
 GET /summit-log
@@ -230,7 +266,7 @@ GET /summit-log
 
 |HTTP Status Code |Meaning|Description|Data schema|
 |---|---|---|---|
-|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|OK|Inline|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
 
 ### Responses Data Schema
 
@@ -287,8 +323,8 @@ PUT /summit-log
 
 |HTTP Status Code |Meaning|Description|Data schema|
 |---|---|---|---|
-|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|OK|Inline|
-|400|[Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1)|Bad Request|Inline|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+|400|[Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1)|none|Inline|
 
 ### Responses Data Schema
 
@@ -323,3 +359,6 @@ HTTP Status Code **400**
 |»»» message|string|true|none||none|
 |»»» data|object|true|none||none|
 |» name|string|true|none||none|
+
+# Data Schema
+

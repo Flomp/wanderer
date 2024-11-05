@@ -50,6 +50,10 @@ export default defineConfig({
         link: '/guides/lists/'
       },
       {
+        label: 'Statistics',
+        link: '/guides/statistics/'
+      },
+      {
         label: 'Custom categories',
         link: '/guides/custom-categories/'
       }, {
