@@ -1,7 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import Tabs from "$lib/components/base/tabs.svelte";
-    import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import { Comment } from "$lib/models/comment";
@@ -27,7 +26,7 @@
         startIcon,
     } from "$lib/util/leaflet_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type { Icon, Map, Marker } from "leaflet";
+    import type { Map, Marker } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
     import "photoswipe/style.css";

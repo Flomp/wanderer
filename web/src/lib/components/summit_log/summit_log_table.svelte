@@ -11,7 +11,7 @@
     import { _ } from "svelte-i18n";
     import MapWithElevation from "../trail/map_with_elevation.svelte";
 
-    export let summitLogs: SummitLog[];
+    export let summitLogs: SummitLog[] = [];
     export let showCategory: boolean = false;
     export let showTrail: boolean = false;
 
@@ -28,14 +28,7 @@
     let currentText: string = "";
 
     onMount(async () => {
-        // L = (await import("leaflet")).default;
-        // map = L.map("summit-log-table-map");
-        // map.attributionControl.setPrefix(false);
-        // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        //     attribution: "© OpenStreetMap contributors",
-        // }).addTo(map);
-        // layerGroup = L.layerGroup();
-        // layerGroup.addTo(map);
+       
     });
 
     async function openMap(log: SummitLog) {
