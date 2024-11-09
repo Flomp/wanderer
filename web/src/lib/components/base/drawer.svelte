@@ -32,7 +32,7 @@
         tabindex="0"
     ></div>
     <div
-        class="absolute flex flex-col overflow-y-auto w-72 h-screen bg-background right-0 top-0 z-50"
+        class="absolute flex flex-col overflow-y-auto w-72 h-dvh bg-background right-0 top-0 z-50"
         in:slide={{ axis: "x", easing: backOut }}
         out:slide={{ axis: "x", easing: backIn }}
     >

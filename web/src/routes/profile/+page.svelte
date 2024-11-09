@@ -89,7 +89,7 @@
     };
 
     $: logCategories = $summitLogs.reduce(
-        (acc, log) => {
+        (acc, log) => {            
             const cat =
                 log.expand?.trails_via_summit_logs?.at(0)?.expand?.category
                     ?.name ?? "unknown";

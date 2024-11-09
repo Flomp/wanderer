@@ -127,7 +127,7 @@
             >
             <div class="basis-full"></div>
             <hr class="border-input-border" />
-            <div class="flex gap-4 items-center m-4">
+            <div class="flex gap-4 items-center justify-between m-4">
                 <a href="/profile">
                     <img
                         class="rounded-full w-10 aspect-square"
