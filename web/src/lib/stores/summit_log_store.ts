@@ -39,10 +39,10 @@ export async function summit_logs_index(filter?: SummitLogFilter, f: (url: Reque
     return fetchedSummitLogs;
 }
 
-export async function summit_logs_create(summitLog: SummitLog) {
+export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     summitLog.author = pb.authStore.model!.id
 
-    let r = await fetch('/api/v1/summit-log', {
+    let r = await f('/api/v1/summit-log', {
         method: 'PUT',
         body: JSON.stringify(summitLog),
     })
@@ -58,7 +58,7 @@ export async function summit_logs_create(summitLog: SummitLog) {
 
         formData.append("gpx", summitLog._gpx)
 
-        r = await fetch(`/api/v1/summit-log/${model.id!}/file`, {
+        r = await f(`/api/v1/summit-log/${model.id!}/file`, {
             method: 'POST',
             body: formData,
         })

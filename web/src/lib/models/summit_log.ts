@@ -5,7 +5,7 @@ class SummitLog {
   date: string;
   text?: string;
   gpx?: string;
-  _gpx: File | null;
+  _gpx: File | Blob | null;
   distance?: number
   elevation_gain?: number
   elevation_loss?: number

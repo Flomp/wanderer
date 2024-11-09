@@ -4,11 +4,51 @@ import type { Settings } from '$lib/models/settings'
 
 import { pb } from '$lib/pocketbase'
 import { isRouteProtected } from '$lib/util/authorization_util'
-import { redirect, type Handle } from '@sveltejs/kit'
+import { json, redirect, text, type Handle } from '@sveltejs/kit'
+import { sequence } from '@sveltejs/kit/hooks'
 import { MeiliSearch } from 'meilisearch'
 import { locale } from 'svelte-i18n'
 
-export const handle: Handle = async ({ event, resolve }) => {
+
+function csrf(allowedPaths: string[]): Handle {
+  return async ({ event, resolve }) => {
+    const { request, url } = event;
+    const forbidden =
+      isFormContentType(request) &&
+      (request.method === "POST" ||
+        request.method === "PUT" ||
+        request.method === "PATCH" ||
+        request.method === "DELETE") &&
+      request.headers.get("origin") !== url.origin &&
+      !allowedPaths.includes(url.pathname);
+
+    if (forbidden) {
+      const message = `Cross-site ${request.method} form submissions are forbidden`;
+      if (request.headers.get("accept") === "application/json") {
+        return json({ message }, { status: 403 });
+      }
+      return text(message, { status: 403 });
+    }
+
+    return resolve(event);
+  };
+}
+
+function isContentType(request: Request, ...types: string[]) {
+  const type = request.headers.get("content-type")?.split(";", 1)[0].trim() ?? "";
+  return types.includes(type.toLowerCase());
+}
+function isFormContentType(request: Request) {
+  return isContentType(
+    request,
+    "application/x-www-form-urlencoded",
+    "multipart/form-data",
+    "text/plain",
+  );
+}
+
+
+const auth: Handle = async ({ event, resolve }) => {
   // load the store data from the request cookie string
   pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '')
 
@@ -70,3 +110,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   return response
 }
+
+export const handle = sequence(csrf(['/api/v1/trail/upload']), auth)

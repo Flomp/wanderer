@@ -186,7 +186,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         trail.waypoints.push(model.id!);
     }
     for (const summitLog of trail.expand.summit_logs) {
-        const model = await summit_logs_create(summitLog);
+        const model = await summit_logs_create(summitLog, f);
         trail.summit_logs.push(model.id!);
     }
 
@@ -373,7 +373,7 @@ export async function trails_upload(file: File, f: (url: RequestInfo | URL, conf
     }
 }
 
-export async function fetchGPX(trail: { gpx: string } & Record<string, any>, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     if (!trail.gpx) {
         return "";
     }

@@ -1,3 +1,4 @@
+import { SummitLog } from "$lib/models/summit_log";
 import type { Trail } from "$lib/models/trail";
 import { trails_create } from "$lib/stores/trail_store";
 import { fromFIT, fromKML, fromTCX, gpx2trail, isFITFile } from "$lib/util/gpx_util";
@@ -11,8 +12,8 @@ export async function PUT(event: RequestEvent) {
         const fileContent = await (data.get("file") as Blob).text();
         let gpxData = ""
         let gpxFile: Blob;
-        if (isFITFile(fileBuffer)) {           
-            gpxData = await fromFIT(fileBuffer);            
+        if (isFITFile(fileBuffer)) {
+            gpxData = await fromFIT(fileBuffer);
             gpxFile = new Blob([gpxData], {
                 type: "application/gpx+xml",
             });
@@ -37,6 +38,12 @@ export async function PUT(event: RequestEvent) {
         let trail: Trail;
         try {
             trail = (await gpx2trail(gpxData, data.get("name") as string | undefined)).trail;
+
+            const log = new SummitLog(trail.date as string, {})
+            log.expand.gpx_data = gpxData;
+            log._gpx = gpxFile;
+
+            trail.expand.summit_logs.push(log);
         } catch (e: any) {
             throw new ClientResponseError({ status: 400, response: { message: "Invalid file" } })
         }

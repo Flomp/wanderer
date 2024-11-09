@@ -32,7 +32,7 @@ upload_and_delete() {
     ls $file
     
     # API call to upload file
-    response=$(curl -b cookie.txt --location --request PUT "$API_URL/trail/upload" --header 'Content-Type: application/gpx+xml' --data-binary "@$file")
+    response=$(curl -b cookie.txt --location --request PUT "$API_URL/trail/upload" --header 'Content-Type: multipart/form-data' -F "file=@$file" -F "name=$base_name")
     
     # Check if API call was successful (status code 200)
     if [ $? -eq 0 ] && [ "$(echo "$response" | grep -c "author")" -eq 1 ]; then
