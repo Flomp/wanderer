@@ -290,7 +290,12 @@
             $form.expand.gpx_data = gpxData;
             $form.category = $page.data.settings.category || $categories[0].id;
 
-            const log = new SummitLog(parseResult.trail.date as string, {})
+            const log = new SummitLog(parseResult.trail.date as string, {
+                distance: $form.distance,
+                elevation_gain: $form.elevation_gain,
+                elevation_loss: $form.elevation_loss,
+                duration: $form.duration ? $form.duration * 60 : undefined,
+            });
             log.expand.gpx_data = gpxData;
             log._gpx = selectedFile;
 
@@ -694,7 +699,7 @@
             >
         </div>
 
-        <div class="flex gap-4 justify-around">
+        <div class="grid grid-cols-2 gap-4 justify-around">
             {#if editingBasicInfo}
                 <TextField
                     bind:value={$form.distance}
@@ -702,18 +707,22 @@
                     label={$_("distance")}
                 ></TextField>
                 <TextField
+                    bind:value={$form.duration}
+                    name="duration"
+                    label={$_("est-duration")}
+                ></TextField><TextField
                     bind:value={$form.elevation_gain}
                     name="elevation_gain"
                     label={$_("elevation-gain")}
                 ></TextField>
                 <TextField
-                    bind:value={$form.duration}
-                    name="duration"
-                    label={$_("est-duration")}
+                    bind:value={$form.elevation_loss}
+                    name="elevation_loss"
+                    label={$_("elevation-loss")}
                 ></TextField>
             {:else}
-                <div class="flex flex-col">
-                    <span>{$_("distance")}</span>
+                <div>
+                    <p>{$_("distance")}</p>
                     <span class="font-medium"
                         >{formatDistance($form.distance)}</span
                     >
@@ -723,8 +732,19 @@
                         value={$form.distance}
                     />
                 </div>
-                <div class="flex flex-col">
-                    <span>{$_("elevation-gain")}</span>
+                <div>
+                    <p>{$_("est-duration")}</p>
+                    <span class="font-medium"
+                        >{formatTimeHHMM($form.duration)}</span
+                    >
+                    <input
+                        type="hidden"
+                        name="duration"
+                        value={$form.duration}
+                    />
+                </div>
+                <div>
+                    <p>{$_("elevation-gain")}</p>
                     <span class="font-medium"
                         >{formatElevation($form.elevation_gain)}</span
                     >
@@ -734,15 +754,15 @@
                         value={$form.elevation_gain}
                     />
                 </div>
-                <div class="flex flex-col">
-                    <span>{$_("est-duration")}</span>
+                <div>
+                    <p>{$_("elevation-loss")}</p>
                     <span class="font-medium"
-                        >{formatTimeHHMM($form.duration)}</span
+                        >{formatElevation($form.elevation_loss)}</span
                     >
                     <input
                         type="hidden"
-                        name="duration"
-                        value={$form.duration}
+                        name="elevation_gain"
+                        value={$form.elevation_gain}
                     />
                 </div>
             {/if}

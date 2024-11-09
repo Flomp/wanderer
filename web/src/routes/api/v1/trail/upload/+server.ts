@@ -39,9 +39,14 @@ export async function PUT(event: RequestEvent) {
         try {
             trail = (await gpx2trail(gpxData, data.get("name") as string | undefined)).trail;
 
-            const log = new SummitLog(trail.date as string, {})
+            const log = new SummitLog(trail.date as string, {
+                distance: trail.distance,
+                elevation_gain: trail.elevation_gain,
+                elevation_loss: trail.elevation_loss,
+                duration: trail.duration ? trail.duration * 60 : undefined,
+            })
             log.expand.gpx_data = gpxData;
-            log._gpx = gpxFile;
+            log._gpx = new File([gpxFile], (data.get("name") as string | null) ?? "file");
 
             trail.expand.summit_logs.push(log);
         } catch (e: any) {
