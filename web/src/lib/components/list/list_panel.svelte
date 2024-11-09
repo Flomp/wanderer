@@ -28,6 +28,11 @@
         0,
     );
 
+    $: cumulativeElevationLoss = list.expand?.trails?.reduce(
+        (s, b) => s + b.elevation_loss!,
+        0,
+    );
+
     $: cumulativeDuration = list.expand?.trails?.reduce(
         (s, b) => s + b.duration!,
         0,
@@ -68,7 +73,9 @@
 
 <div class="relative">
     {#if listIsShared}
-        <div class="absolute top-8 right-8 bg-white rounded-full w-8 py-1 text-center">
+        <div
+            class="absolute top-8 right-8 bg-white rounded-full w-8 py-1 text-center"
+        >
             <ShareInfo type="list" subject={list}></ShareInfo>
         </div>
     {/if}
@@ -105,20 +112,27 @@
     <h4 class="text-2xl font-semibold mb-4">{list.name}</h4>
 
     <hr />
-    <div class="flex my-4 gap-x-4 font-semibold whitespace-nowrap flex-wrap justify-around">
+    <div
+        class="grid grid-cols-2 my-4 gap-4 font-semibold whitespace-nowrap flex-wrap justify-around"
+    >
         <span
             ><i class="fa fa-left-right mr-2"></i>{formatDistance(
                 cumulativeDistance,
             )}</span
         >
         <span
-            ><i class="fa fa-up-down mr-2"></i>{formatElevation(
+            ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
+                cumulativeDuration,
+            )}</span
+        >
+        <span
+            ><i class="fa fa-arrow-trend-up mr-2"></i>{formatElevation(
                 cumulativeElevationGain,
             )}</span
         >
         <span
-            ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                cumulativeDuration,
+            ><i class="fa fa-arrow-trend-down mr-2"></i>{formatElevation(
+                cumulativeElevationLoss,
             )}</span
         >
     </div>

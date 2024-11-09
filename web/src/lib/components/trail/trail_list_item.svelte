@@ -57,7 +57,7 @@
             </h5>
         </div>
 
-        <div class="flex mt-1 gap-4 text-sm text-gray-500">
+        <div class="flex flex-wrap mt-1 gap-x-4 gap-y-2 text-sm text-gray-500">
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
                     trail.distance,
