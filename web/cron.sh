@@ -29,7 +29,7 @@ login() {
 upload_and_delete() {
     local file="$1"
 
-    ls $file
+    ls "$file"
     
     # API call to upload file
     response=$(curl -b cookie.txt --location --request PUT "$API_URL/trail/upload" --header 'Content-Type: multipart/form-data' -F "file=@$file" -F "name=$base_name")

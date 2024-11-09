@@ -153,7 +153,7 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
         }
         response.expand.gpx_data = gpxData;
 
-        
+
         for (const log of response.expand.summit_logs ?? []) {
             const gpxData: string = await fetchGPX(log, f);
 
@@ -387,7 +387,7 @@ export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f:
 function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
     let filterText: string = "";
 
-    filterText += `distance >= ${Math.floor(filter.distanceMin)} AND elevation_gain >= ${Math.floor(filter.elevationGainMin)}`
+    filterText += `distance >= ${Math.floor(filter.distanceMin)} AND elevation_gain >= ${Math.floor(filter.elevationGainMin)} AND elevation_loss >= ${Math.floor(filter.elevationLossMin)}`
 
     if (filter.distanceMax < filter.distanceLimit) {
         filterText += ` AND distance <= ${Math.ceil(filter.distanceMax)}`
@@ -395,6 +395,10 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
 
     if (filter.elevationGainMax < filter.elevationGainLimit) {
         filterText += ` AND elevation_gain <= ${Math.ceil(filter.elevationGainMax)}`
+    }
+
+    if (filter.elevationLossMax < filter.elevationLossLimit) {
+        filterText += ` AND elevation_loss <= ${Math.ceil(filter.elevationLossMax)}`
     }
 
     filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`

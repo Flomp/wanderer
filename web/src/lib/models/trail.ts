@@ -108,6 +108,9 @@ interface TrailFilter {
     elevationGainMin: number;
     elevationGainMax: number;
     elevationGainLimit: number;
+    elevationLossMin: number;
+    elevationLossMax: number;
+    elevationLossLimit: number;
     startDate?: string;
     endDate?: string;
     completed?: boolean;
@@ -120,6 +123,8 @@ interface TrailFilterValues {
     max_distance: number,
     min_elevation_gain: number,
     max_elevation_gain: number,
+    min_elevation_loss: number,
+    max_elevation_loss: number,
     min_durtation: number,
     max_duration: number,
 }

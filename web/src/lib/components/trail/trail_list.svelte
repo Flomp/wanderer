@@ -31,6 +31,7 @@
         { text: $_("difficulty"), value: "difficulty" },
         { text: $_("distance"), value: "distance" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
+        { text: $_("elevation-loss"), value: "elevation_loss" },
     ];
 
     onMount(() => {

@@ -239,17 +239,36 @@
                 >
             </div>
             <hr class="my-4 border-separator" />
+            <p class="text-sm font-medium pb-4">{$_("elevation-loss")}</p>
+            <DoubleSlider
+                minValue={filter.elevationLossMin}
+                maxValue={filter.elevationLossLimit}
+                bind:currentMin={filter.elevationLossMin}
+                bind:currentMax={filter.elevationLossMax}
+                on:set={() => update()}
+            ></DoubleSlider>
+            <div class="flex justify-between">
+                <span>{formatElevation(filter.elevationLossMin)}</span>
+                <span
+                    >{formatElevation(
+                        filter.elevationLossMax,
+                    )}{filter.elevationLossMax == filter.elevationLossLimit
+                        ? "+"
+                        : ""}</span
+                >
+            </div>
+            <hr class="my-4 border-separator" />
 
             <div class="space-y-2">
                 <Datepicker
                     name="startDate"
-                    label={$_('after')}
+                    label={$_("after")}
                     bind:value={filter.startDate}
                     on:change={update}
                 ></Datepicker>
                 <Datepicker
                     name="endDate"
-                    label={$_('before')}
+                    label={$_("before")}
                     bind:value={filter.endDate}
                     on:change={update}
                 ></Datepicker>

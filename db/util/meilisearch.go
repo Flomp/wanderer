@@ -17,6 +17,7 @@ func documentFromTrailRecord(r *models.Record, includeShares bool) map[string]in
 		"location":       r.GetString("location"),
 		"distance":       r.GetFloat("distance"),
 		"elevation_gain": r.GetFloat("elevation_gain"),
+		"elevation_loss": r.GetFloat("elevation_loss"),
 		"duration":       r.GetFloat("duration"),
 		"difficulty":     r.Get("difficulty"),
 		"category":       r.Get("category"),

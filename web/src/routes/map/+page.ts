@@ -20,6 +20,9 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
         elevationGainMin: 0,
         elevationGainMax: filterValues.max_elevation_gain,
         elevationGainLimit: filterValues.max_elevation_gain,
+        elevationLossMin: 0,
+        elevationLossMax: filterValues.max_elevation_loss,
+        elevationLossLimit: filterValues.max_elevation_gain,
         sort: "created",
         sortOrder: "+",
     };
