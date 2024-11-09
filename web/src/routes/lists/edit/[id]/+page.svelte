@@ -179,7 +179,7 @@
     }
 
     function moveTrail(trail: Trail, index: number, direction: 1 | -1) {
-        (document?.activeElement as HTMLElement).blur()
+        (document?.activeElement as HTMLElement).blur();
 
         if (!$form.trails || !$form.expand || !$form.expand.trails) {
             return;
@@ -301,20 +301,26 @@
                                 trail.difficulty ?? "?",
                             )}</span
                         >
-                        <div class="flex mt-1 gap-4 text-sm text-gray-500">
+                        <div class="grid grid-cols-2 mt-1 gap-x-4 gap-y-2 text-sm text-gray-500">
                             <span
                                 ><i class="fa fa-left-right mr-2"
                                 ></i>{formatDistance(trail.distance)}</span
                             >
                             <span
-                                ><i class="fa fa-up-down mr-2"
+                                ><i class="fa fa-clock mr-2"
+                                ></i>{formatTimeHHMM(trail.duration)}</span
+                            >
+                            <span
+                                ><i class="fa fa-arrow-trend-up mr-2"
                                 ></i>{formatElevation(
                                     trail.elevation_gain,
                                 )}</span
                             >
                             <span
-                                ><i class="fa fa-clock mr-2"
-                                ></i>{formatTimeHHMM(trail.duration)}</span
+                                ><i class="fa fa-arrow-trend-down mr-2"
+                                ></i>{formatElevation(
+                                    trail.elevation_loss,
+                                )}</span
                             >
                         </div>
                     </div>

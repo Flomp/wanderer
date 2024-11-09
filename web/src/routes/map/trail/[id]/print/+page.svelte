@@ -148,7 +148,7 @@
                     doc.setTextColor(107, 114, 128);
                     doc.setFont("fa-solid-900", "normal");
                     doc.text("\uf337", currentWidth, currentHeight);
-                    currentWidth += doc.getTextWidth("\uf337") + 3;
+                    currentWidth += doc.getTextWidth("\uf337") + 2;
                     doc.setFont("IBMPlexSans-Regular", "normal");
                     doc.text(
                         formatDistance($trail.distance),
@@ -158,10 +158,23 @@
                     currentWidth +=
                         doc.getTextWidth(formatDistance($trail.distance)) + 4;
 
+                    // Duration
+                    doc.setFont("fa-solid-900", "normal");
+                    doc.text("\uf017", currentWidth, currentHeight);
+                    currentWidth += doc.getTextWidth("\uf337") + 2;
+                    doc.setFont("IBMPlexSans-Regular", "normal");
+                    doc.text(
+                        formatTimeHHMM($trail.duration),
+                        currentWidth,
+                        currentHeight,
+                    );
+                    currentWidth +=
+                        doc.getTextWidth(formatTimeHHMM($trail.duration)) + 4;
+
                     // Elevation gain
                     doc.setFont("fa-solid-900", "normal");
-                    doc.text("\uf338", currentWidth, currentHeight);
-                    currentWidth += doc.getTextWidth("\uf338") + 3;
+                    doc.text("\ue098", currentWidth, currentHeight);
+                    currentWidth += doc.getTextWidth("\ue098") + 2;
                     doc.setFont("IBMPlexSans-Regular", "normal");
                     doc.text(
                         formatElevation($trail.elevation_gain),
@@ -173,17 +186,17 @@
                             formatDistance($trail.elevation_gain),
                         ) + 4;
 
-                    // Duration
+                    // Elevation loss
                     doc.setFont("fa-solid-900", "normal");
-                    doc.text("\uf017", currentWidth, currentHeight);
-                    currentWidth += doc.getTextWidth("\uf337") + 3;
+                    doc.text("\ue097", currentWidth, currentHeight);
+                    currentWidth += doc.getTextWidth("\ue098") + 2;
                     doc.setFont("IBMPlexSans-Regular", "normal");
                     doc.text(
-                        formatTimeHHMM($trail.duration),
+                        formatElevation($trail.elevation_loss),
                         currentWidth,
                         currentHeight,
                     );
-
+                 
                     // Ruler
                     currentHeight += 6;
                     currentWidth = 8 + 24 + 4;
@@ -531,21 +544,27 @@
                     />
                     <div class="basis-full mx-4">
                         <div
-                            class="flex mt-1 gap-4 text-sm text-gray-500 whitespace-nowrap"
+                            class="flex mt-1 gap-x-4 gap-y-2 text-sm text-gray-500 whitespace-nowrap"
                         >
                             <span
                                 ><i class="fa fa-left-right mr-2"
                                 ></i>{formatDistance($trail.distance)}</span
                             >
                             <span
-                                ><i class="fa fa-up-down mr-2"
+                                ><i class="fa fa-clock mr-2"
+                                ></i>{formatTimeHHMM($trail.duration)}</span
+                            >
+                            <span
+                                ><i class="fa fa-arrow-trend-up mr-2"
                                 ></i>{formatElevation(
                                     $trail.elevation_gain,
                                 )}</span
                             >
                             <span
-                                ><i class="fa fa-clock mr-2"
-                                ></i>{formatTimeHHMM($trail.duration)}</span
+                                ><i class="fa fa-arrow-trend-down mr-2"
+                                ></i>{formatElevation(
+                                    $trail.elevation_loss,
+                                )}</span
                             >
                         </div>
                         <svg

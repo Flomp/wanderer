@@ -21,13 +21,17 @@
         0,
     );
 
+    $: cumulativeElevationLoss = list.expand?.trails?.reduce(
+        (s, b) => s + b.elevation_loss!,
+        0,
+    );
+
     $: cumulativeDuration = list.expand?.trails?.reduce(
         (s, b) => s + b.duration!,
         0,
     );
 
     $: listIsShared = (list.expand?.list_share_via_list?.length ?? 0) > 0;
-
 </script>
 
 <div
@@ -58,20 +62,27 @@
                 <ShareInfo type="list" subject={list}></ShareInfo>
             {/if}
         </div>
-        <div class="flex mt-1 gap-x-4 text-sm text-gray-500 whitespace-nowrap flex-wrap">
+        <div
+            class="grid grid-cols-2 mt-1 mb-2 gap-x-4 gap-y-1 text-sm text-gray-500 whitespace-nowrap flex-wrap"
+        >
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
                     cumulativeDistance,
                 )}</span
             >
             <span
-                ><i class="fa fa-up-down mr-2"></i>{formatElevation(
+                ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
+                    cumulativeDuration,
+                )}</span
+            >
+            <span
+                ><i class="fa fa-arrow-trend-up mr-2"></i>{formatElevation(
                     cumulativeElevationGain,
                 )}</span
             >
             <span
-                ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                    cumulativeDuration,
+                ><i class="fa fa-arrow-trend-down mr-2"></i>{formatElevation(
+                    cumulativeElevationLoss,
                 )}</span
             >
         </div>
