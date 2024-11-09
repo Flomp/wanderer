@@ -114,7 +114,7 @@
 
 	function colorKey(i: number) {
 		return $_(
-			currentMonthArray[i]?.log?.expand.trails_via_summit_logs?.at(0)
+			currentMonthArray[i]?.log?.expand?.trails_via_summit_logs?.at(0)
 				?.expand?.category?.name ?? "",
 		);
 	}

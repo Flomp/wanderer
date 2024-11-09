@@ -80,11 +80,11 @@
             type="button"
             on:click={openMap}
             class="h-20 aspect-square shrink-0 rounded-xl !bg-background hover:!bg-secondary-hover transition-colors"
-            class:hidden={!log.expand.gpx_data}
+            class:hidden={!log.expand?.gpx_data}
             id="mini-map-{index}"
         ></button>
     </td>
-    <td class:py-4={!log.expand.gpx_data}
+    <td class:py-4={!log.expand?.gpx_data}
         >{new Date(log.date).toLocaleDateString(undefined, {
             month: "2-digit",
             day: "2-digit",
@@ -108,7 +108,7 @@
     {#if showCategory}
         <td>
             {$_(
-                log.expand.trails_via_summit_logs?.at(0)?.expand.category
+                log.expand?.trails_via_summit_logs?.at(0)?.expand?.category
                     ?.name ?? "-",
             )}
         </td>
@@ -117,7 +117,7 @@
         <td>
             <a
                 class="btn-icon aspect-square"
-                href="/trail/view/{log.expand.trails_via_summit_logs?.at(0)
+                href="/trail/view/{log.expand?.trails_via_summit_logs?.at(0)
                     ?.id ?? ''}"
                 ><i class="fa fa-arrow-up-right-from-square px-[3px]"></i></a
             >

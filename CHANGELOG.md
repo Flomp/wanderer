@@ -1,4 +1,14 @@
-
+# v0.10.1
+## Features
+- Adds elevation loss to trails. Please note that trails created before this version will have a default elevation loss of 0. Edit & save to update.
+  
+## Bug fixes
+- Fixes bug that caused auto-added summit logs to not have distance, durtaion etc.
+- Fixes error in the auto-upload feature
+- Fixes access permissions for profile page
+- A summit log is now also created automatically when you upload a trail directly
+- Fixes link to the API documentation in footer
+  
 # v0.10.0
 ## Features
 - A new summit log entry is now added automatically when uploading a new GPX file for a new or existing trail

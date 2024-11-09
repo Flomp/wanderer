@@ -64,13 +64,18 @@
                 )}</span
             >
             <span
-                ><i class="fa fa-up-down mr-2"></i>{formatElevation(
+                ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
+                    trail.duration,
+                )}</span
+            >
+            <span
+                ><i class="fa fa-arrow-trend-up mr-2"></i>{formatElevation(
                     trail.elevation_gain,
                 )}</span
             >
             <span
-                ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                    trail.duration,
+                ><i class="fa fa-arrow-trend-down mr-2"></i>{formatElevation(
+                    trail.elevation_loss,
                 )}</span
             >
         </div>

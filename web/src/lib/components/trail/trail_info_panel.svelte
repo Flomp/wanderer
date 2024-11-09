@@ -246,12 +246,18 @@
         </section>
         {#if mode == "overview"}
             <section
-                class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 justify-around py-8 border-b border-input-border"
+                class="grid grid-cols-2 sm:grid-cols-5 gap-y-4 justify-around py-8 border-b border-input-border"
             >
                 <div class="flex flex-col items-center">
                     <span>{$_("distance")}</span>
                     <span class="font-semibold text-lg"
                         >{formatDistance(trail.distance)}</span
+                    >
+                </div>
+                <div class="flex flex-col items-center">
+                    <span>{$_("est-duration")}</span>
+                    <span class="font-semibold text-lg"
+                        >{formatTimeHHMM(trail.duration)}</span
                     >
                 </div>
                 <div class="flex flex-col items-center">
@@ -261,9 +267,9 @@
                     >
                 </div>
                 <div class="flex flex-col items-center">
-                    <span>{$_("est-duration")}</span>
+                    <span>{$_("elevation-loss")}</span>
                     <span class="font-semibold text-lg"
-                        >{formatTimeHHMM(trail.duration)}</span
+                        >{formatElevation(trail.elevation_loss)}</span
                     >
                 </div>
                 {#if trail.expand.category}

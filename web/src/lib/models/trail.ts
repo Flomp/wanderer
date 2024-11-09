@@ -12,6 +12,7 @@ class Trail {
     public: boolean;
     distance?: number;
     elevation_gain?: number;
+    elevation_loss?: number;
     duration?: number;
     difficulty?: "easy" | "moderate" | "difficult"
     lat?: number;
@@ -43,6 +44,7 @@ class Trail {
             public?: boolean,
             distance?: number,
             elevation_gain?: number,
+            elevation_loss?: number,
             duration?: number,
             difficulty?: "easy" | "moderate" | "difficult",
             lat?: number,
@@ -68,6 +70,7 @@ class Trail {
         this.public = params?.public ?? false
         this.distance = params?.distance;
         this.elevation_gain = params?.elevation_gain;
+        this.elevation_loss = params?.elevation_loss;
         this.duration = params?.duration;
         this.difficulty = params?.difficulty ?? "easy";
         this.lat = params?.lat;

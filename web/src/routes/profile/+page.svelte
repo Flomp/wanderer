@@ -91,7 +91,7 @@
     $: logCategories = $summitLogs.reduce(
         (acc, log) => {
             const cat =
-                log.expand.trails_via_summit_logs?.at(0)?.expand.category
+                log.expand?.trails_via_summit_logs?.at(0)?.expand?.category
                     ?.name ?? "unknown";
             acc[$_(cat)] = (acc[$_(cat)] || 0) + 1;
             return acc;
