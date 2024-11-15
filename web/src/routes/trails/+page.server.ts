@@ -10,6 +10,9 @@ export const load: ServerLoad = async ({ params, locals, url, fetch }) => {
         q: "",
         category: [],
         difficulty: ["easy", "moderate", "difficult"],
+        author: "",
+        public: true,
+        shared: true,
         near: {
             radius: 2000,
         },

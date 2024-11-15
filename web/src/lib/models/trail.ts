@@ -2,6 +2,7 @@ import type { Category } from "./category";
 import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
 import type { TrailShare } from "./trail_share";
+import type { UserAnonymous } from "./user";
 import type { Waypoint } from "./waypoint";
 
 class Trail {
@@ -28,6 +29,7 @@ class Trail {
         category?: Category;
         waypoints: Waypoint[]
         summit_logs: SummitLog[]
+        author?: UserAnonymous
         comments_via_trail: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]
@@ -97,6 +99,9 @@ interface TrailFilter {
     q: string,
     category: string[],
     difficulty: ("easy" | "moderate" | "difficult")[]
+    author?: string;
+    public?: boolean;
+    shared?: boolean;
     near: {
         lat?: number,
         lon?: number,
@@ -138,4 +143,4 @@ interface TrailBoundingBox {
 
 export { Trail };
 
-export type { TrailFilter, TrailFilterValues, TrailBoundingBox };
+    export type { TrailBoundingBox, TrailFilter, TrailFilterValues };

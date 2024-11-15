@@ -21,8 +21,18 @@ export async function GET(event: RequestEvent) {
                 .getList<Trail>(parseInt(page), parseInt(perPage), { expand: expand ?? "", sort: sort ?? "", filter: filter ?? "" })
         }
 
+        for (const t of r.items) {
+            if (!t.author || !pb.authStore.model) {
+                continue;
+            }
+            if(!t.expand) {
+                t.expand = {} as any
+            }
+            t.expand.author = await pb.collection("users_anonymous").getOne(t.author);
+        }
         return json(r)
     } catch (e: any) {
+        console.error(e)
         throw error(e.status, e);
     }
 }

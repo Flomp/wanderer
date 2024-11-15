@@ -20,9 +20,9 @@ export async function users_create(user: User) {
     return createdUser;
 }
 
-export async function users_search(q: string) {
+export async function users_search(q: string, includeSelf: boolean = true) {
     let r = await fetch('/api/v1/user/anonymous?' + new URLSearchParams({
-        "filter": `username~"${q}"&&id!="${pb.authStore.model?.id}"`,
+        "filter": `username~"${q}"${includeSelf ? '' : '&&id!="${pb.authStore.model?.id}"'}`,
     }), {
         method: 'GET',
     })

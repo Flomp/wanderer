@@ -6,19 +6,27 @@
     import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
+    import Datepicker from "../base/datepicker.svelte";
     import DoubleSlider from "../base/double_slider.svelte";
+    import MultiSelect from "../base/multi_select.svelte";
     import type { RadioItem } from "../base/radio_group.svelte";
     import RadioGroup from "../base/radio_group.svelte";
     import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Slider from "../base/slider.svelte";
-    import Datepicker from "../base/datepicker.svelte";
+    import UserSearch from "../user_search.svelte";
+    import { pb } from "$lib/pocketbase";
 
     export let categories: Category[];
     export let filterExpanded: boolean = true;
     export let filter: TrailFilter;
     export let showTrailSearch: boolean = true;
     export let showCitySearch: boolean = true;
+
+    $: categorySelectItems = categories.map((c) => ({
+        value: c.id,
+        text: c.name,
+    }));
 
     const dispatch = createEventDispatcher();
 
@@ -42,31 +50,29 @@
         dispatch("update", filter);
     }
 
-    function setCategoryFilter(category: Category) {
-        const categoryIndex = filter.category.findIndex(
-            (c) => c == category.id,
-        );
-        if (categoryIndex !== -1) {
-            filter.category.splice(categoryIndex, 1);
-        } else {
-            filter.category.push(category.id);
-        }
+    function setCategoryFilter(categories: SelectItem[]) {
+        filter.category = categories.map((c) => c.value);
 
         update();
     }
 
-    function setDifficultyFilter(
-        difficulty: "easy" | "moderate" | "difficult",
-    ) {
-        const difficultyIndex = filter.difficulty.findIndex(
-            (d) => d == difficulty,
-        );
-        if (difficultyIndex !== -1) {
-            filter.difficulty.splice(difficultyIndex, 1);
-        } else {
-            filter.difficulty.push(difficulty);
-        }
+    function setAuthorFilter(item: SearchItem) {
+        filter.author = item.value.id;
+        update();
+    }
 
+    function setDifficultyFilter(difficulties: SelectItem[]) {
+        filter.difficulty = difficulties.map((d) => d.value);
+        update();
+    }
+
+    function setPublicFilter(e: Event) {
+        filter.public = (e.target as HTMLInputElement).checked;
+        update();
+    }
+
+    function setSharedFilter(e: Event) {
+        filter.shared = (e.target as HTMLInputElement).checked;
         update();
     }
 
@@ -145,47 +151,63 @@
             {#if showTrailSearch}
                 <hr class="my-4 border-separator" />
             {/if}
-            <p class="text-sm font-medium pb-4">{$_("category")}</p>
-            {#each categories as category, i}
-                <div class="flex items-center mb-4">
-                    <input
-                        id="{category.name}-checkbox"
-                        type="checkbox"
-                        checked={filter.category.includes(category.id)}
-                        value={category.id}
-                        class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-                        on:change={() => setCategoryFilter(category)}
-                    />
-                    <label for="{category.name}-checkbox" class="ms-2 text-sm"
-                        >{$_(category.name)}</label
-                    >
-                </div>
-            {/each}
+            <MultiSelect
+                on:change={(e) => setCategoryFilter(e.detail)}
+                label={$_("categories")}
+                items={categorySelectItems}
+                placeholder={`${$_("filter-categories")}...`}
+            ></MultiSelect>
             <hr class="my-4 border-separator" />
-            <p class="text-sm font-medium pb-4">{$_("difficulty")}</p>
-            {#each difficultyItems as difficulty, i}
-                <div class="flex items-center mb-4">
+            {#if pb.authStore.model}
+                <UserSearch
+                    on:click={(e) => setAuthorFilter(e.detail)}
+                    on:clear={() => {
+                        filter.author = "";
+                        update();
+                    }}
+                    clearAfterSelect={false}
+                    label={$_("author")}
+                ></UserSearch>
+                <div class="flex items-center my-4">
                     <input
-                        id="{difficulty.value}-checkbox"
+                        id="public-checkbox"
                         type="checkbox"
-                        checked={filter.difficulty.includes(difficulty.value)}
-                        value={difficulty.value}
+                        checked={filter.public}
                         class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-                        on:change={() => setDifficultyFilter(difficulty.value)}
+                        on:change={setPublicFilter}
                     />
-                    <label
-                        for="{difficulty.value}-checkbox"
-                        class="ms-2 text-sm">{difficulty.text}</label
+                    <label for="public-checkbox" class="ms-2 text-sm"
+                        >{$_("public")}</label
                     >
                 </div>
-            {/each}
+                <div class="flex items-center my-4">
+                    <input
+                        id="shared-checkbox"
+                        type="checkbox"
+                        checked={filter.shared}
+                        class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                        on:change={setSharedFilter}
+                    />
+                    <label for="shared-checkbox" class="ms-2 text-sm"
+                        >{$_("shared")}</label
+                    >
+                </div>
+                <hr class="my-4 border-separator" />
+            {/if}
+            <MultiSelect
+                on:change={(e) => setDifficultyFilter(e.detail)}
+                label={$_("difficulty")}
+                items={difficultyItems}
+                placeholder={`${$_("filter-difficulty")}...`}
+            ></MultiSelect>
             <hr class="my-4 border-separator" />
             {#if showCitySearch}
-                <p class="text-sm font-medium pb-4">{$_("near")}</p>
                 <div class="mb-8">
                     <Search
                         items={searchDropdownItems}
+                        label={$_("near")}
                         placeholder="{$_('search-cities')}..."
+                        clearAfterSelect={false}
                         bind:value={citySearchQuery}
                         on:update={(e) => searchCities(e.detail)}
                         on:click={(e) => handleSearchClick(e.detail)}

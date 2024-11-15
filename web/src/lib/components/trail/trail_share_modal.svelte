@@ -19,6 +19,7 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
+    import UserSearch from "../user_search.svelte";
 
     let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
@@ -35,32 +36,12 @@
 
     let copyButtonText = $_("copy-link");
 
-    let searchItems: SearchItem[] = [];
-
     let sharesLoading: boolean = false;
 
     const permissionSelectItems: SelectItem[] = [
         { text: $_("view"), value: "view" },
         { text: $_("edit"), value: "edit" },
     ];
-
-    async function updateUsers(q: string) {
-        try {
-            const users: User[] = await users_search(q);
-            searchItems = users.map((u) => ({
-                text: u.username!,
-                value: u,
-                icon: "user",
-            }));
-        } catch (e) {
-            console.error(e);
-            show_toast({
-                type: "error",
-                icon: "close",
-                text: "Error during search",
-            });
-        }
-    }
 
     function copyURLToClipboard() {
         navigator.clipboard.writeText(window.location.href);
@@ -70,7 +51,6 @@
     }
 
     function close() {
-        searchItems = [];
         dispatch("save");
         closeModal!();
     }
@@ -81,7 +61,10 @@
         fetchShares();
     }
 
-    async function updateSharePermission(share:TrailShare, permission: "view"| "edit" ) {
+    async function updateSharePermission(
+        share: TrailShare,
+        permission: "view" | "edit",
+    ) {
         share.permission = permission;
         await trail_share_update(share);
     }
@@ -93,39 +76,26 @@
 
     async function fetchShares() {
         sharesLoading = true;
-        await trail_share_index({trail: trail.id!});
+        await trail_share_index({ trail: trail.id! });
         sharesLoading = false;
     }
 </script>
 
 <Modal
     id="share-modal"
-    title={$_('share-this-trail')}
+    title={$_("share-this-trail")}
     size="max-w-sm overflow-visible"
     bind:openModal
     bind:closeModal
 >
     <div slot="content">
-        <Search
-            on:update={(e) => updateUsers(e.detail)}
-            on:click={(e) => shareTrail(e.detail)}
-            placeholder={`${$_("username")}`}
-            items={searchItems}
-        >
-            <img
-                slot="item-header"
-                let:item
-                class="rounded-full w-8 aspect-square mr-2"
-                src={getFileURL(item.value, item.value.avatar) ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}
-                alt="avatar"
-            />
-        </Search>
-        <h4 class="font-semibold mt-4">{$_('shared-with')}</h4>
+        <UserSearch includeSelf={false} on:click={(e) => shareTrail(e.detail)}
+        ></UserSearch>
+        <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
         {#if $shares.length == 0}
             <p class="text-gray-500 text-center mt-2 text-sm">
-                {$_('trail-not-shared')}
+                {$_("trail-not-shared")}
             </p>
         {:else}
             {#each $shares as share}
@@ -141,17 +111,22 @@
                             alt="avatar"
                         />
                         <p>{share.expand.user.username}</p>
-                        <span class="basis-full text-sm text-center text-gray-500">{$_('can')}</span>
+                        <span
+                            class="basis-full text-sm text-center text-gray-500"
+                            >{$_("can")}</span
+                        >
                         <div class="shrink-0">
                             <Select
                                 bind:value={share.permission}
                                 items={permissionSelectItems}
-                                on:change={(e) => updateSharePermission(share, e.detail)}
+                                on:change={(e) =>
+                                    updateSharePermission(share, e.detail)}
                             ></Select>
                         </div>
 
-                        <button class="btn-icon text-red-500"
-                        on:click={() => deleteShare(share)}
+                        <button
+                            class="btn-icon text-red-500"
+                            on:click={() => deleteShare(share)}
                             ><i class="fa fa-trash"></i></button
                         >
                     </div>

@@ -39,7 +39,7 @@
         </label>
     {/if}
     <button
-        class="min-w-44 flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
+        class="min-w-44 w-full flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
         on:click={() => (showDropdown = !showDropdown)}
     >
         {#if value.length === 0}

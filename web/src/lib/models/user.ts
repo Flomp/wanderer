@@ -9,3 +9,9 @@ export type User = {
     language?: string;
     created?: string;
 }
+
+export type UserAnonymous = {
+    id: string,
+    username?: string,
+    avatar?: string;
+}

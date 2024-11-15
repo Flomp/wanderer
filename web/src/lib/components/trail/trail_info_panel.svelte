@@ -38,6 +38,7 @@
     import PhotoGallery from "../photo_gallery.svelte";
     import ShareInfo from "../share_info.svelte";
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
+    import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
@@ -184,14 +185,14 @@
             <div
                 class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
             ></div>
-            {#if trail.public || trailIsShared}
+            {#if (trail.public || trailIsShared) && pb.authStore.model}
                 <div
                     class="flex absolute top-8 right-6 {trail.public &&
                     trailIsShared
                         ? 'w-16'
                         : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
                 >
-                    {#if trail.public}
+                    {#if trail.public && pb.authStore.model}
                         <span
                             class="tooltip text-2xl"
                             class:mr-3={trail.public && trailIsShared}
@@ -225,6 +226,21 @@
                                 },
                             )}
                         </h5>
+                    {/if}
+                    {#if trail.expand.author}
+                        <p class="my-3">
+                            {$_("by")}
+                            <img
+                                class="rounded-full w-8 aspect-square mx-1 inline"
+                                src={getFileURL(
+                                    trail.expand.author,
+                                    trail.expand.author.avatar,
+                                ) ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                                alt="avatar"
+                            />
+                            {trail.expand.author.username}
+                        </p>
                     {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
                         {#if trail.location}

@@ -5,11 +5,11 @@
     import { TrailShare } from "$lib/models/trail_share";
     import type { User } from "$lib/models/user";
     import {
-    list_share_create,
+        list_share_create,
         list_share_delete,
         list_share_index,
         list_share_update,
-        shares
+        shares,
     } from "$lib/stores/list_share_store";
     import { lists } from "$lib/stores/list_store";
     import { show_toast } from "$lib/stores/toast_store";
@@ -26,6 +26,7 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
+    import UserSearch from "../user_search.svelte";
 
     let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
@@ -43,8 +44,6 @@
 
     let copyButtonText = $_("copy-link");
 
-    let searchItems: SearchItem[] = [];
-
     let sharesLoading: boolean = false;
 
     const permissionSelectItems: SelectItem[] = [
@@ -52,33 +51,16 @@
         { text: $_("edit"), value: "edit" },
     ];
 
-    async function updateUsers(q: string) {
-        try {
-            const users: User[] = await users_search(q);
-            searchItems = users.map((u) => ({
-                text: u.username!,
-                value: u,
-                icon: "user",
-            }));
-        } catch (e) {
-            console.error(e);
-            show_toast({
-                type: "error",
-                icon: "close",
-                text: "Error during search",
-            });
-        }
-    }
-
     function copyURLToClipboard() {
-        navigator.clipboard.writeText(window.location.href.split('?')[0] + '?list=' + list.id);
+        navigator.clipboard.writeText(
+            window.location.href.split("?")[0] + "?list=" + list.id,
+        );
 
         copyButtonText = $_("link-copied");
         setTimeout(() => (copyButtonText = $_("copy-link")), 3000);
     }
 
     function close() {
-        searchItems = [];
         dispatch("save");
         closeModal!();
     }
@@ -134,7 +116,7 @@
             trails: list.expand?.trails ?? [],
             list_share_via_list: fetchedShares,
         };
-        lists.set($lists)
+        lists.set($lists);
         sharesLoading = false;
     }
 </script>
@@ -150,21 +132,7 @@
         <p class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500">
             {$_("list-share-warning")}
         </p>
-        <Search
-            on:update={(e) => updateUsers(e.detail)}
-            on:click={(e) => shareList(e.detail)}
-            placeholder={`${$_("username")}`}
-            items={searchItems}
-        >
-            <img
-                slot="item-header"
-                let:item
-                class="rounded-full w-8 aspect-square mr-2"
-                src={getFileURL(item.value, item.value.avatar) ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}
-                alt="avatar"
-            />
-        </Search>
+        <UserSearch includeSelf={false} on:click={(e) => shareList(e.detail)}></UserSearch>
         <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
         {#if $shares.length == 0}

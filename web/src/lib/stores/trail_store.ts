@@ -401,7 +401,35 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
         filterText += ` AND elevation_loss <= ${Math.ceil(filter.elevationLossMax)}`
     }
 
-    filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
+    if (filter.difficulty.length > 0) {
+        filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
+    }
+
+    if (filter.author?.length) {
+        filterText += ` AND author = ${filter.author}`
+    }
+
+    if (filter.public !== undefined || filter.shared !== undefined) {
+        filterText += " AND ("
+        if (filter.public !== undefined) {
+            filterText += `(public = ${filter.public}`
+
+            if (!filter.author?.length || filter.author == pb.authStore.model?.id) {
+                filterText += ` OR author = ${pb.authStore.model?.id}`
+            }
+            filterText += ")"
+        }
+
+        if (filter.shared !== undefined) {
+            if (filter.shared === true) {
+                filterText += ` OR shares = ${pb.authStore.model?.id}`
+            } else {
+                filterText += ` AND NOT shares = ${pb.authStore.model?.id}`
+
+            }
+        }
+        filterText += ")"
+    }
 
     if (filter.startDate) {
         filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`

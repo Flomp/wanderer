@@ -18,6 +18,8 @@
     export let placeholder: string = "Search...";
     export let large: boolean = false;
     export let extraClasses: string = "";
+    export let label: string = "";
+    export let clearAfterSelect: boolean = true;
 
     const dispatch = createEventDispatcher();
 
@@ -46,23 +48,32 @@
     function handleItemClick(item: SearchItem) {
         searching = false;
         dispatch("click", item);
-        clear();
+        if (clearAfterSelect) {
+            clear();
+        }
     }
 
     function clear() {
         value = "";
+        items = [];
         update(value);
     }
 </script>
 
 <div class="relative {extraClasses}">
-    <span class="absolute top-1/2 -translate-y-1/2 left-0 pl-4">
+    <span
+        class="absolute {large
+            ? 'bottom-[31px]'
+            : 'bottom-[25px]'} translate-y-1/2 left-0 pl-4"
+    >
         <i class="fa fa-search" class:text-xl={large}></i>
     </span>
     {#if value.length > 0}
         <button
             type="button"
-            class="btn-icon absolute top-1/2 -translate-y-1/2 right-0 mr-2"
+            class="btn-icon absolute {large
+                ? 'bottom-[31px]'
+                : 'bottom-[25px]'} translate-y-1/2 right-0 mr-2"
             on:click={clear}
             in:fade={{ duration: 150 }}
             out:fade={{ duration: 150 }}
@@ -74,6 +85,7 @@
         type="search"
         name="q"
         autocomplete="off"
+        {label}
         extraClasses={large
             ? "px-12 py-4 text-xl min-w-80 w-[33vw] max-w-[532px] rounded-xl"
             : "px-10"}

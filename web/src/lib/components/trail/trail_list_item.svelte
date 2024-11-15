@@ -8,6 +8,7 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
+    import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
 
@@ -29,7 +30,7 @@
             <h4 class="font-semibold text-lg">
                 {trail.name}
             </h4>
-            {#if trail.public}
+            {#if trail.public && pb.authStore.model}
                 <span class="tooltip ml-3" data-title={$_("public")}>
                     <i class="fa fa-globe"></i>
                 </span>
@@ -46,6 +47,21 @@
                     year: "numeric",
                     timeZone: "UTC",
                 })}
+            </p>
+        {/if}
+        {#if trail.expand.author}
+            <p class="text-xs text-gray-500 mb-3">
+                {$_("by")}
+                <img
+                    class="rounded-full w-5 aspect-square mx-1 inline"
+                    src={getFileURL(
+                        trail.expand.author,
+                        trail.expand.author.avatar,
+                    ) ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                    alt="avatar"
+                />
+                {trail.expand.author.username}
             </p>
         {/if}
         <div class="flex flex-wrap gap-x-8">
