@@ -2,6 +2,8 @@
     import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import { onMount } from "svelte";
     import PhotoCard from "../photo_card.svelte";
+    import { show_toast } from "$lib/stores/toast_store";
+    import { _ } from "svelte-i18n";
 
     export let id: string;
     export let photos: string[];
@@ -10,6 +12,7 @@
     export let thumbnail: number = 0;
     export let showThumbnailControls: boolean = true;
     export let showExifControls: boolean = false;
+    export let maxSizeBytes = 5242880;
 
     let photoPreviews: string[] = [];
 
@@ -55,11 +58,21 @@
         }
 
         for (const file of files) {
+            if (file.size > maxSizeBytes) {
+                show_toast({
+                    type: "error",
+                    text: $_("file-too-big", {
+                        values: { file: file.name, size: "5 MB" },
+                    }),
+                    icon: "close",
+                });
+                continue;
+            }
             let photoFile = file;
             if (!file.type.startsWith("image")) {
                 continue;
             } else if (file.type === "image/heic") {
-                const heic2any = (await import("heic2any")).default
+                const heic2any = (await import("heic2any")).default;
                 photoFile = new File(
                     [
                         (await heic2any({

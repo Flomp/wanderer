@@ -276,7 +276,7 @@
                     <div class="flex flex-col items-center">
                         <span>{$_("category")}</span>
                         <span class="font-semibold text-lg"
-                            >{trail.expand.category.name}</span
+                            >{$_(trail.expand.category.name)}</span
                         >
                     </div>
                 {/if}

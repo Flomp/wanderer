@@ -296,8 +296,11 @@
                 elevation_loss: $form.elevation_loss,
                 duration: $form.duration ? $form.duration * 60 : undefined,
             });
+            console.log(selectedFile.type);
+            
             log.expand.gpx_data = gpxData;
-            log._gpx = selectedFile;
+            const blob = new Blob([gpxData], { type: selectedFile.type });
+            log._gpx = new File([blob], selectedFile.name, { type: selectedFile.type });
 
             $form.expand.summit_logs.push(log);
 

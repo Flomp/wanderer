@@ -91,6 +91,7 @@
   "export-all-trails": "Export all trails",
   "features": "Features",
   "file-format": "File format",
+  "file-too-big": "File {file} is too big (max. {size})",
   "filter-categories": "Filter categories",
   "focus-map-on": "Focus map on",
   "french": "French",
