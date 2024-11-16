@@ -4,15 +4,17 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
 -->
 
 <script lang="ts">
-  import { Group } from "three";
+  import { theme } from "$lib/stores/theme_store";
   import { T, forwardEventHandlers } from "@threlte/core";
   import { useGltf } from "@threlte/extras";
-  import { tweened } from "svelte/motion";
-  import { theme } from "$lib/stores/theme_store";
   import { backInOut } from "svelte/easing";
+  import { tweened } from "svelte/motion";
+  import { Group, Mesh, SpotLight } from "three";
 
   export const ref = new Group();
   export let rotation: number = 0;
+
+  let bridge: Mesh;
 
   const gltf = useGltf("/models/mountain.glb");
 
@@ -30,25 +32,25 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
   });
   $: moonZPosition.set($theme == "dark" ? 14 : -20);
 
-  const campfireLightIntensitiy = tweened($theme == "dark" ? 2 : 0, {
+  const campfireLightIntensity = tweened($theme == "dark" ? 2 : 0, {
     duration: 500,
   });
-  $: campfireLightIntensitiy.set($theme == "dark" ? 2 : 0);
+  $: campfireLightIntensity.set($theme == "dark" ? 2 : 0);
 
-  const cabinLightIntensitiy = tweened($theme == "dark" ? 4 : 0, {
+  const cabinLightIntensity = tweened($theme == "dark" ? 4 : 0, {
     duration: 400,
   });
-  $: cabinLightIntensitiy.set($theme == "dark" ? 4 : 0);
+  $: cabinLightIntensity.set($theme == "dark" ? 4 : 0);
 
-  const sunLightIntensitiy = tweened($theme == "light" ? 2 : 0, {
+  const sunLightIntensity = tweened($theme == "light" ? 4 : 0, {
     duration: 500,
   });
-  $: sunLightIntensitiy.set($theme == "light" ? 2 : 0);
+  $: sunLightIntensity.set($theme == "light" ? 4 : 0);
 
-  const moonLightIntensitiy = tweened($theme == "dark" ? 0.8 : 0, {
+  const moonLightIntensity = tweened($theme == "dark" ? 0.8 : 0, {
     duration: 500,
   });
-  $: moonLightIntensitiy.set($theme == "dark" ? 0.8 : 0);
+  $: moonLightIntensity.set($theme == "dark" ? 0.8 : 0);
 </script>
 
 <T is={ref} dispose={false} {...$$restProps} bind:this={$component}>
@@ -77,7 +79,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       <T.Group
         position={[0.2, 1.3, 13.73]}
         rotation={[Math.PI, -1.43, Math.PI]}
-        scale={78.24}
+        scale={90.24}
       >
         <T.Mesh
           geometry={gltf.nodes.Sign6001_1.geometry}
@@ -109,7 +111,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
     <T.PointLight
       position={[14.37, 3.8, 4.11]}
       color="#C98A76"
-      intensity={$campfireLightIntensitiy}
+      intensity={$campfireLightIntensity}
     ></T.PointLight>
     <T.Mesh
       geometry={gltf.nodes.campfire.geometry}
@@ -123,12 +125,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       position={[13.84, 2.64, 8.83]}
       scale={0.42}
     />
-    <T.DirectionalLight
-      position={[-10, 20, -10]}
-      color="#a2cbf5"
-      intensity={$moonLightIntensitiy}
-      castShadow
-    ></T.DirectionalLight>
+
     <T.Mesh
       geometry={gltf.nodes.Moon.geometry}
       material={gltf.materials.DD9944}
@@ -136,14 +133,14 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       rotation={[0, -0.81, 0]}
       scale={0.53}
       ><T.PointLight position={[0.5, 5, 0.5]} color="#a2cbf5" intensity={4}
-      ></T.PointLight></T.Mesh
+      ></T.PointLight>
+      <T.DirectionalLight
+        position={[20, 20, 40]}
+        color="#a2cbf5"
+        intensity={$moonLightIntensity}
+        castShadow
+      ></T.DirectionalLight></T.Mesh
     >
-    <T.DirectionalLight
-      position={[-10, 20, -10]}
-      color="#ffffff"
-      intensity={$sunLightIntensitiy}
-      castShadow
-    ></T.DirectionalLight>
     <T.Group
       position={[-5.61, $sunZPosition, -26.34]}
       rotation={[0, 0.75, 0]}
@@ -157,10 +154,36 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
         geometry={gltf.nodes.GeoSphere003_1_1.geometry}
         material={gltf.materials._Sol01___Default}
       >
-        <T.PointLight position={[0, 45, 60]} color="#ffffff" intensity={20}
-        ></T.PointLight></T.Mesh
+        <T.PointLight position={[0, 20, 45]} color="#ffffff" intensity={20}
+        ></T.PointLight>
+        <T.PointLight position={[-50, 40, 40]} color="#ffffff" intensity={20}
+        ></T.PointLight>
+        <T.PointLight position={[0, 60, 50]} color="#ffffff" intensity={20}
+        ></T.PointLight>
+        <T.PointLight position={[50, 40, 40]} color="#ffffff" intensity={20}
+        ></T.PointLight>
+        <T.DirectionalLight
+          position={[20, 40, 20]}
+          color="#FCF9D9"
+          intensity={$sunLightIntensity}
+          castShadow
+        /></T.Mesh
       >
     </T.Group>
+    <T.SpotLight
+      position={[-4.58, 4.85, 13.62]}
+      angle={Math.PI / 5}
+      color="#ffffff"
+      intensity={$campfireLightIntensity * 1.5}
+      target={bridge}
+    ></T.SpotLight>
+    <T.Mesh
+      geometry={gltf.nodes.Hiker.geometry}
+      material={gltf.materials["Material.004"]}
+      position={[-4.58, 4.6, 13.62]}
+      rotation={[-1.53, -0.02, 2.52]}
+      scale={52.08}
+    />
     <T.Mesh
       geometry={gltf.nodes.ground.geometry}
       material={gltf.materials["Color texture"]}
@@ -169,6 +192,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       geometry={gltf.nodes.bridge.geometry}
       material={gltf.materials["Color texture"]}
       position={[0.06, 5.76, 6.04]}
+      bind:ref={bridge}
     />
     <T.Mesh
       geometry={gltf.nodes.water.geometry}
@@ -712,8 +736,8 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
     />
     <T.PointLight
       position={[-8.6, 9.3, -1]}
-      color="#FCF9D9 "
-      intensity={$cabinLightIntensitiy}
+      color="#FCF9D9"
+      intensity={$cabinLightIntensity}
     ></T.PointLight>
     <T.Mesh
       geometry={gltf.nodes.Cabin.geometry}
@@ -748,12 +772,12 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
         <T.PointLight
           position={[-1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensitiy}
+          intensity={$campfireLightIntensity}
         ></T.PointLight>
         <T.PointLight
           position={[1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensitiy}
+          intensity={$campfireLightIntensity}
         ></T.PointLight></T.Mesh
       >
     </T.Group>
@@ -772,12 +796,12 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
         <T.PointLight
           position={[-1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensitiy}
+          intensity={$campfireLightIntensity}
         ></T.PointLight>
         <T.PointLight
           position={[1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensitiy}
+          intensity={$campfireLightIntensity}
         ></T.PointLight></T.Mesh
       >
     </T.Group>
@@ -793,12 +817,12 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
         <T.PointLight
           position={[-1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensitiy}
+          intensity={$campfireLightIntensity}
         ></T.PointLight>
         <T.PointLight
           position={[1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensitiy}
+          intensity={$campfireLightIntensity}
         ></T.PointLight></T.Mesh
       >
     </T.Group>
