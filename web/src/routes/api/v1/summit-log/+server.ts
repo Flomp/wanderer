@@ -11,6 +11,16 @@ export async function GET(event: RequestEvent) {
             sort: "+date",
             filter: filter
         })
+
+        for (const t of r) {
+            if (!t.author || !pb.authStore.model) {
+                continue;
+            }
+            if (!t.expand) {
+                t.expand = {} as any
+            }
+            t.expand.author = await pb.collection("users_anonymous").getOne(t.author);
+        }
         return json(r)
     } catch (e: any) {
         throw error(e.status, e);

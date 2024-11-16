@@ -14,6 +14,7 @@
     export let summitLogs: SummitLog[] = [];
     export let showCategory: boolean = false;
     export let showTrail: boolean = false;
+    export let showAuthor: boolean = false;
 
     let openMapModal: () => void;
     let closeMapModal: () => void;
@@ -27,9 +28,7 @@
 
     let currentText: string = "";
 
-    onMount(async () => {
-       
-    });
+    onMount(async () => {});
 
     async function openMap(log: SummitLog) {
         if (!log.expand.gpx_data) {
@@ -72,6 +71,11 @@
                 </th>
             {/if}
             <th>{$_("description")}</th>
+            {#if showAuthor}
+                <th>
+                    {$_("author", { values: { n: 1 } })}
+                </th>
+            {/if}
         </tr>
     </thead>
     <tbody>
@@ -83,6 +87,7 @@
                 on:text={(e) => openText(e.detail)}
                 {showCategory}
                 {showTrail}
+                {showAuthor}
             ></SummitLogTableRow>
         {/each}
     </tbody>

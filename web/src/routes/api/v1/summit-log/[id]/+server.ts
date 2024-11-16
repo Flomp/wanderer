@@ -7,6 +7,12 @@ export async function GET(event: RequestEvent) {
     try {
         const r = await pb.collection('summit_logs')
             .getOne<SummitLog>(event.params.id as string)
+
+        if (!r.expand) {
+            r.expand = {} as any
+        }
+        r.expand.author = await pb.collection("users_anonymous").getOne(r.author!);
+
         return json(r)
     } catch (e: any) {
         throw error(e.status, e);

@@ -11,11 +11,13 @@
     import type { Map } from "leaflet";
     import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import { getFileURL } from "$lib/util/file_util";
 
     export let index: number;
     export let log: SummitLog;
     export let showCategory: boolean = false;
     export let showTrail: boolean = false;
+    export let showAuthor: boolean = false;
 
     let map: Map;
 
@@ -64,13 +66,10 @@
     }
 
     function colCount() {
-        if (showCategory && showTrail) {
-            return 9;
-        } else if (showCategory || showTrail) {
-            return 8;
-        }
-
-        return 7;
+        return [showCategory, showTrail, showAuthor].reduce(
+            (b, v) => (v ? b + 1 : b),
+            7,
+        );
     }
 </script>
 
@@ -130,6 +129,26 @@
             >
         {/if}
     </td>
+    {#if showAuthor && log.expand.author}
+        <td>
+            <p
+                class="tooltip flex justify-center"
+                data-title={log.expand.author.username}
+            >
+                <a href="/profile/{log.expand.author.id}">
+                    <img
+                        class="rounded-full w-7 aspect-square"
+                        src={getFileURL(
+                            log.expand?.author,
+                            log.expand?.author.avatar,
+                        ) ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand?.author.username}&backgroundType=gradientLinear`}
+                        alt="avatar"
+                    />
+                </a>
+            </p>
+        </td>
+    {/if}
 </tr>
 <tr>
     <td colspan={colCount()}> <hr class="border-input-border" /> </td>

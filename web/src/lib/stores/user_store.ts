@@ -1,4 +1,4 @@
-import type { User } from "$lib/models/user";
+import type { User, UserAnonymous } from "$lib/models/user";
 import { pb } from "$lib/pocketbase";
 import { ClientResponseError, type AuthMethodsList } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
@@ -35,11 +35,11 @@ export async function users_search(q: string, includeSelf: boolean = true) {
     }
 }
 
-export async function users_show(id: string) {
-    let r = await fetch(`/api/v1/user/anonymous/${id}`, {
+export async function users_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    let r = await f(`/api/v1/user/anonymous/${id}`, {
         method: 'GET',
     })
-    const response = await r.json()
+    const response: UserAnonymous = await r.json()
 
     if (r.ok) {
         return response;

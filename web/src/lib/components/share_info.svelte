@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { List } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
-    import type { User } from "$lib/models/user";
+    import type { User, UserAnonymous } from "$lib/models/user";
     import { pb } from "$lib/pocketbase";
     import { users_show } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
@@ -18,7 +18,7 @@
     let loading: boolean = false;
     let infoLoaded: boolean = false;
     let subjectIsOwned: boolean = subject.author == pb.authStore.model?.id;
-    let author: User;
+    let author: UserAnonymous;
 
     async function fetchInfo() {
         if (!infoLoaded) {

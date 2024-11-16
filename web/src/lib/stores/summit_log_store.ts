@@ -7,8 +7,10 @@ import { fetchGPX } from "./trail_store";
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
 export const summitLogs: Writable<SummitLog[]> = writable([]);
 
-export async function summit_logs_index(filter?: SummitLogFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const filterText = filter ? buildFilterText(filter) : "";
+export async function summit_logs_index(author: string, filter?: SummitLogFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+
+    let filterText = `author='${author}'`
+    filterText += filter ? "&&" + buildFilterText(filter) : "";
 
     const r = await f('/api/v1/summit-log?' + new URLSearchParams({
         filter: filterText,
@@ -35,7 +37,7 @@ export async function summit_logs_index(filter?: SummitLogFilter, f: (url: Reque
     }
 
     summitLogs.set(fetchedSummitLogs);
-
+    
     return fetchedSummitLogs;
 }
 
@@ -117,15 +119,15 @@ function buildFilterText(filter: SummitLogFilter,): string {
     let filterText: string = "";
 
     if (filter.category.length > 0) {
-        filterText += `trails_via_summit_logs.category != null && '${filter.category.join(",")}' ~ trails_via_summit_logs.category`;
+        filterText += `trails_via_summit_logs.category!=null&&'${filter.category.join(",")}'~trails_via_summit_logs.category`;
     }
 
     if (filter.startDate) {
-        filterText += `${filter.category.length ? ' && ' : ''}date >= '${filter.startDate}'`
+        filterText += `${filter.category.length ? '&&' : ''}date>='${filter.startDate}'`
     }
 
     if (filter.endDate) {
-        filterText += `${filter.category.length || filter.startDate ? ' && ' : ''} date <= '${filter.endDate}'`
+        filterText += `${filter.category.length || filter.startDate ? '&&' : ''}date<='${filter.endDate}'`
     }
 
     return filterText;

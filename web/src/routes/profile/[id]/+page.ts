@@ -1,9 +1,14 @@
 import type { SummitLogFilter } from "$lib/models/summit_log";
 import { categories_index } from "$lib/stores/category_store";
 import { summit_logs_index } from "$lib/stores/summit_log_store";
-import { type ServerLoad } from "@sveltejs/kit";
+import { users_show } from "$lib/stores/user_store";
+import { error, type ServerLoad } from "@sveltejs/kit";
 
 export const load: ServerLoad = async ({ params, locals, fetch }) => {
+
+    if(!params.id) {
+        error(404, "Not found")
+    }
 
     const date = new Date()
     date.setUTCHours(6)
@@ -19,7 +24,8 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
         endDate: lastDay.toISOString().slice(0, 10),
         category: []
     }
-    const logs = await summit_logs_index(filter, fetch);
+    const logs = await summit_logs_index(params.id, filter, fetch);
+    const user = await users_show(params.id, fetch);
 
-    return {filter}
+    return { filter, user }
 };

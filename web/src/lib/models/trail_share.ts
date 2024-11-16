@@ -1,4 +1,4 @@
-import type { User } from "./user";
+import type { User, UserAnonymous } from "./user";
 
 export class TrailShare {
     id?: string;
@@ -6,7 +6,7 @@ export class TrailShare {
     trail: string;
     permission: "view" | "edit"
     expand?: {
-        user: User
+        user: UserAnonymous
     }
 
     constructor(user: string, trail: string, permission: "view" | "edit") {

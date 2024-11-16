@@ -172,7 +172,7 @@
     class="trail-info-panel mx-auto {mode == 'list'
         ? ''
         : 'border border-input-border rounded-3xl'} h-full"
-    style="max-width: min(100%, 64rem);"
+    style="max-width: min(100%, 76rem);"
 >
     <div class="trail-info-panel-header">
         <section class="relative h-80">
@@ -239,7 +239,7 @@
                                     `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            {trail.expand.author.username}
+                            <a class="underline" href="/profile/{trail.expand.author.id}">{trail.expand.author.username}</a>
                         </p>
                     {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
@@ -357,8 +357,8 @@
                 </div>
             {/if}
             {#if activeTab == 3}
-                <div class="overflow-x-scroll">
-                    <SummitLogTable summitLogs={trail.expand.summit_logs}
+                <div class="overflow-x-auto">
+                    <SummitLogTable summitLogs={trail.expand.summit_logs} showAuthor
                     ></SummitLogTable>
                 </div>
             {/if}

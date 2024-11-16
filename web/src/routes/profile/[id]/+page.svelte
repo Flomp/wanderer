@@ -218,7 +218,7 @@
     }
 
     async function loadSummitLogs() {
-        const logs = await summit_logs_index(filter);
+        const logs = await summit_logs_index($page.params.id, filter);
         summitLogs.set(logs);
     }
 </script>
@@ -230,21 +230,21 @@
 <div
     class="grid grid-cols-1 sm:grid-cols-[272px_minmax(0,_1fr)] md:grid-cols-[356px_minmax(0,_1fr)] gap-y-4 max-w-6xl mx-auto"
 >
-    {#if $currentUser}
+    {#if data.user}
         <div class="flex items-center gap-x-6 h-full px-4">
             <img
                 class="rounded-full w-16 aspect-square overflow-hidden"
-                src={getFileURL($currentUser, $currentUser.avatar) ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                src={getFileURL(data.user, data.user.avatar) ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${data.user.username}&backgroundType=gradientLinear`}
                 alt="avatar"
             />
             <div>
                 <h4 class="text-2xl font-semibold col-start-2">
-                    {$currentUser.username}
+                    {data.user.username}
                 </h4>
                 <p class="text-sm">
                     <span class="text-gray-500">Joined:</span>
-                    {new Date($currentUser.created ?? "").toLocaleDateString(
+                    {new Date(data.user.created ?? "").toLocaleDateString(
                         undefined,
                         {
                             month: "2-digit",
@@ -420,7 +420,7 @@
         <span class="text-gray-500 font-semibold text-lg"
             ><i class="fa fa-table mr-3"></i>{$_("all-activities")}</span
         >
-        <div class=" overflow-x-scroll">
+        <div class=" overflow-x-auto">
             <SummitLogTable summitLogs={$summitLogs} showCategory showTrail
             ></SummitLogTable>
         </div>

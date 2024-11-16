@@ -14,4 +14,5 @@ export type UserAnonymous = {
     id: string,
     username?: string,
     avatar?: string;
+    created?: string;
 }

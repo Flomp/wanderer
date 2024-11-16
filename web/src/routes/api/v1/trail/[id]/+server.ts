@@ -21,9 +21,15 @@ export async function GET(event: RequestEvent) {
         r.date = r.date?.substring(0, 10) ?? ""
         for (const log of r.expand?.summit_logs ?? []) {
             log.date = log.date.substring(0, 10)
+
+            if (!log.expand) {
+                log.expand = {} as any
+            }
+            log.expand.author = await pb.collection("users_anonymous").getOne(log.author!);
         }
         return json(r)
     } catch (e: any) {
+        console.error(e)
         throw error(e.status || 500, e);
     }
 }
