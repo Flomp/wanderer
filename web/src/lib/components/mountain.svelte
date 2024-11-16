@@ -42,10 +42,10 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
   });
   $: cabinLightIntensity.set($theme == "dark" ? 4 : 0);
 
-  const sunLightIntensity = tweened($theme == "light" ? 4 : 0, {
+  const sunLightIntensity = tweened($theme == "light" ? 5 : 0, {
     duration: 500,
   });
-  $: sunLightIntensity.set($theme == "light" ? 4 : 0);
+  $: sunLightIntensity.set($theme == "light" ? 5 : 0);
 
   const moonLightIntensity = tweened($theme == "dark" ? 0.8 : 0, {
     duration: 500,
