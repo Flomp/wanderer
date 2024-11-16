@@ -83,6 +83,7 @@
 				a.push({ date: date, today: today, log: logAtDate });
 			}
 		}
+
 		return a;
 	}
 
@@ -112,17 +113,17 @@
 		});
 	}
 
-	function colorKey(i: number) {
+	function colorKey(a: typeof currentMonthArray, i: number) {
 		return $_(
-			currentMonthArray[i]?.log?.expand?.trails_via_summit_logs?.at(0)
-				?.expand?.category?.name ?? "",
+			a[i]?.log?.expand?.trails_via_summit_logs?.at(0)?.expand?.category
+				?.name ?? "",
 		);
 	}
 
 	function handleDateClick(date?: Date) {
 		if (!date) {
 			return;
-		}		
+		}
 		dispatch("click", date);
 	}
 </script>
@@ -149,13 +150,18 @@
 			</div>
 		{/each}
 	</div>
-	<div class="grid grid-cols-7 grid-rows-6 gap-1" style="aspect-ratio: 1.17/1">
+	<div
+		class="grid grid-cols-7 grid-rows-6 gap-1"
+		style="aspect-ratio: 1.17/1"
+	>
 		{#each { length: 42 } as _, i}
 			<button
 				class="calendar-day flex items-center justify-center rounded-xl"
 				on:click={() => handleDateClick(currentMonthArray[i]?.date)}
 				class:today={currentMonthArray[i]?.today}
-				style="background-color: {colorMap[colorKey(i)] ?? ''}"
+				style="background-color: {colorMap[
+					colorKey(currentMonthArray, i)
+				] ?? ''}"
 			>
 				{currentMonthArray[i]?.date?.getDate() ?? ""}
 			</button>
