@@ -4,11 +4,11 @@
     import { onMount } from "svelte";
     import { tweened } from "svelte/motion";
     import * as THREE from "three";
-    import Earth from "./earth.svelte";
+    import Mountain from "./mountain.svelte";
 
     let rotation = 0;
     useTask((delta) => {
-        rotation += delta / 4;
+        rotation += delta / 2;
     });
 
     const { toneMapping } = useThrelte();
@@ -42,7 +42,7 @@
 
 <T.PerspectiveCamera
     makeDefault
-    position={[5, 2, 0]}
+    position={[35.5, 32, 35.5]}
     on:create={({ ref }) => {
         ref.lookAt(0, 0, 0);
     }}
@@ -52,7 +52,8 @@
     <T.Points geometry={starsGeometry} material={starsMaterial}></T.Points>
 {/if}
 
-<Earth {rotation}></Earth>
+<!-- <Earth {rotation}></Earth> -->
+<Mountain {rotation}></Mountain>
 
 <T.HemisphereLight
     skyColor={ambientColor}
