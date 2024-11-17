@@ -97,14 +97,20 @@
                     on:change={handleChange}
                     error={$errors.username}
                 ></TextField>
-                <TextField
-                    name="password"
-                    label={$_("password")}
-                    type="password"
-                    bind:value={$form.password}
-                    on:change={handleChange}
-                    error={$errors.password}
-                ></TextField>
+                <div class="flex flex-col">
+                    <TextField
+                        name="password"
+                        label={$_("password")}
+                        type="password"
+                        bind:value={$form.password}
+                        on:change={handleChange}
+                        error={$errors.password}
+                    ></TextField>
+                    <a
+                        class="text-xs underline decoration-dashed float-end mt-1 self-end"
+                        href="/auth/reset">{$_("forgot-your-password")}</a
+                    >
+                </div>
                 <Button
                     primary={true}
                     extraClasses={"min-w-full"}

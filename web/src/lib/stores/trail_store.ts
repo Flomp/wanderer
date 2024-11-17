@@ -56,7 +56,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
     r = await f('/api/v1/trail?' + new URLSearchParams({
         expand: "category,waypoints,summit_logs,trail_share_via_trail",
-        filter: trailIds.map((id: Record<string, any>) => `id="${id}"`).join('||'),
+        filter: `'${trailIds.join(',')}'~id`,
         sort: `${filter.sortOrder}${filter.sort}`
     }), {
         method: 'GET',
@@ -101,7 +101,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     }
 
     r = await fetch('/api/v1/trail?' + new URLSearchParams({
-        filter: trailIds.map((id: Record<string, any>) => `id="${id}"`).join("||"),
+        filter: `'${trailIds.join(',')}'~id`,
         expand: "category,waypoints,summit_logs",
         sort: `+name`,
     }), {

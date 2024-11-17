@@ -29,10 +29,7 @@ func main() {
 		Automigrate: true,
 	})
 
-	client := meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   os.Getenv("MEILI_URL"),
-		APIKey: os.Getenv("MEILI_MASTER_KEY"),
-	})
+	client := meilisearch.New(os.Getenv("MEILI_URL"), meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")))
 
 	app.OnModelAfterCreate("users").Add(func(e *core.ModelEvent) error {
 		record := e.Model.(*models.Record)

@@ -133,5 +133,30 @@ export async function users_delete(user: User) {
     if (!r.ok) {
         throw new ClientResponseError(await r.json())
     }
+}
 
+export async function users_reset_password(reset: { email: string }) {
+    const r = await fetch('/api/v1/auth/reset', {
+        method: 'POST',
+        body: JSON.stringify(reset),
+    })
+
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
+}
+
+export async function users_confirm_reset(reset: { password: string, passwordConfirm: string, token: string }) {
+    const r = await fetch('/api/v1/auth/confirm-reset', {
+        method: 'POST',
+        body: JSON.stringify(reset),
+    })
+
+    if (r.ok) {
+        return await r.json();
+    } else {
+        throw new ClientResponseError(await r.json())
+    }
 }
