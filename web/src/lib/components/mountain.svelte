@@ -14,9 +14,9 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
   export const ref = new Group();
   export let rotation: number = 0;
 
-  let bridge: Mesh;
+  let dog: Mesh;
 
-  const gltf = useGltf("/models/mountain.glb");
+  const gltf = useGltf("/models/mountain.glb", { useDraco: true });
 
   const component = forwardEventHandlers();
 
@@ -79,18 +79,36 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       <T.Group
         position={[0.2, 1.3, 13.73]}
         rotation={[Math.PI, -1.43, Math.PI]}
-        scale={90.24}
+        scale={78.24}
       >
         <T.Mesh
-          geometry={gltf.nodes.Sign6001_1.geometry}
+          geometry={gltf.nodes.Sign6_1.geometry}
           material={gltf.materials["Dark Wood"]}
         />
         <T.Mesh
-          geometry={gltf.nodes.Sign6001_2.geometry}
+          geometry={gltf.nodes.Sign6_2.geometry}
           material={gltf.materials["Light Wood"]}
         />
         <T.Mesh
-          geometry={gltf.nodes.Sign6001_3.geometry}
+          geometry={gltf.nodes.Sign6_3.geometry}
+          material={gltf.materials.Herbs}
+        />
+      </T.Group>
+      <T.Group
+        position={[0.2, 1.3, 13.73]}
+        rotation={[Math.PI, -1.43, Math.PI]}
+        scale={78.24}
+      >
+        <T.Mesh
+          geometry={gltf.nodes.Sign6_1.geometry}
+          material={gltf.materials["Dark Wood"]}
+        />
+        <T.Mesh
+          geometry={gltf.nodes.Sign6_2.geometry}
+          material={gltf.materials["Light Wood"]}
+        />
+        <T.Mesh
+          geometry={gltf.nodes.Sign6_3.geometry}
           material={gltf.materials.Herbs}
         />
       </T.Group>
@@ -175,14 +193,22 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       angle={Math.PI / 5}
       color="#ffffff"
       intensity={$campfireLightIntensity * 1.5}
-      target={bridge}
+      target={dog}
     ></T.SpotLight>
     <T.Mesh
       geometry={gltf.nodes.Hiker.geometry}
       material={gltf.materials["Material.004"]}
       position={[-4.58, 4.6, 13.62]}
       rotation={[-1.53, -0.02, 2.52]}
-      scale={52.08}
+      scale={1.5}
+    />
+    <T.Mesh
+      geometry={gltf.nodes.Geo_Beagle.geometry}
+      material={gltf.materials.lambert2SG}
+      position={[-4.27, 5, 12.68]}
+      rotation={[-2.94, 0.25, Math.PI]}
+      scale={1.5}
+      bind:ref={dog}
     />
     <T.Mesh
       geometry={gltf.nodes.ground.geometry}
@@ -192,11 +218,10 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       geometry={gltf.nodes.bridge.geometry}
       material={gltf.materials["Color texture"]}
       position={[0.06, 5.76, 6.04]}
-      bind:ref={bridge}
     />
     <T.Mesh
       geometry={gltf.nodes.water.geometry}
-      material={gltf.materials["Color texture_water"]}
+      material={gltf.materials["Color texture"]}
       position={[0, -0.08, 0]}
     />
     <T.Mesh
@@ -786,11 +811,11 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       rotation={[0, rotation + 0.5, 0]}
     >
       <T.Mesh
-        geometry={gltf.nodes["Node-Mesh002"].geometry}
+        geometry={gltf.nodes["Node-Mesh001"].geometry}
         material={gltf.materials.mat8}
       />
       <T.Mesh
-        geometry={gltf.nodes["Node-Mesh002_1"].geometry}
+        geometry={gltf.nodes["Node-Mesh001_1"].geometry}
         material={gltf.materials.mat23}
       >
         <T.PointLight
@@ -807,11 +832,11 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
     </T.Group>
     <T.Group position={[-9.02, 14.74, 6.22]} rotation={[0, rotation - 0.5, 0]}>
       <T.Mesh
-        geometry={gltf.nodes["Node-Mesh003"].geometry}
+        geometry={gltf.nodes["Node-Mesh001"].geometry}
         material={gltf.materials.mat8}
       />
       <T.Mesh
-        geometry={gltf.nodes["Node-Mesh003_1"].geometry}
+        geometry={gltf.nodes["Node-Mesh001_1"].geometry}
         material={gltf.materials.mat23}
       >
         <T.PointLight
