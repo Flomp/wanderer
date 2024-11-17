@@ -9,7 +9,10 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
   import { useGltf } from "@threlte/extras";
   import { backInOut } from "svelte/easing";
   import { tweened } from "svelte/motion";
-  import { Group, Mesh, SpotLight } from "three";
+  import { Group, Mesh } from "three";
+
+  import { interactivity } from "@threlte/extras";
+  interactivity();
 
   export const ref = new Group();
   export let rotation: number = 0;
@@ -19,6 +22,9 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
   const gltf = useGltf("/models/mountain.glb", { useDraco: true });
 
   const component = forwardEventHandlers();
+
+  const bark = new Audio("/audio/sophie.mp3");
+  bark.volume = 0.5
 
   const sunZPosition = tweened($theme == "light" ? 11.7 : -20, {
     duration: 1000,
@@ -209,6 +215,7 @@ Command: npx @threlte/gltf@2.0.1 static/models/mountain.glb
       rotation={[-2.94, 0.25, Math.PI]}
       scale={1.5}
       bind:ref={dog}
+      on:click={() => bark.play()}
     />
     <T.Mesh
       geometry={gltf.nodes.ground.geometry}
