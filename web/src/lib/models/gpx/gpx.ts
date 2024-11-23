@@ -8,7 +8,7 @@ import Waypoint from './waypoint';
 const defaultAttributes = {
   version: '1.1',
   creator: 'wanderer',
-  'xmlns:prod': 'http://www.topografix.com/GPX/1/1',
+  xmlns: 'http://www.topografix.com/GPX/1/1',
   'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
   'xsi:schemaLocation':
     'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd'
@@ -18,7 +18,7 @@ export default class GPX {
   $: {
     version: string;
     creator: string;
-    'xmlns:prod': string;
+    xmlns: string;
     'xmlns:xsi': string;
     'xsi:schemaLocation': string;
   }
@@ -151,6 +151,14 @@ export default class GPX {
     const gpx = new GPX(this);
     allDatesToISOString(gpx);
 
-    return builder.buildObject(gpx).replace('xmlns:prod', 'xmlns');
+    let xmlString = builder.buildObject(gpx);
+  
+    // Ensure xmlns is present in the root element
+    if (!xmlString.includes('xmlns="http://www.topografix.com/GPX/1/1"')) {
+      console.log("Adding missing \"xmlns\" to file.")
+      xmlString = xmlString.replace('<gpx', '<gpx xmlns="http://www.topografix.com/GPX/1/1"');
+    }
+  
+    return xmlString;
   }
 }
