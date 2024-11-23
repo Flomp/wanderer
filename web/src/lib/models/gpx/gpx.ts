@@ -154,8 +154,8 @@ export default class GPX {
     let xmlString = builder.buildObject(gpx);
 
     // Ensure xmlns is present in the root element for Firefox
-    if (!xmlString.includes('xmlns="http://www.topografix.com/GPX/1/1"')) {
-      xmlString = xmlString.replace('<gpx', '<gpx xmlns="http://www.topografix.com/GPX/1/1"');
+    if (!xmlString.includes(`xmlns="${defaultAttributes["xmlns"]}"`)) {
+      xmlString = xmlString.replace('<gpx', `<gpx xmlns="${defaultAttributes["xmlns"]}"`);
     }
   
     return xmlString;
