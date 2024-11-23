@@ -32,7 +32,7 @@ export default class GPX {
     $?: {
       version: string,
       creator: string,
-      'xmlns:prod': string,
+      xmlns: string,
       'xmlns:xsi': string,
       'xsi:schemaLocation': string,
     }
@@ -152,10 +152,9 @@ export default class GPX {
     allDatesToISOString(gpx);
 
     let xmlString = builder.buildObject(gpx);
-  
-    // Ensure xmlns is present in the root element
+
+    // Ensure xmlns is present in the root element for Firefox
     if (!xmlString.includes('xmlns="http://www.topografix.com/GPX/1/1"')) {
-      console.log("Adding missing \"xmlns\" to file.")
       xmlString = xmlString.replace('<gpx', '<gpx xmlns="http://www.topografix.com/GPX/1/1"');
     }
   
