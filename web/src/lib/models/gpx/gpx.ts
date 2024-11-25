@@ -2,7 +2,7 @@ import * as xml2js from 'isomorphic-xml2js';
 import Metadata from './metadata';
 import Route from './route';
 import Track from './track';
-import { allDatesToISOString, calculateDistance, removeEmpty } from './utils';
+import { allDatesToISOString, haversineDistance, removeEmpty } from './utils';
 import Waypoint from './waypoint';
 
 const defaultAttributes = {
@@ -104,7 +104,7 @@ export default class GPX {
             totalElevationLoss += Math.abs(elevationDiff)
           }
 
-          const distance = calculateDistance(
+          const distance = haversineDistance(
             prevPoint.$.lat ?? 0,
             prevPoint.$.lon ?? 0,
             point.$.lat ?? 0,

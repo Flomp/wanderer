@@ -4,7 +4,10 @@
     --secondary-hover: 243, 244, 246;
 
     --background: 255, 255, 255;
+    --background-inverse: 7, 10, 36;
+
     --content: 0, 0, 0;
+    --content-inverse: 255, 255, 255;
 
     --input-background: 249, 250, 251;
     --input-background-error: 254, 242, 242;
@@ -30,7 +33,10 @@
     --secondary-hover: 36, 39, 52;
 
     --background: 7, 10, 36;
+    --background-inverse: 255, 255, 255;
+
     --content: 255, 255, 255;
+    --content-inverse: 0, 0, 0;
 
     --input-background: 36, 39, 52;
     --input-background-error: 69, 10, 10;

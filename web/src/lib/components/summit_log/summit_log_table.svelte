@@ -7,9 +7,9 @@
 
     import type { Trail } from "$lib/models/trail";
     import { gpx2trail } from "$lib/util/gpx_util";
-    import type { Map } from "leaflet";
+    import * as M from "maplibre-gl";
     import { _ } from "svelte-i18n";
-    import MapWithElevation from "../trail/map_with_elevation.svelte";
+    import MapWithElevationMaplibre from "../trail/map_with_elevation_maplibre.svelte";
 
     export let summitLogs: SummitLog[] = [];
     export let showCategory: boolean = false;
@@ -22,7 +22,7 @@
     let openTextModal: () => void;
     let closeTextModal: () => void;
 
-    let map: Map;
+    let map: M.Map;
 
     let trail: Trail | null = null;
 
@@ -40,8 +40,6 @@
 
         openMapModal();
         await tick();
-
-        map.invalidateSize();
         return;
     }
 
@@ -103,7 +101,10 @@
     bind:closeModal={closeMapModal}
 >
     <div slot="content" id="summit-log-table-map" class="h-[32rem]">
-        <MapWithElevation {trail} bind:map></MapWithElevation>
+        {#if trail}
+            <MapWithElevationMaplibre {trail} bind:map
+            ></MapWithElevationMaplibre>
+        {/if}
     </div>
 </Modal>
 <Modal

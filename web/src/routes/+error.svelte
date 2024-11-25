@@ -7,7 +7,7 @@
     style="height: calc(100dvh - 120px); font-size: 4rem"
 >
     <img
-        class="absolute top-1/2 left-1/2 aspect-square rounded-xl object-cover"
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 aspect-square rounded-xl object-cover"
         width="500"
         src="/imgs/error.webp"
         alt="Default error img"

@@ -5,7 +5,9 @@ export default {
     extend: {
       colors: {
         'background': 'rgba(var(--background))',
+        'background-inverse': 'rgba(var(--background-inverse))',
         'content': 'rgba(var(--content))',
+        'content-inverse': 'rgba(var(--content-inverse))',
 
         'primary': 'rgba(var(--primary))',
         'primary-hover': 'rgba(var(--primary-hover))',

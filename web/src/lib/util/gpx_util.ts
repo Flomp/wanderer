@@ -2,21 +2,22 @@ import GPX from "$lib/models/gpx/gpx";
 import { Trail } from "$lib/models/trail";
 import { Waypoint } from "$lib/models/waypoint";
 import { currentUser } from "$lib/stores/user_store";
-import { kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON";
+import { gpx, kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON";
 import cryptoRandomString from "crypto-random-string";
 import { get } from "svelte/store";
 //@ts-ignore
-import EasyFit from "$lib/vendor/easy-fit/easy-fit"
+import { browser } from "$app/environment";
 import Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import GPXWaypoint from "$lib/models/gpx/waypoint";
-import { browser } from "$app/environment";
-import * as xmldom from 'xmldom'
-import type { Feature, FeatureCollection, GeoJsonProperties, Position } from 'geojson';
+import EasyFit from "$lib/vendor/easy-fit/easy-fit";
+import type { GeoJSON, Feature, FeatureCollection, GeoJsonProperties, Position } from 'geojson';
+import * as xmldom from 'xmldom';
+import { bbox } from "./geojson_util";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string) {
-   
+
     const gpx = await GPX.parse(gpxString);
 
     if (gpx instanceof Error) {
@@ -281,4 +282,13 @@ export function isFITFile(buffer: ArrayBuffer) {
     }
 
     return true;
+}
+
+export function toGeoJson(gpxData: string) {
+    const parser = browser ? new DOMParser() : new xmldom.DOMParser();
+    const geojson = gpx(
+        parser.parseFromString(gpxData, "text/xml"),
+    ) as GeoJSON;
+    geojson.bbox = bbox(geojson)
+    return geojson
 }

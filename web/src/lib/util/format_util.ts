@@ -1,5 +1,4 @@
 import { page } from "$app/stores";
-import { currentUser } from "$lib/stores/user_store";
 import { get } from "svelte/store";
 
 export function formatTimeHHMM(minutes?: number) {

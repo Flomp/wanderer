@@ -39,10 +39,11 @@
     import ShareInfo from "../share_info.svelte";
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import { pb } from "$lib/pocketbase";
+    import * as M from "maplibre-gl";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
-    export let markers: Marker[] = [];
+    export let markers: (Marker | M.Marker)[] = [];
 
     const tabs = [
         $_("description"),
@@ -118,11 +119,19 @@
     });
 
     function openMarkerPopup(i: number) {
-        markers[i].openPopup();
+        if (typeof (markers[i] as Marker<any>).openPopup === "function") {
+            (markers[i] as Marker<any>).openPopup();
+        } else {
+            (markers[i] as M.Marker).togglePopup();
+        }
     }
 
     function closeMarkerPopup(i: number) {
-        markers[i].closePopup();
+        if (typeof (markers[i] as Marker<any>).closePopup === "function") {
+            (markers[i] as Marker<any>).closePopup();
+        } else {
+            (markers[i] as M.Marker).togglePopup();
+        }
     }
 
     async function toggleMapFullScreen() {
@@ -239,7 +248,11 @@
                                     `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <a class="underline" href="/profile/{trail.expand.author.id}">{trail.expand.author.username}</a>
+                            <a
+                                class="underline"
+                                href="/profile/{trail.expand.author.id}"
+                                >{trail.expand.author.username}</a
+                            >
                         </p>
                     {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
@@ -358,7 +371,9 @@
             {/if}
             {#if activeTab == 3}
                 <div class="overflow-x-auto">
-                    <SummitLogTable summitLogs={trail.expand.summit_logs} showAuthor
+                    <SummitLogTable
+                        summitLogs={trail.expand.summit_logs}
+                        showAuthor
                     ></SummitLogTable>
                 </div>
             {/if}
