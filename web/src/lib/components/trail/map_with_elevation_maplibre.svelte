@@ -9,6 +9,7 @@
         FontawesomeMarker,
     } from "$lib/util/maplibre_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
+    import { StyleSwitcherControl } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
     import type { GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
@@ -62,39 +63,48 @@
             return;
         }
 
-        for (const waypoint of trail?.expand.waypoints ?? []) {
-            const marker = createMarkerFromWaypoint(waypoint);
-            marker.addTo(map);
-            markers.push(marker);
-        }
-
         epc.setData(data, trail!.expand.waypoints);
         epc.showProfile();
 
         const trailSource = map.getSource("trail-source");
         if (!trailSource) {
-            map.on("load", () => {
-                map!.addSource("trail-source", {
-                    type: "geojson",
-                    data: data,
-                });
-
-                map!.addLayer({
-                    id: "uploaded-polygons",
-                    type: "line",
-                    source: "trail-source",
-                    paint: {
-                        "line-color": "#648ad5",
-                        "line-width": 5,
-                    },
-                });
-            });
+            addTrailLayer();
         } else {
             (trailSource as M.GeoJSONSource).setData(data);
         }
 
         if (!drawing) {
             addStartEndMarkers();
+        }
+    }
+
+    function addTrailLayer() {
+        if (!data || !map) {
+            return;
+        }
+        const trailSource = map.getSource("trail-source");
+        if (!trailSource) {
+            try {
+                map.addSource("trail-source", {
+                    type: "geojson",
+                    data: data,
+                });
+            } catch (e) {
+                return;
+            }
+        }
+
+        const trailLayer = map.getLayer("trail-layer");
+        if (!trailLayer) {
+            map.addLayer({
+                id: "trail-layer",
+                type: "line",
+                source: "trail-source",
+                paint: {
+                    "line-color": "#648ad5",
+                    "line-width": 5,
+                },
+            });
         }
     }
 
@@ -137,9 +147,28 @@
             )
         ).ElevationProfileControl;
 
+        const mapStyles = [
+            {
+                text: "Carto Light",
+                value: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+                thumbnail:
+                    "https://basemaps.cartocdn.com/light_all/1/0/0@2x.png",
+            },
+            {
+                text: "Carto Dark",
+                value: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+                thumbnail:
+                    "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
+            },
+        ];
+        const preferredMapStyleIndex = mapStyles.findIndex(
+            (s) => s.text === localStorage.getItem("layer"),
+        );
+
         map = new M.Map({
             container: mapContainer,
-            style: `https://basemaps.cartocdn.com/gl/positron-gl-style/style.json`,
+            style:
+                mapStyles[preferredMapStyleIndex].value ?? mapStyles[0].value,
             center: [initialState.lng, initialState.lat],
             zoom: initialState.zoom,
         });
@@ -175,6 +204,16 @@
                 elevationMarker.setLngLat(data.position as M.LngLatLike);
             },
         });
+
+        const switcherControl = new StyleSwitcherControl({
+            styles: mapStyles,
+            onSwitch: (style) => {
+                map?.setStyle(style.value);
+                localStorage.setItem("layer", style.text);
+            },
+            selectedIndex:
+                preferredMapStyleIndex !== -1 ? preferredMapStyleIndex : 0,
+        });
         map.addControl(new M.NavigationControl());
         map.addControl(
             new M.ScaleControl({
@@ -184,10 +223,21 @@
             "top-left",
         );
         map.addControl(epc);
+        map.addControl(switcherControl);
+
+        map.on("styledata", () => {
+            addTrailLayer();
+        });
 
         map.on("click", (e) => {
             dispatch("click", e);
         });
+
+        for (const waypoint of trail?.expand.waypoints ?? []) {
+            const marker = createMarkerFromWaypoint(waypoint);
+            marker.addTo(map);
+            markers.push(marker);
+        }
     });
 
     onDestroy(() => {

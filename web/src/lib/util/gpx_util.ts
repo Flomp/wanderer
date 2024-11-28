@@ -33,7 +33,7 @@ export async function gpx2trail(gpxString: string, fallbackName?: string) {
     for (const wpt of gpx.wpt ?? []) {
         const wp = new Waypoint(wpt.$.lat ?? 0, wpt.$.lon ?? 0);
         wp.id = cryptoRandomString({ length: 15 });
-        wp.name = wpt.name
+        wp.name = wpt.name ?? ""
         wp.description = wpt.desc;
         trail.expand.waypoints.push(wp);
     }

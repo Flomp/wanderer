@@ -720,8 +720,7 @@ export class ElevationProfile {
                         this.waypointPositions.forEach((position: number, index: number) => {
 
                             const xPos = xScale.getPixelForValue(position); // X-axis pixel for tick
-                            console.log(xPos);
-                            
+                                                        
                             // Create custom HTML tick
                             const wpDiv = document.createElement("div");
                             wpDiv.className = "wp-marker absolute -translate-x-1/2 w-6 aspect-square bg-background-inverse rounded-full flex justify-center items-center text-content-inverse cursor-pointer hover:scale-110";

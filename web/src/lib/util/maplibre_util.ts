@@ -20,7 +20,7 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
     const marker = new FontawesomeMarker({
         icon: `fa fa-${waypoint.icon}`,
     }, {
-        draggable: onDragEnd != null,
+        draggable: onDragEnd !== undefined,
         color: "#6b7280"
 
     })
