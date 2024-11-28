@@ -8,7 +8,7 @@ import type {
     Position,
 } from "geojson";
 
-import { Chart, registerables } from "chart.js";
+import { Chart, registerables, type ScriptableContext } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 // @ts-ignore
 import { CrosshairPlugin } from "chartjs-plugin-crosshair";
@@ -369,6 +369,26 @@ export class ElevationProfile {
     private cumulatedTime: number[] = []
     private speed: number[] = [];
 
+    private gradeColor = [
+        "#0d0887", // 0% and less
+        "#3e049c", // 1
+        "#6300a7", // 2
+        "#8606a6", // 3
+        "#a62098", // 4
+        "#c03a83", // 5
+        "#d5546e", // 6
+        "#e76f5a", // 7
+        "#f68d45", // 8
+        "#fdae32", // 9
+        "#fcd225", // 10
+        "#f0f921", // more than 10%
+    ]
+
+    private width?: number
+    private height?: number
+    private gradient?: CanvasGradient;
+
+
     constructor(
         /**
          * DIV element to place the chart into
@@ -399,26 +419,10 @@ export class ElevationProfile {
             ...options,
         };
 
-        const gradeColor = [
-            "#0d0887", // 0% and less
-            "#3e049c", // 1
-            "#6300a7", // 2
-            "#8606a6", // 3
-            "#a62098", // 4
-            "#c03a83", // 5
-            "#d5546e", // 6
-            "#e76f5a", // 7
-            "#f68d45", // 8
-            "#fdae32", // 9
-            "#fcd225", // 10
-            "#f0f921", // more than 10%
-        ]
-
         const distanceUnit = this.settings.unit === "imperial" ? "mi" : "km";
         const elevationUnit = this.settings.unit === "imperial" ? "ft" : "m";
         Chart.defaults.font.size = this.settings.fontSize;
 
-        let width: number, height: number, gradient: CanvasGradient;
         this.chart = new Chart<"line", Array<number>, number>(this.canvas, {
             type: "line",
 
@@ -432,47 +436,8 @@ export class ElevationProfile {
                         pointRadius: 0,
                         fill: !!this.settings.profileBackgroundColor,
                         borderColor: (context) => {
-                            const { ctx, chartArea } = context.chart;
-
-                            if (!chartArea) {
-                                return;
-                            }
-
-                            const chartWidth = chartArea.right - chartArea.left;
-                            const chartHeight = chartArea.bottom - chartArea.top;
-                            if (!gradient || width !== chartWidth || height !== chartHeight) {
-                                width = chartWidth;
-                                height = chartHeight;
-
-                                gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
-
-                                gradient.addColorStop(0, gradeColor[0])
-
-                                let prevColor = gradeColor[0];
-                                for (let i = 0; i < this.grade.length; i++) {
-                                    const grade = ~~(Math.abs(this.grade[i]) / 2.5);
-
-                                    let color;
-                                    if (grade < 1) {
-                                        color = gradeColor[0]
-                                    }
-                                    else if (grade > 10) {
-                                        color = gradeColor[11];
-                                    } else {
-                                        color = gradeColor[grade];
-                                    }
-
-
-                                    if (color !== prevColor) {
-                                        const percentDone = this.cumulatedDistance[i] / this.cumulatedDistance[this.cumulatedDistance.length - 1]
-                                        gradient.addColorStop(percentDone, color);
-                                        prevColor = color;
-                                    }
-
-                                }
-                            }
-
-                            return gradient;
+                            const chart = context.chart;
+                            return this.gradientFromElevation(chart)
                         },
                         // borderColor: this.settings.profileLineColor ?? "#0000",
                         backgroundColor: this.settings.profileBackgroundColor ?? "#0000",
@@ -720,7 +685,7 @@ export class ElevationProfile {
                         this.waypointPositions.forEach((position: number, index: number) => {
 
                             const xPos = xScale.getPixelForValue(position); // X-axis pixel for tick
-                                                        
+
                             // Create custom HTML tick
                             const wpDiv = document.createElement("div");
                             wpDiv.className = "wp-marker absolute -translate-x-1/2 w-6 aspect-square bg-background-inverse rounded-full flex justify-center items-center text-content-inverse cursor-pointer hover:scale-110";
@@ -783,6 +748,55 @@ export class ElevationProfile {
                 }
             });
         }
+    }
+
+    gradientFromElevation(chart: Chart, force: boolean = false) {
+        const ctx = chart.ctx;
+        const chartArea = chart.chartArea;
+
+        if (!chartArea) {
+            return;
+        }
+
+        const chartWidth = chartArea.right - chartArea.left;
+        const chartHeight = chartArea.bottom - chartArea.top;
+
+        if (chartWidth == 0 || chartHeight == 0) {
+            return;
+        }
+
+        if (!this.gradient || this.width !== chartWidth || this.height !== chartHeight || force) {
+            this.width = chartWidth;
+            this.height = chartHeight;
+
+            this.gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0) as CanvasGradient;
+
+            this.gradient.addColorStop(0, this.gradeColor[0])
+
+            let prevColor = this.gradeColor[0];
+            for (let i = 0; i < this.grade.length; i++) {
+                const grade = ~~(Math.abs(this.grade[i]) / 2.5);
+
+                let color;
+                if (grade < 1) {
+                    color = this.gradeColor[0]
+                }
+                else if (grade > 10) {
+                    color = this.gradeColor[11];
+                } else {
+                    color = this.gradeColor[grade];
+                }
+
+
+                if (color !== prevColor) {
+                    const percentDone = this.cumulatedDistance[i] / this.cumulatedDistance[this.cumulatedDistance.length - 1]
+                    this.gradient.addColorStop(percentDone, color);
+                    prevColor = color;
+                }
+
+            }
+        }
+        return this.gradient;
     }
 
     createWindowExtractLineString(): LineString {
@@ -849,7 +863,7 @@ export class ElevationProfile {
 
         this.times = times;
 
-        this.elevatedPositions = smoothElevations(positions, positions.length / 100);
+        this.elevatedPositions = smoothElevations(positions, Math.ceil(positions.length / 100));
 
         this.cumulatedDistance = haversineCumulatedDistanceWgs84(
             this.elevatedPositions
@@ -983,6 +997,11 @@ export class ElevationProfile {
         this.chart.data.datasets[0].data = this.elevatedPositionsAdjustedUnit.map(
             (pos) => pos[2]
         );
+
+        const gradient = this.gradientFromElevation(this.chart, true);
+        if (gradient) {
+            this.chart.data.datasets[0].borderColor = gradient
+        }
 
         if (
             this.chart.options.scales &&

@@ -636,6 +636,7 @@
         $form.distance = totals.distance;
         $form.duration = totals.duration;
         $form.elevation_gain = totals.elevationGain;
+        $form.elevation_loss = totals.elevationLoss;
         $form.expand.gpx_data = route.toString();
     }
 </script>
