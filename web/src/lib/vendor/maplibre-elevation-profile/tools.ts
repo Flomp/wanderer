@@ -25,7 +25,10 @@ export function haversineCumulatedDistanceWgs84(path: Position[]): number[] {
 
 export function smoothElevations(positions: Position[], windowSize: number): Position[] {
     // Ensure windowSize is valid (at least 1)
-    if (windowSize < 1) throw new Error("Window size must be at least 1.");
+    if (windowSize < 1) {
+        console.warn("Window size must be at least 1.");
+        return positions
+    };
 
     // Create a new array with smoothed elevations
     return positions.map((pos, i, arr) => {

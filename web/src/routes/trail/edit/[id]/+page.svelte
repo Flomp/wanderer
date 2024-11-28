@@ -10,7 +10,7 @@
     import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
     import SummitLogModal from "$lib/components/summit_log/summit_log_modal.svelte";
-    import MapWithElevation from "$lib/components/trail/map_with_elevation.svelte";
+    import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import PhotoPicker from "$lib/components/trail/photo_picker.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
@@ -58,13 +58,14 @@
         gpx2trail,
         isFITFile,
     } from "$lib/util/gpx_util";
+
     import {
         createAnchorMarker,
         createMarkerFromWaypoint,
-    } from "$lib/util/leaflet_util";
+    } from "$lib/util/maplibre_util";
     import { createForm } from "$lib/vendor/svelte-form-lib";
     import cryptoRandomString from "crypto-random-string";
-    import type { DivIcon, LeafletMouseEvent, Map } from "leaflet";
+    import * as M from "maplibre-gl";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
@@ -73,8 +74,7 @@
 
     export let data: { trail: Trail };
 
-    let L: any;
-    let map: Map;
+    let map: M.Map;
 
     let openWaypointModal: () => void;
     let openSummitLogModal: () => void;
@@ -215,9 +215,6 @@
     });
 
     onMount(async () => {
-        L = (await import("leaflet")).default;
-        await import("leaflet.awesome-markers");
-
         clearAnchorMarker();
         clearRoute();
 
@@ -296,10 +293,12 @@
                 elevation_loss: $form.elevation_loss,
                 duration: $form.duration ? $form.duration * 60 : undefined,
             });
-            
+
             log.expand.gpx_data = gpxData;
             const blob = new Blob([gpxData], { type: selectedFile.type });
-            log._gpx = new File([blob], selectedFile.name, { type: selectedFile.type });
+            log._gpx = new File([blob], selectedFile.name, {
+                type: selectedFile.type,
+            });
 
             $form.expand.summit_logs.push(log);
 
@@ -370,7 +369,7 @@
     }
 
     function openMarkerPopup(waypoint: Waypoint) {
-        waypoint.marker?.openPopup();
+        waypoint.marker?.togglePopup();
     }
 
     function handleWaypointMenuClick(
@@ -411,9 +410,9 @@
             savedWaypoint.id = cryptoRandomString({ length: 15 });
             $form.expand.waypoints = [...$form.expand.waypoints, savedWaypoint];
         }
-        const marker = createMarkerFromWaypoint(L, savedWaypoint, (event) => {
-            var marker = event.target;
-            var position = marker.getLatLng();
+        const marker = createMarkerFromWaypoint(savedWaypoint, (event) => {
+            var marker = event;
+            var position = marker.getLngLat();
             const editableWaypointIndex = $form.expand.waypoints.findIndex(
                 (w) => w.id == savedWaypoint.id,
             );
@@ -503,26 +502,26 @@
         }
     }
 
-    async function handleMapClick(e: LeafletMouseEvent) {
+    async function handleMapClick(e: M.MapMouseEvent) {
         if (!drawingActive) {
             return;
         }
         const anchorCount = anchors.length;
         if (anchorCount == 0) {
-            addAnchor(e.latlng.lat, e.latlng.lng);
+            addAnchor(e.lngLat.lat, e.lngLat.lng);
         } else {
             const previousAnchor = anchors[anchorCount - 1];
             try {
                 const routeWaypoints = await calculateRouteBetween(
                     previousAnchor.lat,
                     previousAnchor.lon,
-                    e.latlng.lat,
-                    e.latlng.lng,
+                    e.lngLat.lat,
+                    e.lngLat.lng,
                     selectedModeOfTransport,
                     autoRouting,
                 );
                 appendToRoute(routeWaypoints);
-                addAnchor(e.latlng.lat, e.latlng.lng);
+                addAnchor(e.lngLat.lat, e.lngLat.lng);
                 updateTrailWithRouteData();
             } catch (e) {
                 console.error(e);
@@ -542,7 +541,6 @@
             lon: lon,
         };
         const marker = createAnchorMarker(
-            L,
             lat,
             lon,
             anchors.length + 1,
@@ -553,7 +551,7 @@
                 if (!drawingActive) {
                     return;
                 }
-                const position = marker.getLatLng();
+                const position = marker.getLngLat();
                 anchor.lat = position.lat;
                 anchor.lon = position.lng;
                 recalculateRoute(anchors.findIndex((a) => a.id == anchor.id));
@@ -574,14 +572,11 @@
         anchors.splice(anchorIndex, 1);
         for (let i = anchorIndex; i < anchors.length; i++) {
             const anchor = anchors[i];
-            const markerIcon = anchor.marker?.getIcon() as DivIcon | undefined;
+            const markerIcon = anchor.marker?.getElement();
             if (markerIcon) {
-                const markerText =
-                    (markerIcon.options.html as HTMLSpanElement).textContent ??
-                    "0";
+                const markerText = markerIcon.textContent ?? "0";
                 const markerIndex = parseInt(markerText);
-                (markerIcon.options.html as HTMLSpanElement).textContent =
-                    markerIndex - 1 + "";
+                markerIcon.textContent = markerIndex - 1 + "";
             }
         }
         if (anchorIndex == 0) {
@@ -924,19 +919,13 @@
                 ></Select>
             </div>
         {/if}
-        <MapWithElevation
+        <MapWithElevationMaplibre
             trail={$form}
-            crosshair={drawingActive}
-            options={{
-                autofitBounds: !drawingActive,
-                mapTooltip: !drawingActive,
-                speed: !drawingActive,
-                speedFactor: drawingActive ? 0 : 1,
-                showStartEnd: !drawingActive,
-            }}
+            drawing={drawingActive}
+            
             bind:map
             on:click={(e) => handleMapClick(e.detail)}
-        ></MapWithElevation>
+        ></MapWithElevationMaplibre>
     </div>
 </main>
 <WaypointModal

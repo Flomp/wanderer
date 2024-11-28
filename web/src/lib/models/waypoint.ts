@@ -1,4 +1,5 @@
-import type { Marker } from "leaflet";
+import type { Marker } from "maplibre-gl";
+import * as M from "maplibre-gl";
 import { number, object, string } from "yup";
 
 class Waypoint {
@@ -8,13 +9,13 @@ class Waypoint {
     lat: number;
     lon: number;
     icon?: string;
-    marker?: Marker;
+    marker?: M.Marker;
     photos: string[];
     _photos: File[];
     author?: string;
 
     constructor(lat: number, lon: number, params?: {
-        id?: string, name?: string, description?: string, icon?: string, marker?: Marker, photos?: string[];
+        id?: string, name?: string, description?: string, icon?: string, marker?: M.Marker, photos?: string[];
     }) {
         this.id = params?.id;
         this.name = params?.name ?? "";

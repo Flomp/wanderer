@@ -1,4 +1,4 @@
-import type { LatLng, Marker } from "leaflet";
+import * as M from "maplibre-gl";
 
 interface ValhallaRouteResponse {
     trip: {
@@ -16,7 +16,7 @@ interface ValhallaAnchor {
     id: string,
     lat: number,
     lon: number,
-    marker?: Marker
+    marker?: M.Marker
 }
 
-export { type ValhallaRouteResponse, type ValhallaHeightResponse, type ValhallaAnchor }
+export { type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse };

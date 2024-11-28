@@ -348,14 +348,3 @@
   width: max-content !important;
   max-width: 100%;
 }
-
-.leaflet-anchor {
-  background-color: #fff;
-  border: 2px solid black;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  -moz-border-radius: 50%;
-  -webkit-border-radius: 50%;
-  text-align: center;
-}

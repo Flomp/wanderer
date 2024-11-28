@@ -9,21 +9,30 @@
         FontawesomeMarker,
     } from "$lib/util/maplibre_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
-    import type { GeoJsonObject } from "geojson";
+    import type { GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
-    import { onDestroy, onMount } from "svelte";
+    import { createEventDispatcher, onDestroy, onMount } from "svelte";
 
-    export let trail: Trail;
+    export let trail: Trail | null;
     export let markers: M.Marker[] = [];
     export let map: M.Map | null = null;
-    export let crosshairCursor: boolean = false;
+    export let drawing: boolean = false;
 
     let mapContainer: HTMLDivElement;
-
     let epc: ElevationProfileControl;
+    let startMarker: M.Marker;
+    let endMarker: M.Marker;
 
-    $: data = toGeoJson(trail.expand.gpx_data!) as GeoJsonObject;
+    const dispatch = createEventDispatcher();
+
+    $: data = trail?.expand.gpx_data
+        ? (toGeoJson(trail.expand.gpx_data!) as GeoJSON)
+        : null;
+
+    $: if (data && map) {
+        initMap();
+    }
 
     $: if ($theme == "dark") {
         epc?.toggleTheme({
@@ -41,11 +50,86 @@
         });
     }
 
+    $: if (drawing && map) {
+        map.getCanvas().style.cursor = "crosshair";
+    } else if (!drawing && map) {
+        map.getCanvas().style.cursor = "inherit";
+        addStartEndMarkers();
+    }
+
+    function initMap() {
+        if (!map || !data) {
+            return;
+        }
+
+        for (const waypoint of trail?.expand.waypoints ?? []) {
+            const marker = createMarkerFromWaypoint(waypoint);
+            marker.addTo(map);
+            markers.push(marker);
+        }
+
+        epc.setData(data, trail!.expand.waypoints);
+        epc.showProfile();
+
+        const trailSource = map.getSource("trail-source");
+        if (!trailSource) {
+            map.on("load", () => {
+                map!.addSource("trail-source", {
+                    type: "geojson",
+                    data: data,
+                });
+
+                map!.addLayer({
+                    id: "uploaded-polygons",
+                    type: "line",
+                    source: "trail-source",
+                    paint: {
+                        "line-color": "#648ad5",
+                        "line-width": 5,
+                    },
+                });
+            });
+        } else {
+            (trailSource as M.GeoJSONSource).setData(data);
+        }
+
+        if (!drawing) {
+            addStartEndMarkers();
+        }
+    }
+
+    function addStartEndMarkers() {
+        if (!map || !data) {
+            return;
+        }
+        const startEndPoint = findStartAndEndPoints(data);
+
+        startMarker ??= new FontawesomeMarker({ icon: "fa fa-bullseye" }, {});
+
+        startMarker.setLngLat(startEndPoint[0] as M.LngLatLike).addTo(map);
+
+        endMarker ??= new FontawesomeMarker(
+            { icon: "fa fa-flag-checkered" },
+            {},
+        );
+        endMarker.setLngLat(startEndPoint[1] as M.LngLatLike).addTo(map);
+
+        map!.fitBounds(data.bbox as any, {
+            animate: false,
+            padding: {
+                top: 16,
+                left: 16,
+                right: 16,
+                bottom: map!.getContainer().clientHeight * 0.3 + 16,
+            },
+        });
+    }
+
     onMount(async () => {
         const initialState = {
             lng: 0,
             lat: 0,
-            zoom: 14,
+            zoom: 1,
         };
         const ElevationProfileControl = (
             await import(
@@ -59,28 +143,6 @@
             center: [initialState.lng, initialState.lat],
             zoom: initialState.zoom,
         });
-
-        for (const waypoint of trail?.expand.waypoints ?? []) {
-            const marker = createMarkerFromWaypoint(waypoint);
-            marker.addTo(map);
-            markers.push(marker);
-        }
-
-        const startEndPoint = findStartAndEndPoints(data);
-
-        const startMarker = new FontawesomeMarker(
-            { icon: "fa fa-bullseye" },
-            {},
-        )
-            .setLngLat(startEndPoint[0] as M.LngLatLike)
-            .addTo(map);
-
-        const endMarker = new FontawesomeMarker(
-            { icon: "fa fa-flag-checkered" },
-            {},
-        )
-            .setLngLat(startEndPoint[1] as M.LngLatLike)
-            .addTo(map);
 
         const elevationMarker = new FontawesomeMarker(
             {
@@ -96,7 +158,7 @@
         elevationMarker.setOpacity("0");
 
         epc = new ElevationProfileControl({
-            visible: true,
+            visible: false,
             profileBackgroundColor: $theme == "light" ? "#242734" : "#191b24",
             backgroundColor: "bg-menu-background/90",
             unit: $page.data.settings?.unit ?? "metric",
@@ -122,32 +184,9 @@
             "top-left",
         );
         map.addControl(epc);
-        epc.setData(data, trail.expand.waypoints);
 
-        map.on("load", () => {
-            map!.addSource("trail-source", {
-                type: "geojson",
-                data: data as any,
-            });
-
-            map!.addLayer({
-                id: "uploaded-polygons",
-                type: "line",
-                source: "trail-source",
-                paint: {
-                    "line-color": "#648ad5",
-                    "line-width": 5,
-                },
-            });
-            map!.fitBounds(data.bbox as any, {
-                animate: false,
-                padding: {
-                    top: 16,
-                    left: 16,
-                    right: 16,
-                    bottom: map!.getContainer().clientHeight * 0.3 + 16,
-                },
-            });
+        map.on("click", (e) => {
+            dispatch("click", e);
         });
     });
 
@@ -156,7 +195,7 @@
     });
 </script>
 
-<div id="map" class:cursor-pointer={crosshairCursor} bind:this={mapContainer}></div>
+<div id="map" bind:this={mapContainer}></div>
 
 <style>
     #map {
