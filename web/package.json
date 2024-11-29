@@ -36,6 +36,8 @@
     "@sveltejs/adapter-node": "^4.0.1",
     "@threlte/core": "^7.1.0",
     "@threlte/extras": "^8.7.5",
+    "@turf/destination": "^7.1.0",
+    "@turf/distance": "^7.1.0",
     "@types/chart.js": "^2.9.41",
     "@types/leaflet.awesome-markers": "^2.0.28",
     "@types/three": "^0.161.2",

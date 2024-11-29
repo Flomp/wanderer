@@ -1,5 +1,7 @@
+import { haversineDistance } from "$lib/models/gpx/utils";
 import type { Waypoint } from "$lib/models/waypoint";
 import type { LeafletEvent, Map, Marker } from "leaflet";
+import * as M from "maplibre-gl";
 
 export const startIcon = () => L.divIcon({
     html: '<i class="p-2 text-white bg-gray-500 rounded-full fa fa-bullseye -translate-x-1/2 -translate-y-1/3"></i>',
@@ -64,16 +66,16 @@ export function createAnchorMarker(L: any, lat: number, lon: number, index: numb
     return marker
 }
 
-export function calculatePixelPerMeter(map: Map, meters: number) {
-    const y = map.getSize().y;
-    const x = map.getSize().x;
-    const maxMeters = map.containerPointToLatLng([0, y]).distanceTo(map.containerPointToLatLng([x, y]));
+export function calculatePixelPerMeter(map: M.Map, meters: number) {
+    const y = map.getCanvas().getBoundingClientRect().y;
+    const x = map.getCanvas().getBoundingClientRect().x;
+    const maxMeters = map.unproject([0, y]).distanceTo(map.unproject([x, y]));
     const pixelPerMeter = x / maxMeters;
 
     return pixelPerMeter * meters
 }
 
-export function calculateScaleFactor(map: Map) {
+export function calculateScaleFactor(map: M.Map) {
     function _pxTOmm() {
         let heightRef = document.createElement('div');
         heightRef.style.height = '1mm';
@@ -89,16 +91,17 @@ export function calculateScaleFactor(map: Map) {
             return px / pxPermm;
         }
     }
-    var centerOfMap = map.getSize().y / 2;
+    var centerOfMap = map.getCanvas().getBoundingClientRect().y / 2;
 
-    var realWorlMetersPer100Pixels = map.distance(
-        map.containerPointToLatLng([0, centerOfMap]),
-        map.containerPointToLatLng([100, centerOfMap])
+    const p1 = map.unproject([0, centerOfMap]);
+    const p2 = map.unproject([100, centerOfMap]);
+    var realWorldMetersPer100Pixels = haversineDistance(
+        p1.lat, p1.lng, p2.lat, p2.lng
     );
 
     const screenMetersPer100Pixels = _pxTOmm()(100) / 1000;
 
-    const scaleFactor = realWorlMetersPer100Pixels / screenMetersPer100Pixels
+    const scaleFactor = realWorldMetersPer100Pixels / screenMetersPer100Pixels
 
     return scaleFactor
 }

@@ -410,6 +410,7 @@ export class ElevationProfile {
         }
 
         this.canvas = document.createElement("canvas");
+        this.canvas.id = "elevation-profile-chart"
         appContainer.appendChild(this.canvas);
 
         Chart.register(...registerables);
@@ -515,7 +516,7 @@ export class ElevationProfile {
                             tickColor: "#0002"
                         },
                         ticks: {
-                            stepSize: 0.1,
+                            stepSize: 1,
                             align: "inner",
                             display: this.settings.displayDistanceLabels,
                             color: this.settings.labelColor,

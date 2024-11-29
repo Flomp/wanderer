@@ -7,9 +7,10 @@ import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
 
 export class FontawesomeMarker extends M.Marker {
-    constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string }, markerOptions?: M.MarkerOptions) {
+    constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
         const element = document.createElement('div')
         element.className = `cursor-pointer flex items-center justify-center w-${options.width ?? 7} aspect-square bg-${options.backgroundColor ?? "gray-500"} rounded-full text-${options.fontSize ?? "normal"}`
+        element.id = options.id ?? "";
         super({ element: element, ...markerOptions });
 
         const {

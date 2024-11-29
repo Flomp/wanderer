@@ -15,6 +15,7 @@
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
     import { createEventDispatcher, onDestroy, onMount } from "svelte";
+    import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
 
     export let trails: Trail[] = [];
     export let markers: M.Marker[] = [];
@@ -22,11 +23,17 @@
     export let drawing: boolean = false;
     export let showElevation: boolean = true;
     export let showInfoPopup: boolean = false;
+    export let showGrid: boolean = false;
+    export let elevationProfileContainer: string | HTMLDivElement | undefined =
+        undefined;
+    export let mapOptions: Partial<M.MapOptions> | undefined = undefined;
+
     export let activeTrail: number = 0;
     export let minZoom: number = 0;
 
     let mapContainer: HTMLDivElement;
     let epc: ElevationProfileControl | null = null;
+    let graticule: MaplibreGraticule | null = null;
 
     let layers: Record<
         string,
@@ -76,6 +83,30 @@
             trails[activeTrail]?.id ?? activeTrail.toString(),
             data?.at(activeTrail),
         );
+    }
+
+    $: if (showGrid) {
+        if (!graticule) {
+            graticule = new MaplibreGraticule({
+                minZoom: 0,
+                maxZoom: 20,
+                showLabels: true,
+                labelType: "hdms",
+                labelSize: 10,
+                labelColor: "#858585",
+                longitudePosition: "top",
+                latitudePosition: "right",
+                paint: {
+                    "line-opacity": 0.8,
+                    "line-color": "rgba(0,0,0,0.2)",
+                },
+            });
+        }
+        map?.addControl(graticule);
+    } else {
+        if (graticule) {
+            map?.removeControl(graticule);
+        }
     }
 
     function getData(trails: Trail[]) {
@@ -155,7 +186,7 @@
             ? (data[activeTrail].bbox as M.LngLatBoundsLike)
             : getBounds();
         map!.fitBounds(bounds, {
-            animate: true,
+            animate: trails.length > 1,
             padding: {
                 top: 16,
                 left: 16,
@@ -410,16 +441,22 @@
             (s) => s.text === localStorage.getItem("layer"),
         );
 
-        map = new M.Map({
-            container: mapContainer,
-            style:
-                mapStyles[preferredMapStyleIndex].value ?? mapStyles[0].value,
-            center: [initialState.lng, initialState.lat],
-            zoom: initialState.zoom,
-        });
+        const finalMapOptions: M.MapOptions = {
+            ...{
+                container: mapContainer,
+                style:
+                    mapStyles[preferredMapStyleIndex].value ??
+                    mapStyles[0].value,
+                center: [initialState.lng, initialState.lat],
+                zoom: initialState.zoom,
+            },
+            ...mapOptions,
+        };
+        map = new M.Map(finalMapOptions);
 
         const elevationMarker = new FontawesomeMarker(
             {
+                id: "elevation-marker",
                 icon: "fa-regular fa-circle",
                 fontSize: "xs",
                 width: 4,
@@ -449,7 +486,6 @@
             }),
             "top-left",
         );
-        map.addControl(switcherControl);
 
         if (showElevation) {
             epc = new ElevationProfileControl({
@@ -462,6 +498,7 @@
                 displayDistanceGrid: true,
                 tooltipDisplayDPlus: false,
                 zoom: false,
+                container: elevationProfileContainer,
                 onEnter: () => {
                     elevationMarker.setOpacity("1");
                 },
@@ -474,6 +511,7 @@
             });
             map.addControl(epc);
         }
+        map.addControl(switcherControl);
 
         map.on("styledata", () => {
             trails.forEach((t, i) => {

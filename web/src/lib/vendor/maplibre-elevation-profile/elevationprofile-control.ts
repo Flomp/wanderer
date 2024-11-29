@@ -144,14 +144,14 @@ export class ElevationProfileControl implements IControl {
                 }
             }
 
-            const waypointContainer = document.createElement("div")
-            waypointContainer.className = "absolute w-full"
-            waypointContainer.id = "waypoint-container"
-
-            this.profileContainer.append(waypointContainer);
-
             mapContainer.appendChild(this.profileContainer);
         }
+
+        const waypointContainer = document.createElement("div")
+        waypointContainer.className = "absolute w-full"
+        waypointContainer.id = "waypoint-container"
+
+        this.profileContainer.append(waypointContainer);
 
         if (this.settings.containerClass) {
             this.profileContainer.classList.add(this.settings.containerClass);

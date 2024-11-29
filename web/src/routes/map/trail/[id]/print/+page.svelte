@@ -6,7 +6,7 @@
     import Button from "$lib/components/base/button.svelte";
     import Select from "$lib/components/base/select.svelte";
     import LogoText from "$lib/components/logo/logo_text.svelte";
-    import MapWithElevation from "$lib/components/trail/map_with_elevation.svelte";
+    import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import type { Settings } from "$lib/models/settings";
     import { show_toast } from "$lib/stores/toast_store";
     import { trail } from "$lib/stores/trail_store";
@@ -21,19 +21,16 @@
     } from "$lib/util/leaflet_util";
     import { createRect, createText } from "$lib/util/svg_util";
     import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type AutoGraticule from "$lib/vendor/leaflet-graticule/leaflet-auto-graticule";
-    import leafletImage from "$lib/vendor/leaflet-image/leaflet-image.js";
-    import { Canvg } from "canvg";
+    import QrCodeWithLogo from "$lib/vendor/qr-code-with-logos/index";
     import { jsPDF } from "jspdf";
-    import type { Map } from "leaflet";
     import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
     import "leaflet/dist/leaflet.css";
-    import QrCodeWithLogo from "$lib/vendor/qr-code-with-logos/index";
+    import * as M from "maplibre-gl";
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
 
-    let map: Map;
-    let graticule: AutoGraticule;
+    let map: M.Map;
+    let showGrid: boolean = true;
 
     const settings: Settings = $page.data.settings;
 
@@ -94,7 +91,7 @@
         });
     });
 
-    function print() {
+    async function print() {
         printLoading = true;
         const doc = new jsPDF(selectedOrientation, "mm", [
             paperDimensions[selectedPaperSize].pdf[
@@ -117,246 +114,220 @@
             ?.getBoundingClientRect().width;
 
         try {
-            leafletImage(
-                map,
-                async function (err: string, canvas: HTMLCanvasElement) {
-                    // Map
-                    var img = document.createElement("img");
-                    var dimensions = map.getSize();
-                    img.width = dimensions.x;
-                    img.height = dimensions.y;
-                    const ratio = img.height / img.width;
-                    img.src = canvas.toDataURL();
-                    doc.addImage(img.src, "png", 8, 8, 0, (width - 16) * ratio);
-                    currentHeight += (width - 16) * ratio + 11;
-                    const elevationProfileHeight = currentHeight - 4;
+            var img = document.createElement("img");
+            var dimensions = map.getCanvas().getBoundingClientRect();
+            img.width = dimensions.width;
+            img.height = dimensions.height;
+            let ratio = img.height / img.width;
+            img.src = map.getCanvas().toDataURL();
 
-                    // QR Code
-                    doc.addImage(
-                        document.getElementById("qrcode") as HTMLImageElement,
-                        "png",
-                        8,
-                        currentHeight,
-                        24,
-                        24,
-                    );
+            doc.addImage(img.src, "png", 8, 8, 0, (width - 16) * ratio);
+            currentHeight += (width - 16) * ratio + 11;
+            const elevationProfileHeight = currentHeight - 11;
 
-                    // Distance
-                    currentHeight += 5;
-                    let currentWidth = 8 + 24 + 4;
-                    doc.setFontSize(9);
-                    doc.setTextColor(107, 114, 128);
-                    doc.setFont("fa-solid-900", "normal");
-                    doc.text("\uf337", currentWidth, currentHeight);
-                    currentWidth += doc.getTextWidth("\uf337") + 2;
-                    doc.setFont("IBMPlexSans-Regular", "normal");
-                    doc.text(
-                        formatDistance($trail.distance),
-                        currentWidth,
-                        currentHeight,
-                    );
-                    currentWidth +=
-                        doc.getTextWidth(formatDistance($trail.distance)) + 4;
+            // Waypoints
+            const canvasContainer = map.getCanvasContainer();
+            const marker =
+                canvasContainer.getElementsByClassName("maplibregl-marker");
+            for (const m of marker) {
+                if (m.id === "elevation-marker") {
+                    continue;
+                }
+                const markerStyle = window.getComputedStyle(m);
+                const matrix = new DOMMatrixReadOnly(markerStyle.transform);
+                const percentX = matrix.m41 / dimensions.width;
+                const percentY = matrix.m42 / dimensions.height;
 
-                    // Duration
-                    doc.setFont("fa-solid-900", "normal");
-                    doc.text("\uf017", currentWidth, currentHeight);
-                    currentWidth += doc.getTextWidth("\uf337") + 2;
-                    doc.setFont("IBMPlexSans-Regular", "normal");
-                    doc.text(
-                        formatTimeHHMM($trail.duration),
-                        currentWidth,
-                        currentHeight,
-                    );
-                    currentWidth +=
-                        doc.getTextWidth(formatTimeHHMM($trail.duration)) + 4;
+                const markerIcon = m.querySelector("i") as HTMLElement;
+                const iconContent = window
+                    .getComputedStyle(markerIcon, ":before")
+                    .getPropertyValue("content");
+                const iconText = String.fromCharCode(parseInt(iconContent.replace(/['"\\]/g, "").trim(), 16)); 
 
-                    // Elevation gain
-                    doc.setFont("fa-solid-900", "normal");
-                    doc.text("\ue098", currentWidth, currentHeight);
-                    currentWidth += doc.getTextWidth("\ue098") + 2;
-                    doc.setFont("IBMPlexSans-Regular", "normal");
-                    doc.text(
-                        formatElevation($trail.elevation_gain),
-                        currentWidth,
-                        currentHeight,
-                    );
-                    currentWidth +=
-                        doc.getTextWidth(
-                            formatDistance($trail.elevation_gain),
-                        ) + 4;
+                doc.setFont("fa-solid-900", "normal");
+                doc.text(iconText, width * percentX, height * percentY);
+            }
 
-                    // Elevation loss
-                    doc.setFont("fa-solid-900", "normal");
-                    doc.text("\ue097", currentWidth, currentHeight);
-                    currentWidth += doc.getTextWidth("\ue098") + 2;
-                    doc.setFont("IBMPlexSans-Regular", "normal");
-                    doc.text(
-                        formatElevation($trail.elevation_loss),
-                        currentWidth,
-                        currentHeight,
-                    );
-                 
-                    // Ruler
-                    currentHeight += 6;
-                    currentWidth = 8 + 24 + 4;
-                    doc.setTextColor(0, 0, 0);
-                    for (let i = 0; i < rulerSegments.length; i++) {
-                        const segment = rulerSegments[i];
-                        const label = rulerLabels[i].textContent ?? "";
-                        const segmentWidth =
-                            segment.getBoundingClientRect().width;
-                        const segmentWidthPercent =
-                            segmentWidth / (pageWidth ?? 0);
-                        const segmentPDFWidth = width * segmentWidthPercent;
-                        let textWidth = doc.getTextWidth(label);
 
-                        if (i % 2 == 0) {
-                            doc.setFillColor(255, 255, 255);
-                        } else {
-                            doc.setFillColor(93, 93, 93);
-                        }
-
-                        doc.rect(
-                            currentWidth,
-                            currentHeight,
-                            segmentPDFWidth,
-                            2,
-                            "FD",
-                        );
-                        doc.text(
-                            label,
-                            currentWidth - textWidth / 2,
-                            currentHeight + 6,
-                        );
-                        currentWidth += segmentPDFWidth;
-                        if (i == rulerSegments.length - 1) {
-                            const endLabel =
-                                rulerLabels[i + 1].textContent ?? "";
-                            textWidth = doc.getTextWidth(endLabel);
-                            doc.text(
-                                endLabel,
-                                currentWidth - textWidth / 2,
-                                currentHeight + 6,
-                            );
-                            textWidth = doc.getTextWidth("KM");
-                            doc.text(
-                                "KM",
-                                currentWidth - textWidth,
-                                currentHeight - 2,
-                            );
-                        }
-                    }
-
-                    // Scale
-                    currentHeight += 12;
-                    doc.setFillColor(255, 255, 255);
-                    doc.text(
-                        `Scale:  1 : ${Math.round(scale)}`,
-                        8 + 24 + 4,
-                        currentHeight,
-                    );
-
-                    // Elevation profile
-                    const gridLines = document.querySelectorAll(
-                        "#elevation .grid line",
-                    );
-                    gridLines.forEach((l) =>
-                        l.setAttribute("stroke", "#d1d5db"),
-                    );
-                    const gridBorders = document.querySelectorAll(
-                        "#elevation .grid path",
-                    );
-                    gridBorders.forEach((l) =>
-                        l.setAttribute("stroke", "#fff"),
-                    );
-                    const tooltip = document.querySelector(
-                        "#elevation .tooltip",
-                    ) as HTMLElement;
-                    tooltip.style.display = "none";
-                    const units = document.querySelectorAll(
-                        "#elevation .axis text",
-                    );
-                    units.forEach((l) => l.setAttribute("fill", "#000"));
-                    const elevationCanvas = document.createElement("canvas");
-                    const ctx = elevationCanvas.getContext("2d")!;
-                    const v = await Canvg.from(
-                        ctx,
-                        document.querySelector("#elevation svg")!.outerHTML,
-                    );
-                    v.start();
-                    const profileRatio =
-                        elevationCanvas.height / elevationCanvas.width;
-                    doc.addImage(
-                        elevationCanvas.toDataURL("image/png"),
-                        width - 79.3 - 8,
-                        elevationProfileHeight,
-                        79.3,
-                        79.3 * profileRatio,
-                    );
-                    const elevationPlot = (
-                        document.querySelector(
-                            ".canvas-plot",
-                        ) as HTMLCanvasElement
-                    ).toDataURL("image/png");
-                    doc.addImage(
-                        elevationPlot,
-                        width - 77.3,
-                        elevationProfileHeight + 8,
-                        0,
-                        0,
-                    );
-                    tooltip.style.display = "block";
-
-                    // Separator
-                    currentHeight += 5;
-                    doc.setDrawColor(232, 234, 237);
-                    doc.line(8, currentHeight, width - 8, currentHeight);
-                    currentHeight += 6;
-
-                    // Trail name & location
-                    doc.setTextColor(0, 0, 0);
-                    doc.setFont("IBMPlexSans-SemiBold", "bold");
-                    doc.text($trail.name, 8, currentHeight);
-                    doc.setFont("fa-solid-900", "normal");
-                    currentHeight += 5;
-                    doc.text("\uf3c5", 8, currentHeight);
-                    doc.setFont("IBMPlexSans-Regular", "normal");
-                    doc.text($trail.location || "-", 12, currentHeight);
-
-                    // Logo
-                    const logo = new Image();
-                    logo.src = "/imgs/logo_text_dark.png";
-                    const logoRatio = 64 / 212;
-                    const logoWidth = 32;
-                    const logoHeight = logoWidth * logoRatio;
-                    doc.addImage(
-                        logo,
-                        width - 8 - logoWidth,
-                        height - 4 - logoHeight,
-                        logoWidth,
-                        logoHeight,
-                    );
-
-                    if (includeDescription && $trail.description) {
-                        doc.addPage();
-                        doc.text($trail.description, 16, 16, {
-                            maxWidth: width - 32,
-                        });
-                        doc.addImage(
-                            logo,
-                            width - 8 - logoWidth,
-                            height - 4 - logoHeight,
-                            logoWidth,
-                            logoHeight,
-                        );
-                    }
-
-                    doc.save($trail.name + ".pdf");
-                    printLoading = false;
-                },
+            // printLoading = false;
+            // return;
+            // QR Code
+            doc.addImage(
+                document.getElementById("qrcode") as HTMLImageElement,
+                "png",
+                8,
+                currentHeight,
+                24,
+                24,
             );
+
+            // Distance
+            currentHeight += 5;
+            let currentWidth = 8 + 24 + 4;
+            doc.setFontSize(9);
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("fa-solid-900", "normal");
+            doc.text("\uf337", currentWidth, currentHeight);
+            currentWidth += doc.getTextWidth("\uf337") + 2;
+            doc.setFont("IBMPlexSans-Regular", "normal");
+            doc.text(
+                formatDistance($trail.distance),
+                currentWidth,
+                currentHeight,
+            );
+            currentWidth +=
+                doc.getTextWidth(formatDistance($trail.distance)) + 4;
+
+            // Duration
+            doc.setFont("fa-solid-900", "normal");
+            doc.text("\uf017", currentWidth, currentHeight);
+            currentWidth += doc.getTextWidth("\uf337") + 2;
+            doc.setFont("IBMPlexSans-Regular", "normal");
+            doc.text(
+                formatTimeHHMM($trail.duration),
+                currentWidth,
+                currentHeight,
+            );
+            currentWidth +=
+                doc.getTextWidth(formatTimeHHMM($trail.duration)) + 4;
+
+            // Elevation gain
+            doc.setFont("fa-solid-900", "normal");
+            doc.text("\ue098", currentWidth, currentHeight);
+            currentWidth += doc.getTextWidth("\ue098") + 2;
+            doc.setFont("IBMPlexSans-Regular", "normal");
+            doc.text(
+                formatElevation($trail.elevation_gain),
+                currentWidth,
+                currentHeight,
+            );
+            currentWidth +=
+                doc.getTextWidth(formatDistance($trail.elevation_gain)) + 4;
+
+            // Elevation loss
+            doc.setFont("fa-solid-900", "normal");
+            doc.text("\ue097", currentWidth, currentHeight);
+            currentWidth += doc.getTextWidth("\ue098") + 2;
+            doc.setFont("IBMPlexSans-Regular", "normal");
+            doc.text(
+                formatElevation($trail.elevation_loss),
+                currentWidth,
+                currentHeight,
+            );
+
+            // Ruler
+            currentHeight += 6;
+            currentWidth = 8 + 24 + 4;
+            doc.setTextColor(0, 0, 0);
+            for (let i = 0; i < rulerSegments.length; i++) {
+                const segment = rulerSegments[i];
+                const label = rulerLabels[i].textContent ?? "";
+                const segmentWidth = segment.getBoundingClientRect().width;
+                const segmentWidthPercent = segmentWidth / (pageWidth ?? 0);
+                const segmentPDFWidth = width * segmentWidthPercent;
+                let textWidth = doc.getTextWidth(label);
+
+                if (i % 2 == 0) {
+                    doc.setFillColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(93, 93, 93);
+                }
+
+                doc.rect(currentWidth, currentHeight, segmentPDFWidth, 2, "FD");
+                doc.text(
+                    label,
+                    currentWidth - textWidth / 2,
+                    currentHeight + 6,
+                );
+                currentWidth += segmentPDFWidth;
+                if (i == rulerSegments.length - 1) {
+                    const endLabel = rulerLabels[i + 1].textContent ?? "";
+                    textWidth = doc.getTextWidth(endLabel);
+                    doc.text(
+                        endLabel,
+                        currentWidth - textWidth / 2,
+                        currentHeight + 6,
+                    );
+                    textWidth = doc.getTextWidth("KM");
+                    doc.text("KM", currentWidth - textWidth, currentHeight - 2);
+                }
+            }
+
+            // Scale
+            currentHeight += 12;
+            doc.setFillColor(255, 255, 255);
+            doc.text(
+                `Scale:  1 : ${Math.round(scale)}`,
+                8 + 24 + 4,
+                currentHeight,
+            );
+
+            // Elevation profile
+            const elevationChartCanvas = document.getElementById(
+                "elevation-profile-chart",
+            ) as HTMLCanvasElement;
+            var dimensions = elevationChartCanvas.getBoundingClientRect();
+            img.width = dimensions.width;
+            img.height = dimensions.height;
+            ratio = img.height / img.width;
+            img.src = elevationChartCanvas.toDataURL();
+
+            doc.addImage(
+                elevationChartCanvas.toDataURL("image/png"),
+                width - 79.3 - 8,
+                elevationProfileHeight,
+                79.3,
+                79.3 * ratio,
+            );
+
+            // Separator
+            currentHeight += 5;
+            doc.setDrawColor(232, 234, 237);
+            doc.line(8, currentHeight, width - 8, currentHeight);
+            currentHeight += 6;
+
+            // Trail name & location
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("IBMPlexSans-SemiBold", "bold");
+            doc.text($trail.name, 8, currentHeight);
+            doc.setFont("fa-solid-900", "normal");
+            currentHeight += 5;
+            doc.text("\uf3c5", 8, currentHeight);
+            doc.setFont("IBMPlexSans-Regular", "normal");
+            doc.text($trail.location || "-", 12, currentHeight);
+
+            // Logo
+            const logo = new Image();
+            logo.src = "/imgs/logo_text_dark.png";
+            const logoRatio = 64 / 212;
+            const logoWidth = 32;
+            const logoHeight = logoWidth * logoRatio;
+            doc.addImage(
+                logo,
+                width - 8 - logoWidth,
+                height - 4 - logoHeight,
+                logoWidth,
+                logoHeight,
+            );
+
+            if (includeDescription && $trail.description) {
+                doc.addPage();
+                doc.text($trail.description, 16, 16, {
+                    maxWidth: width - 32,
+                });
+                doc.addImage(
+                    logo,
+                    width - 8 - logoWidth,
+                    height - 4 - logoHeight,
+                    logoWidth,
+                    logoHeight,
+                );
+            }
+
+            doc.save($trail.name + ".pdf");
+            printLoading = false;
         } catch (e) {
+            console.error(e);
             show_toast({
                 icon: "close",
                 type: "error",
@@ -371,11 +342,10 @@
             return;
         }
         await tick();
-        map.invalidateSize();
         updateScale(map);
     }
 
-    async function updateScale(map: Map) {
+    async function updateScale(map: M.Map) {
         const svg = document.getElementById("ruler") as HTMLElement;
         if (!svg) {
             return;
@@ -454,9 +424,9 @@
 
     function toggleGrid() {
         if (selectedGrid == "off") {
-            graticule?.remove();
+            showGrid = false;
         } else {
-            graticule.addTo(map);
+            showGrid = true;
         }
     }
 </script>
@@ -521,65 +491,52 @@
             ]}"
         >
             <div class="basis-full">
-                <MapWithElevation
-                    trail={$trail}
-                    options={{
-                        theme: "gray-theme",
-                        slope: false,
-                        speed: false,
-                        legend: false,
-                        time: false,
-                        hotline: false,
-                        graticule: true,
-                        height: 150,
-                    }}
-                    on:zoomend={(e) => updateScale(e.detail)}
+                <MapWithElevationMaplibre
+                    trails={[$trail]}
+                    on:zoom={(e) => updateScale(e.detail)}
                     bind:map
-                    bind:graticule
-                >
-                    <img
-                        class="w-[100px] h-[100px]"
-                        id="qrcode"
-                        alt="QR Code"
-                    />
-                    <div class="basis-full mx-4">
-                        <div
-                            class="flex mt-1 gap-x-4 gap-y-2 text-sm text-gray-500 whitespace-nowrap"
+                    {showGrid}
+                    elevationProfileContainer="elevation-profile"
+                    mapOptions={{ preserveDrawingBuffer: true }}
+                ></MapWithElevationMaplibre>
+            </div>
+            <div class="flex items-center min-w-0">
+                <img class="w-[100px] h-[100px]" id="qrcode" alt="QR Code" />
+                <div>
+                    <div
+                        class="flex mt-1 gap-x-4 gap-y-2 text-sm text-gray-500 whitespace-nowrap"
+                    >
+                        <span
+                            ><i class="fa fa-left-right mr-2"
+                            ></i>{formatDistance($trail.distance)}</span
                         >
-                            <span
-                                ><i class="fa fa-left-right mr-2"
-                                ></i>{formatDistance($trail.distance)}</span
-                            >
-                            <span
-                                ><i class="fa fa-clock mr-2"
-                                ></i>{formatTimeHHMM($trail.duration)}</span
-                            >
-                            <span
-                                ><i class="fa fa-arrow-trend-up mr-2"
-                                ></i>{formatElevation(
-                                    $trail.elevation_gain,
-                                )}</span
-                            >
-                            <span
-                                ><i class="fa fa-arrow-trend-down mr-2"
-                                ></i>{formatElevation(
-                                    $trail.elevation_loss,
-                                )}</span
-                            >
-                        </div>
-                        <svg
-                            width="100%"
-                            height="50"
-                            id="ruler"
-                            xmlns="http://www.w3.org/2000/svg"
-                            version="1.1"
+                        <span
+                            ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
+                                $trail.duration,
+                            )}</span
                         >
-                        </svg>
-                        <span class="text-sm"
-                            >Scale: &nbsp 1 : {Math.round(scale)}</span
+                        <span
+                            ><i class="fa fa-arrow-trend-up mr-2"
+                            ></i>{formatElevation($trail.elevation_gain)}</span
+                        >
+                        <span
+                            ><i class="fa fa-arrow-trend-down mr-2"
+                            ></i>{formatElevation($trail.elevation_loss)}</span
                         >
                     </div>
-                </MapWithElevation>
+                    <svg
+                        width="100%"
+                        height="50"
+                        id="ruler"
+                        xmlns="http://www.w3.org/2000/svg"
+                        version="1.1"
+                    >
+                    </svg>
+                    <span class="text-sm"
+                        >Scale: &nbsp 1 : {Math.round(scale)}</span
+                    >
+                </div>
+                <div class="min-w-0 basis-full" id="elevation-profile"></div>
             </div>
             <div class="pt-4 -mt-4 border-t border-t-input-border z-10">
                 <div class="float-right"><LogoText height={48}></LogoText></div>
@@ -593,9 +550,3 @@
         </div>
     </div>
 </main>
-
-<style>
-    :global(#map-container) {
-        height: 100%;
-    }
-</style>
