@@ -70,8 +70,8 @@
     let selectedOrientation: "portrait" | "landscape" = orientations[0].value;
 
     const gridOptions = [
-        { text: "Degrees", value: "degree" },
-        { text: "No Grid", value: "off" },
+        { text: $_("degrees"), value: "degree" },
+        { text: $_("no-grid"), value: "off" },
     ];
     let selectedGrid = gridOptions[0].value;
 
@@ -121,8 +121,18 @@
             let ratio = img.height / img.width;
             img.src = map.getCanvas().toDataURL();
 
-            doc.addImage(img.src, "png", 8, 8, 0, (width - 16) * ratio);
-            currentHeight += (width - 16) * ratio + 11;
+            const imgPadding = 8;
+            const docImgWidth = width - 2 * imgPadding;
+            const docImgHeight = docImgWidth * ratio;
+            doc.addImage(
+                img.src,
+                "png",
+                imgPadding,
+                imgPadding,
+                0,
+                docImgHeight,
+            );
+            currentHeight += docImgHeight + 11;
             const elevationProfileHeight = currentHeight - 11;
 
             // Waypoints
@@ -142,15 +152,33 @@
                 const iconContent = window
                     .getComputedStyle(markerIcon, ":before")
                     .getPropertyValue("content");
-                const iconText = String.fromCharCode(parseInt(iconContent.replace(/['"\\]/g, "").trim(), 16)); 
+                const iconText = iconContent.replaceAll('"', "");
 
+                const iconPositionX = docImgWidth * percentX + imgPadding;
+                const iconPositionY = docImgHeight * percentY + imgPadding;
+                const circleRadius = 3;
+
+                doc.setFillColor(107, 114, 128);
+                doc.circle(
+                    iconPositionX + circleRadius,
+                    iconPositionY + circleRadius,
+                    circleRadius,
+                    "F",
+                );
+                doc.setTextColor("#ffffff");
+                doc.setFontSize(9);
                 doc.setFont("fa-solid-900", "normal");
-                doc.text(iconText, width * percentX, height * percentY);
+
+                const { w: letterWidth, h: letterHeight } =
+                    doc.getTextDimensions(iconText);
+
+                doc.text(
+                    iconText,
+                    iconPositionX + circleRadius - letterWidth / 2 + 0.1,
+                    iconPositionY + circleRadius + letterHeight / 2 - 0.1,
+                );
             }
 
-
-            // printLoading = false;
-            // return;
             // QR Code
             doc.addImage(
                 document.getElementById("qrcode") as HTMLImageElement,
@@ -536,9 +564,12 @@
                         >Scale: &nbsp 1 : {Math.round(scale)}</span
                     >
                 </div>
-                <div class="min-w-0 basis-full" id="elevation-profile"></div>
+                <div
+                    class="min-w-0 basis-full relative"
+                    id="elevation-profile"
+                ></div>
             </div>
-            <div class="pt-4 -mt-4 border-t border-t-input-border z-10">
+            <div class="pt-4 border-t border-t-input-border z-10">
                 <div class="float-right"><LogoText height={48}></LogoText></div>
 
                 <h4 class="text-sm font-semibold">{$trail.name}</h4>

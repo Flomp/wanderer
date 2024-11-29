@@ -246,6 +246,7 @@
             showElevation={false}
             showInfoPopup={true}
             activeTrail={-1}
+            fitBounds="off"
             minZoom={MIN_ZOOM}
             bind:map
             bind:this={mapWithElevation}

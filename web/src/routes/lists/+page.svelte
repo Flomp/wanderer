@@ -173,6 +173,7 @@
             bind:map
             bind:this={mapWithElevation}
             bind:markers
+            fitBounds="animate"
             on:select={(e) => {
                 selectedTrail = e.detail;
             }}

@@ -24,6 +24,8 @@
     export let showElevation: boolean = true;
     export let showInfoPopup: boolean = false;
     export let showGrid: boolean = false;
+    export let fitBounds: "animate" | "instant" | "off" = "instant";
+
     export let elevationProfileContainer: string | HTMLDivElement | undefined =
         undefined;
     export let mapOptions: Partial<M.MapOptions> | undefined = undefined;
@@ -158,8 +160,12 @@
             }
         });
 
-        if (!drawing && data.some((d) => d.bbox !== undefined)) {
-            flyToBounds();
+        if (
+            !drawing &&
+            fitBounds !== "off" &&
+            data.some((d) => d.bbox !== undefined)
+        ) {
+            flyToBounds(fitBounds == "animate");
         }
     }
 
@@ -181,12 +187,12 @@
         return new M.LngLatBounds([minX, minY, maxX, maxY]);
     }
 
-    function flyToBounds() {
+    function flyToBounds(animate: boolean = true) {
         const bounds = data[activeTrail]
             ? (data[activeTrail].bbox as M.LngLatBoundsLike)
             : getBounds();
         map!.fitBounds(bounds, {
-            animate: trails.length > 1,
+            animate: animate,
             padding: {
                 top: 16,
                 left: 16,
@@ -325,13 +331,15 @@
         }
         e?.preventDefault();
         dispatch("select", trail);
-        const index = trails.indexOf(trail);
+        const index = trails.findIndex((t) => t.id == trail.id);
         if (index == -1) {
+            console.log("here");
+
             return;
         }
         activeTrail = index;
+
         highlightTrail(trail.id!);
-        flyToBounds();
         if (data[activeTrail] && showElevation) {
             epc?.setData(
                 data[activeTrail]!,
@@ -339,6 +347,7 @@
             );
             epc?.showProfile();
         }
+        flyToBounds();
     }
 
     export function unFocusTrail(trail: Trail) {
