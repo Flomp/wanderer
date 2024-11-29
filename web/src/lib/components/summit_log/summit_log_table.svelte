@@ -36,6 +36,7 @@
         }
 
         trail = (await gpx2trail(log.expand.gpx_data)).trail;
+        trail.id = log.id;
         trail.expand.gpx_data = log.expand.gpx_data;
 
         openMapModal();
@@ -102,7 +103,7 @@
 >
     <div slot="content" id="summit-log-table-map" class="h-[32rem]">
         {#if trail}
-            <MapWithElevationMaplibre {trail} bind:map
+            <MapWithElevationMaplibre trails={[trail]} bind:map
             ></MapWithElevationMaplibre>
         {/if}
     </div>

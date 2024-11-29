@@ -8,15 +8,15 @@ import type {
     Position,
 } from "geojson";
 
-import { Chart, registerables, type ScriptableContext } from "chart.js";
+import { Chart, registerables } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 // @ts-ignore
 import { CrosshairPlugin } from "chartjs-plugin-crosshair";
 
-import type { Waypoint } from "$lib/models/waypoint";
-import { haversineCumulatedDistanceWgs84, smoothElevations } from "./tools";
 import { haversineDistance } from "$lib/models/gpx/utils";
+import type { Waypoint } from "$lib/models/waypoint";
 import { formatTimeHHMM } from "$lib/util/format_util";
+import { haversineCumulatedDistanceWgs84, smoothElevations } from "./tools";
 
 const FEET_PER_METER = 3.28084;
 const MILES_PER_METER = 0.000621371;
@@ -288,6 +288,7 @@ export type ElevationProfileOptions = {
      * Default: `"#0005"` (partially transparent black)
      */
     crosshairColor?: string;
+    zoom?: boolean;
     /**
      * Callback function to call when the chart is zoomed or panned.
      * The argument `windowedLineString` is the GeoJSON LineString corresponding
@@ -348,6 +349,7 @@ const elevationProfileDefaultOptions: ElevationProfileOptions = {
     paddingRight: 10,
     onClick: null,
     onMove: null,
+    zoom: true
 };
 
 /**
@@ -573,15 +575,15 @@ export class ElevationProfile {
                     zoom: {
                         zoom: {
                             wheel: {
-                                enabled: true,
+                                enabled: this.settings.zoom,
                             },
                             pinch: {
-                                enabled: true,
+                                enabled: this.settings.zoom,
                             },
                             mode: "x",
                         },
                         pan: {
-                            enabled: true,
+                            enabled: this.settings.zoom,
                             mode: "x",
                         },
                         limits: {
@@ -701,7 +703,7 @@ export class ElevationProfile {
                 },
                 {
                     id: "customZoomEvent",
-                    afterDataLimits: () => {
+                    afterDataLimits: (chart) => {
                         if (typeof this.settings.onChangeView !== "function") return;
                         try {
                             this.settings.onChangeView.apply(this, [
@@ -791,6 +793,7 @@ export class ElevationProfile {
                 if (color !== prevColor) {
                     const percentDone = this.cumulatedDistance[i] / this.cumulatedDistance[this.cumulatedDistance.length - 1]
                     this.gradient.addColorStop(percentDone, color);
+                    
                     prevColor = color;
                 }
 
@@ -974,7 +977,7 @@ export class ElevationProfile {
                 }
             }
         }
-
+        
         this.grade.push(this.grade.at(-1) ?? 0);
         this.cumulatedDPlus.push(cumulatedDPlus);
 

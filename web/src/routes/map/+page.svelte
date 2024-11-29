@@ -6,7 +6,7 @@
         type SearchItem,
     } from "$lib/components/base/search.svelte";
     import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
-    import MapWithElevationMultiple from "$lib/components/trail/map_with_elevation_multiple.svelte";
+    import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import type { Settings } from "$lib/models/settings";
@@ -21,21 +21,13 @@
         trails_search_bounding_box,
     } from "$lib/stores/trail_store";
     import { country_codes } from "$lib/util/country_code_util";
-    import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type {
-        GPX,
-        LatLng,
-        LatLngBoundsExpression,
-        Map,
-        Marker,
-    } from "leaflet";
-    import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
-    import "leaflet/dist/leaflet.css";
+    import * as M from "maplibre-gl";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
-    let map: Map;
-    let mapWithElevation: MapWithElevationMultiple;
+
+    let map: M.Map;
+    let mapWithElevation: MapWithElevationMaplibre;
     let searchDropdownItems: SearchItem[] = [];
 
     let showFilter: boolean = false;
@@ -44,6 +36,8 @@
     const filter: TrailFilter = $page.data.filter;
     const maxBoundingBox: TrailBoundingBox = $page.data.boundingBox;
     const settings: Settings = $page.data.settings;
+
+    const MIN_ZOOM = 6;
 
     onMount(async () => {});
 
@@ -93,23 +87,25 @@
     }
 
     function handleSearchClick(item: SearchItem) {
-        map.setView([item.value._geo.lat, item.value._geo.lng], 14);
+        map.setCenter([item.value._geo.lng, item.value._geo.lat]);
+        map.setZoom(14);
     }
 
-    async function searchTrails(northEast: LatLng, southWest: LatLng) {
+    async function searchTrails(northEast: M.LngLat, southWest: M.LngLat) {
         const changes = await trails_search_bounding_box(
             northEast,
             southWest,
             filter,
+            map.getZoom() > MIN_ZOOM
         );
     }
 
     function handleTrailCardMouseEnter(trail: Trail) {
-        mapWithElevation.openPopup(trail.id!)
+        mapWithElevation.togglePopup(trail.id!);
     }
 
     function handleTrailCardMouseLeave(trail: Trail) {
-        mapWithElevation.closePopup(trail.id!)
+        mapWithElevation.togglePopup(trail.id!);
     }
 
     async function handleFilterUpdate(filter: TrailFilter) {
@@ -136,29 +132,37 @@
             $page.url.searchParams.has("br_lat") &&
             $page.url.searchParams.has("br_lon")
         ) {
-            const boundingBox: LatLngBoundsExpression = [
-                [parseFloat($page.url.searchParams.get("br_lat")!), parseFloat($page.url.searchParams.get("tl_lon")!)],
-                [parseFloat($page.url.searchParams.get("tl_lat")!), parseFloat($page.url.searchParams.get("br_lon")!)],
+            const boundingBox: M.LngLatBoundsLike = [
+                [
+                    parseFloat($page.url.searchParams.get("br_lon")!),
+                    parseFloat($page.url.searchParams.get("tl_lat")!),
+                ],
+                [
+                    parseFloat($page.url.searchParams.get("tl_lon")!),
+                    parseFloat($page.url.searchParams.get("br_lat")!),
+                ],
             ];
-            map.fitBounds(boundingBox);
+            map.fitBounds(boundingBox, { animate: false });
         } else if (settings && settings.mapFocus == "trails") {
-            const boundingBox: LatLngBoundsExpression = [
-                [maxBoundingBox.max_lat, maxBoundingBox.min_lon],
-                [maxBoundingBox.min_lat, maxBoundingBox.max_lon],
+            const boundingBox: M.LngLatBoundsLike = [
+                [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
+                [maxBoundingBox.max_lon, maxBoundingBox.min_lat],
             ];
-            map.fitBounds(boundingBox);
+            map.fitBounds(boundingBox, { animate: false, padding: 32 });
         } else if (
             settings &&
             settings.mapFocus == "location" &&
             settings.location
         ) {
-            map.setView([settings.location.lat, settings.location.lon], 12);
+            map.setCenter([settings.location.lon, settings.location.lat]);
+            map.setZoom(12);
         } else {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    map.setView([lat, lon], 13);
+                    map.setCenter([lat, lon]);
+                    map.setZoom(12);
                 },
                 (error) => {
                     console.error("Error getting user location:", error);
@@ -235,14 +239,17 @@
         id="trail-map"
         class:hidden={!showMap && browser && window.innerWidth < 768}
     >
-        <MapWithElevationMultiple
+        <MapWithElevationMaplibre
             on:moveend={handleMapMove}
             on:init={handleMapInit}
             trails={$trails}
-            options={{ flyToBounds: false }}
+            showElevation={false}
+            showInfoPopup={true}
+            activeTrail={-1}
+            minZoom={MIN_ZOOM}
             bind:map
             bind:this={mapWithElevation}
-        ></MapWithElevationMultiple>
+        ></MapWithElevationMaplibre>
     </div>
 </main>
 

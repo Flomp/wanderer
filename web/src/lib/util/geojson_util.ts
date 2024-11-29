@@ -30,40 +30,89 @@ export function bbox(
 
 export function findStartAndEndPoints(geojson: GeoJsonObject): Position[] {
     const startEndPoints: Position[] = [];
-
-    (geojson as FeatureCollection).features.forEach((feature) => {
-        const geometry = feature.geometry;
-
-        if (geometry.type === "LineString") {
-            const coords = geometry.coordinates as number[][];
-            const start: [number, number] = [coords[0][0], coords[0][1]]; // First point
-            const end: [number, number] = [
-                coords[coords.length - 1][0],
-                coords[coords.length - 1][1],
-            ]; // Last point
-            startEndPoints.push(start);
-            startEndPoints.push(end)
-        } else if (geometry.type === "MultiLineString") {
-            const coords = geometry.coordinates as number[][][];
-            const start: [number, number] = [
-                coords[0][0][0],
-                coords[0][0][1],
-            ]; // First point of the first line
-            const lastLine = coords[coords.length - 1];
-            const end: [number, number] = [
-                lastLine[lastLine.length - 1][0],
-                lastLine[lastLine.length - 1][1],
-            ]; // Last point of the last line
-            startEndPoints.push(start);
-            startEndPoints.push(end)
-        } else {
-            console.warn(
-                `Geometry type ${geometry.type} is not supported for start/end point extraction.`
-            );
-        }
-    });
+    
+    // Check if it's a FeatureCollection
+    if ((geojson as any).features) {
+        (geojson as any).features.forEach((feature: any) => {
+            const geometry = feature.geometry;
+            extractStartAndEndPointsFromGeometry(geometry, startEndPoints);
+        });
+    } else if ((geojson as any).geometry) {
+        // Single Feature
+        const geometry = (geojson as any).geometry;
+        extractStartAndEndPointsFromGeometry(geometry, startEndPoints);
+    } else {
+        console.warn(
+            "Unsupported GeoJSON type. Expected FeatureCollection or Feature."
+        );
+    }
 
     return startEndPoints;
+}
+
+function extractStartAndEndPointsFromGeometry(geometry: any, startEndPoints: Position[]) {
+    if (geometry.type === "LineString") {
+        const coords = geometry.coordinates as number[][];
+        const start: [number, number] = [coords[0][0], coords[0][1]]; // First point
+        const end: [number, number] = [
+            coords[coords.length - 1][0],
+            coords[coords.length - 1][1],
+        ]; // Last point
+        startEndPoints.push(start, end);
+    } else if (geometry.type === "MultiLineString") {
+        const coords = geometry.coordinates as number[][][];
+        const start: [number, number] = [
+            coords[0][0][0],
+            coords[0][0][1],
+        ]; // First point of the first line
+        const lastLine = coords[coords.length - 1];
+        const end: [number, number] = [
+            lastLine[lastLine.length - 1][0],
+            lastLine[lastLine.length - 1][1],
+        ]; // Last point of the last line
+        startEndPoints.push(start, end);
+    } else if (geometry.type === "Point") {
+        const coords = geometry.coordinates as number[];
+        startEndPoints.push(coords as [number, number], coords as [number, number]);
+    } else if (geometry.type === "MultiPoint") {
+        const coords = geometry.coordinates as number[][];
+        const start: [number, number] = [coords[0][0], coords[0][1]]; // First point
+        const end: [number, number] = [
+            coords[coords.length - 1][0],
+            coords[coords.length - 1][1],
+        ]; // Last point
+        startEndPoints.push(start, end);
+    } else if (geometry.type === "Polygon") {
+        const coords = geometry.coordinates as number[][][];
+        const start: [number, number] = [
+            coords[0][0][0],
+            coords[0][0][1],
+        ]; // First point of the first ring
+        const lastRing = coords[coords.length - 1];
+        const end: [number, number] = [
+            lastRing[lastRing.length - 1][0],
+            lastRing[lastRing.length - 1][1],
+        ]; // Last point of the last ring
+        startEndPoints.push(start, end);
+    } else if (geometry.type === "MultiPolygon") {
+        const coords = geometry.coordinates as number[][][][];
+        const firstPolygon = coords[0];
+        const start: [number, number] = [
+            firstPolygon[0][0][0],
+            firstPolygon[0][0][1],
+        ]; // First point of the first ring of the first polygon
+        const lastPolygon = coords[coords.length - 1];
+        const lastRing = lastPolygon[lastPolygon.length - 1];
+        const end: [number, number] = [
+            lastRing[lastRing.length - 1][0],
+            lastRing[lastRing.length - 1][1],
+        ]; // Last point of the last ring of the last polygon
+        startEndPoints.push(start, end);
+    } else {
+        console.warn(
+            `Geometry type ${geometry.type} is not supported for start/end point extraction.`
+        );
+    }
 }
 
 function coordEach(geojson: GeoJSON, callback: (
@@ -144,13 +193,13 @@ function coordEach(geojson: GeoJSON, callback: (
                     for (j = 0; j < coords.length; j++) {
                         if (
                             callback(
-                              coords[j],
-                              coordIndex,
-                              featureIndex,
-                              multiFeatureIndex,
-                              geometryIndex
+                                coords[j],
+                                coordIndex,
+                                featureIndex,
+                                multiFeatureIndex,
+                                geometryIndex
                             ) === false
-                          )
+                        )
                             return false;
                         coordIndex++;
                         if (geomType === "MultiPoint") multiFeatureIndex++;
@@ -163,13 +212,13 @@ function coordEach(geojson: GeoJSON, callback: (
                         for (k = 0; k < coords[j].length - wrapShrink; k++) {
                             if (
                                 callback(
-                                  coords[j][k],
-                                  coordIndex,
-                                  featureIndex,
-                                  multiFeatureIndex,
-                                  geometryIndex
+                                    coords[j][k],
+                                    coordIndex,
+                                    featureIndex,
+                                    multiFeatureIndex,
+                                    geometryIndex
                                 ) === false
-                              )
+                            )
                                 return false;
                             coordIndex++;
                         }
@@ -185,13 +234,13 @@ function coordEach(geojson: GeoJSON, callback: (
                             for (l = 0; l < coords[j][k].length - wrapShrink; l++) {
                                 if (
                                     callback(
-                                      coords[j][k][l],
-                                      coordIndex,
-                                      featureIndex,
-                                      multiFeatureIndex,
-                                      geometryIndex
+                                        coords[j][k][l],
+                                        coordIndex,
+                                        featureIndex,
+                                        multiFeatureIndex,
+                                        geometryIndex
                                     ) === false
-                                  )
+                                )
                                     return false;
                                 coordIndex++;
                             }

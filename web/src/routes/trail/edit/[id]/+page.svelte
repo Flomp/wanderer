@@ -921,7 +921,7 @@
             </div>
         {/if}
         <MapWithElevationMaplibre
-            trail={$form}
+            trails={[$form]}
             drawing={drawingActive}
             bind:map
             on:click={(e) => handleMapClick(e.detail)}

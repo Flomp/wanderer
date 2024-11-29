@@ -9,6 +9,7 @@ import { ClientResponseError } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
+import * as M from "maplibre-gl";
 
 export const trails: Writable<Trail[]> = writable([])
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -71,7 +72,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     }
 }
 
-export async function trails_search_bounding_box(northEast: LatLng, southWest: LatLng, filter?: TrailFilter) {
+export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, loadGPX: boolean = true) {
 
     let filterText: string = "";
 
@@ -83,6 +84,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
         method: "POST",
         body: JSON.stringify({
             q: "", options: {
+                limit: 400,
                 filter: [
                     `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
                     filterText
@@ -92,7 +94,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     });
     const result = await r.json();
 
-    const trailIds = result.hits.map((h: Record<string, any>) => h.id);
+    const trailIds = result.hits?.map((h: Record<string, any>) => h.id) ?? [];
 
     if (trailIds.length == 0) {
         const currentTrails: Trail[] = get(trails);
@@ -101,6 +103,7 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     }
 
     r = await fetch('/api/v1/trail?' + new URLSearchParams({
+        "per-page": "-1",
         filter: `'${trailIds.join(',')}'~id`,
         expand: "category,waypoints,summit_logs",
         sort: `+name`,
@@ -110,13 +113,16 @@ export async function trails_search_bounding_box(northEast: LatLng, southWest: L
     const response = await r.json()
 
     if (r.ok) {
-        for (const trail of response.items) {
-            const gpxData: string = await fetchGPX(trail);
-            if (!trail.expand) {
-                trail.expand = {};
+        if (loadGPX) {
+            for (const trail of response.items) {
+                const gpxData: string = await fetchGPX(trail);
+                if (!trail.expand) {
+                    trail.expand = {};
+                }
+                trail.expand.gpx_data = gpxData;
             }
-            trail.expand.gpx_data = gpxData;
         }
+
 
         const comparison = compareObjectArrays<Trail>(get(trails), response.items)
 

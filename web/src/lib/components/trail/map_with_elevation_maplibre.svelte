@@ -6,6 +6,7 @@
     import { toGeoJson } from "$lib/util/gpx_util";
     import {
         createMarkerFromWaypoint,
+        createPopupFromTrail,
         FontawesomeMarker,
     } from "$lib/util/maplibre_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
@@ -15,21 +16,36 @@
     import "maplibre-gl/dist/maplibre-gl.css";
     import { createEventDispatcher, onDestroy, onMount } from "svelte";
 
-    export let trail: Trail | null;
+    export let trails: Trail[] = [];
     export let markers: M.Marker[] = [];
     export let map: M.Map | null = null;
     export let drawing: boolean = false;
+    export let showElevation: boolean = true;
+    export let showInfoPopup: boolean = false;
+    export let activeTrail: number = 0;
+    export let minZoom: number = 0;
 
     let mapContainer: HTMLDivElement;
-    let epc: ElevationProfileControl;
-    let startMarker: M.Marker;
-    let endMarker: M.Marker;
+    let epc: ElevationProfileControl | null = null;
+
+    let layers: Record<
+        string,
+        {
+            startMarker: M.Marker | null;
+            endMarker: M.Marker | null;
+            source: M.GeoJSONSource | null;
+            layer: M.LineLayerSpecification | null;
+            listener: {
+                onEnter: ((e: M.MapMouseEvent) => void) | null;
+                onLeave: ((e: M.MapMouseEvent) => void) | null;
+                onClick: ((e: M.MapMouseEvent) => void) | null;
+            };
+        }
+    > = {};
 
     const dispatch = createEventDispatcher();
 
-    $: data = trail?.expand.gpx_data
-        ? (toGeoJson(trail.expand.gpx_data!) as GeoJSON)
-        : null;
+    $: data = getData(trails);
 
     $: if (data && map) {
         initMap();
@@ -55,84 +71,303 @@
         map.getCanvas().style.cursor = "crosshair";
     } else if (!drawing && map) {
         map.getCanvas().style.cursor = "inherit";
-        addStartEndMarkers();
+        addStartEndMarkers(
+            trails[activeTrail],
+            trails[activeTrail]?.id ?? activeTrail.toString(),
+            data?.at(activeTrail),
+        );
+    }
+
+    function getData(trails: Trail[]) {
+        if (!trails.length) {
+            return [];
+        }
+
+        const r: GeoJSON[] = [];
+        trails.forEach((t) => {
+            if (t.expand.gpx_data) {
+                r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
+            } else if (t.lat && t.lon) {
+                r.push({
+                    id: "",
+                    type: "Feature",
+                    properties: {},
+                    geometry: {
+                        type: "Point",
+                        coordinates: [t.lon ?? 0, t.lat ?? 0],
+                    },
+                } as GeoJSON);
+            }
+        });
+        return r;
     }
 
     function initMap() {
-        if (!map || !data) {
+        if (!map) {
             return;
         }
 
-        epc.setData(data, trail!.expand.waypoints);
-        epc.showProfile();
-
-        const trailSource = map.getSource("trail-source");
-        if (!trailSource) {
-            addTrailLayer();
-        } else {
-            (trailSource as M.GeoJSONSource).setData(data);
+        if (data[activeTrail] && showElevation) {
+            epc?.setData(
+                data[activeTrail]!,
+                trails.at(activeTrail)!.expand.waypoints,
+            );
+            epc?.showProfile();
         }
 
-        if (!drawing) {
-            addStartEndMarkers();
+        trails.forEach((t, i) => {
+            const layerId = t.id ?? i.toString();
+            addTrailLayer(t, layerId, data[i]);
+        });
+
+        Object.keys(layers).forEach((layerId) => {
+            const isStillVisible = trails.some((t) => t.id === layerId);
+            if (!isStillVisible) {
+                removeTrailLayer(layerId);
+            }
+        });
+
+        if (!drawing && data.some((d) => d.bbox !== undefined)) {
+            flyToBounds();
         }
     }
 
-    function addTrailLayer() {
-        if (!data || !map) {
+    function getBounds() {
+        let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
+
+        for (const [xMin, yMin, xMax, yMax] of data
+            .filter((d) => d.bbox !== undefined)
+            .map((d) => d.bbox!)) {
+            minX = Math.min(minX, xMin);
+            minY = Math.min(minY, yMin);
+            maxX = Math.max(maxX, xMax);
+            maxY = Math.max(maxY, yMax);
+        }
+
+        return new M.LngLatBounds([minX, minY, maxX, maxY]);
+    }
+
+    function flyToBounds() {
+        const bounds = data[activeTrail]
+            ? (data[activeTrail].bbox as M.LngLatBoundsLike)
+            : getBounds();
+        map!.fitBounds(bounds, {
+            animate: true,
+            padding: {
+                top: 16,
+                left: 16,
+                right: 16,
+                bottom:
+                    16 +
+                    (epc?.isProfileShown
+                        ? map!.getContainer().clientHeight * 0.3
+                        : 0),
+            },
+        });
+    }
+
+    function removeTrailLayer(id: string) {
+        if (!layers[id]) {
             return;
         }
-        const trailSource = map.getSource("trail-source");
-        if (!trailSource) {
+        const layer = layers[id];
+
+        if (layer.layer) {
+            map?.removeLayer(id);
+        }
+        if (layer.source) {
+            map?.removeSource(id);
+        }
+        layer.startMarker?.remove();
+        layer.endMarker?.remove();
+
+        map?.off("mouseenter", id, layers[id].listener.onEnter!);
+        map?.off("mouseleave", id, layers[id].listener.onLeave!);
+        map?.off("click", id, layers[id].listener.onClick!);
+
+        delete layers[id];
+    }
+
+    function createEmptyLayer(id: string) {
+        if (!layers[id]) {
+            layers[id] = {
+                startMarker: null,
+                endMarker: null,
+                source: null,
+                layer: null,
+                listener: {
+                    onClick: null,
+                    onEnter: null,
+                    onLeave: null,
+                },
+            };
+        }
+    }
+
+    function addTrailLayer(
+        trail: Trail,
+        id: string,
+        geojson: GeoJSON | null | undefined,
+    ) {
+        if (!geojson || !map) {
+            return;
+        }
+
+        createEmptyLayer(id);
+
+        if (!layers[id].source) {
             try {
-                map.addSource("trail-source", {
+                map.addSource(id, {
                     type: "geojson",
-                    data: data,
+                    data: geojson,
                 });
+                layers[id].source = map.getSource(id) as M.GeoJSONSource;
+                // map.addSource("trail-source", {
+                //     type: "vector",
+                //     url: `http://localhost:8080/data/out.json`,
+                // });
             } catch (e) {
                 return;
             }
+        } else {
+            layers[id].source.setData(geojson);
         }
 
-        const trailLayer = map.getLayer("trail-layer");
-        if (!trailLayer) {
+        if (!layers[id].layer) {
             map.addLayer({
-                id: "trail-layer",
+                id: id,
                 type: "line",
-                source: "trail-source",
+                source: id,
+                minzoom: minZoom,
                 paint: {
                     "line-color": "#648ad5",
                     "line-width": 5,
                 },
             });
+            layers[id].layer = map.getLayer(id) as M.LineLayerSpecification;
+            layers[id].listener.onEnter = (e) => highlightTrail(id);
+            layers[id].listener.onLeave = (e) => unHighlightTrail(id);
+            layers[id].listener.onClick = (e) => focusTrail(trail, e);
+
+            map.on("mouseenter", id, layers[id].listener.onEnter);
+            map.on("mouseleave", id, layers[id].listener.onLeave);
+            map.on("click", id, layers[id].listener.onClick);
+
+            // map.addLayer({
+            //     id: "trail-layer",
+            //     type: "line",
+            //     source: "trail-source",
+            //     "source-layer": "Herzogstand", // Replace with the actual layer name in the .mbtiles file
+            //     layout: {
+            //         "line-join": "round",
+            //         "line-cap": "round",
+            //     },
+            //     paint: {
+            //         "line-color": "#648ad5",
+            //         "line-width": 5,
+            //     },
+            // });
+        }
+
+        if (!drawing) {
+            addStartEndMarkers(trail, id, geojson);
         }
     }
 
-    function addStartEndMarkers() {
-        if (!map || !data) {
+    export function highlightTrail(id: string) {
+        map?.setPaintProperty(id, "line-width", 7);
+        map?.setPaintProperty(id, "line-color", "#2766e3");
+    }
+
+    export function unHighlightTrail(id: string) {
+        map?.setPaintProperty(id, "line-width", 5);
+        map?.setPaintProperty(id, "line-color", "#648ad5");
+    }
+
+    export function focusTrail(trail: Trail, e?: M.MapMouseEvent) {
+        const currentlyFocussedTrail = trails[activeTrail];
+        if (currentlyFocussedTrail) {
+            unFocusTrail(currentlyFocussedTrail);
+        }
+        e?.preventDefault();
+        dispatch("select", trail);
+        const index = trails.indexOf(trail);
+        if (index == -1) {
             return;
         }
-        const startEndPoint = findStartAndEndPoints(data);
+        activeTrail = index;
+        highlightTrail(trail.id!);
+        flyToBounds();
+        if (data[activeTrail] && showElevation) {
+            epc?.setData(
+                data[activeTrail]!,
+                trails.at(activeTrail)!.expand.waypoints,
+            );
+            epc?.showProfile();
+        }
+    }
 
-        startMarker ??= new FontawesomeMarker({ icon: "fa fa-bullseye" }, {});
+    export function unFocusTrail(trail: Trail) {
+        dispatch("unselect", trail);
+        activeTrail = -1;
+        unHighlightTrail(trail.id!);
+        flyToBounds();
 
-        startMarker.setLngLat(startEndPoint[0] as M.LngLatLike).addTo(map);
+        if (showElevation) {
+            epc?.hideProfile();
+        }
+    }
 
-        endMarker ??= new FontawesomeMarker(
+    function addStartEndMarkers(
+        trail: Trail,
+        id: string,
+        geojson: GeoJSON | null | undefined,
+    ) {
+        if (!map || !trail) {
+            return;
+        }
+        createEmptyLayer(id);
+
+        layers[id].startMarker ??= new FontawesomeMarker(
+            { icon: "fa fa-bullseye" },
+            {},
+        );
+
+        if (!geojson) {
+            if (trail.lon && trail.lat) {
+                layers[id].startMarker
+                    .setLngLat([trail.lon, trail.lat])
+                    .addTo(map);
+            }
+            return;
+        }
+
+        const startEndPoint = findStartAndEndPoints(geojson);
+
+        layers[id].startMarker
+            .setLngLat(startEndPoint[0] as M.LngLatLike)
+            .addTo(map);
+
+        if (showInfoPopup) {
+            const popup = createPopupFromTrail(trail);
+            layers[id].startMarker.setPopup(popup);
+        }
+
+        layers[id].endMarker ??= new FontawesomeMarker(
             { icon: "fa fa-flag-checkered" },
             {},
         );
-        endMarker.setLngLat(startEndPoint[1] as M.LngLatLike).addTo(map);
+        layers[id].endMarker.setLngLat(startEndPoint[1] as M.LngLatLike);
+        if (map.getZoom() > minZoom) {
+            layers[id].endMarker.addTo(map);
+        }
+    }
 
-        map!.fitBounds(data.bbox as any, {
-            animate: false,
-            padding: {
-                top: 16,
-                left: 16,
-                right: 16,
-                bottom: map!.getContainer().clientHeight * 0.3 + 16,
-            },
-        });
+    export function togglePopup(id: string) {
+        layers[id]?.startMarker?.togglePopup();
     }
 
     onMount(async () => {
@@ -148,6 +383,16 @@
         ).ElevationProfileControl;
 
         const mapStyles = [
+            {
+                text: "Open Street Maps",
+                value: "/styles/osm.json",
+                thumbnail: "https://tile.openstreetmap.org/1/0/0.png",
+            },
+            {
+                text: "Open Topo Maps",
+                value: "/styles/otm.json",
+                thumbnail: "https://tile.opentopomap.org/1/0/0.png",
+            },
             {
                 text: "Carto Light",
                 value: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
@@ -186,28 +431,10 @@
         elevationMarker.setLngLat([0, 0]).addTo(map);
         elevationMarker.setOpacity("0");
 
-        epc = new ElevationProfileControl({
-            visible: false,
-            profileBackgroundColor: $theme == "light" ? "#242734" : "#191b24",
-            backgroundColor: "bg-menu-background/90",
-            unit: $page.data.settings?.unit ?? "metric",
-            profileLineWidth: 3,
-            displayDistanceGrid: true,
-            tooltipDisplayDPlus: false,
-            onEnter: () => {
-                elevationMarker.setOpacity("1");
-            },
-            onLeave: () => {
-                elevationMarker.setOpacity("0");
-            },
-            onMove: (data) => {
-                elevationMarker.setLngLat(data.position as M.LngLatLike);
-            },
-        });
-
         const switcherControl = new StyleSwitcherControl({
             styles: mapStyles,
             onSwitch: (style) => {
+                layers = {};
                 map?.setStyle(style.value);
                 localStorage.setItem("layer", style.text);
             },
@@ -222,18 +449,64 @@
             }),
             "top-left",
         );
-        map.addControl(epc);
         map.addControl(switcherControl);
 
+        if (showElevation) {
+            epc = new ElevationProfileControl({
+                visible: false,
+                profileBackgroundColor:
+                    $theme == "light" ? "#242734" : "#191b24",
+                backgroundColor: "bg-menu-background/90",
+                unit: $page.data.settings?.unit ?? "metric",
+                profileLineWidth: 3,
+                displayDistanceGrid: true,
+                tooltipDisplayDPlus: false,
+                zoom: false,
+                onEnter: () => {
+                    elevationMarker.setOpacity("1");
+                },
+                onLeave: () => {
+                    elevationMarker.setOpacity("0");
+                },
+                onMove: (data) => {
+                    elevationMarker.setLngLat(data.position as M.LngLatLike);
+                },
+            });
+            map.addControl(epc);
+        }
+
         map.on("styledata", () => {
-            addTrailLayer();
+            trails.forEach((t, i) => {
+                addTrailLayer(t, t.id ?? i.toString(), data?.at(i));
+            });
+        });
+
+        map.on("moveend", (e) => {
+            dispatch("moveend", e.target);
+        });
+
+        map.on("zoom", (e) => {
+            const zoom = e.target.getZoom();
+            Object.values(layers).forEach((l) => {
+                if (zoom > minZoom && map) {
+                    l.endMarker?.addTo(map);
+                } else {
+                    l.endMarker?.remove();
+                }
+            });
+
+            dispatch("zoom", e.target);
         });
 
         map.on("click", (e) => {
             dispatch("click", e);
         });
 
-        for (const waypoint of trail?.expand.waypoints ?? []) {
+        map.on("load", () => {
+            dispatch("init", map);
+        });
+
+        for (const waypoint of trails[activeTrail]?.expand.waypoints ?? []) {
             const marker = createMarkerFromWaypoint(waypoint);
             marker.addTo(map);
             markers.push(marker);

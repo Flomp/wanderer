@@ -10,10 +10,16 @@
     } from "$lib/components/base/search.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
-    import MapWithElevationMultiple from "$lib/components/trail/map_with_elevation_multiple.svelte";
+    import ConfirmModal from "$lib/components/confirm_modal.svelte";
+    import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import type { Trail } from "$lib/models/trail.js";
+    import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
     import { show_toast } from "$lib/stores/toast_store.js";
+    import {
+        trail_share_create,
+        trail_share_index,
+    } from "$lib/stores/trail_share_store.js";
     import { trails_show } from "$lib/stores/trail_store";
     import { getFileURL } from "$lib/util/file_util.js";
     import {
@@ -21,21 +27,15 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import {
-        trail_share_create,
-        trail_share_index,
-    } from "$lib/stores/trail_share_store.js";
-    import { TrailShare } from "$lib/models/trail_share.js";
-    import ConfirmModal from "$lib/components/confirm_modal.svelte";
 
     export let data;
 
     let previewURL = data.previewUrl ?? "";
     let searchDropdownItems: SearchItem[] = [];
 
-    let activeTrailIndex: number | null = null;
+    let activeTrailIndex: number = -1;
 
-    let map: MapWithElevationMultiple;
+    let map: MapWithElevationMaplibre;
 
     let loading: boolean = false;
 
@@ -301,7 +301,9 @@
                                 trail.difficulty ?? "?",
                             )}</span
                         >
-                        <div class="grid grid-cols-2 mt-1 gap-x-4 gap-y-2 text-sm text-gray-500">
+                        <div
+                            class="grid grid-cols-2 mt-1 gap-x-4 gap-y-2 text-sm text-gray-500"
+                        >
                             <span
                                 ><i class="fa fa-left-right mr-2"
                                 ></i>{formatDistance(trail.distance)}</span
@@ -368,12 +370,11 @@
         >
     </form>
     <div id="trail-map" class="max-h-full">
-        <MapWithElevationMultiple
+        <MapWithElevationMaplibre
             trails={$form.expand?.trails ?? []}
-            options={{ flyToBounds: true }}
-            bind:activeTrailIndex
+            bind:activeTrail={activeTrailIndex}
             bind:this={map}
-        ></MapWithElevationMultiple>
+        ></MapWithElevationMaplibre>
     </div>
 </main>
 

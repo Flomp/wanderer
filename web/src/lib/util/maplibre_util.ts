@@ -1,5 +1,10 @@
+import type { Trail } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import M from "maplibre-gl";
+import { getFileURL } from "./file_util";
+import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
+import { get } from "svelte/store";
+import { _ } from "svelte-i18n";
 
 export class FontawesomeMarker extends M.Marker {
     constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string }, markerOptions?: M.MarkerOptions) {
@@ -70,6 +75,38 @@ export function createAnchorMarker(lat: number, lon: number, index: number, onDe
     })
 
     return marker
+}
+
+export function createPopupFromTrail(trail: Trail) {
+    const thumbnail = trail.photos.length
+        ? getFileURL(trail, trail.photos[trail.thumbnail])
+        : "/imgs/default_thumbnail.webp";
+    const popup = new M.Popup({maxWidth: "320px"});
+    popup.setHTML(
+        `<a href="/trail/view/${trail.id}" data-sveltekit-preload-data="off">
+    <li class="flex items-center gap-4 cursor-pointer text-black max-w-80">
+        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
+        </div>
+        <div>
+            <h4 class="font-semibold text-lg">${trail.name}</h4>
+            <div class="flex gap-x-4">
+            ${trail.location ? `<h5><i class="fa fa-location-dot mr-2"></i>${trail.location}</h5>` : ""}
+            <h5><i class="fa fa-gauge mr-2"></i>${get(_)(trail.difficulty as string)}</h5>
+            </div>
+            <div class="grid grid-cols-2 mt-2 gap-x-4 gap-y-2 text-sm text-gray-500 flex-wrap"><span class="shrink-0"><i
+                        class="fa fa-left-right mr-2"></i>${formatDistance(
+            trail.distance,
+        )}</span><span class="shrink-0"><i class="fa fa-clock mr-2"></i>${formatTimeHHMM(
+            trail.duration,
+        )}</span><span class="shrink-0"><i class="fa fa-arrow-trend-up mr-2"></i>${formatElevation(
+            trail.elevation_gain,
+        )}</span></span> <span class="shrink-0"><i class="fa fa-arrow-trend-down mr-2"></i>${formatElevation(
+            trail.elevation_loss,
+        )}</span></div>
+        </div>
+    </li>
+</a>`)
+    return popup;
 }
 
 // export function calculatePixelPerMeter(map: Map, meters: number) {

@@ -6,22 +6,18 @@
     import ListCard from "$lib/components/list/list_card.svelte";
     import ListPanel from "$lib/components/list/list_panel.svelte";
     import ListShareModal from "$lib/components/list/list_share_modal.svelte";
-    import MapWithElevationMultiple from "$lib/components/trail/map_with_elevation_multiple.svelte";
+    import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import { List } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import {
-        list,
         lists,
         lists_delete,
-        lists_index,
+        lists_index
     } from "$lib/stores/list_store";
     import { fetchGPX } from "$lib/stores/trail_store";
-    import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type { Map } from "leaflet";
-    import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
-    import "leaflet/dist/leaflet.css";
+    import * as M from "maplibre-gl";
 
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
@@ -29,13 +25,15 @@
     let openConfirmModal: () => void;
     let openShareModal: () => void;
 
-    let map: Map;
-    let mapWithElevationMultiple: MapWithElevationMultiple;
+    let map: M.Map;
+    let mapWithElevation: MapWithElevationMaplibre;
     let markers: any[];
     let showMap: boolean = true;
 
     let selectedList: List | null = null;
     let selectedTrail: Trail | null = null;
+
+    let activeTrailIndex: number = -1;
 
     onMount(() => {
         if ($page.url.searchParams.get("list")) {
@@ -86,32 +84,32 @@
         selectedList = item;
     }
 
-    function back() {       
+    async function back() {
         if (selectedTrail) {
+            mapWithElevation.unFocusTrail(selectedTrail);
             selectedTrail = null;
-            mapWithElevationMultiple.resetSelection();
         } else if (selectedList) {
             selectedList = null;
-            map.flyTo([0, 0], 4, {
-                duration: 0.25,
-                easeLinearity: 0.25,
-                noMoveStart: true,
+            map.flyTo({
+                animate: true,
+                zoom: 1,
+                center: [0, 0],
             });
         }
     }
 
     function selectTrail(trail: Trail) {
         selectedTrail = trail;
-        mapWithElevationMultiple.selectTrail(trail.id!);
+        mapWithElevation.focusTrail(trail);
         window.scrollTo({ top: 0 });
     }
 
     function highlightTrail(trail: Trail) {
-        mapWithElevationMultiple.highlightTrail(trail.id!);
+        mapWithElevation.highlightTrail(trail.id!);
     }
 
     function unHighlightTrail(trail: Trail) {
-        mapWithElevationMultiple.unHighlightTrail(trail.id!);
+        mapWithElevation.unHighlightTrail(trail.id!);
     }
 </script>
 
@@ -170,17 +168,17 @@
         </div>
     </div>
     <div id="trail-map" class="md:sticky md:top-[62px]" class:hidden={!showMap}>
-        <MapWithElevationMultiple
+        <MapWithElevationMaplibre
             trails={selectedList?.expand?.trails ?? []}
             bind:map
-            bind:this={mapWithElevationMultiple}
+            bind:this={mapWithElevation}
             bind:markers
             on:select={(e) => {
-                selectedTrail = e.detail
+                selectedTrail = e.detail;
             }}
-            bindRoutePopup={false}
-            options={{ itinerary: true, flyToBounds: true }}
-        ></MapWithElevationMultiple>
+            bind:activeTrail={activeTrailIndex}
+            showInfoPopup={true}
+        ></MapWithElevationMaplibre>
     </div>
     <div class="min-w-0" class:hidden={showMap}>
         <TrailList trails={selectedList?.expand?.trails ?? []}></TrailList>

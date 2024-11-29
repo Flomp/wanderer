@@ -58,7 +58,7 @@ export class ElevationProfileControl implements IControl {
     private map?: M.Map;
     private buttonContainer?: HTMLDivElement;
     private toggleButton?: HTMLButtonElement;
-    private isProfileShown = false;
+    public isProfileShown = false;
     private iconSpan?: HTMLSpanElement;
 
     private profileContainer?: HTMLDivElement;
