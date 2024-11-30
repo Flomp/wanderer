@@ -15,16 +15,11 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import {
-        calculatePixelPerMeter,
-        calculateScaleFactor,
-    } from "$lib/util/leaflet_util";
+    import { calculatePixelPerMeter, calculateScaleFactor } from "$lib/util/maplibre_util";
+   
     import { createRect, createText } from "$lib/util/svg_util";
-    import "$lib/vendor/leaflet-elevation/src/index.css";
     import QrCodeWithLogo from "$lib/vendor/qr-code-with-logos/index";
     import { jsPDF } from "jspdf";
-    import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
-    import "leaflet/dist/leaflet.css";
     import * as M from "maplibre-gl";
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";

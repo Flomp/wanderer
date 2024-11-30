@@ -4,12 +4,11 @@ import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { getFileURL } from "$lib/util/file_util";
 import { util } from "$lib/vendor/svelte-form-lib/util";
-import type { LatLng } from "leaflet";
+import * as M from "maplibre-gl";
 import { ClientResponseError } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
-import * as M from "maplibre-gl";
 
 export const trails: Writable<Trail[]> = writable([])
 export const trail: Writable<Trail> = writable(new Trail(""));

@@ -5,6 +5,7 @@ import { getFileURL } from "./file_util";
 import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
 import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
+import { haversineDistance } from "$lib/models/gpx/utils";
 
 export class FontawesomeMarker extends M.Marker {
     constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
@@ -110,41 +111,42 @@ export function createPopupFromTrail(trail: Trail) {
     return popup;
 }
 
-// export function calculatePixelPerMeter(map: Map, meters: number) {
-//     const y = map.getSize().y;
-//     const x = map.getSize().x;
-//     const maxMeters = map.containerPointToLatLng([0, y]).distanceTo(map.containerPointToLatLng([x, y]));
-//     const pixelPerMeter = x / maxMeters;
+export function calculatePixelPerMeter(map: M.Map, meters: number) {
+    const y = map.getCanvas().getBoundingClientRect().y;
+    const x = map.getCanvas().getBoundingClientRect().x;
+    const maxMeters = map.unproject([0, y]).distanceTo(map.unproject([x, y]));
+    const pixelPerMeter = x / maxMeters;
 
-//     return pixelPerMeter * meters
-// }
+    return pixelPerMeter * meters
+}
 
-// export function calculateScaleFactor(map: Map) {
-//     function _pxTOmm() {
-//         let heightRef = document.createElement('div');
-//         heightRef.style.height = '1mm';
-//         heightRef.style.position = "absolute";
-//         heightRef.id = 'heightRef';
-//         document.body.appendChild(heightRef);
+export function calculateScaleFactor(map: M.Map) {
+    function _pxTOmm() {
+        let heightRef = document.createElement('div');
+        heightRef.style.height = '1mm';
+        heightRef.style.position = "absolute";
+        heightRef.id = 'heightRef';
+        document.body.appendChild(heightRef);
 
-//         const pxPermm = heightRef.getBoundingClientRect().height;
+        const pxPermm = heightRef.getBoundingClientRect().height;
 
-//         document.body.removeChild(heightRef);
+        document.body.removeChild(heightRef);
 
-//         return function pxTOmm(px: number) {
-//             return px / pxPermm;
-//         }
-//     }
-//     var centerOfMap = map.getSize().y / 2;
+        return function pxTOmm(px: number) {
+            return px / pxPermm;
+        }
+    }
+    var centerOfMap = map.getCanvas().getBoundingClientRect().y / 2;
 
-//     var realWorlMetersPer100Pixels = map.distance(
-//         map.containerPointToLatLng([0, centerOfMap]),
-//         map.containerPointToLatLng([100, centerOfMap])
-//     );
+    const p1 = map.unproject([0, centerOfMap]);
+    const p2 = map.unproject([100, centerOfMap]);
+    var realWorldMetersPer100Pixels = haversineDistance(
+        p1.lat, p1.lng, p2.lat, p2.lng
+    );
 
-//     const screenMetersPer100Pixels = _pxTOmm()(100) / 1000;
+    const screenMetersPer100Pixels = _pxTOmm()(100) / 1000;
 
-//     const scaleFactor = realWorlMetersPer100Pixels / screenMetersPer100Pixels
+    const scaleFactor = realWorldMetersPer100Pixels / screenMetersPer100Pixels
 
-//     return scaleFactor
-// }
+    return scaleFactor
+}

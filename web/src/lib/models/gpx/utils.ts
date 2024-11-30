@@ -33,4 +33,13 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return distance;
 }
 
-export { removeEmpty, allDatesToISOString, haversineDistance };
+function convertDMSToDD(dms: Number[], direction: "N" | "O" | "S" | "W") {
+  var dd = dms[0].valueOf() + dms[1].valueOf() / 60 + dms[2].valueOf() / (60 * 60);
+
+  if (direction == "S" || direction == "W") {
+    dd = dd * -1;
+  }
+  return dd;
+}
+
+export { removeEmpty, allDatesToISOString, haversineDistance, convertDMSToDD };

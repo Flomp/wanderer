@@ -20,15 +20,7 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import {
-        createMarkerFromWaypoint,
-        endIcon,
-        startIcon,
-    } from "$lib/util/leaflet_util";
-    import "$lib/vendor/leaflet-elevation/src/index.css";
-    import type { Map, Marker } from "leaflet";
-    import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
-    import "leaflet/dist/leaflet.css";
+
     import "photoswipe/style.css";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
@@ -40,10 +32,11 @@
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import { pb } from "$lib/pocketbase";
     import * as M from "maplibre-gl";
+    import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
-    export let markers: (Marker | M.Marker)[] = [];
+    export let markers: M.Marker[] = [];
 
     const tabs = [
         $_("description"),
@@ -55,8 +48,6 @@
 
     const trailIsShared =
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
-
-    let map: Map;
 
     let activeTab = 0;
 
@@ -74,64 +65,14 @@
         fetchComments();
     }
 
-    onMount(async () => {
-        if (mode == "overview") {
-            const L = (await import("leaflet")).default;
-            await import("leaflet-gpx");
-            await import("leaflet.awesome-markers");
-
-            map = L.map("map").setView([0, 0], 2);
-            map.attributionControl.setPrefix(false);
-
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: "© OpenStreetMap contributors",
-            }).addTo(map);
-
-            const gpxLayer = new L.GPX(trail.expand.gpx_data!, {
-                async: true,
-                polyline_options: {
-                    className: "lightblue-theme elevation-polyline",
-                    opacity: 0.75,
-                    weight: 5,
-                },
-                gpx_options: {
-                    parseElements: ["track", "route"] as any,
-                },
-                marker_options: {
-                    startIcon: startIcon() as any,
-                    startIconUrl: "",
-                    endIcon: endIcon() as any,
-                    endIconUrl: "",
-                    shadowUrl: "",
-                },
-            })
-                .on("loaded", function (e) {
-                    map.fitBounds(e.target.getBounds());
-                })
-                .addTo(map);
-
-            for (const waypoint of trail.expand.waypoints) {
-                const marker = createMarkerFromWaypoint(L, waypoint);
-                marker.addTo(map);
-                markers.push(marker);
-            }
-        }
-    });
+    onMount(async () => {});
 
     function openMarkerPopup(i: number) {
-        if (typeof (markers[i] as Marker<any>).openPopup === "function") {
-            (markers[i] as Marker<any>).openPopup();
-        } else {
-            (markers[i] as M.Marker).togglePopup();
-        }
+        (markers[i] as M.Marker).togglePopup();
     }
 
     function closeMarkerPopup(i: number) {
-        if (typeof (markers[i] as Marker<any>).closePopup === "function") {
-            (markers[i] as Marker<any>).closePopup();
-        } else {
-            (markers[i] as M.Marker).togglePopup();
-        }
+        (markers[i] as M.Marker).togglePopup();
     }
 
     async function toggleMapFullScreen() {
@@ -425,16 +366,16 @@
                 </div>
             {/if}
             {#if mode == "overview"}
-                <div class="relative">
-                    <div class="rounded-xl h-72" id="map">
-                        <div class="leaflet-top leaflet-right">
-                            <button
-                                class="leaflet-control fa fa-maximize rounded-full text-lg bg-white text-black px-[14px] py-2 hover:bg-gray-100"
-                                style="cursor: pointer !important"
-                                on:click={() => toggleMapFullScreen()}
-                            ></button>
-                        </div>
-                    </div>
+                <div class="relative h-72 rounded-xl">
+                    <MapWithElevationMaplibre
+                        trails={[trail]}
+                        showElevation={false}
+                        showStyleSwitcher={false}
+                        showFullscreen={true}
+                        mapOptions={{ attributionControl: false }}
+                        on:fullscreen={toggleMapFullScreen}
+                        bind:markers
+                    ></MapWithElevationMaplibre>
                 </div>
             {/if}
         </div>

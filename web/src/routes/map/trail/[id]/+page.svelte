@@ -2,9 +2,6 @@
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import { trail } from "$lib/stores/trail_store";
-    import "$lib/vendor/leaflet-elevation/src/index.css";
-    import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
-    import "leaflet/dist/leaflet.css";
     import * as M from "maplibre-gl";
     import "photoswipe/style.css";
     import { _ } from "svelte-i18n";

@@ -16,6 +16,7 @@
     import "maplibre-gl/dist/maplibre-gl.css";
     import { createEventDispatcher, onDestroy, onMount } from "svelte";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
+    import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
 
     export let trails: Trail[] = [];
     export let markers: M.Marker[] = [];
@@ -24,6 +25,8 @@
     export let showElevation: boolean = true;
     export let showInfoPopup: boolean = false;
     export let showGrid: boolean = false;
+    export let showStyleSwitcher: boolean = true;
+    export let showFullscreen: boolean = false;
     export let fitBounds: "animate" | "instant" | "off" = "instant";
 
     export let elevationProfileContainer: string | HTMLDivElement | undefined =
@@ -520,7 +523,18 @@
             });
             map.addControl(epc);
         }
-        map.addControl(switcherControl);
+        if (showStyleSwitcher) {
+            map.addControl(switcherControl);
+        }
+
+        if (showFullscreen) {
+            map.addControl(
+                new FullscreenControl(() => {
+                    dispatch("fullscreen");
+                }),
+                "bottom-right",
+            );
+        }
 
         map.on("styledata", () => {
             trails.forEach((t, i) => {

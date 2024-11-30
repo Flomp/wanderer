@@ -13,8 +13,8 @@
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
     import PhotoPicker from "../trail/photo_picker.svelte";
-    import { convertDMSToDD } from "$lib/util/leaflet_util";
     import { show_toast } from "$lib/stores/toast_store";
+    import { convertDMSToDD } from "$lib/models/gpx/utils";
 
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;

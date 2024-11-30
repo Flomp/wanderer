@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { SummitLog } from "$lib/models/summit_log";
-    import "leaflet/dist/leaflet.css";
     import { onMount, tick } from "svelte";
     import Modal from "../base/modal.svelte";
     import SummitLogTableRow from "./summit_log_table_row.svelte";
