@@ -15,8 +15,7 @@ function update(object, path, value) {
 
 function cloneDeep(object) {
   try {
-    return JSON.parse(JSON.stringify(object));
-
+    return structuredClone(object);
   } catch (e) {
     return object;
   }

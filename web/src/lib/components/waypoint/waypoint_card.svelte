@@ -15,6 +15,7 @@
     $: if (waypoint.photos?.length) {
         imgSrc = waypoint.photos
             .filter((_, i) => i < 3)
+            .reverse()
             .map((p) => getFileURL(waypoint, p));
     } else if (waypoint._photos?.length && browser) {
         Promise.all(
@@ -37,7 +38,7 @@
 </script>
 
 <div
-    class="flex gap-4 p-4 border border-input-border rounded-md my-2 hover:bg-menu-item-background-hover"
+    class="flex gap-4 p-4 outline outline-1 outline-input-border rounded-md my-2 hover:outline-2"
 >
     {#if imgSrc.length}
         {#if mode == "show"}

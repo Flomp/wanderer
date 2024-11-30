@@ -37,7 +37,7 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
     }
 
     summitLogs.set(fetchedSummitLogs);
-    
+
     return fetchedSummitLogs;
 }
 
@@ -53,14 +53,29 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
         throw new ClientResponseError(await r.json())
     }
 
+    let model: SummitLog = await r.json();
+
     if (summitLog._gpx && summitLog._gpx instanceof File) {
-        let model: SummitLog = await r.json();
 
         const formData = new FormData()
 
         formData.append("gpx", summitLog._gpx)
 
         r = await f(`/api/v1/summit-log/${model.id!}/file`, {
+            method: 'POST',
+            body: formData,
+        })
+    }
+
+    if (summitLog._photos && summitLog._photos.length) {
+
+        const formData = new FormData()
+
+        for (const photo of summitLog._photos) {
+            formData.append("photos", photo)
+        }
+
+        r = await fetch(`/api/v1/summit-log/${model.id!}/file`, {
             method: 'POST',
             body: formData,
         })
@@ -73,28 +88,38 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
     }
 }
 
-export async function summit_logs_update(summitLog: SummitLog) {
-    summitLog.author = pb.authStore.model!.id
+export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: SummitLog) {
+    newSummitLog.author = pb.authStore.model!.id
 
-    let r = await fetch('/api/v1/summit-log/' + summitLog.id, {
+    let r = await fetch('/api/v1/summit-log/' + newSummitLog.id, {
         method: 'POST',
-        body: JSON.stringify(summitLog),
+        body: JSON.stringify(newSummitLog),
     })
 
     if (!r.ok) {
         throw new ClientResponseError(await r.json())
     }
 
+    const formData = new FormData()
 
-    if (summitLog._gpx) {
-        const formData = new FormData()
-
-        formData.append("gpx", summitLog._gpx);
-        r = await fetch(`/api/v1/summit-log/${summitLog.id!}/file`, {
-            method: 'POST',
-            body: formData,
-        })
+    for (const photo of newSummitLog._photos ?? []) {
+        formData.append("photos", photo)
     }
+
+    const deletedPhotos = oldSummitLog.photos.filter(oldPhoto => !newSummitLog.photos.find(newPhoto => newPhoto === oldPhoto));
+
+    for (const deletedPhoto of deletedPhotos) {
+        formData.append("photos-", deletedPhoto.replace(/^.*[\\/]/, ''));
+    }
+
+    if (newSummitLog._gpx) {
+        formData.append("gpx", newSummitLog._gpx);
+    }
+
+    r = await fetch(`/api/v1/summit-log/${newSummitLog.id!}/file`, {
+        method: 'POST',
+        body: formData,
+    })
 
     if (r.ok) {
         return await r.json();

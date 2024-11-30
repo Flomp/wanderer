@@ -133,7 +133,7 @@
                 alt=""
             />
             <div
-                class="absolute bottom-0 w-full h-1/2 bg-gradient-to-b from-transparent to-black opacity-50"
+                class="absolute bottom-0 w-full h-2/3 bg-gradient-to-b from-transparent to-black opacity-50"
             ></div>
             {#if (trail.public || trailIsShared) && pb.authStore.model}
                 <div
@@ -366,7 +366,7 @@
                 </div>
             {/if}
             {#if mode == "overview"}
-                <div class="relative h-72 rounded-xl">
+                <div class="relative h-72 rounded-xl overflow-hidden">
                     <MapWithElevationMaplibre
                         trails={[trail]}
                         showElevation={false}

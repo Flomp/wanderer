@@ -79,7 +79,6 @@
     <tbody>
         {#each summitLogs as log, i}
             <SummitLogTableRow
-                index={i}
                 {log}
                 on:open={(e) => openMap(e.detail)}
                 on:text={(e) => openText(e.detail)}

@@ -12,6 +12,7 @@
     import Textarea from "../base/textarea.svelte";
     import TrailPicker from "../trail/trail_picker.svelte";
     import GPX from "$lib/models/gpx/gpx";
+    import PhotoPicker from "../trail/photo_picker.svelte";
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
 
@@ -30,6 +31,22 @@
             if (!$form.expand.gpx_data) {
                 $form.gpx = "";
             }
+
+            if (
+                !$form._photos?.length &&
+                !$form.photos?.length &&
+                $form.expand?.gpx_data
+            ) {
+                const canvas = document.querySelector(
+                    "#trail-picker-map .maplibregl-canvas",
+                ) as HTMLCanvasElement;
+
+                const dataURL = canvas.toDataURL();
+                const response = await fetch(dataURL);
+                const blob = await response.blob();
+                $form._photos = [new File([blob], "route")];
+            }
+
             dispatch("save", submittedValues);
             closeModal!();
         },
@@ -84,6 +101,18 @@
                 error={$errors.date}
                 on:change={handleChange}
             ></Datepicker>
+        </div>
+        <div>
+            <label for="summitlog-photo-input" class="text-sm font-medium pb-1">
+                {$_("photos")}
+            </label>
+            <PhotoPicker
+                id="summitlog-photo-input"
+                parent={$form}
+                bind:photos={$form.photos}
+                bind:photoFiles={$form._photos}
+                showThumbnailControls={false}
+            ></PhotoPicker>
         </div>
         <div class="flex gap-4">
             <TrailPicker

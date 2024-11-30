@@ -120,11 +120,11 @@
             ></TextField>
         </div>
         <div>
-            <label for="trail-photo-input" class="text-sm font-medium pb-1">
+            <label for="waypoint-photo-input" class="text-sm font-medium pb-1">
                 {$_("photos")}
             </label>
             <PhotoPicker
-                id="waypoint"
+                id="waypoint-photo-input"
                 parent={$form}
                 on:exif={(e) => getCoordinatesFromPhoto(e.detail)}
                 bind:photos={$form.photos}

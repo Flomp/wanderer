@@ -1,25 +1,31 @@
 <script lang="ts">
     import type { SummitLog } from "$lib/models/summit_log";
-    import "leaflet/dist/leaflet.css";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
-    import { browser } from "$app/environment";
-    import GPX from "$lib/models/gpx/gpx";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
-    import type { Map } from "leaflet";
-    import { onMount } from "svelte";
+    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
 
-    let map: Map;
-    let L: any;
-    let layer: any;
+    let thumbnail: string = "/imgs/default_thumbnail.webp";
 
-    export let index: number = 0;
+    $: Promise.all(
+        (log._photos ?? []).map(async (f) => {
+            return await readAsDataURLAsync(f);
+        }),
+    ).then((v) => {
+        if (log.photos.length) {
+            thumbnail = getFileURL(log, log.photos[0]);
+        } else if (v.length) {
+            thumbnail = v[0];
+        } else {
+            thumbnail = "/imgs/default_thumbnail.webp";
+        }
+    });
+
     export let log: SummitLog;
     export let mode: "show" | "edit" = "show";
 
@@ -27,64 +33,18 @@
         { text: $_("edit"), value: "edit" },
         { text: $_("delete"), value: "delete" },
     ];
-
-    onMount(async () => {
-        if (!map) {
-            await initMap();
-        }
-        if (log.expand.gpx_data) {
-            showTrailOnMap();
-        }
-    });
-
-    async function initMap() {
-        L = (await import("leaflet")).default;
-
-        map = L.map("mini-map-" + index, {
-            zoomControl: false,
-            scrollWheelZoom: false,
-            dragging: false,
-        });
-        map.attributionControl.setPrefix(false);
-    }
-
-    $: if (log.expand.gpx_data) {
-        showTrailOnMap();
-    } else {
-        removeTrailFromMap();
-    }
-
-    async function showTrailOnMap() {
-        if (!log.expand.gpx_data || !browser || !map) {
-            return;
-        }
-
-        const geoJson = gpx(
-            new DOMParser().parseFromString(log.expand.gpx_data, "text/xml"),
-        );
-        layer = L.geoJson(geoJson, {
-            filter: (feature: any, layer: any) => {
-                return feature.geometry.type !== "Point";
-            },
-        }).addTo(map);
-        map.fitBounds(layer.getBounds());
-        map.invalidateSize();
-    }
-
-    function removeTrailFromMap() {
-        if (layer) {
-            map?.removeLayer(layer);
-        }
-    }
 </script>
 
 <div class="p-4 my-2 border border-input-border rounded-xl">
     <div class="flex items-center gap-x-4">
-        <div
-            class="h-24 aspect-square shrink-0 rounded-xl !bg-background"
-            class:hidden={!log.expand.gpx_data}
-            id="mini-map-{index}"
-        ></div>
+        <div class="h-24 aspect-square shrink-0 rounded-xl overflow-hidden">
+            <img
+                id="header-img"
+                class="object-cover h-full"
+                src={thumbnail}
+                alt=""
+            />
+        </div>
         <div class="basis-full">
             <div
                 class="flex justify-between items-center"

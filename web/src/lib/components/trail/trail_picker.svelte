@@ -1,16 +1,15 @@
 <script lang="ts">
-    import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
-    import "leaflet/dist/leaflet.css";
+    import * as M from "maplibre-gl";
 
-    import type { Map } from "leaflet";
-    import { createEventDispatcher, onMount, tick } from "svelte";
+    import { fromFile, toGeoJson } from "$lib/util/gpx_util";
+    import { createEventDispatcher, onMount } from "svelte";
     export let trailFile: File | null;
     export let trailData: string | undefined;
     export let label: string = "";
 
-    let map: Map;
-    let L: any;
-    let layer: any;
+    let map: M.Map;
+    let layer: M.LineLayerSpecification | undefined;
+    let source: M.GeoJSONSource | undefined;
 
     const dispatch = createEventDispatcher();
 
@@ -27,14 +26,13 @@
     });
 
     async function initMap() {
-        L = (await import("leaflet")).default;
-
-        map = L.map("trail-picker-map", {
-            zoomControl: false,
-            scrollWheelZoom: false,
-            dragging: false,
+        map = new M.Map({
+            container: "trail-picker-map",
+            attributionControl: false,
+            dragPan: false,
+            scrollZoom: false,
+            preserveDrawingBuffer: true
         });
-        map.attributionControl.setPrefix(false);
     }
 
     function openTrailBrowser() {
@@ -42,7 +40,7 @@
             trailFile = null;
             trailData = undefined;
 
-            dispatch("change", null)
+            dispatch("change", null);
         } else {
             document.getElementById("trail-input")!.click();
         }
@@ -59,35 +57,61 @@
         }
 
         trailFile = files.item(0);
-        trailData = await trailFile?.text();
+        if (!trailFile) {
+            return;
+        }
+        const parseResult = await fromFile(trailFile);
+
+        trailData = parseResult.gpxData;
 
         dispatch("change", trailData);
     }
 
     async function showTrailOnMap() {
-        if (!trailData) {
+        if (!trailData || !map) {
             return;
         }
+        const sourceId = "trail-picker-geojson-source";
+        const layerId = "trail-picker-geojson-layer";
 
-        const geoJson = gpx(
-            new DOMParser().parseFromString(trailData, "text/xml"),
-        );
+        const geojson = toGeoJson(trailData);
+
         if (layer) {
-            map.removeLayer(layer);
+            map.removeLayer(layerId);
+            map.removeSource(sourceId);
         }
-        layer = L.geoJson(geoJson, {
-            filter: (feature: any, layer: any) => {
-                return feature.geometry.type !== "Point";
+
+        map.addSource(sourceId, {
+            type: "geojson",
+            data: geojson,
+        });
+        map.addLayer({
+            id: layerId,
+            type: "line",
+            source: sourceId,
+            paint: {
+                "line-color": "#3388ff",
+                "line-width": 3,
             },
-        }).addTo(map);
-        map.fitBounds(layer.getBounds());
-        map.invalidateSize();
+        });
+        layer = map.getLayer(layerId) as M.LineLayerSpecification;
+        source = map.getSource(sourceId) as M.GeoJSONSource;        
+        map.resize()
+        map.fitBounds(geojson.bbox as M.LngLatBoundsLike, {animate: false, padding: 8});
     }
 
     function removeTrailFromMap() {
         if (layer) {
-            map?.removeLayer(layer);
+            map?.removeLayer(layer.id);
+            layer = undefined;
         }
+        if (source) {
+            map?.removeSource(source.id);
+            source = undefined;
+        }
+
+        trailData = undefined;
+        trailFile = null;
     }
 </script>
 

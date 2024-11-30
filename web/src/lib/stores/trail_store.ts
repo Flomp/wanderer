@@ -261,7 +261,9 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     }
 
     for (const updatedSummitLog of summitLogUpdates.updated) {
-        const model = await summit_logs_update(updatedSummitLog);
+        const oldSummitLog = oldTrail.expand.summit_logs.find(w => w.id == updatedSummitLog.id);
+
+        const model = await summit_logs_update(oldSummitLog!, updatedSummitLog);
     }
 
     for (const deletedSummitLog of summitLogUpdates.deleted) {

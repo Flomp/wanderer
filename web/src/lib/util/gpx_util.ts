@@ -102,6 +102,37 @@ export async function trail2gpx(trail: Trail) {
     return gpx.toString();
 }
 
+export async function fromFile(file: File | Blob) {
+    let gpxData = "";
+    let gpxFile: Blob;
+    const fileContent = await file.text();
+    const fileBuffer = await file.arrayBuffer();
+
+    if (!isFITFile(fileBuffer)) {
+        if (fileContent.includes("http://www.opengis.net/kml")) {
+            gpxData = fromKML(fileContent);
+            gpxFile = new Blob([gpxData], {
+                type: "application/gpx+xml",
+            });
+        } else if (fileContent.includes("TrainingCenterDatabase")) {
+            gpxData = fromTCX(fileContent);
+            gpxFile = new Blob([gpxData], {
+                type: "application/gpx+xml",
+            });
+        } else {
+            gpxData = fileContent;
+            gpxFile = file;
+        }
+    } else {
+        gpxData = await fromFIT(fileBuffer);
+        gpxFile = new Blob([gpxData], {
+            type: "application/gpx+xml",
+        });
+    }
+
+    return {gpxData, gpxFile};
+}
+
 export function fromKML(kmlData: string) {
     const parser = browser ? new DOMParser() : new xmldom.DOMParser();
     const nodes = parser.parseFromString(kmlData, "text/xml")

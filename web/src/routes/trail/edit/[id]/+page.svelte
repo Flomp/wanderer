@@ -52,6 +52,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import {
+        fromFile,
         fromFIT,
         fromKML,
         fromTCX,
@@ -231,39 +232,6 @@
         document.getElementById("fileInput")!.click();
     }
 
-    async function parseFile(file: File) {
-        const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
-        let gpxData = "";
-        const fileContent = await file.text();
-        const fileBuffer = await file.arrayBuffer();
-
-        if (!isFITFile(fileBuffer)) {
-            if (fileContent.includes("http://www.opengis.net/kml")) {
-                gpxData = fromKML(fileContent);
-                gpxFile = new Blob([gpxData], {
-                    type: "application/gpx+xml",
-                });
-                return gpxData;
-            } else if (fileContent.includes("TrainingCenterDatabase")) {
-                gpxData = fromTCX(fileContent);
-                gpxFile = new Blob([gpxData], {
-                    type: "application/gpx+xml",
-                });
-            } else {
-                gpxData = fileContent;
-                gpxFile = file;
-            }
-        } else {
-            gpxData = await fromFIT(fileBuffer);
-            gpxFile = new Blob([gpxData], {
-                type: "application/gpx+xml",
-            });
-        }
-
-        return gpxData;
-    }
-
     async function handleFileSelection() {
         const selectedFile = (
             document.getElementById("fileInput") as HTMLInputElement
@@ -279,7 +247,8 @@
         drawingActive = false;
         overwriteGPX = false;
 
-        let gpxData = await parseFile(selectedFile);
+        const { gpxData, gpxFile: file } = await fromFile(selectedFile);
+        gpxFile = file;
 
         try {
             const parseResult = await gpx2trail(gpxData, selectedFile.name);
@@ -848,7 +817,6 @@
                 <li>
                     <SummitLogCard
                         {log}
-                        index={i}
                         mode="edit"
                         on:change={(e) => handleSummitLogMenuClick(log, i, e)}
                     ></SummitLogCard>

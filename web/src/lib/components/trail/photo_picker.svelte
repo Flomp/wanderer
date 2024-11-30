@@ -116,7 +116,7 @@
 </script>
 
 <div
-    class="flex gap-x-4 max-w-full overflow-x-auto shrink-0 rounded-xl {offerUpload
+    class="flex gap-x-4 max-w-full shrink-0 rounded-xl {offerUpload
         ? 'outline-dashed outline-input-border'
         : ''}"
     role="dialog"
@@ -125,7 +125,7 @@
     on:drop={handlePhotoDrop}
 >
     <button
-        class="btn-secondary h-32 w-32 m-2 shrink-0 grow-0 basis-auto"
+        class="btn-secondary h-32 w-32 shrink-0 grow-0 basis-auto"
         type="button"
         on:click={openPhotoBrowser}><i class="fa fa-plus"></i></button
     >
@@ -137,17 +137,19 @@
         style="display: none;"
         on:change={() => handlePhotoSelection()}
     />
-    {#each (photos ?? []).concat(photoPreviews) as photo, i}
-        <div class="shrink-0 grow-0 basis-auto m-2">
-            <PhotoCard
-                src={i >= photos.length ? photo : getFileURL(parent, photo)}
-                on:delete={() => handlePhotoDelete(i)}
-                isThumbnail={thumbnail === i}
-                on:thumbnail={() => makePhotoThumbnail(i)}
-                on:exif
-                {showThumbnailControls}
-                {showExifControls}
-            ></PhotoCard>
-        </div>
-    {/each}
+    <div class="flex overflow-x-auto gap-x-3">
+        {#each (photos ?? []).concat(photoPreviews) as photo, i}
+            <div class="shrink-0 grow-0 basis-auto overflow-hidden">
+                <PhotoCard
+                    src={i >= photos.length ? photo : getFileURL(parent, photo)}
+                    on:delete={() => handlePhotoDelete(i)}
+                    isThumbnail={thumbnail === i}
+                    on:thumbnail={() => makePhotoThumbnail(i)}
+                    on:exif
+                    {showThumbnailControls}
+                    {showExifControls}
+                ></PhotoCard>
+            </div>
+        {/each}
+    </div>
 </div>

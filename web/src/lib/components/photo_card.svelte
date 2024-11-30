@@ -32,7 +32,7 @@
         ></i>
     {/if}
     <div
-        class="flex opacity-0 group-hover:opacity-100 absolute top-0 w-full h-full bg-white/75 rounded-xl items-center justify-center gap-6 transition-all"
+        class="flex opacity-0 group-hover:opacity-100 absolute top-0 w-full h-full bg-secondary-hover/75 rounded-xl items-center justify-center gap-6 transition-all"
     >
         {#if showThumbnailControls}
             <button

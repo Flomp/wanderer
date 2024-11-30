@@ -1,65 +1,34 @@
 <script lang="ts">
     import type { SummitLog } from "$lib/models/summit_log";
-    import "leaflet/dist/leaflet.css";
 
+    import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
-    import type { Map } from "leaflet";
-    import { createEventDispatcher, onMount } from "svelte";
+    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
-    import { getFileURL } from "$lib/util/file_util";
+    import PhotoGallery from "../photo_gallery.svelte";
 
-    export let index: number;
     export let log: SummitLog;
     export let showCategory: boolean = false;
     export let showTrail: boolean = false;
     export let showAuthor: boolean = false;
 
-    let map: Map;
+    let openGallery: (idx?: number) => void;
+
+    let imgSrc: string[] = [];
+    $: if (log.photos?.length) {
+        imgSrc = log.photos
+            .filter((_, i) => i < 3)
+            .reverse()
+            .map((p) => getFileURL(log, p));
+    } else {
+        imgSrc = [];
+    }
 
     const dispatch = createEventDispatcher();
-
-    onMount(async () => {
-        if (log.expand.gpx_data) {
-            await initMap();
-        }
-    });
-
-    async function initMap() {
-        const L = (await import("leaflet")).default;
-
-        map = L.map("mini-map-" + index, {
-            zoomControl: false,
-            scrollWheelZoom: false,
-            dragging: false,
-        });
-        map.attributionControl.setPrefix(false);
-
-        if (!log.expand.gpx_data || !map) {
-            return;
-        }
-
-        const geoJson = gpx(
-            new DOMParser().parseFromString(log.expand.gpx_data, "text/xml"),
-        );
-        const layer = (L as any)
-            .geoJson(geoJson, {
-                filter: (feature: any, layer: any) => {
-                    return feature.geometry.type !== "Point";
-                },
-            })
-            .addTo(map);
-        map.fitBounds(layer.getBounds());
-        map.invalidateSize();
-    }
-
-    function openMap() {
-        dispatch("open", log);
-    }
 
     function openText() {
         dispatch("text", log);
@@ -75,13 +44,27 @@
 
 <tr class="text-center">
     <td>
-        <button
-            type="button"
-            on:click={openMap}
-            class="h-20 aspect-square shrink-0 rounded-xl !bg-background hover:!bg-secondary-hover transition-colors"
-            class:hidden={!log.expand?.gpx_data}
-            id="mini-map-{index}"
-        ></button>
+        {#if imgSrc.length}
+            <PhotoGallery
+                photos={log.photos.map((p) => getFileURL(log, p))}
+                bind:open={openGallery}
+            ></PhotoGallery>
+            <button
+                class="relative w-16 aspect-square ml-2 mb-3 shrink-0"
+                type="button"
+                on:click={() => openGallery()}
+            >
+                {#each imgSrc as img, i}
+                    <img
+                        class="absolute h-full rounded-xl object-cover"
+                        style="top: {6 * i}px; right: {6 *
+                            i}px; transform: rotate(-{i * 5}deg)"
+                        src={img}
+                        alt="waypoint"
+                    />
+                {/each}
+            </button>
+        {/if}
     </td>
     <td class:py-4={!log.expand?.gpx_data}
         >{new Date(log.date).toLocaleDateString(undefined, {
