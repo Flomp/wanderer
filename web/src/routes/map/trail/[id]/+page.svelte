@@ -15,7 +15,7 @@
 <main class="grid grid-cols-1 md:grid-cols-[458px_1fr] gap-x-1 gap-y-4">
     <TrailInfoPanel trail={$trail} {markers}></TrailInfoPanel>
     <div id="trail-details" class="sticky top-[62px]">
-        <MapWithElevationMaplibre trails={[$trail]} bind:markers></MapWithElevationMaplibre>
+        <MapWithElevationMaplibre trails={[$trail]} bind:markers showTerrain={true}></MapWithElevationMaplibre>
     </div>
 </main>
 

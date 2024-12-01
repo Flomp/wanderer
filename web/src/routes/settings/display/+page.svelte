@@ -49,11 +49,14 @@
 
     let customTilesetName: string = "";
     let customTilesetURL: string = "";
+    let terrainURL: string = "";
 
     onMount(() => {
         citySearchQuery = settings?.location?.name ?? "";
         selectedLanguage = settings?.language || "en";
         selectedMapFocus = settings?.mapFocus ?? "trails";
+
+        terrainURL = settings?.terrain ?? "";
     });
 
     async function searchCities(q: string) {
@@ -127,6 +130,13 @@
             tilesets: settings.tilesets,
         });
     }
+
+    async function handleTerrainAdd() {
+        await settings_update({
+            id: settings!.id,
+            terrain: terrainURL,
+        });
+    }
 </script>
 
 <svelte:head>
@@ -189,14 +199,14 @@
                     <TextField
                         label={$_("name")}
                         bind:value={customTilesetName}
-                        placeholder="Open Street Maps"
+                        placeholder={$_("name")}
                     ></TextField>
                     <div class="flex items-center basis-full gap-2">
                         <div class="flex-grow">
                             <TextField
                                 label="URL"
                                 bind:value={customTilesetURL}
-                                placeholder="https://{'{'}s{'}'}.tile.openstreetmap.org/{'{'}z{'}'}/{'{'}x{'}'}/{'{'}y{'}'}.png"
+                                placeholder="https://.../style.json"
                             ></TextField>
                         </div>
                         <button
@@ -205,6 +215,24 @@
                             ><i class="fa fa-plus"></i></button
                         >
                     </div>
+                </div>
+                <h3 class="text-2xl font-semibold">{$_("Terrain")}</h3>
+                <div class="flex items-center gap-2">
+                    <div class="basis-full">
+                        <TextField
+                            label="Terrain URL"
+                            bind:value={terrainURL}
+                            placeholder="https://.../tiles.json"
+                        ></TextField>
+                    </div>
+                    <button
+                        disabled={terrainURL == settings?.terrain}
+                        class="btn-icon mt-6"
+                        class:hover:!bg-background={terrainURL == settings?.terrain}
+                        on:click={handleTerrainAdd}
+                        class:text-gray-500={terrainURL == settings?.terrain}
+                        ><i class="fa fa-save"></i></button
+                    >
                 </div>
             </div>
         </Settings>

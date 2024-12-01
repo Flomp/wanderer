@@ -27,7 +27,7 @@
 
     let map: M.Map;
     let mapWithElevation: MapWithElevationMaplibre;
-    let markers: any[];
+    let markers: M.Marker[];
     let showMap: boolean = true;
 
     let selectedList: List | null = null;

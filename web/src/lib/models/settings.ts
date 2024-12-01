@@ -7,6 +7,7 @@ class Settings {
   location?: { name: string, lat: number, lon: number };
   category?: string;
   tilesets?: {name: string, url: string}[]
+  terrain?: string;
   user?: string;
 
   constructor(
@@ -18,6 +19,7 @@ class Settings {
       location?: { name: string, lat: number, lon: number }
       category?: string
       tilesets?: {name: string, url: string}[]
+      terrain?: string;
     }
   ) {
     this.unit = unit;
@@ -27,6 +29,7 @@ class Settings {
     this.location = params?.location;
     this.category = params?.category;
     this.tilesets = params?.tilesets ?? [];
+    this.terrain = params?.terrain;
   }
 }
 

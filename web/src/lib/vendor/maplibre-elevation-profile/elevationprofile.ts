@@ -415,7 +415,6 @@ export class ElevationProfile {
 
         Chart.register(...registerables);
         Chart.register(zoomPlugin);
-        Chart.register(CrosshairPlugin);
 
         this.settings = {
             ...elevationProfileDefaultOptions,
@@ -676,6 +675,7 @@ export class ElevationProfile {
             },
 
             plugins: [
+                CrosshairPlugin,
                 {
                     id: "waypointPlugin",
                     afterDraw: (chart, args, options) => {

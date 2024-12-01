@@ -7,7 +7,7 @@ import { type ControlPosition, type IControl } from "maplibre-gl";
 type MapStyle = {
     text: string;
     value: string;
-    thumbnail: string;
+    thumbnail?: string;
 }
 
 export type StyleSwitcherControlOptions = {
@@ -73,20 +73,30 @@ export class StyleSwitcherControl implements IControl {
         this.switcherContainer.appendChild(headingDiv)
 
         const buttonDiv = document.createElement("ul")
-        buttonDiv.classList.add("mt-2");
+        buttonDiv.classList.add("mt-2", "max-h-64", "overflow-y-scroll");
         this.settings.styles.forEach((style, i) => {
             const styleLi = document.createElement("li");
             styleLi.classList.add("flex", "items-center", "gap-x-4", "px-3", "py-2", "cursor-pointer", "hover:bg-menu-item-background-hover")
-            const styleImg = document.createElement("img");
-            styleImg.classList.add("w-12", "h-12", "rounded-md")
-            styleImg.src = style.thumbnail;
+            if (style.thumbnail) {
+                const styleImg = document.createElement("img");
+                styleImg.classList.add("w-12", "h-12", "rounded-md")
+                styleImg.src = style.thumbnail;
+                styleLi.appendChild(styleImg)
+            } else {
+                const styleIconContainer = document.createElement("i");
+                styleIconContainer.classList.add("w-12", "h-12", "rounded-md", "bg-blue-200", "flex", "items-center", "justify-center")
+                const styleIcon = document.createElement("i");
+                styleIcon.classList.add("fa", "fa-map-location-dot", "text-xl")
+                styleIconContainer.appendChild(styleIcon)
+                styleLi.appendChild(styleIconContainer)
+            }
+
             const styleName = document.createElement("span");
             styleName.classList.add("!text-sm")
             if (i == this.settings.selectedIndex) {
                 styleName.classList.add("font-semibold")
             }
             styleName.textContent = style.text;
-            styleLi.appendChild(styleImg)
             styleLi.appendChild(styleName)
 
             styleLi.addEventListener("click", () => {

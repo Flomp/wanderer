@@ -17,6 +17,7 @@
     import { createEventDispatcher, onDestroy, onMount } from "svelte";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
+    import type { Settings } from "$lib/models/settings";
 
     export let trails: Trail[] = [];
     export let markers: M.Marker[] = [];
@@ -27,6 +28,7 @@
     export let showGrid: boolean = false;
     export let showStyleSwitcher: boolean = true;
     export let showFullscreen: boolean = false;
+    export let showTerrain: boolean = false;
     export let fitBounds: "animate" | "instant" | "off" = "instant";
 
     export let elevationProfileContainer: string | HTMLDivElement | undefined =
@@ -194,6 +196,11 @@
         const bounds = data[activeTrail]
             ? (data[activeTrail].bbox as M.LngLatBoundsLike)
             : getBounds();
+
+        if (!bounds) {
+            return;
+        }
+
         map!.fitBounds(bounds, {
             animate: animate,
             padding: {
@@ -336,8 +343,6 @@
         dispatch("select", trail);
         const index = trails.findIndex((t) => t.id == trail.id);
         if (index == -1) {
-            console.log("here");
-
             return;
         }
         activeTrail = index;
@@ -425,30 +430,37 @@
             )
         ).ElevationProfileControl;
 
-        const mapStyles = [
-            {
-                text: "Open Street Maps",
-                value: "/styles/osm.json",
-                thumbnail: "https://tile.openstreetmap.org/1/0/0.png",
-            },
-            {
-                text: "Open Topo Maps",
-                value: "/styles/otm.json",
-                thumbnail: "https://tile.opentopomap.org/1/0/0.png",
-            },
-            {
-                text: "Carto Light",
-                value: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-                thumbnail:
-                    "https://basemaps.cartocdn.com/light_all/1/0/0@2x.png",
-            },
-            {
-                text: "Carto Dark",
-                value: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-                thumbnail:
-                    "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
-            },
-        ];
+        const mapStyles: { text: string; value: string; thumbnail?: string }[] =
+            [
+                ...(($page.data.settings as Settings).tilesets ?? []).map(
+                    (t) => ({
+                        text: t.name,
+                        value: t.url,
+                    }),
+                ),
+                {
+                    text: "Open Street Maps",
+                    value: "/styles/osm.json",
+                    thumbnail: "https://tile.openstreetmap.org/1/0/0.png",
+                },
+                {
+                    text: "Open Topo Maps",
+                    value: "/styles/otm.json",
+                    thumbnail: "https://tile.opentopomap.org/1/0/0.png",
+                },
+                {
+                    text: "Carto Light",
+                    value: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+                    thumbnail:
+                        "https://basemaps.cartocdn.com/light_all/1/0/0@2x.png",
+                },
+                {
+                    text: "Carto Dark",
+                    value: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+                    thumbnail:
+                        "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
+                },
+            ];
         const preferredMapStyleIndex = mapStyles.findIndex(
             (s) => s.text === localStorage.getItem("layer"),
         );
@@ -490,7 +502,9 @@
             selectedIndex:
                 preferredMapStyleIndex !== -1 ? preferredMapStyleIndex : 0,
         });
-        map.addControl(new M.NavigationControl());
+        map.addControl(
+            new M.NavigationControl({ visualizePitch: showTerrain }),
+        );
         map.addControl(
             new M.ScaleControl({
                 maxWidth: 120,
@@ -536,10 +550,25 @@
             );
         }
 
+        if (showTerrain) {
+            map!.addControl(
+                new M.TerrainControl({
+                    source: "terrain",
+                }),
+            );
+        }
+
         map.on("styledata", () => {
             trails.forEach((t, i) => {
                 addTrailLayer(t, t.id ?? i.toString(), data?.at(i));
             });
+
+            if (showTerrain && $page.data.settings?.terrain) {
+                map!.addSource("terrain", {
+                    type: "raster-dem",
+                    url: $page.data.settings.terrain,
+                });
+            }
         });
 
         map.on("moveend", (e) => {
