@@ -15,7 +15,7 @@ export const trail: Writable<Trail> = writable(new Trail(""));
 
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
-export async function trails_index(perPage: number = 21, random: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_index(perPage: number = 21, random: boolean = false, setStore: boolean = true, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail?' + new URLSearchParams({
         "per-page": perPage.toString(),
         expand: "category,waypoints,summit_logs",
@@ -26,7 +26,9 @@ export async function trails_index(perPage: number = 21, random: boolean = false
     const response = await r.json()
 
     if (r.ok) {
-        trails.set(response.items);
+        if(setStore) {
+            trails.set(response.items);
+        }
         return response.items;
     } else {
         throw new ClientResponseError(response)

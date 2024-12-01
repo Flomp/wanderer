@@ -13,6 +13,8 @@
     import { Canvas } from "@threlte/core";
     import { _ } from "svelte-i18n";
 
+    export let data;
+
     let searchDropdownItems: SearchItem[] = [];
 
     async function search(q: string) {
@@ -108,7 +110,7 @@
         id="trails"
         class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none"
     >
-        {#if $trails.length == 0}
+        {#if data.trails.length == 0}
             <div>
                 <img
                     style="max-width: min(450px, 100%)"
@@ -118,14 +120,14 @@
                 />
             </div>
         {/if}
-        {#each { length: Math.min($trails.length, 4) } as _, i}
-            <a href="/trail/view/{$trails[i].id}">
-                <TrailCard trail={$trails[i]}></TrailCard></a
+        {#each { length: Math.min(data.trails.length, 4) } as _, i}
+            <a href="/trail/view/{data.trails[i].id}">
+                <TrailCard trail={data.trails[i]}></TrailCard></a
             >
         {/each}
     </div>
     <div class="max-w-md md:mx-auto space-y-8">
-        {#if $trails.length == 0}
+        {#if data.trails.length == 0}
             <h2 class="text-4xl md:text-5xl font-bold">
                 {$_("hero_section_1_heading")}
             </h2>
