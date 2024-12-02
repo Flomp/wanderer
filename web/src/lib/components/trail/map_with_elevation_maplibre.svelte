@@ -615,4 +615,8 @@
         width: 100%;
         height: 100%;
     }
+
+    :global(.maplibregl-popup-content) {
+        @apply bg-background rounded-md;
+    }
 </style>

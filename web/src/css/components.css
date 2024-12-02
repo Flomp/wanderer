@@ -59,10 +59,11 @@
     border-radius: 4px;
     color: #fff;
     content: attr(data-title);
-    font-size: 14px;
+    font-size: 12px;
     padding: 6px 10px;
     top: 24px;
     white-space: nowrap;
+    z-index: 10
 }
 
 .tooltip:hover:after,
