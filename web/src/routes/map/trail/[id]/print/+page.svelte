@@ -128,7 +128,7 @@
                 docImgHeight,
             );
             currentHeight += docImgHeight + 11;
-            const elevationProfileHeight = currentHeight - 11;
+            const elevationProfileHeight = currentHeight + 6 - 11;
 
             // Waypoints
             const canvasContainer = map.getCanvasContainer();
@@ -161,7 +161,7 @@
                     "F",
                 );
                 doc.setTextColor("#ffffff");
-                doc.setFontSize(9);
+                doc.setFontSize(7);
                 doc.setFont("fa-solid-900", "normal");
 
                 const { w: letterWidth, h: letterHeight } =
@@ -169,8 +169,8 @@
 
                 doc.text(
                     iconText,
-                    iconPositionX + circleRadius - letterWidth / 2 + 0.1,
-                    iconPositionY + circleRadius + letterHeight / 2 - 0.1,
+                    iconPositionX + circleRadius - letterWidth / 2,
+                    iconPositionY + circleRadius + letterHeight / 2 - 0.33,
                 );
             }
 
@@ -560,7 +560,7 @@
                     >
                 </div>
                 <div
-                    class="min-w-0 basis-full relative"
+                    class="min-w-0 basis-full relative text-xs"
                     id="elevation-profile"
                 ></div>
             </div>
