@@ -164,6 +164,6 @@
 
 <style>
     td {
-        padding: 0rem 0.5rem;
+        padding: 0.3rem 0.5rem;
     }
 </style>

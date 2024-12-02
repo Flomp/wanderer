@@ -54,7 +54,7 @@
 <table class="w-full">
     <thead class="text-left text-gray-500">
         <tr class="text-sm">
-            {#if showPhotos}
+            {#if showPhotos && summitLogs.some(l => l.photos.length)}
                 <th class="w-24"></th>
             {/if}
             <th>{$_("date")}</th>
@@ -96,7 +96,7 @@
                 {showCategory}
                 {showTrail}
                 {showAuthor}
-                {showPhotos}
+                showPhotos={showPhotos && summitLogs.some(l => l.photos.length)}
                 showDescription={summitLogs.some(l => l.text?.length)}
                 showRoute={showRoute && summitLogs.some((l) => l.gpx)}
             ></SummitLogTableRow>
