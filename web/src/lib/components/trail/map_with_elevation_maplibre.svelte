@@ -488,7 +488,7 @@
                 icon: "fa-regular fa-circle",
                 fontSize: "xs",
                 width: 4,
-                backgroundColor: "primary",
+                backgroundColor: "bg-primary",
                 fontColor: "white",
             },
             {},

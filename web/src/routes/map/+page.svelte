@@ -96,7 +96,7 @@
             northEast,
             southWest,
             filter,
-            map.getZoom() > MIN_ZOOM
+            map.getZoom() > MIN_ZOOM,
         );
     }
 
@@ -143,6 +143,14 @@
                 ],
             ];
             map.fitBounds(boundingBox, { animate: false });
+        } else if (
+            $page.url.searchParams.has("lat") &&
+            $page.url.searchParams.has("lon")
+        ) {
+            console.log($page.url.searchParams.get("lon"), $page.url.searchParams.get("lat"));
+            
+            map.setCenter([parseFloat($page.url.searchParams.get("lon")!), parseFloat($page.url.searchParams.get("lat")!)]);
+            map.setZoom(14);
         } else if (settings && settings.mapFocus == "trails") {
             const boundingBox: M.LngLatBoundsLike = [
                 [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
@@ -157,11 +165,13 @@
             map.setCenter([settings.location.lon, settings.location.lat]);
             map.setZoom(12);
         } else {
+            console.log("here");
+
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    map.setCenter([lat, lon]);
+                    map.setCenter([lon, lat]);
                     map.setZoom(12);
                 },
                 (error) => {

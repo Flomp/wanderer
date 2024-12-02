@@ -139,7 +139,7 @@
     />
     <div class="flex overflow-x-auto gap-x-3">
         {#each (photos ?? []).concat(photoPreviews) as photo, i}
-            <div class="shrink-0 grow-0 basis-auto overflow-hidden">
+            <div class="shrink-0 grow-0 basis-auto">
                 <PhotoCard
                     src={i >= photos.length ? photo : getFileURL(parent, photo)}
                     on:delete={() => handlePhotoDelete(i)}
