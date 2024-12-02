@@ -5,6 +5,7 @@
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
+    import SkeletonCard from "$lib/components/base/skeleton_card.svelte";
     import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
@@ -16,15 +17,14 @@
         TrailFilter,
     } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
-    import {
-        trails,
-        trails_search_bounding_box,
-    } from "$lib/stores/trail_store";
+    import { trails_search_bounding_box } from "$lib/stores/trail_store";
     import { country_codes } from "$lib/util/country_code_util";
     import * as M from "maplibre-gl";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
+
+    let trails: Trail[] = [];
 
     let map: M.Map;
     let mapWithElevation: MapWithElevationMaplibre;
@@ -38,6 +38,8 @@
     const settings: Settings = $page.data.settings;
 
     const MIN_ZOOM = 6;
+
+    let loading: boolean = false;
 
     onMount(async () => {});
 
@@ -92,12 +94,15 @@
     }
 
     async function searchTrails(northEast: M.LngLat, southWest: M.LngLat) {
+        loading = true;
         const changes = await trails_search_bounding_box(
             northEast,
             southWest,
             filter,
             map.getZoom() > MIN_ZOOM,
         );
+        trails = changes.trails;
+        loading = false;
     }
 
     function handleTrailCardMouseEnter(trail: Trail) {
@@ -147,9 +152,10 @@
             $page.url.searchParams.has("lat") &&
             $page.url.searchParams.has("lon")
         ) {
-            console.log($page.url.searchParams.get("lon"), $page.url.searchParams.get("lat"));
-            
-            map.setCenter([parseFloat($page.url.searchParams.get("lon")!), parseFloat($page.url.searchParams.get("lat")!)]);
+            map.setCenter([
+                parseFloat($page.url.searchParams.get("lon")!),
+                parseFloat($page.url.searchParams.get("lat")!),
+            ]);
             map.setZoom(14);
         } else if (settings && settings.mapFocus == "trails") {
             const boundingBox: M.LngLatBoundsLike = [
@@ -165,8 +171,6 @@
             map.setCenter([settings.location.lon, settings.location.lat]);
             map.setZoom(12);
         } else {
-            console.log("here");
-
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
@@ -228,21 +232,29 @@
         </div>
 
         {#if !showFilter && (!showMap || (browser && window.innerWidth >= 768))}
-            {#if $trails.length == 0}
-                <EmptyStateSearch></EmptyStateSearch>
+            {#if loading}
+                {#each { length: 4 } as _, index}
+                    <SkeletonCard></SkeletonCard>
+                {/each}
+            {:else}
+                {#if trails.length == 0}
+                    <EmptyStateSearch></EmptyStateSearch>
+                {/if}
+                {#each trails as trail, i}
+                    <a
+                        data-sveltekit-preload-data="off"
+                        href="map/trail/{trail.id}"
+                    >
+                        <TrailCard
+                            {trail}
+                            on:mouseenter={() =>
+                                handleTrailCardMouseEnter(trail)}
+                            on:mouseleave={() =>
+                                handleTrailCardMouseLeave(trail)}
+                        ></TrailCard>
+                    </a>
+                {/each}
             {/if}
-            {#each $trails as trail, i}
-                <a
-                    data-sveltekit-preload-data="off"
-                    href="map/trail/{trail.id}"
-                >
-                    <TrailCard
-                        {trail}
-                        on:mouseenter={() => handleTrailCardMouseEnter(trail)}
-                        on:mouseleave={() => handleTrailCardMouseLeave(trail)}
-                    ></TrailCard>
-                </a>
-            {/each}
         {/if}
     </div>
     <div
@@ -252,7 +264,7 @@
         <MapWithElevationMaplibre
             on:moveend={handleMapMove}
             on:init={handleMapInit}
-            trails={$trails}
+            {trails}
             showElevation={false}
             showInfoPopup={true}
             activeTrail={-1}

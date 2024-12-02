@@ -32,7 +32,5 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
 
     await categories_index(fetch)
 
-    trails.set([])
-
     return { filter: filter, boundingBox: boundingBox }
 };

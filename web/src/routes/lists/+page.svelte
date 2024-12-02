@@ -179,6 +179,7 @@
             }}
             bind:activeTrail={activeTrailIndex}
             showInfoPopup={true}
+            showTerrain={true}
         ></MapWithElevationMaplibre>
     </div>
     <div class="min-w-0" class:hidden={showMap}>

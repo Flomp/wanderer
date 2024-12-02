@@ -26,7 +26,7 @@ export async function trails_index(perPage: number = 21, random: boolean = false
     const response = await r.json()
 
     if (r.ok) {
-        if(setStore) {
+        if (setStore) {
             trails.set(response.items);
         }
         return response.items;
@@ -40,7 +40,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
     let r = await f("/api/v1/search/trails", {
         method: "POST",
-        body: JSON.stringify({ q: filter.q, options: { filter: filterText, sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`], hitsPerPage: 21, page: page } }),
+        body: JSON.stringify({ q: filter.q, options: { filter: filterText, sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`], hitsPerPage: 12, page: page } }),
     });
 
     const result = await r.json();
@@ -52,8 +52,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     const trailIds = result.hits.map((h: Record<string, any>) => h.id);
 
     if (trailIds.length == 0) {
-        trails.set([]);
-        return [];
+        return { trails: [], ...result };
     }
 
     r = await f('/api/v1/trail?' + new URLSearchParams({
@@ -66,8 +65,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     const response = await r.json()
 
     if (r.ok) {
-        trails.set(response.items);
-        return result;
+        return { trails: response.items, ...result };
     } else {
         throw new ClientResponseError(response)
     }
@@ -85,7 +83,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
         method: "POST",
         body: JSON.stringify({
             q: "", options: {
-                limit: 400,
+                limit: 100,
                 filter: [
                     `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
                     filterText
@@ -99,8 +97,9 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 
     if (trailIds.length == 0) {
         const currentTrails: Trail[] = get(trails);
-        trails.set([]);
-        return compareObjectArrays<Trail>(currentTrails, []);
+        const comparison = compareObjectArrays<Trail>(currentTrails, []);
+
+        return { trails: [], ...comparison }
     }
 
     r = await fetch('/api/v1/trail?' + new URLSearchParams({
@@ -127,11 +126,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 
         const comparison = compareObjectArrays<Trail>(get(trails), response.items)
 
-        if (comparison.added.length || comparison.deleted.length || comparison.updated.length) {
-            trails.set(response.items);
-        }
-
-        return comparison;
+        return { trails: response.items, ...comparison };
     } else {
         throw new ClientResponseError(response)
     }

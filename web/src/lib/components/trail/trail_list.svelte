@@ -7,6 +7,8 @@
     import EmptyStateSearch from "../empty_states/empty_state_search.svelte";
     import TrailCard from "./trail_card.svelte";
     import TrailListItem from "./trail_list_item.svelte";
+    import SkeletonCard from "../base/skeleton_card.svelte";
+    import SkeletonListItem from "../base/skeleton_list_item.svelte";
 
     export let filter: TrailFilter | null = null;
     export let trails: Trail[];
@@ -14,6 +16,8 @@
         page: 1,
         totalPages: 1,
     };
+
+    export let loading: boolean = false;
 
     const displayOptions: SelectItem[] = [
         { text: $_("card", { values: { n: 2 } }), value: "cards" },
@@ -58,7 +62,7 @@
     }
 
     function setSort() {
-        if(!filter) {
+        if (!filter) {
             return;
         }
         localStorage.setItem("sort", filter.sort);
@@ -66,7 +70,7 @@
     }
 
     function setSortOrder() {
-        if(!filter) {
+        if (!filter) {
             return;
         }
         if (filter.sortOrder === "+") {
@@ -119,25 +123,35 @@
     </div>
 
     <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
-        {#if trails.length == 0}
-            <div class="flex flex-col basis-full items-center">
-                <EmptyStateSearch width={356}></EmptyStateSearch>
-            </div>
-        {/if}
-        {#each trails as trail}
-            <a
-                class="max-w-full"
-                class:basis-full={selectedDisplayOption === "list"}
-                href="/trail/view/{trail.id}"
-                data-sveltekit-preload-data="off"
-            >
+        {#if loading}
+            {#each { length: 12 } as _, index}
                 {#if selectedDisplayOption === "cards"}
-                    <TrailCard {trail}></TrailCard>
+                    <SkeletonCard></SkeletonCard>
                 {:else}
-                    <TrailListItem {trail}></TrailListItem>
+                    <SkeletonListItem></SkeletonListItem>
                 {/if}
-            </a>
-        {/each}
+            {/each}
+        {:else}
+            {#if trails.length == 0}
+                <div class="flex flex-col basis-full items-center">
+                    <EmptyStateSearch width={356}></EmptyStateSearch>
+                </div>
+            {/if}
+            {#each trails as trail}
+                <a
+                    class="max-w-full"
+                    class:basis-full={selectedDisplayOption === "list"}
+                    href="/trail/view/{trail.id}"
+                    data-sveltekit-preload-data="off"
+                >
+                    {#if selectedDisplayOption === "cards"}
+                        <TrailCard {trail}></TrailCard>
+                    {:else}
+                        <TrailListItem {trail}></TrailListItem>
+                    {/if}
+                </a>
+            {/each}
+        {/if}
     </div>
     <Pagination
         page={pagination.page}

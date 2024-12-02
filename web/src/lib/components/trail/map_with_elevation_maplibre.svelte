@@ -355,6 +355,7 @@
             );
             epc?.showProfile();
         }
+        showWaypoints();
         flyToBounds();
     }
 
@@ -367,6 +368,7 @@
         if (showElevation) {
             epc?.hideProfile();
         }
+        hideWaypoints();
     }
 
     function addStartEndMarkers(
@@ -418,6 +420,26 @@
         layers[id]?.startMarker?.togglePopup();
     }
 
+    function showWaypoints() {
+        if (!map) {
+            return;
+        }
+        for (const waypoint of trails[activeTrail]?.expand.waypoints ?? []) {
+            const marker = createMarkerFromWaypoint(waypoint);
+            marker.addTo(map);
+            markers.push(marker);
+        }
+    }
+
+    function hideWaypoints() {
+        if (!map) {
+            return;
+        }
+        for (const m of markers) {
+            m.remove()
+        }
+    }
+
     onMount(async () => {
         const initialState = {
             lng: 0,
@@ -465,7 +487,7 @@
             (s) => s.text === localStorage.getItem("layer"),
         );
 
-        if(preferredMapStyleIndex == -1) {
+        if (preferredMapStyleIndex == -1) {
             preferredMapStyleIndex = 0;
         }
 
@@ -567,7 +589,7 @@
                 addTrailLayer(t, t.id ?? i.toString(), data?.at(i));
             });
 
-            if (showTerrain && $page.data.settings?.terrain) {
+            if (showTerrain && $page.data.settings?.terrain && !map?.getSource("terrain")) {
                 map!.addSource("terrain", {
                     type: "raster-dem",
                     url: $page.data.settings.terrain,
@@ -600,11 +622,7 @@
             dispatch("init", map);
         });
 
-        for (const waypoint of trails[activeTrail]?.expand.waypoints ?? []) {
-            const marker = createMarkerFromWaypoint(waypoint);
-            marker.addTo(map);
-            markers.push(marker);
-        }
+        showWaypoints();
     });
 
     onDestroy(() => {
