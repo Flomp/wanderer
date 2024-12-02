@@ -59,6 +59,19 @@
 
     const dispatch = createEventDispatcher();
 
+    const trailColors = [
+        "#3549BB",
+        "#592E9E",
+        "#47A2CD",
+        "#62D5BC",
+        "#7DDE95",
+        "#759E2E",
+        "#BBA535",
+        "#CD6F47",
+        "#D5627B",
+        "#DE7DC5",
+    ];
+
     $: data = getData(trails);
 
     $: if (data && map) {
@@ -155,7 +168,7 @@
 
         trails.forEach((t, i) => {
             const layerId = t.id ?? i.toString();
-            addTrailLayer(t, layerId, data[i]);
+            addTrailLayer(t, layerId, i, data[i]);
         });
 
         Object.keys(layers).forEach((layerId) => {
@@ -257,6 +270,7 @@
     function addTrailLayer(
         trail: Trail,
         id: string,
+        index: number,
         geojson: GeoJSON | null | undefined,
     ) {
         if (!geojson || !map) {
@@ -290,7 +304,7 @@
                 source: id,
                 minzoom: minZoom,
                 paint: {
-                    "line-color": "#648ad5",
+                    "line-color": trailColors[index % trailColors.length],
                     "line-width": 5,
                 },
             });
@@ -326,12 +340,12 @@
 
     export function highlightTrail(id: string) {
         map?.setPaintProperty(id, "line-width", 7);
-        map?.setPaintProperty(id, "line-color", "#2766e3");
+        // map?.setPaintProperty(id, "line-color", "#2766e3");
     }
 
     export function unHighlightTrail(id: string) {
         map?.setPaintProperty(id, "line-width", 5);
-        map?.setPaintProperty(id, "line-color", "#648ad5");
+        // map?.setPaintProperty(id, "line-color", "#648ad5");
     }
 
     export function focusTrail(trail: Trail, e?: M.MapMouseEvent) {
@@ -436,7 +450,7 @@
             return;
         }
         for (const m of markers) {
-            m.remove()
+            m.remove();
         }
     }
 
@@ -454,7 +468,7 @@
 
         const mapStyles: { text: string; value: string; thumbnail?: string }[] =
             [
-                ...(($page.data.settings as Settings).tilesets ?? []).map(
+                ...(($page.data.settings as Settings)?.tilesets ?? []).map(
                     (t) => ({
                         text: t.name,
                         value: t.url,
@@ -586,10 +600,14 @@
 
         map.on("styledata", () => {
             trails.forEach((t, i) => {
-                addTrailLayer(t, t.id ?? i.toString(), data?.at(i));
+                addTrailLayer(t, t.id ?? i.toString(), i, data?.at(i));
             });
 
-            if (showTerrain && $page.data.settings?.terrain && !map?.getSource("terrain")) {
+            if (
+                showTerrain &&
+                $page.data.settings?.terrain &&
+                !map?.getSource("terrain")
+            ) {
                 map!.addSource("terrain", {
                     type: "raster-dem",
                     url: $page.data.settings.terrain,
