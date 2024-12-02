@@ -315,6 +315,8 @@
                     <SummitLogTable
                         summitLogs={trail.expand.summit_logs}
                         showAuthor
+                        showRoute
+                        showPhotos
                     ></SummitLogTable>
                 </div>
             {/if}

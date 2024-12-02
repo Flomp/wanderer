@@ -14,7 +14,10 @@
     export let log: SummitLog;
     export let showCategory: boolean = false;
     export let showTrail: boolean = false;
+    export let showRoute: boolean = false;
     export let showAuthor: boolean = false;
+    export let showDescription: boolean = false;
+    export let showPhotos: boolean = false;
 
     let openGallery: (idx?: number) => void;
 
@@ -34,38 +37,47 @@
         dispatch("text", log);
     }
 
+    function openRoute() {
+        dispatch("open", log);
+    }
+
     function colCount() {
-        return [showCategory, showTrail, showAuthor].reduce(
-            (b, v) => (v ? b + 1 : b),
-            7,
-        );
+        return [
+            showCategory,
+            showTrail,
+            showAuthor,
+            showRoute,
+            showDescription,
+        ].reduce((b, v) => (v ? b + 1 : b), 7);
     }
 </script>
 
-<tr class="text-center">
-    <td>
-        {#if imgSrc.length}
-            <PhotoGallery
-                photos={log.photos.map((p) => getFileURL(log, p))}
-                bind:open={openGallery}
-            ></PhotoGallery>
-            <button
-                class="relative w-16 aspect-square ml-2 mb-3 shrink-0"
-                type="button"
-                on:click={() => openGallery()}
-            >
-                {#each imgSrc as img, i}
-                    <img
-                        class="absolute h-full rounded-xl object-cover"
-                        style="top: {6 * i}px; right: {6 *
-                            i}px; transform: rotate(-{i * 5}deg)"
-                        src={img}
-                        alt="waypoint"
-                    />
-                {/each}
-            </button>
-        {/if}
-    </td>
+<tr class="text-sm">
+    {#if showPhotos}
+        <td>
+            {#if imgSrc.length}
+                <PhotoGallery
+                    photos={log.photos.map((p) => getFileURL(log, p))}
+                    bind:open={openGallery}
+                ></PhotoGallery>
+                <button
+                    class="relative w-16 aspect-square ml-2 mb-3 shrink-0"
+                    type="button"
+                    on:click={() => openGallery()}
+                >
+                    {#each imgSrc as img, i}
+                        <img
+                            class="absolute h-full rounded-xl object-cover"
+                            style="top: {4 * i}px; right: {4 *
+                                i}px; transform: rotate(-{i * 5}deg)"
+                            src={img}
+                            alt="waypoint"
+                        />
+                    {/each}
+                </button>
+            {/if}
+        </td>
+    {/if}
     <td class:py-4={!log.expand?.gpx_data}
         >{new Date(log.date).toLocaleDateString(undefined, {
             month: "2-digit",
@@ -105,13 +117,19 @@
             >
         </td>
     {/if}
-    <td>
-        {#if log.text}
-            <button on:click={openText} class="btn-icon"
-                ><i class="fa-regular fa-message"></i></button
-            >
-        {/if}
-    </td>
+    {#if showDescription}
+        <td>
+            {#if log.text}
+                <button on:click={openText}
+                    ><p
+                        class="rounded-full bg-menu-item-background-hover hover:bg-menu-item-background-focus text-ellipsis max-w-28 whitespace-nowrap overflow-hidden px-3 py-1"
+                    >
+                        {log.text}
+                    </p></button
+                >
+            {/if}
+        </td>
+    {/if}
     {#if showAuthor && log.expand.author}
         <td>
             <p
@@ -132,7 +150,20 @@
             </p>
         </td>
     {/if}
+    {#if showRoute && log.expand.gpx_data}
+        <td>
+            <button on:click={openRoute} class="btn-icon">
+                <i class="fa fa-map-location-dot px-[3px] text-xl"></i></button
+            >
+        </td>
+    {/if}
 </tr>
 <tr>
     <td colspan={colCount()}> <hr class="border-input-border" /> </td>
 </tr>
+
+<style>
+    td {
+        padding: 0rem 0.5rem;
+    }
+</style>

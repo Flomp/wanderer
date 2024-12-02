@@ -421,7 +421,7 @@
             ><i class="fa fa-table mr-3"></i>{$_("all-activities")}</span
         >
         <div class=" overflow-x-auto">
-            <SummitLogTable summitLogs={$summitLogs} showCategory showTrail
+            <SummitLogTable summitLogs={$summitLogs} showCategory showTrail showRoute
             ></SummitLogTable>
         </div>
     </div>

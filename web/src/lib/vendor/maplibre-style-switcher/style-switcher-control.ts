@@ -41,7 +41,9 @@ export class StyleSwitcherControl implements IControl {
 
         this.buttonContainer.classList.add(
             "maplibregl-ctrl",
-            "maplibregl-ctrl-group"
+            "maplibregl-ctrl-group",
+            "relative",
+            "z-10"
         );
         this.toggleButton = document.createElement("button");
         this.buttonContainer.appendChild(this.toggleButton);
@@ -86,7 +88,7 @@ export class StyleSwitcherControl implements IControl {
                 const styleIconContainer = document.createElement("i");
                 styleIconContainer.classList.add("w-12", "h-12", "rounded-md", "bg-blue-200", "flex", "items-center", "justify-center")
                 const styleIcon = document.createElement("i");
-                styleIcon.classList.add("fa", "fa-map-location-dot", "text-xl")
+                styleIcon.classList.add("fa", "fa-map-location-dot", "text-xl", "text-black")
                 styleIconContainer.appendChild(styleIcon)
                 styleLi.appendChild(styleIconContainer)
             }

@@ -14,6 +14,8 @@
     export let showCategory: boolean = false;
     export let showTrail: boolean = false;
     export let showAuthor: boolean = false;
+    export let showRoute: boolean = false;
+    export let showPhotos: boolean = false;
 
     let openMapModal: () => void;
     let closeMapModal: () => void;
@@ -50,9 +52,11 @@
 </script>
 
 <table class="w-full">
-    <thead>
+    <thead class="text-left text-gray-500">
         <tr class="text-sm">
-            <th class="w-24"></th>
+            {#if showPhotos}
+                <th class="w-24"></th>
+            {/if}
             <th>{$_("date")}</th>
             <th>{$_("distance")}</th>
             <th>{$_("elevation-gain")}</th>
@@ -68,10 +72,17 @@
                     {$_("trail", { values: { n: 1 } })}
                 </th>
             {/if}
-            <th>{$_("description")}</th>
+            {#if summitLogs.some((l) => l.text?.length)}
+                <th>{$_("description")}</th>
+            {/if}
             {#if showAuthor}
                 <th>
                     {$_("author", { values: { n: 1 } })}
+                </th>
+            {/if}
+            {#if showRoute && summitLogs.some((l) => l.gpx)}
+                <th>
+                    {$_("map")}
                 </th>
             {/if}
         </tr>
@@ -85,6 +96,9 @@
                 {showCategory}
                 {showTrail}
                 {showAuthor}
+                {showPhotos}
+                showDescription={summitLogs.some(l => l.text?.length)}
+                showRoute={showRoute && summitLogs.some((l) => l.gpx)}
             ></SummitLogTableRow>
         {/each}
     </tbody>
@@ -101,7 +115,7 @@
 >
     <div slot="content" id="summit-log-table-map" class="h-[32rem]">
         {#if trail}
-            <MapWithElevationMaplibre trails={[trail]} bind:map
+            <MapWithElevationMaplibre trails={[trail]} bind:map showTerrain
             ></MapWithElevationMaplibre>
         {/if}
     </div>
@@ -118,6 +132,6 @@
 
 <style>
     th {
-        padding: 0rem 0.75rem;
+        padding: 0rem 0.5rem;
     }
 </style>
