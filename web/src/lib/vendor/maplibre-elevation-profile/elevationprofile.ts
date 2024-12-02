@@ -691,7 +691,8 @@ export class ElevationProfile {
 
                             // Create custom HTML tick
                             const wpDiv = document.createElement("div");
-                            wpDiv.className = "wp-marker absolute -translate-x-1/2 w-6 aspect-square bg-background-inverse rounded-full flex justify-center items-center text-content-inverse cursor-pointer hover:scale-110";
+                            wpDiv.className = "wp-marker tooltip absolute -translate-x-1/2 w-6 aspect-square bg-background-inverse rounded-full flex justify-center items-center text-content-inverse cursor-pointer hover:scale-110";
+                            wpDiv.dataset.title = this.waypoints[index].name ?? "?"
                             wpDiv.style.left = `${xPos}px`; // Position horizontally
                             wpDiv.style.top = `8px`; // Position horizontally
 
