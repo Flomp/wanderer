@@ -461,9 +461,13 @@
                         "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
                 },
             ];
-        const preferredMapStyleIndex = mapStyles.findIndex(
+        let preferredMapStyleIndex = mapStyles.findIndex(
             (s) => s.text === localStorage.getItem("layer"),
         );
+
+        if(preferredMapStyleIndex == -1) {
+            preferredMapStyleIndex = 0;
+        }
 
         const finalMapOptions: M.MapOptions = {
             ...{
