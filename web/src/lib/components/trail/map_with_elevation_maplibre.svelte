@@ -59,6 +59,19 @@
 
     const dispatch = createEventDispatcher();
 
+    const trailColors = [
+        "#3549BB",
+        "#592E9E",
+        "#47A2CD",
+        "#62D5BC",
+        "#7DDE95",
+        "#759E2E",
+        "#BBA535",
+        "#CD6F47",
+        "#D5627B",
+        "#DE7DC5",
+    ];
+
     $: data = getData(trails);
 
     $: if (data && map) {
@@ -155,7 +168,7 @@
 
         trails.forEach((t, i) => {
             const layerId = t.id ?? i.toString();
-            addTrailLayer(t, layerId, data[i]);
+            addTrailLayer(t, layerId, i, data[i]);
         });
 
         Object.keys(layers).forEach((layerId) => {
@@ -257,6 +270,7 @@
     function addTrailLayer(
         trail: Trail,
         id: string,
+        index: number,
         geojson: GeoJSON | null | undefined,
     ) {
         if (!geojson || !map) {
@@ -290,7 +304,7 @@
                 source: id,
                 minzoom: minZoom,
                 paint: {
-                    "line-color": "#648ad5",
+                    "line-color": trailColors[index % trailColors.length],
                     "line-width": 5,
                 },
             });
@@ -326,12 +340,12 @@
 
     export function highlightTrail(id: string) {
         map?.setPaintProperty(id, "line-width", 7);
-        map?.setPaintProperty(id, "line-color", "#2766e3");
+        // map?.setPaintProperty(id, "line-color", "#2766e3");
     }
 
     export function unHighlightTrail(id: string) {
         map?.setPaintProperty(id, "line-width", 5);
-        map?.setPaintProperty(id, "line-color", "#648ad5");
+        // map?.setPaintProperty(id, "line-color", "#648ad5");
     }
 
     export function focusTrail(trail: Trail, e?: M.MapMouseEvent) {
@@ -355,6 +369,7 @@
             );
             epc?.showProfile();
         }
+        showWaypoints();
         flyToBounds();
     }
 
@@ -367,6 +382,7 @@
         if (showElevation) {
             epc?.hideProfile();
         }
+        hideWaypoints();
     }
 
     function addStartEndMarkers(
@@ -418,6 +434,26 @@
         layers[id]?.startMarker?.togglePopup();
     }
 
+    function showWaypoints() {
+        if (!map) {
+            return;
+        }
+        for (const waypoint of trails[activeTrail]?.expand.waypoints ?? []) {
+            const marker = createMarkerFromWaypoint(waypoint);
+            marker.addTo(map);
+            markers.push(marker);
+        }
+    }
+
+    function hideWaypoints() {
+        if (!map) {
+            return;
+        }
+        for (const m of markers) {
+            m.remove();
+        }
+    }
+
     onMount(async () => {
         const initialState = {
             lng: 0,
@@ -432,7 +468,7 @@
 
         const mapStyles: { text: string; value: string; thumbnail?: string }[] =
             [
-                ...(($page.data.settings as Settings).tilesets ?? []).map(
+                ...(($page.data.settings as Settings)?.tilesets ?? []).map(
                     (t) => ({
                         text: t.name,
                         value: t.url,
@@ -461,9 +497,13 @@
                         "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
                 },
             ];
-        const preferredMapStyleIndex = mapStyles.findIndex(
+        let preferredMapStyleIndex = mapStyles.findIndex(
             (s) => s.text === localStorage.getItem("layer"),
         );
+
+        if (preferredMapStyleIndex == -1) {
+            preferredMapStyleIndex = 0;
+        }
 
         const finalMapOptions: M.MapOptions = {
             ...{
@@ -484,7 +524,7 @@
                 icon: "fa-regular fa-circle",
                 fontSize: "xs",
                 width: 4,
-                backgroundColor: "primary",
+                backgroundColor: "bg-primary",
                 fontColor: "white",
             },
             {},
@@ -560,10 +600,14 @@
 
         map.on("styledata", () => {
             trails.forEach((t, i) => {
-                addTrailLayer(t, t.id ?? i.toString(), data?.at(i));
+                addTrailLayer(t, t.id ?? i.toString(), i, data?.at(i));
             });
 
-            if (showTerrain && $page.data.settings?.terrain) {
+            if (
+                showTerrain &&
+                $page.data.settings?.terrain &&
+                !map?.getSource("terrain")
+            ) {
                 map!.addSource("terrain", {
                     type: "raster-dem",
                     url: $page.data.settings.terrain,
@@ -596,11 +640,7 @@
             dispatch("init", map);
         });
 
-        for (const waypoint of trails[activeTrail]?.expand.waypoints ?? []) {
-            const marker = createMarkerFromWaypoint(waypoint);
-            marker.addTo(map);
-            markers.push(marker);
-        }
+        showWaypoints();
     });
 
     onDestroy(() => {

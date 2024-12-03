@@ -515,7 +515,7 @@ export class ElevationProfile {
                             tickColor: "#0002"
                         },
                         ticks: {
-                            stepSize: 1,
+                            stepSize: 0.1,
                             align: "inner",
                             display: this.settings.displayDistanceLabels,
                             color: this.settings.labelColor,
@@ -794,7 +794,7 @@ export class ElevationProfile {
                 if (color !== prevColor) {
                     const percentDone = this.cumulatedDistance[i] / this.cumulatedDistance[this.cumulatedDistance.length - 1]
                     this.gradient.addColorStop(percentDone, color);
-                    
+
                     prevColor = color;
                 }
 
@@ -978,7 +978,7 @@ export class ElevationProfile {
                 }
             }
         }
-        
+
         this.grade.push(this.grade.at(-1) ?? 0);
         this.cumulatedDPlus.push(cumulatedDPlus);
 

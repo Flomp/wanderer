@@ -3,17 +3,21 @@
     import { page } from "$app/stores";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
-    import type { TrailFilter } from "$lib/models/trail";
-    import { categories } from "$lib/stores/category_store";
-    import { trails, trails_search_filter } from "$lib/stores/trail_store";
+    import type { Trail, TrailFilter } from "$lib/models/trail";
+    import { trails_search_filter } from "$lib/stores/trail_store";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
 
     let filterExpanded: boolean = true;
 
+    let loading: boolean = false;
+
     const filter: TrailFilter = $page.data.filter;
-    const pagination: { page: number; totalPages: number } =
-        $page.data.pagination;
+    const pagination: { page: number; totalPages: number } = {
+        page: 1,
+        totalPages: 1,
+    };
+    let trails: Trail[] = [];
 
     onMount(() => {
         if (window.innerWidth < 768) {
@@ -22,14 +26,18 @@
     });
 
     async function handleFilterUpdate() {
+        loading = true;
         const response = await trails_search_filter(filter, pagination.page);
+        trails = response.trails;        
         pagination.page = response.page;
         pagination.totalPages = response.totalPages;
+        loading = false;
     }
 
     async function paginate(page: number) {
         pagination.page = page;
         const response = await trails_search_filter(filter, page);
+        trails = response.trails;
         $page.url.searchParams.set("page", page.toString());
         goto(`?${$page.url.searchParams.toString()}`);
     }
@@ -50,7 +58,8 @@
     ></TrailFilterPanel>
     <TrailList
         {filter}
-        trails={$trails}
+        {loading}
+        {trails}
         {pagination}
         on:update={() => handleFilterUpdate()}
         on:pagination={(e) => paginate(e.detail)}

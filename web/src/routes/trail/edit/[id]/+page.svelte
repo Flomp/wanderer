@@ -77,6 +77,12 @@
 
     let map: M.Map;
 
+    let mapTrail: Trail[] = [];
+    $: gpxData = $form.expand?.gpx_data;
+    $: if (gpxData) {
+        updateTrailOnMap();
+    }
+
     let openWaypointModal: () => void;
     let openSummitLogModal: () => void;
     let openListSelectModal: () => void;
@@ -610,6 +616,10 @@
         $form.elevation_loss = totals.elevationLoss;
         $form.expand.gpx_data = route.toString();
     }
+
+    function updateTrailOnMap() {
+        mapTrail = [{ ...$form }];
+    }
 </script>
 
 <svelte:head>
@@ -891,7 +901,7 @@
             </div>
         {/if}
         <MapWithElevationMaplibre
-            trails={[$form]}
+            trails={mapTrail}
             drawing={drawingActive}
             bind:map
             on:click={(e) => handleMapClick(e.detail)}
