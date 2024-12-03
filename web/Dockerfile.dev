@@ -1,0 +1,15 @@
+FROM node:18-alpine
+
+WORKDIR /app
+# COPY package*.json /npm_install/
+# RUN npm install --verbose --prefix /npm_install
+EXPOSE 5173
+ENV NODE_ENV=development
+ENV PUBLIC_POCKETBASE_URL=http://db:8090
+ENV MEILI_URL=http://search:7700
+ENV PUBLIC_DISABLE_SIGNUP=false
+
+# CMD ["npm", "run", "dev", "--", "--host"]
+# CMD [ "sh", "-c", "npm run dev -- --host 0.0.0.0" ]
+CMD [ "sh", "-c", "node --inspect=0.0.0.0:9229 ./node_modules/vite/bin/vite.js dev --host 0.0.0.0" ]
+# CMD [ "sh", "-c", "tail -f /dev/null" ]

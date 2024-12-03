@@ -1,0 +1,72 @@
+x-common-env: &cenv
+  MEILI_URL: http://search:7700
+  MEILI_MASTER_KEY: vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo
+
+services:
+  search:
+    container_name: wanderer-search
+    image: flomp/wanderer-search
+    environment:
+      <<: *cenv
+      MEILI_NO_ANALYTICS: true
+    ports:
+      - 7700:7700
+    networks:
+      - wanderer
+    volumes:
+      - ./data/data.ms:/meili_data/data.ms
+    healthcheck:
+      test: curl --fail http://localhost:7700/health || exit 1
+      interval: 15s
+      retries: 10
+      start_period: 20s
+      timeout: 10s
+
+  db:
+    container_name: wanderer-db
+    image: flomp/wanderer-db
+    depends_on:
+      search:
+        condition: service_healthy
+    environment:
+      <<: *cenv
+    ports:
+      - "8090:8090"
+    networks:
+      - wanderer
+    volumes:
+      - ./data/pb_data:/pb_data
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    depends_on:
+      search:
+        condition: service_healthy
+      db:
+        condition: service_started
+    environment:
+      <<: *cenv
+      NODE_ENV: development
+      ORIGIN: http://localhost:5173
+      BODY_SIZE_LIMIT: Infinity
+      PUBLIC_POCKETBASE_URL: http://db:8090
+      PUBLIC_DISABLE_SIGNUP: false
+      UPLOAD_FOLDER: /app/uploads
+      UPLOAD_USER:
+      UPLOAD_PASSWORD:
+      PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de
+    volumes:
+      - ./web:/app
+      - ./data/uploads:/app/uploads
+    ports:
+      - "5173:5173"
+      - "9229:9229"  # Debugger Node.js
+    # command: tail -f /dev/null
+    networks:
+      - wanderer
+
+networks:
+  wanderer:
+    driver: bridge

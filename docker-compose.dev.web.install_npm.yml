@@ -1,0 +1,9 @@
+services:
+  install_npm:
+    image: node:18-alpine
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./web:/app
+    working_dir: /app
+    command: npm install --verbose
