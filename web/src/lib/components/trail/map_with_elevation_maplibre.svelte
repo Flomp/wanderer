@@ -339,7 +339,7 @@
         }
     }
 
-    function addCaretLayer(id?: string) {        
+    function addCaretLayer(id?: string) {
         if (!map || !id) {
             return;
         }
@@ -656,16 +656,31 @@
                 addTrailLayer(t, t.id ?? i.toString(), i, data?.at(i));
             });
 
-            if (
-                showTerrain &&
-                $page.data.settings?.terrain &&
-                !map?.getSource("terrain")
-            ) {
+            if (showTerrain) {
                 try {
-                    map!.addSource("terrain", {
-                        type: "raster-dem",
-                        url: $page.data.settings.terrain,
-                    });
+                    if (
+                        $page.data.settings?.terrain?.terrain &&
+                        !map?.getSource("terrain")
+                    ) {
+                        map!.addSource("terrain", {
+                            type: "raster-dem",
+                            url: $page.data.settings?.terrain?.terrain,
+                        });
+                    }
+                    if (
+                        $page.data.settings?.terrain?.hillshading &&
+                        !map?.getSource("hillshading")
+                    ) {
+                        map!.addSource("hillshading", {
+                            type: "raster-dem",
+                            url: $page.data.settings?.terrain?.hillshading,
+                        });
+                        map!.addLayer({
+                            id: "hillshading",
+                            source: "terrain",
+                            type: "hillshade",
+                        });
+                    }
                 } catch (e) {}
             }
         });

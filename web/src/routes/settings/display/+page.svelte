@@ -50,13 +50,15 @@
     let customTilesetName: string = "";
     let customTilesetURL: string = "";
     let terrainURL: string = "";
+    let hillshadingURL: string = "";
 
     onMount(() => {
         citySearchQuery = settings?.location?.name ?? "";
         selectedLanguage = settings?.language || "en";
         selectedMapFocus = settings?.mapFocus ?? "trails";
 
-        terrainURL = settings?.terrain ?? "";
+        terrainURL = settings?.terrain.terrain ?? "";
+        hillshadingURL = settings?.terrain.hillshading ?? "";
     });
 
     async function searchCities(q: string) {
@@ -134,9 +136,13 @@
     async function handleTerrainAdd() {
         await settings_update({
             id: settings!.id,
-            terrain: terrainURL,
+            terrain: { terrain: terrainURL, hillshading: hillshadingURL },
         });
     }
+
+    $: terrainSaveEnabled =
+        terrainURL !== settings.terrain?.terrain ||
+        hillshadingURL !== settings.terrain.hillshading;
 </script>
 
 <svelte:head>
@@ -225,12 +231,19 @@
                             placeholder="https://.../tiles.json"
                         ></TextField>
                     </div>
+                    <div class="basis-full">
+                        <TextField
+                            label="Hillshading URL"
+                            bind:value={hillshadingURL}
+                            placeholder="https://.../tiles.json"
+                        ></TextField>
+                    </div>
                     <button
-                        disabled={terrainURL == settings?.terrain}
+                        disabled={!terrainSaveEnabled}
                         class="btn-icon mt-6"
-                        class:hover:!bg-background={terrainURL == settings?.terrain}
+                        class:hover:!bg-background={!terrainSaveEnabled}
                         on:click={handleTerrainAdd}
-                        class:text-gray-500={terrainURL == settings?.terrain}
+                        class:text-gray-500={!terrainSaveEnabled}
                         ><i class="fa fa-save"></i></button
                     >
                 </div>
