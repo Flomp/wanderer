@@ -18,6 +18,7 @@
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import type { Settings } from "$lib/models/settings";
+    import directionCaret from "$lib/assets/svgs/caret-right-solid.svg";
 
     export let trails: Trail[] = [];
     export let markers: M.Marker[] = [];
@@ -338,6 +339,46 @@
         }
     }
 
+    function addCaretLayer(id?: string) {        
+        if (!map || !id) {
+            return;
+        }
+        map.addLayer({
+            id: "direction-carets",
+            type: "symbol",
+            source: id,
+            layout: {
+                "symbol-placement": "line",
+                "symbol-spacing": [
+                    "interpolate",
+                    ["exponential", 1.5],
+                    ["zoom"],
+                    minZoom,
+                    80,
+                    18,
+                    200,
+                ],
+                "icon-image": "direction-caret",
+                "icon-size": [
+                    "interpolate",
+                    ["exponential", 1.5],
+                    ["zoom"],
+                    minZoom,
+                    0.5,
+                    18,
+                    0.8,
+                ],
+            },
+        });
+    }
+
+    function removeCaretLayer() {
+        if (!map || !map.getLayer("direction-carets")) {
+            return;
+        }
+        map.removeLayer("direction-carets");
+    }
+
     export function highlightTrail(id: string) {
         map?.setPaintProperty(id, "line-width", 7);
         // map?.setPaintProperty(id, "line-color", "#2766e3");
@@ -370,6 +411,7 @@
             epc?.showProfile();
         }
         showWaypoints();
+        addCaretLayer(trail.id!);
         flyToBounds();
     }
 
@@ -383,6 +425,7 @@
             epc?.hideProfile();
         }
         hideWaypoints();
+        removeCaretLayer();
     }
 
     function addStartEndMarkers(
@@ -430,7 +473,13 @@
         }
     }
 
-    export function togglePopup(id: string) {
+    export function togglePopup(id: string, currentState?: boolean) {
+        if (
+            currentState !== undefined &&
+            layers[id]?.startMarker?.getPopup().isOpen() != currentState
+        ) {
+            return;
+        }
         layers[id]?.startMarker?.togglePopup();
     }
 
@@ -532,6 +581,10 @@
         elevationMarker.setLngLat([0, 0]).addTo(map);
         elevationMarker.setOpacity("0");
 
+        let img = new Image(20, 20);
+        img.onload = () => map!.addImage("direction-caret", img);
+        img.src = directionCaret;
+
         const switcherControl = new StyleSwitcherControl({
             styles: mapStyles,
             onSwitch: (style) => {
@@ -608,10 +661,12 @@
                 $page.data.settings?.terrain &&
                 !map?.getSource("terrain")
             ) {
-                map!.addSource("terrain", {
-                    type: "raster-dem",
-                    url: $page.data.settings.terrain,
-                });
+                try {
+                    map!.addSource("terrain", {
+                        type: "raster-dem",
+                        url: $page.data.settings.terrain,
+                    });
+                } catch (e) {}
             }
         });
 
@@ -637,6 +692,7 @@
         });
 
         map.on("load", () => {
+            addCaretLayer(trails[activeTrail]?.id);
             dispatch("init", map);
         });
 
@@ -658,5 +714,10 @@
 
     :global(.maplibregl-popup-content) {
         @apply bg-background rounded-md;
+    }
+
+    :global(.maplibregl-popup-close-button) {
+        top: 4px;
+        right: 8px;
     }
 </style>

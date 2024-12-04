@@ -68,10 +68,16 @@
     onMount(async () => {});
 
     function openMarkerPopup(i: number) {
+        if((markers[i] as M.Marker).getPopup().isOpen()) {
+            return;
+        }
         (markers[i] as M.Marker).togglePopup();
     }
 
     function closeMarkerPopup(i: number) {
+        if(!(markers[i] as M.Marker).getPopup().isOpen()) {
+            return;
+        }
         (markers[i] as M.Marker).togglePopup();
     }
 

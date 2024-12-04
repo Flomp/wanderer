@@ -86,7 +86,7 @@ export function createPopupFromTrail(trail: Trail) {
     const popup = new M.Popup({maxWidth: "320px"});
     popup.setHTML(
         `<a href="/map/trail/${trail.id}" data-sveltekit-preload-data="off">
-    <li class="flex items-center gap-4 cursor-pointer text-black max-w-80">
+    <li class="flex items-center gap-4 cursor-pointer text-content max-w-80">
         <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
         </div>
         <div>

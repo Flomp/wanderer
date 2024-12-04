@@ -106,11 +106,11 @@
     }
 
     function handleTrailCardMouseEnter(trail: Trail) {
-        mapWithElevation.togglePopup(trail.id!);
+        mapWithElevation.togglePopup(trail.id!, false);
     }
 
     function handleTrailCardMouseLeave(trail: Trail) {
-        mapWithElevation.togglePopup(trail.id!);
+        mapWithElevation.togglePopup(trail.id!, true);
     }
 
     async function handleFilterUpdate(filter: TrailFilter) {
