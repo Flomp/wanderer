@@ -31,6 +31,9 @@
     export let showFullscreen: boolean = false;
     export let showTerrain: boolean = false;
     export let fitBounds: "animate" | "instant" | "off" = "instant";
+    export let onMarkerDragEnd:
+        | ((marker: M.Marker, wpId?: string) => void)
+        | undefined = undefined;
 
     export let elevationProfileContainer: string | HTMLDivElement | undefined =
         undefined;
@@ -488,7 +491,7 @@
             return;
         }
         for (const waypoint of trails[activeTrail]?.expand.waypoints ?? []) {
-            const marker = createMarkerFromWaypoint(waypoint);
+            const marker = createMarkerFromWaypoint(waypoint, onMarkerDragEnd);
             marker.addTo(map);
             markers.push(marker);
         }

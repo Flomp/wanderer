@@ -387,21 +387,24 @@
             savedWaypoint.id = cryptoRandomString({ length: 15 });
             $form.expand.waypoints = [...$form.expand.waypoints, savedWaypoint];
         }
-        const marker = createMarkerFromWaypoint(savedWaypoint, (event) => {
-            var marker = event;
-            var position = marker.getLngLat();
-            const editableWaypointIndex = $form.expand.waypoints.findIndex(
-                (w) => w.id == savedWaypoint.id,
-            );
-            const editableWaypoint =
-                $form.expand.waypoints[editableWaypointIndex];
-            editableWaypoint!.lat = position.lat;
-            editableWaypoint!.lon = position.lng;
-            $form.expand.waypoints = [...$form.expand.waypoints];
-        });
+        const marker = createMarkerFromWaypoint(savedWaypoint, moveMarker);
 
         marker.addTo(map);
         savedWaypoint.marker = marker;
+    }
+
+    function moveMarker(marker: M.Marker, wpId?: string) {
+        const position = marker.getLngLat();
+        const editableWaypointIndex = $form.expand.waypoints.findIndex(
+            (w) => w.id == wpId,
+        );
+        const editableWaypoint = $form.expand.waypoints[editableWaypointIndex];
+        if (!editableWaypoint) {
+            return;
+        }
+        editableWaypoint.lat = position.lat;
+        editableWaypoint.lon = position.lng;
+        $form.expand.waypoints = [...$form.expand.waypoints];
     }
 
     function beforeSummitLogModalOpen() {
@@ -903,6 +906,8 @@
         <MapWithElevationMaplibre
             trails={mapTrail}
             drawing={drawingActive}
+            showTerrain={true}
+            onMarkerDragEnd={moveMarker}
             bind:map
             on:click={(e) => handleMapClick(e.detail)}
         ></MapWithElevationMaplibre>
