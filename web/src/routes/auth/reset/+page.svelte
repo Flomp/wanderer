@@ -58,7 +58,7 @@
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
         <h4 class="text-xl font-semibold">{$_("forgot-your-password")}</h4>
-        <p class="text-gray-500">{$_('password-reset-text')}</p>
+        <p class="text-gray-500 w-80">{$_('password-reset-text')}</p>
         <div class="space-y-6 w-80">
             <TextField
                 name="email"

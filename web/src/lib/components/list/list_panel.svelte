@@ -74,7 +74,7 @@
 <div class="relative">
     {#if listIsShared}
         <div
-            class="absolute top-8 right-8 bg-white rounded-full w-8 py-1 text-center"
+            class="absolute top-8 right-8 bg-white text-primary rounded-full w-8 py-1 text-center"
         >
             <ShareInfo type="list" subject={list}></ShareInfo>
         </div>

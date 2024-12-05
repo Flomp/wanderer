@@ -137,7 +137,7 @@
         style="display: none;"
         on:change={() => handlePhotoSelection()}
     />
-    <div class="flex overflow-x-auto gap-x-3">
+    <div class="flex overflow-x-auto gap-x-3 w-full">
         {#each (photos ?? []).concat(photoPreviews) as photo, i}
             <div class="shrink-0 grow-0 basis-auto">
                 <PhotoCard

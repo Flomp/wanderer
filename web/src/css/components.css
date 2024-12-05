@@ -3,7 +3,7 @@
 @import 'tailwindcss/components';
 
 .btn-primary {
-    @apply h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-ring
+    @apply min-h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-ring
 }
 
 .btn-large {
