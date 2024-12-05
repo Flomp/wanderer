@@ -36,7 +36,7 @@
 >
     <table class="w-full">
         <thead>
-            <tr class="bg-secondary">
+            <tr class="bg-secondary-hover">
                 {#each tableHeader as column}
                     <th
                         class="p-4 text-left text-sm font-medium {getColumnWidth(
