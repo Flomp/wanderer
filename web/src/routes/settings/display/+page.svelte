@@ -57,8 +57,8 @@
         selectedLanguage = settings?.language || "en";
         selectedMapFocus = settings?.mapFocus ?? "trails";
 
-        terrainURL = settings?.terrain.terrain ?? "";
-        hillshadingURL = settings?.terrain.hillshading ?? "";
+        terrainURL = settings?.terrain?.terrain ?? "";
+        hillshadingURL = settings?.terrain?.hillshading ?? "";
     });
 
     async function searchCities(q: string) {
@@ -141,8 +141,8 @@
     }
 
     $: terrainSaveEnabled =
-        terrainURL !== settings.terrain?.terrain ||
-        hillshadingURL !== settings.terrain.hillshading;
+        terrainURL !== settings?.terrain?.terrain ||
+        hillshadingURL !== settings?.terrain?.hillshading;
 </script>
 
 <svelte:head>
@@ -171,6 +171,7 @@
                         <Search
                             items={searchDropdownItems}
                             placeholder="{$_('search-cities')}..."
+                            clearAfterSelect={false}
                             bind:value={citySearchQuery}
                             on:update={(e) => searchCities(e.detail)}
                             on:click={(e) => handleSearchClick(e.detail)}
