@@ -56,7 +56,12 @@ export default defineConfig({
       {
         label: 'Custom categories',
         link: '/guides/custom-categories/'
-      }, {
+      },
+      {
+        label: 'Customize the map',
+        link: '/guides/customize-map/'
+      },
+      {
         label: 'Import/Export',
         link: '/guides/import-export/'
       }, {

@@ -62,3 +62,19 @@ In the PocketBase admin panel navigate to `Settings -> Auth providers`. Click th
 ![wanderer OAuth](../../../assets/guides/wanderer_oauth.png)
 
 That's it! You should now see your OAuth provider appear in wanderer's login form. Click the button, authorize wanderer, and wait for the authentication to finish. You are now logged in and can use wanderer like any other user.
+
+## Forgot your password?
+wanderer offers the option to send password reset emails in case a user forgets his password.
+
+### Prerequisites
+
+To set up password reset emails you will need to access the PocketBase backend. Make sure to forward port 8090 of the `wanderer-db` container. Access the PocketBase admin panel in your browser at `http://<your_pocketbase_url>:8090/_/` and create an admin account.
+
+### Configure SMTP settings 
+
+![Pocketbase Mail Settings](../../../assets/guides/pocketbase_mail_settings.png)
+
+Next in the pocketbase admin panel go to Settings -> Mail settings an enable "Use SMTP mail server". Enter the details of your SMTP server and send a test email to ensure your configuration is correct. On the same page you can also adjust the email template of the password reset email.
+
+### Request password reset
+Once the SMTP access is configured users can click the "Forgot password" link in the login form. After requesting the reset the user will receive an email with a unique link to reset their password.
