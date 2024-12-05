@@ -3,6 +3,35 @@ title: Changelog
 description: What changed in the last patch?
 ---
 
+## v0.12.0
+
+> [!CAUTION]
+This release contains breaking changes. Most migrations will happen automatically, but you will need to take action in two places that will be clearly marked ⚠️ further down.
+
+### Maintenance
+- Updates to meilisearch version 0.11.3. 
+- ⚠️ meilisearch indices are not compatible across minor versions. This means you will need to rename or delete your [`data.ms`](https://github.com/Flomp/wanderer/blob/8635de78b9f1510e2316b08e605b175a2615f4db/docker-compose.yml#L19) folder on your host system to force meilisearch to rebuild the index on the next start (note that this can take a little while). 
+
+### Features
+- Adds password reset email function for users (see [docs](https://wanderer.to/guides/authentication/#forgot-your-password) for more info)
+- You can now add photos to your summit logs
+- Complete rewrite of the map logic switching from raster to vector tiles
+
+⚠️ Custom raster tilesets added via `Settings -> Display -> Tilesets` will no longer work. You will have to delete them for the map to show correctly. Tileset URLs must now point to a valid `style.json` describing a vector tileset (see [docs](https://wanderer.to/guides/customize-map/#custom-map-styles) for more info).
+- 3D Terrain and Hillshading are now available (see [docs](https://wanderer.to/guides/customize-map/#terrain--hillshading) fore more info)
+- Adds two more default map styles: CARTO Light & Dark
+- Adds loading animations for trail lists
+
+### Bug fixes
+
+- Fixes bug that caused a new trail to be created instead of updated when uploading a new GPS data source to an existing trail
+- Fixes bug that caused trails to throw a 404 error when they had summit logs created before v0.11.0
+- Waypoint markers can now also be dragged after a trail was saved
+- Fixes issue with GPX export when using Google Chrome (thanks [@tofublock](https://github.com/tofublock))
+
+### Miscellaneous
+As the number of contributors to this project continues to grow (which I’m very happy about), I’ve set up a [Discord channel](https://discord.gg/MdpybUHc) for more direct communication. If you’re interested in helping with Wanderer, feel free to join!
+
 ## v0.11.0
 ### Features
 - Other user's profiles can now be viewed
@@ -141,8 +170,8 @@ description: What changed in the last patch?
 
 ## v0.5.0
 
-### ⚠️ Breaking changes ⚠️
-- This version updates the index pattern of the meilisearch index. Please delete your `data.ms` folder before launching wanderer. The indices will be rebuilt on launch. Otherwise trail filtering will no longer work.
+> [!CAUTION]
+This version updates the index pattern of the meilisearch index. Please delete or rename your `data.ms` folder before launching wanderer. The indices will be rebuilt on launch. Otherwise trail filtering will no longer work.
 
 ### Features
 - Trails can now be filtered by date
