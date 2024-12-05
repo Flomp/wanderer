@@ -210,6 +210,7 @@
   "speed": "Speed",
   "stop-drawing": "Stop drawing",
   "summit-book": "Summit Book",
+  "table": "Table",
   "text": "Text",
   "tilesets": "Custom tilesets",
   "trail": "{n, plural, =1 {Trail} other {Trails}}",
