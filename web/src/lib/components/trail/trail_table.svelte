@@ -68,12 +68,9 @@
                             title={trail.name}
                         >
                             {#if trail.expand.author}
-                                <div
-                                    class="absolute right-0 top-0 p-4"
-                                    title={"created by " +
-                                        trail.expand.author.username}
-                                >
+                                <div class="absolute right-0 top-0 p-4">
                                     <img
+                                        title={`${$_("by")} ${trail.expand.author.username}`}
                                         class="rounded-full w-5 aspect-square mx-1 inline"
                                         src={getFileURL(
                                             trail.expand.author,
