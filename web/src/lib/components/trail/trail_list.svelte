@@ -33,9 +33,9 @@
     const sortOptions: SelectItem[] = [
         { text: $_("name"), value: "name" },
         { text: $_("distance"), value: "distance" },
+        { text: $_("duration"), value: "duration" },
         { text: $_("difficulty"), value: "difficulty" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
-        { text: $_("elevation-loss"), value: "elevation_loss" },
         { text: $_("creation-date"), value: "created" },
         { text: $_("date"), value: "date" },
     ];

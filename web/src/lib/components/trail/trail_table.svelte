@@ -1,6 +1,10 @@
 <script lang="ts">
     import type { Trail, TrailFilter } from "$lib/models/trail";
-    import { formatDistance, formatElevation } from "$lib/util/format_util";
+    import {
+        formatDistance,
+        formatElevation,
+        formatTimeHHMM,
+    } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import type { SelectItem } from "../base/select.svelte";
     import { goto } from "$app/navigation";
@@ -63,12 +67,11 @@
                         class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors overflow-hidden"
                         on:click={() => goto(`/trail/view/${trail.id}`)}
                     >
-                        <td
-                            class="p-4 text-sm line-clamp-2 relative"
-                            title={trail.name}
-                        >
+                        <td class="p-4 text-sm line-clamp-2 relative">
                             {#if trail.expand.author}
-                                <div class="absolute right-0 top-0 p-4">
+                                <div
+                                    class="absolute right-0 top-1/2 transform -translate-y-1/2 p-4"
+                                >
                                     <img
                                         title={`${$_("by")} ${trail.expand.author.username}`}
                                         class="rounded-full w-5 aspect-square mx-1 inline"
@@ -89,13 +92,13 @@
                             {formatDistance(trail.distance)}
                         </td>
                         <td class="p-4 text-sm">
+                            {formatTimeHHMM(trail.duration)}
+                        </td>
+                        <td class="p-4 text-sm">
                             {trail.difficulty}
                         </td>
                         <td class="p-4 text-sm">
                             {formatElevation(trail.elevation_gain)}
-                        </td>
-                        <td class="p-4 text-sm">
-                            {formatElevation(trail.elevation_loss)}
                         </td>
                         <td class="p-4 text-sm">
                             {#if trail.created}
