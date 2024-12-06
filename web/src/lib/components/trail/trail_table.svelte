@@ -5,6 +5,7 @@
     import type { SelectItem } from "../base/select.svelte";
     import { goto } from "$app/navigation";
     import { createEventDispatcher } from "svelte";
+    import { getFileURL } from "$lib/util/file_util";
 
     export let tableHeader: SelectItem[];
     export let trails: Trail[] | null = null;
@@ -14,19 +15,16 @@
 
     function getColumnWidth(columnValue: string): string {
         switch (columnValue) {
-            case "name":
-                return "w-[25%]";
             case "distance":
+                return "w-[15%]";
             case "difficulty":
-                return "w-[10%] md-hidden";
             case "elevation_gain":
             case "elevation_loss":
-                return "w-[10%]";
             case "created":
             case "date":
-                return "w-[10%]";
+                return "w-[5%]";
             default:
-                return "w-1/6";
+                return "";
         }
     }
 </script>
@@ -65,8 +63,26 @@
                         class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors overflow-hidden"
                         on:click={() => goto(`/trail/view/${trail.id}`)}
                     >
-                        <td class="p-4 text-sm line-clamp-2">
-                            {trail.name}
+                        <td
+                            class="p-4 text-sm line-clamp-2 relative"
+                            title={trail.name}
+                        >
+                            {#if trail.expand.author}
+                                <div class="absolute right-0 top-0 p-4">
+                                    <img
+                                        class="rounded-full w-5 aspect-square mx-1 inline"
+                                        src={getFileURL(
+                                            trail.expand.author,
+                                            trail.expand.author.avatar,
+                                        ) ||
+                                            `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                                        alt="avatar"
+                                    />
+                                </div>
+                            {/if}
+                            <div class="w-[75%]">
+                                {trail.name}
+                            </div>
                         </td>
                         <td class="p-4 text-sm">
                             {formatDistance(trail.distance)}
@@ -85,7 +101,7 @@
                                 {new Date(trail.created).toLocaleDateString(
                                     undefined,
                                     {
-                                        month: "short",
+                                        month: "2-digit",
                                         day: "2-digit",
                                         year: "numeric",
                                         timeZone: "UTC",
@@ -98,7 +114,7 @@
                                 {new Date(trail.date).toLocaleDateString(
                                     undefined,
                                     {
-                                        month: "short",
+                                        month: "2-digit",
                                         day: "2-digit",
                                         year: "numeric",
                                         timeZone: "UTC",
@@ -132,7 +148,7 @@
         container-type: inline-size;
     }
 
-    @container (max-width: 550px) {
+    @container (max-width: 660px) {
         th:nth-last-child(-n + 2),
         td:nth-last-child(-n + 2) {
             display: none;
