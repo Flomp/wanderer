@@ -68,7 +68,11 @@
                             title={trail.name}
                         >
                             {#if trail.expand.author}
-                                <div class="absolute right-0 top-0 p-4">
+                                <div
+                                    class="absolute right-0 top-0 p-4"
+                                    title={"created by " +
+                                        trail.expand.author.username}
+                                >
                                     <img
                                         class="rounded-full w-5 aspect-square mx-1 inline"
                                         src={getFileURL(
@@ -80,7 +84,7 @@
                                     />
                                 </div>
                             {/if}
-                            <div class="w-[75%]">
+                            <div class="w-[75%]" title={trail.name}>
                                 {trail.name}
                             </div>
                         </td>
