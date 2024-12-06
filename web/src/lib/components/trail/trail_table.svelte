@@ -21,12 +21,13 @@
         switch (columnValue) {
             case "distance":
                 return "w-[15%]";
-            case "difficulty":
             case "elevation_gain":
-            case "elevation_loss":
             case "created":
             case "date":
                 return "w-[5%]";
+            case "duration":
+            case "difficulty":
+                return "w-[11%]";
             default:
                 return "";
         }
@@ -70,7 +71,7 @@
                         <td class="p-4 text-sm line-clamp-2 relative">
                             {#if trail.expand.author}
                                 <div
-                                    class="absolute right-0 top-1/2 transform -translate-y-1/2 p-4"
+                                    class="author-icon absolute right-0 top-1/2 transform -translate-y-1/2 p-4"
                                 >
                                     <img
                                         title={`${$_("by")} ${trail.expand.author.username}`}
@@ -155,6 +156,11 @@
     @container (max-width: 660px) {
         th:nth-last-child(-n + 2),
         td:nth-last-child(-n + 2) {
+            display: none;
+        }
+    }
+    @container (max-width: 520px) {
+        .author-icon {
             display: none;
         }
     }
