@@ -210,6 +210,7 @@
   "speed": "",
   "stop-drawing": "",
   "summit-book": "Bergtopboek",
+  "table": "Tabel",
   "text": "Tekst",
   "tilesets": "",
   "trail": "{n, plural, =1 {Wandelroute} other {Wandelroutes}}",

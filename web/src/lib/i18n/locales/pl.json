@@ -210,6 +210,7 @@
   "speed": "",
   "stop-drawing": "",
   "summit-book": "Logbook",
+  "table": "Tabela",
   "text": "Tekst",
   "tilesets": "",
   "trail": "{n, plural, =1 {Szlak} other {Szlaki}}",

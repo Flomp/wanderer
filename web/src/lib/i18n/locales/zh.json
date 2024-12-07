@@ -210,6 +210,7 @@
   "speed": "",
   "stop-drawing": "",
   "summit-book": "详细日程",
+  "table": "表格",
   "text": "文本",
   "tilesets": "",
   "trail": "{n, plural, =1 {路线} other {路线}}",
