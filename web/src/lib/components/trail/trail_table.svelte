@@ -19,15 +19,17 @@
 
     function getColumnWidth(columnValue: string): string {
         switch (columnValue) {
+            case "name":
+                return "w-[25%]";
             case "distance":
                 return "w-[15%]";
+            case "duration":
+            case "difficulty":
+                return "w-[11%]";
             case "elevation_gain":
             case "created":
             case "date":
                 return "w-[5%]";
-            case "duration":
-            case "difficulty":
-                return "w-[11%]";
             default:
                 return "";
         }
@@ -69,12 +71,23 @@
                         on:click={() => goto(`/trail/view/${trail.id}`)}
                     >
                         <td class="p-4 text-sm line-clamp-2 relative">
-                            {#if trail.expand.author}
+                            {#if trail.public}
+                                <div
+                                    class="public-icon absolute right-0 top-1/2 transform {trail.expand &&
+                                    trail.expand.author
+                                        ? '-translate-y-2/3 -translate-x-1/3'
+                                        : '-translate-y-1/2'} p-4"
+                                >
+                                    <i class="fa fa-globe" title={$_("public")}
+                                    ></i>
+                                </div>
+                            {/if}
+                            {#if trail.expand && trail.expand.author}
                                 <div
                                     class="author-icon absolute right-0 top-1/2 transform -translate-y-1/2 p-4"
                                 >
                                     <img
-                                        title={`${$_("by")} ${trail.expand.author.username}`}
+                                        title={`${trail.public ? $_("public") + " " : ""}${$_("by")} ${trail.expand.author.username}`}
                                         class="rounded-full w-5 aspect-square mx-1 inline"
                                         src={getFileURL(
                                             trail.expand.author,
