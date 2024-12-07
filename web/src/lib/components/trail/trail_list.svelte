@@ -36,6 +36,7 @@
         { text: $_("duration"), value: "duration" },
         { text: $_("difficulty"), value: "difficulty" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
+        { text: $_("elevation-loss"), value: "elevation_loss" },
         { text: $_("creation-date"), value: "created" },
         { text: $_("date"), value: "date" },
     ];
@@ -162,7 +163,9 @@
             {#if selectedDisplayOption === "table"}
                 <TrailTable
                     {trails}
-                    tableHeader={sortOptions}
+                    tableHeader={sortOptions.filter(
+                        (option) => option.value !== "elevation_loss",
+                    )}
                     {filter}
                     on:sort={(sort) => handleSortUpdate(sort)}
                 ></TrailTable>
