@@ -14,7 +14,7 @@ func init() {
 
 	m.Register(func(db dbx.Builder) error {
 		_, err := client.Index("trails").UpdateSortableAttributes(&[]string{
-			"created", "date", "difficulty", "distance", "elevation_gain", "name", "duration", "author",
+			"created", "date", "difficulty", "distance", "elevation_gain", "elevation_loss", "name", "duration", "author",
 		})
 
 		if err != nil {
@@ -24,7 +24,7 @@ func init() {
 		return nil
 	}, func(db dbx.Builder) error {
 		_, err := client.Index("trails").UpdateSortableAttributes(&[]string{
-			"created", "date", "difficulty", "distance", "elevation_gain", "name",
+			"created", "date", "difficulty", "distance", "elevation_gain", "elevation_loss", "name",
 		})
 
 		if err != nil {
