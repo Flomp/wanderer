@@ -173,7 +173,8 @@
         }
     }
     @container (max-width: 520px) {
-        .author-icon {
+        .author-icon,
+        .public-icon {
             display: none;
         }
     }
