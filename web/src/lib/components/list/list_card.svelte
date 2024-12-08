@@ -58,6 +58,14 @@
             >
                 {list.name}
             </h5>
+            {#if list.public}
+                <span
+                    class="tooltip"
+                    data-title={$_("public")}
+                >
+                    <i class="fa fa-globe"></i>
+                </span>
+            {/if}
             {#if listIsShared}
                 <ShareInfo type="list" subject={list}></ShareInfo>
             {/if}

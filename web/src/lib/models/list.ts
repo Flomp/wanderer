@@ -5,6 +5,7 @@ import type { ListShare } from "./list_share";
 export class List {
     id?: string;
     name: string;
+    public: boolean;
     description?: string;
     avatar?: string;
     trails?: string[];
@@ -15,8 +16,9 @@ export class List {
     }
     author?: string;
 
-    constructor(name: string, trails: Trail[], params?: { description?: string, avatar?: string, author?: string }) {
+    constructor(name: string, trails: Trail[], params?: { description?: string, public?: boolean, avatar?: string, author?: string }) {
         this.name = name;
+        this.public = params?.public ?? false
         this.expand = { trails: trails };
         this.trails = trails.map(t => t.id!);
         this.description = params?.description;

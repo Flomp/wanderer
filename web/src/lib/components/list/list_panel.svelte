@@ -72,14 +72,26 @@
 </script>
 
 <div class="relative">
-    {#if listIsShared}
+    {#if (list.public || listIsShared) && $currentUser}
         <div
-            class="absolute top-8 right-8 bg-white text-primary rounded-full w-8 py-1 text-center"
+            class="flex absolute top-4 right-6 {list.public && listIsShared
+                ? 'w-16'
+                : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
         >
-            <ShareInfo type="list" subject={list}></ShareInfo>
+            {#if list.public}
+                <span
+                    class="tooltip"
+                    class:mr-3={list.public && listIsShared}
+                    data-title={$_("public")}
+                >
+                    <i class="fa fa-globe"></i>
+                </span>
+            {/if}
+            {#if listIsShared}
+                <ShareInfo type="list" subject={list}></ShareInfo>
+            {/if}
         </div>
     {/if}
-
     {#if dropdownItems.length}
         <div class="absolute bottom-8 right-8">
             <Dropdown
