@@ -25,7 +25,6 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
         category: []
     }
     const logs = await summit_logs_index(params.id, filter, fetch);
-    const user = await users_show(params.id, fetch);
 
-    return { filter, user }
+    return { filter }
 };

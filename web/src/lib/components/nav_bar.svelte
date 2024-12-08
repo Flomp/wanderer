@@ -83,7 +83,7 @@
             logout();
             window.location.href = "/";
         } else if (item.value == "settings") {
-            goto("/settings/account");
+            goto("/settings/profile");
         }
     }
 </script>
