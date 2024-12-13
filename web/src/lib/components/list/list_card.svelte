@@ -51,18 +51,15 @@
             <i class="fa fa-table-list text-5xl"></i>
         </div>
     {/if}
-    <div class="self-start min-w-0 w-full transition-transform">
+    <div class="self-start min-w-0 basis-full transition-transform">
         <div class="flex items-center gap-3">
             <h5
-                class="text-xl font-semibold overflow-hidden overflow-ellipsis basis-full"
+                class="text-xl font-semibold overflow-hidden overflow-ellipsis"
             >
                 {list.name}
             </h5>
             {#if list.public}
-                <span
-                    class="tooltip"
-                    data-title={$_("public")}
-                >
+                <span class="tooltip" data-title={$_("public")}>
                     <i class="fa fa-globe"></i>
                 </span>
             {/if}
@@ -70,6 +67,21 @@
                 <ShareInfo type="list" subject={list}></ShareInfo>
             {/if}
         </div>
+        {#if list.expand?.author}
+            <p class="text-xs text-gray-500 my-2">
+                {$_("by")}
+                <img
+                    class="rounded-full w-5 aspect-square mx-1 inline"
+                    src={getFileURL(
+                        list.expand.author,
+                        list.expand.author.avatar,
+                    ) ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
+                    alt="avatar"
+                />
+                {list.expand?.author.username}
+            </p>
+        {/if}
         <div
             class="grid grid-cols-2 mt-1 mb-2 gap-x-4 gap-y-1 text-sm text-gray-500 whitespace-nowrap flex-wrap"
         >

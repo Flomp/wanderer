@@ -14,5 +14,4 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
         }
 
     }
-    await lists_index(undefined, fetch);
 };

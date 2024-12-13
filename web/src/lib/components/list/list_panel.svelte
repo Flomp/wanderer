@@ -42,8 +42,12 @@
         list.author == $currentUser?.id ||
         list.expand?.list_share_via_list?.some((s) => s.permission == "edit");
 
+    $: allowShare =
+        list.author == $currentUser?.id &&
+        !list.expand?.trails?.some((t) => t.author !== $currentUser?.id);
+
     $: dropdownItems = [
-        ...(list.author == $currentUser?.id
+        ...(allowShare
             ? [{ text: $_("share"), value: "share", icon: "share" }]
             : []),
         ...(allowEdit
@@ -122,7 +126,23 @@
 
 <div class="p-4 md:p-6">
     <h4 class="text-2xl font-semibold mb-4">{list.name}</h4>
-
+    {#if list.expand?.author}
+        <p class="my-3 text-gray-500 text-sm">
+            {$_("by")}
+            <img
+                class="rounded-full w-8 aspect-square mx-1 inline"
+                src={getFileURL(
+                    list.expand.author,
+                    list.expand.author.avatar,
+                ) ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
+                alt="avatar"
+            />
+            <a class="underline" href="/profile/{list.expand.author.id}"
+                >{list.expand.author.username}</a
+            >
+        </p>
+    {/if}
     <hr />
     <div
         class="grid grid-cols-2 my-4 gap-4 font-semibold whitespace-nowrap flex-wrap justify-around"

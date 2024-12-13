@@ -52,7 +52,7 @@
     ></i>
     {#if showInfo}
         <ul
-            class="menu absolute z-10 top-8 bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden p-3 space-y-3 text-content"
+            class="menu absolute z-10 top-8 bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden p-3 space-y-3 text-content -translate-x-3/4"
             in:fly={{y: -10, duration: 150}} out:fly={{y: -10, duration: 150}}
             >
             {#if loading}

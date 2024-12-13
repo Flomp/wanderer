@@ -82,7 +82,8 @@
             if ($form.id) {
                 await lists_update($form, avatarFile);
             } else {
-                await lists_create($form, avatarFile);
+                const createdList = await lists_create($form, avatarFile);
+                $form.id = createdList.id;
             }
             show_toast({
                 type: "success",

@@ -2,11 +2,12 @@
     import { createEventDispatcher } from "svelte";
 
     import type { List } from "$lib/models/list";
-    import { lists } from "$lib/stores/list_store";
     import { trail } from "$lib/stores/trail_store";
+    import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
     import Modal from "../base/modal.svelte";
-    import { getFileURL } from "$lib/util/file_util";
+    
+    export let lists: List[];
 
     export let openModal: (() => void) | undefined = undefined;
     export let closeModal: (() => void) | undefined = undefined;
@@ -34,7 +35,7 @@
     <slot {openModal} />
 
     <ul slot="content">
-        {#each $lists as list}
+        {#each lists as list}
             <li
                 class="flex gap-4 items-center p-4 hover:bg-menu-item-background-hover rounded-xl transition-colors cursor-pointer"
                 on:click={() => handleSelect(list)}

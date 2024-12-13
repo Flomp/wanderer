@@ -30,6 +30,8 @@
     let openExportModal: () => void;
     let openShareModal: () => void;
 
+    let lists: List[] = [];
+
     const allowEdit =
         trail.author == $currentUser?.id ||
         trail.expand.trail_share_via_trail?.some((s) => s.permission == "edit");
@@ -76,6 +78,13 @@
                     : `/trail/view/${trail.id!}`,
             );
         } else if (item.value == "list") {
+            lists = (
+                await lists_index(
+                    { q: "", author: $currentUser?.id ?? "" },
+                    1,
+                    -1,
+                )
+            ).items;
             openListSelectModal();
         } else if (item.value == "direction") {
             window
@@ -175,7 +184,6 @@
                     text: `${$_("added-trail-to")} "${list.name}"`,
                 });
             }
-            await lists_index();
         } catch (e) {
             console.error(e);
 
@@ -206,6 +214,7 @@
     on:confirm={deleteTrail}
 ></ConfirmModal>
 <ListSelectModal
+    {lists}
     bind:openModal={openListSelectModal}
     on:change={(e) => handleListSelection(e.detail)}
 ></ListSelectModal>

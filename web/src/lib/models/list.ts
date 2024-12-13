@@ -1,6 +1,7 @@
 import { object, string } from "yup";
 import type { Trail } from "./trail";
 import type { ListShare } from "./list_share";
+import type { UserAnonymous } from "./user";
 
 export class List {
     id?: string;
@@ -12,6 +13,7 @@ export class List {
     expand?: {
         trails?: Trail[]
         list_share_via_list?: ListShare[]
+        author?: UserAnonymous;
 
     }
     author?: string;
@@ -29,8 +31,11 @@ export class List {
 
 export interface ListFilter {
     q: string,
-    sort: "name" | "size" | "created";
-    sortOrder: "+" | "-"
+    sort?: "name" | "size" | "created";
+    author?: string;
+    public?: boolean;
+    shared?: boolean;
+    sortOrder?: "+" | "-"
 }
 
 export const listSchema = object<List>({
