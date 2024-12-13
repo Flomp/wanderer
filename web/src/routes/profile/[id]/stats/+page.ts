@@ -1,10 +1,9 @@
 import type { SummitLogFilter } from "$lib/models/summit_log";
 import { categories_index } from "$lib/stores/category_store";
 import { summit_logs_index } from "$lib/stores/summit_log_store";
-import { users_show } from "$lib/stores/user_store";
-import { error, type ServerLoad } from "@sveltejs/kit";
+import { error, type Load } from "@sveltejs/kit";
 
-export const load: ServerLoad = async ({ params, locals, fetch }) => {
+export const load: Load = async ({ params, fetch }) => {
 
     if(!params.id) {
         error(404, "Not found")

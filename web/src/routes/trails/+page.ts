@@ -1,6 +1,6 @@
-import type { Trail, TrailFilter } from "$lib/models/trail";
+import type { TrailFilter } from "$lib/models/trail";
 import { categories_index } from "$lib/stores/category_store";
-import { trails_get_filter_values, trails_search_filter } from "$lib/stores/trail_store";
+import { trails_get_filter_values } from "$lib/stores/trail_store";
 import type { ServerLoad } from "@sveltejs/kit";
 
 export const load: ServerLoad = async ({ params, locals, url, fetch }) => {

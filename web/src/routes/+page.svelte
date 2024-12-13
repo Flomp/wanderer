@@ -7,7 +7,6 @@
     import Scene from "$lib/components/scene.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import { categories } from "$lib/stores/category_store";
-    import { trails } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { country_codes } from "$lib/util/country_code_util";
     import { Canvas } from "@threlte/core";

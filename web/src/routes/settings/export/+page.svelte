@@ -101,7 +101,7 @@
             for (const trail of trails) {
                 const gpxData: string = await fetchGPX(trail);
                 if (!trail.expand) {
-                    trail.expand = {};
+                    (trail as any).expand = {};
                 }
                 trail.expand.gpx_data = gpxData;
                 const trailFolder = zip.folder(`${trail.name}`);

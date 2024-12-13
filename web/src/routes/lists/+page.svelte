@@ -316,7 +316,7 @@
                 <div class="px-4 mt-2" class:space-y-3={loading}>
                     {#if loading}
                         {#each { length: 3 } as _, index}
-                            <SkeletonCard fullWidth></SkeletonCard>
+                            <SkeletonCard></SkeletonCard>
                         {/each}
                     {:else}
                         {#each data.lists.items as item, i}

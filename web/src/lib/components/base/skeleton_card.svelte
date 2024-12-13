@@ -1,10 +1,5 @@
-<script lang="ts">
-    export let fullWidth: boolean = false;
-</script>
-
-
 <div
-    class="skeleton-card relative rounded-2xl animate-pulse flex flex-col {fullWidth ? "w-full" : "sm:w-72 w-80"} p-4 bg-menu-background border border-input-border"
+    class="skeleton-card relative rounded-2xl animate-pulse flex flex-col min-w-72 p-4 bg-menu-background border border-input-border"
     aria-hidden="true"
 >
     <!-- Image placeholder -->
