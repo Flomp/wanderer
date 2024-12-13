@@ -10,6 +10,7 @@
     import { goto } from "$app/navigation";
     import { createEventDispatcher } from "svelte";
     import { getFileURL } from "$lib/util/file_util";
+    import ShareInfo from "../share_info.svelte";
 
     export let tableHeader: SelectItem[];
     export let trails: Trail[] | null = null;
@@ -37,7 +38,7 @@
 </script>
 
 <div
-    class="table-container w-full border border-input-border rounded-xl overflow-hidden"
+    class="table-container w-full border border-input-border rounded-xl overflow-x-scroll"
 >
     <table class="w-full">
         <thead>
@@ -67,39 +68,44 @@
             {#if trails}
                 {#each trails as trail}
                     <tr
-                        class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors overflow-hidden"
+                        class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
                         on:click={() => goto(`/trail/view/${trail.id}`)}
                     >
-                        <td class="p-4 text-sm line-clamp-2 relative">
-                            {#if trail.public}
-                                <div
-                                    class="public-icon absolute right-0 top-1/2 transform {trail.expand &&
-                                    trail.expand.author
-                                        ? '-translate-y-2/3 -translate-x-1/3'
-                                        : '-translate-y-1/2'} p-4"
-                                >
-                                    <i class="fa fa-globe" title={$_("public")}
-                                    ></i>
-                                </div>
-                            {/if}
-                            {#if trail.expand && trail.expand.author}
-                                <div
-                                    class="author-icon absolute right-0 top-1/2 transform -translate-y-1/2 p-4"
-                                >
-                                    <img
-                                        title={`${trail.public ? $_("public") + " " : ""}${$_("by")} ${trail.expand.author.username}`}
-                                        class="rounded-full w-5 aspect-square mx-1 inline"
-                                        src={getFileURL(
-                                            trail.expand.author,
-                                            trail.expand.author.avatar,
-                                        ) ||
-                                            `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
-                                        alt="avatar"
-                                    />
-                                </div>
-                            {/if}
-                            <div class="w-[75%]" title={trail.name}>
+                        <td
+                            class="flex justify-between items-center text-sm relative"
+                        >
+                            <div class="p-4 w-[75%]" title={trail.name}>
                                 {trail.name}
+                            </div>
+                            <div class="flex flex-col items-center">
+                                {#if trail.expand && trail.expand.author}
+                                    <div class="author-icon">
+                                        <img
+                                            title={`${trail.public ? $_("public") + " " : ""}${$_("by")} ${trail.expand.author.username}`}
+                                            class="rounded-full w-5 aspect-square mx-1 inline"
+                                            src={getFileURL(
+                                                trail.expand.author,
+                                                trail.expand.author.avatar,
+                                            ) ||
+                                                `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                                            alt="avatar"
+                                        />
+                                    </div>
+                                {/if}
+                                <div class="flex gap-x-1">
+                                    {#if trail.public}
+                                        <div
+                                            class="public-icon tooltip"
+                                            data-title={$_("public")}
+                                        >
+                                            <i class="fa fa-globe"></i>
+                                        </div>
+                                    {/if}
+                                    {#if trail.expand?.trail_share_via_trail?.length}
+                                        <ShareInfo type="trail" subject={trail}
+                                        ></ShareInfo>
+                                    {/if}
+                                </div>
                             </div>
                         </td>
                         <td class="p-4 text-sm">
@@ -169,12 +175,6 @@
     @container (max-width: 660px) {
         th:nth-last-child(-n + 2),
         td:nth-last-child(-n + 2) {
-            display: none;
-        }
-    }
-    @container (max-width: 520px) {
-        .author-icon,
-        .public-icon {
             display: none;
         }
     }
