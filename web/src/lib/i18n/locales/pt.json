@@ -213,6 +213,7 @@
   "speed": "Velocidade",
   "stop-drawing": "Parar desenho",
   "summit-book": "Livro da cimeira",
+  "table": "Tabela",
   "text": "Texto",
   "tilesets": "Camada de renderização personalizada",
   "trail": "{n, plural, =1 {Percurso} other {Percursos}}",
