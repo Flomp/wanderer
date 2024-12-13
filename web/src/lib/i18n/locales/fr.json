@@ -213,6 +213,7 @@
   "speed": "",
   "stop-drawing": "",
   "summit-book": "Livre du sommet",
+  "table": "Tableau",
   "text": "Texte",
   "tilesets": "",
   "trail": "{n, plural, =1 {Itinéraire} other {Itinéraires}}",

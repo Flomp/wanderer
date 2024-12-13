@@ -213,6 +213,7 @@
   "speed": "",
   "stop-drawing": "",
   "summit-book": "Csúcspont könyv",
+  "table": "Táblázat",
   "text": "Szöveg",
   "tilesets": "",
   "trail": "{n, plural, =1 {Útvonal} other {Útvonalak}}",

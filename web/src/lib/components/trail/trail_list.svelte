@@ -7,6 +7,7 @@
     import EmptyStateSearch from "../empty_states/empty_state_search.svelte";
     import TrailCard from "./trail_card.svelte";
     import TrailListItem from "./trail_list_item.svelte";
+    import TrailTable from "./trail_table.svelte";
     import SkeletonCard from "../base/skeleton_card.svelte";
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
 
@@ -22,6 +23,7 @@
     const displayOptions: SelectItem[] = [
         { text: $_("card", { values: { n: 2 } }), value: "cards" },
         { text: $_("list", { values: { n: 1 } }), value: "list" },
+        { text: $_("table"), value: "table" },
     ];
 
     let selectedDisplayOption = displayOptions[0].value;
@@ -29,13 +31,14 @@
     let dispatch = createEventDispatcher();
 
     const sortOptions: SelectItem[] = [
-        { text: $_("alphabetical"), value: "name" },
-        { text: $_("creation-date"), value: "created" },
-        { text: $_("date"), value: "date" },
-        { text: $_("difficulty"), value: "difficulty" },
+        { text: $_("name"), value: "name" },
         { text: $_("distance"), value: "distance" },
+        { text: $_("duration"), value: "duration" },
+        { text: $_("difficulty"), value: "difficulty" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
         { text: $_("elevation-loss"), value: "elevation_loss" },
+        { text: $_("creation-date"), value: "created" },
+        { text: $_("date"), value: "date" },
     ];
 
     onMount(() => {
@@ -81,6 +84,19 @@
         localStorage.setItem("sort_order", filter.sortOrder);
         dispatch("update", filter);
     }
+
+    function handleSortUpdate(sort: any) {
+        if (!filter) {
+            return;
+        }
+        if (sort.detail === filter.sort) {
+            setSortOrder();
+        } else {
+            filter.sort = sort.detail;
+            filter.sortOrder = "+";
+            setSort();
+        }
+    }
 </script>
 
 <div class="min-w-0">
@@ -94,21 +110,23 @@
         </div>
         {#if filter}
             <div class="shrink-0">
-                <p class="text-sm text-gray-500 pb-2">{$_("sort")}</p>
-                <div class="flex items-center gap-2">
-                    <Select
-                        bind:value={filter.sort}
-                        items={sortOptions}
-                        on:change={setSort}
-                    ></Select>
-                    <button
-                        id="sort-order-btn"
-                        class="btn-icon"
-                        class:rotated={filter.sortOrder == "-"}
-                        on:click={() => setSortOrder()}
-                        ><i class="fa fa-arrow-up"></i></button
-                    >
-                </div>
+                {#if selectedDisplayOption !== "table"}
+                    <p class="text-sm text-gray-500 pb-2">{$_("sort")}</p>
+                    <div class="flex items-center gap-2">
+                        <Select
+                            bind:value={filter.sort}
+                            items={sortOptions}
+                            on:change={setSort}
+                        ></Select>
+                        <button
+                            id="sort-order-btn"
+                            class="btn-icon"
+                            class:rotated={filter.sortOrder == "-"}
+                            on:click={() => setSortOrder()}
+                            ><i class="fa fa-arrow-up"></i></button
+                        >
+                    </div>
+                {/if}
             </div>
         {/if}
         <div class="shrink-0">
@@ -124,35 +142,51 @@
 
     <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
         {#if loading}
-            {#each { length: 12 } as _, index}
-                {#if selectedDisplayOption === "cards"}
+            {#if selectedDisplayOption === "table"}
+                <TrailTable trails={null} tableHeader={sortOptions}
+                ></TrailTable>
+            {:else}
+                {#each { length: 12 } as _, index}
+                    {#if selectedDisplayOption === "cards"}
                     <div class="flex-1">
                         <SkeletonCard></SkeletonCard>
                     </div>
-                {:else}
-                    <SkeletonListItem></SkeletonListItem>
-                {/if}
-            {/each}
+                    {:else if selectedDisplayOption === "list"}
+                        <SkeletonListItem></SkeletonListItem>
+                    {/if}
+                {/each}
+            {/if}
         {:else}
             {#if trails.length == 0}
                 <div class="flex flex-col basis-full items-center">
                     <EmptyStateSearch width={356}></EmptyStateSearch>
                 </div>
             {/if}
-            {#each trails as trail}
-                <a
-                    class="max-w-full flex-1"
-                    class:basis-full={selectedDisplayOption === "list"}
-                    href="/trail/view/{trail.id}"
-                    data-sveltekit-preload-data="off"
-                >
-                    {#if selectedDisplayOption === "cards"}
-                        <TrailCard {trail}></TrailCard>
-                    {:else}
-                        <TrailListItem {trail}></TrailListItem>
-                    {/if}
-                </a>
-            {/each}
+            {#if selectedDisplayOption === "table"}
+                <TrailTable
+                    {trails}
+                    tableHeader={sortOptions.filter(
+                        (option) => option.value !== "elevation_loss",
+                    )}
+                    {filter}
+                    on:sort={(sort) => handleSortUpdate(sort)}
+                ></TrailTable>
+            {:else}
+                {#each trails as trail}
+                    <a
+                        class="max-w-full flex-1"
+                        class:basis-full={selectedDisplayOption === "list"}
+                        href="/trail/view/{trail.id}"
+                        data-sveltekit-preload-data="off"
+                    >
+                        {#if selectedDisplayOption === "cards"}
+                            <TrailCard {trail}></TrailCard>
+                        {:else}
+                            <TrailListItem {trail}></TrailListItem>
+                        {/if}
+                    </a>
+                {/each}
+            {/if}
         {/if}
     </div>
     <Pagination
