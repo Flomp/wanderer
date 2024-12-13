@@ -213,6 +213,7 @@
   "speed": "速度",
   "stop-drawing": "停止绘制",
   "summit-book": "详细日程",
+  "table": "表格",
   "text": "文本",
   "tilesets": "自定义地图图层",
   "trail": "{n, plural, =1 {路线} other {路线}}",
