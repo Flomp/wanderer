@@ -1,5 +1,5 @@
 <div
-    class="skeleton-card relative rounded-2xl sm:w-72 animate-pulse flex flex-col w-80 p-4 bg-menu-background border border-input-border"
+    class="skeleton-card relative rounded-2xl animate-pulse flex flex-col min-w-72 p-4 bg-menu-background border border-input-border"
     aria-hidden="true"
 >
     <!-- Image placeholder -->

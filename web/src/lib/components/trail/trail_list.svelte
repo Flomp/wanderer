@@ -148,7 +148,9 @@
             {:else}
                 {#each { length: 12 } as _, index}
                     {#if selectedDisplayOption === "cards"}
+                    <div class="flex-1">
                         <SkeletonCard></SkeletonCard>
+                    </div>
                     {:else if selectedDisplayOption === "list"}
                         <SkeletonListItem></SkeletonListItem>
                     {/if}
@@ -172,7 +174,7 @@
             {:else}
                 {#each trails as trail}
                     <a
-                        class="max-w-full"
+                        class="max-w-full flex-1"
                         class:basis-full={selectedDisplayOption === "list"}
                         href="/trail/view/{trail.id}"
                         data-sveltekit-preload-data="off"

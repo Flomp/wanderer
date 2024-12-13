@@ -20,13 +20,15 @@
         trail_share_create,
         trail_share_index,
     } from "$lib/stores/trail_share_store.js";
-    import { trails_show } from "$lib/stores/trail_store";
+    import { trails_show, trails_update } from "$lib/stores/trail_store";
     import { getFileURL } from "$lib/util/file_util.js";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
+    import Toggle from "$lib/components/base/toggle.svelte";
+    import { currentUser } from "$lib/stores/user_store.js";
 
     export let data;
 
@@ -42,45 +44,62 @@
     let newShares: TrailShare[] = [];
 
     let openConfirmModal: () => void;
+    let openPublishConfirmModal: () => void;
 
     const { form, errors, handleChange, handleSubmit } = createForm<List>({
         initialValues: data.list!,
         validationSchema: listSchema,
         onSubmit: async (submittedList) => {
-            const avatarFile = (
-                document.getElementById("avatar") as HTMLInputElement
-            ).files![0];
-            loading = true;
-            try {
-                if ($form.id) {
-                    await lists_update($form, avatarFile);
-                    await findNewTrailShares();
-                    if (!newShares.length) {
-                        show_toast({
-                            type: "success",
-                            icon: "check",
-                            text: $_("list-saved-successfully"),
-                        });
-                    }
-                } else {
-                    await lists_create($form, avatarFile);
-                    show_toast({
-                        type: "success",
-                        icon: "check",
-                        text: $_("list-saved-successfully"),
-                    });
-                }
-            } catch (e) {
-                show_toast({
-                    type: "error",
-                    icon: "close",
-                    text: $_("error-saving-list"),
-                });
-            } finally {
-                loading = false;
+            if (await checkPrerequisites()) {
+                await saveList();
             }
         },
     });
+
+    async function checkPrerequisites() {
+        if (
+            (data.list?.public === false && $form.public === true) ||
+            ($form.public === true &&
+                data.list?.expand?.trails?.length !==
+                    $form.expand?.trails?.length)
+        ) {
+            openPublishConfirmModal();
+            return false;
+        } else if (await findNewTrailShares()) {
+            openConfirmModal();
+            return false;
+        }
+
+        return true;
+    }
+
+    async function saveList() {
+        const avatarFile = (
+            document.getElementById("avatar") as HTMLInputElement
+        ).files![0];
+        loading = true;
+        try {
+            if ($form.id) {
+                await lists_update($form, avatarFile);
+            } else {
+                const createdList = await lists_create($form, avatarFile);
+                $form.id = createdList.id;
+            }
+            show_toast({
+                type: "success",
+                icon: "check",
+                text: $_("list-saved-successfully"),
+            });
+        } catch (e) {
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: $_("error-saving-list"),
+            });
+        } finally {
+            loading = false;
+        }
+    }
 
     function openAvatarBrowser() {
         document.getElementById("avatar")!.click();
@@ -98,22 +117,21 @@
     }
 
     async function search(q: string) {
-        const r = await fetch("/api/v1/search/multi", {
+        const r = await fetch("/api/v1/search/trails", {
             method: "POST",
             body: JSON.stringify({
-                queries: [
-                    {
-                        indexUid: "trails",
-                        q: q,
-                        limit: 3,
-                    },
-                ],
+                q,
+                options: {
+                    filter: `author = ${$currentUser?.id} OR public = true`,
+                    sort: ["name:desc"],
+                    limit: 3,
+                },
             }),
         });
 
         const response = await r.json();
 
-        searchDropdownItems = response.results[0].hits
+        searchDropdownItems = response.hits
             .filter((h: List) => !$form.trails?.includes(h.id!))
             .map((t: Record<string, any>) => ({
                 text: t.name,
@@ -149,7 +167,10 @@
                 user: userId,
             });
             for (const trail of $form.expand?.trails ?? []) {
-                if (trail.author == userId) {
+                if (
+                    trail.author == userId ||
+                    trail.author != $currentUser?.id
+                ) {
                     continue;
                 }
                 const trailShare = existingTrailShares.find(
@@ -160,10 +181,7 @@
                 }
             }
         }
-
-        if (newShares.length) {
-            openConfirmModal();
-        }
+        return newShares.length > 0;
     }
 
     async function updateTrailShares() {
@@ -171,11 +189,16 @@
             await trail_share_create(newShare);
         }
         newShares = [];
-        show_toast({
-            type: "success",
-            icon: "check",
-            text: $_("list-saved-successfully"),
-        });
+    }
+
+    async function publishTrails() {
+        for (const trail of $form.expand?.trails ?? []) {
+            if (trail.author !== $currentUser?.id) {
+                continue;
+            }
+            const updatedTrail: Trail = { ...trail, public: true };
+            await trails_update(trail, updatedTrail);
+        }
     }
 
     function moveTrail(trail: Trail, index: number, direction: 1 | -1) {
@@ -261,6 +284,8 @@
             error={$errors.description}
             on:change={handleChange}
         ></Textarea>
+        <Toggle name="public" label={$_("public")} bind:value={$form.public}
+        ></Toggle>
         <h3 class="text-xl font-semibold">
             {$_("trail", { values: { n: 2 } })}
         </h3>
@@ -379,11 +404,27 @@
 </main>
 
 <ConfirmModal
+    id="share-confirm-modal"
     text={$_("list-share-warning-update")}
     title={$_("confirm-share")}
     action="confirm"
     bind:openModal={openConfirmModal}
-    on:confirm={updateTrailShares}
+    on:confirm={async () => {
+        await updateTrailShares();
+        await saveList();
+    }}
+></ConfirmModal>
+
+<ConfirmModal
+    id="publish-confirm-modal"
+    text={$_("list-public-warning")}
+    title={$_("confirm-publish")}
+    action="confirm"
+    bind:openModal={openPublishConfirmModal}
+    on:confirm={async () => {
+        await publishTrails();
+        await saveList();
+    }}
 ></ConfirmModal>
 
 <style>

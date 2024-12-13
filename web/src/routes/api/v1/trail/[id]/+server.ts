@@ -25,7 +25,9 @@ export async function GET(event: RequestEvent) {
             if (!log.expand) {
                 log.expand = {} as any
             }
-            log.expand.author = await pb.collection("users_anonymous").getOne(log.author!);
+            if(log.author) {
+                log.expand.author = await pb.collection("users_anonymous").getOne(log.author);
+            }
         }
         return json(r)
     } catch (e: any) {

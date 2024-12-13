@@ -3,7 +3,6 @@
     import type { List } from "$lib/models/list";
     import { ListShare } from "$lib/models/list_share";
     import { TrailShare } from "$lib/models/trail_share";
-    import type { User } from "$lib/models/user";
     import {
         list_share_create,
         list_share_delete,
@@ -11,19 +10,15 @@
         list_share_update,
         shares,
     } from "$lib/stores/list_share_store";
-    import { lists } from "$lib/stores/list_store";
-    import { show_toast } from "$lib/stores/toast_store";
     import {
         trail_share_create,
         trail_share_delete,
         trail_share_index,
     } from "$lib/stores/trail_share_store";
-    import { users_search } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
     import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import Button from "../base/button.svelte";
-    import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
     import UserSearch from "../user_search.svelte";
@@ -116,8 +111,8 @@
             trails: list.expand?.trails ?? [],
             list_share_via_list: fetchedShares,
         };
-        lists.set($lists);
-        sharesLoading = false;
+        sharesLoading = false;        
+        dispatch("update", list)
     }
 </script>
 

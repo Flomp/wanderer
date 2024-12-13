@@ -1,6 +1,5 @@
 <script lang="ts">
     import Button from "$lib/components/base/button.svelte";
-    import Settings from "$lib/components/profile/settings.svelte";
     import TrailExportModal from "$lib/components/trail/trail_export_modal.svelte";
     import { show_toast } from "$lib/stores/toast_store";
     import {
@@ -59,11 +58,9 @@
         uploading = true;
         let progress = 0;
         for (let i = 0; i < files.length; i++) {
-            
-
             const file = files[i];
             try {
-                uploadProgress.set(progress += 100 / (files.length * 2));
+                uploadProgress.set((progress += 100 / (files.length * 2)));
                 await trails_upload(file);
             } catch (e) {
                 errorsThrown += 1;
@@ -73,7 +70,7 @@
                     text: `Error uploading file: ${file.name}`,
                 });
             } finally {
-                uploadProgress.set(progress += 100 / (files.length * 2));
+                uploadProgress.set((progress += 100 / (files.length * 2)));
             }
         }
 
@@ -104,7 +101,7 @@
             for (const trail of trails) {
                 const gpxData: string = await fetchGPX(trail);
                 if (!trail.expand) {
-                    trail.expand = {};
+                    (trail as any).expand = {};
                 }
                 trail.expand.gpx_data = gpxData;
                 const trailFolder = zip.folder(`${trail.name}`);
@@ -162,40 +159,38 @@
 <svelte:head>
     <title>{$_("settings")} | wanderer</title>
 </svelte:head>
-<main>
-    <Settings selected={2}>
-        <div class="space-y-6">
-            <h3 class="text-2xl font-semibold">{$_("import")}</h3>
-            <button
-                class="drop-area relative h-64 w-full p-4 {uploading
-                    ? ''
-                    : 'border border-content border-dashed'} rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
-                class:bg-menu-item-background-hover={uploading}
-                class:border-2={offerUpload && !uploading}
-                style="--progress: {$uploadProgress}%"
-                on:click={openFileBrowser}
-                on:dragover={handleDragOver}
-                on:dragleave={handleDragLeave}
-                on:drop={handleDrop}
-            >
-                {$_("import-hint")}
-            </button>
+<div class="space-y-6">
+    <h3 class="text-2xl font-semibold">{$_("import")}</h3>
+    <hr class="mt-4 mb-6 border-input-border" />
+    <button
+        class="drop-area relative h-64 w-full p-4 {uploading
+            ? ''
+            : 'border border-content border-dashed'} rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
+        class:bg-menu-item-background-hover={uploading}
+        class:border-2={offerUpload && !uploading}
+        style="--progress: {$uploadProgress}%"
+        on:click={openFileBrowser}
+        on:dragover={handleDragOver}
+        on:dragleave={handleDragLeave}
+        on:drop={handleDrop}
+    >
+        {$_("import-hint")}
+    </button>
 
-            <input
-                type="file"
-                id="file-input"
-                accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
-                multiple={true}
-                style="display: none;"
-                on:change={() => handleFileSelection()}
-            />
-            <h3 class="text-2xl font-semibold">{$_("export")}</h3>
-            <Button secondary={true} on:click={() => openExportModal()}
-                >{$_("export-all-trails")}</Button
-            >
-        </div>
-    </Settings>
-</main>
+    <input
+        type="file"
+        id="file-input"
+        accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
+        multiple={true}
+        style="display: none;"
+        on:change={() => handleFileSelection()}
+    />
+    <h3 class="text-2xl font-semibold">{$_("export")}</h3>
+    <hr class="mt-4 mb-6 border-input-border" />
+    <Button secondary={true} on:click={() => openExportModal()}
+        >{$_("export-all-trails")}</Button
+    >
+</div>
 
 <TrailExportModal
     bind:openModal={openExportModal}

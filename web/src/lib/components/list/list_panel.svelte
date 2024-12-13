@@ -42,8 +42,12 @@
         list.author == $currentUser?.id ||
         list.expand?.list_share_via_list?.some((s) => s.permission == "edit");
 
+    $: allowShare =
+        list.author == $currentUser?.id &&
+        !list.expand?.trails?.some((t) => t.author !== $currentUser?.id);
+
     $: dropdownItems = [
-        ...(list.author == $currentUser?.id
+        ...(allowShare
             ? [{ text: $_("share"), value: "share", icon: "share" }]
             : []),
         ...(allowEdit
@@ -72,14 +76,26 @@
 </script>
 
 <div class="relative">
-    {#if listIsShared}
+    {#if (list.public || listIsShared) && $currentUser}
         <div
-            class="absolute top-8 right-8 bg-white rounded-full w-8 py-1 text-center"
+            class="flex absolute top-4 right-6 {list.public && listIsShared
+                ? 'w-16'
+                : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
         >
-            <ShareInfo type="list" subject={list}></ShareInfo>
+            {#if list.public}
+                <span
+                    class="tooltip"
+                    class:mr-3={list.public && listIsShared}
+                    data-title={$_("public")}
+                >
+                    <i class="fa fa-globe"></i>
+                </span>
+            {/if}
+            {#if listIsShared}
+                <ShareInfo type="list" subject={list}></ShareInfo>
+            {/if}
         </div>
     {/if}
-
     {#if dropdownItems.length}
         <div class="absolute bottom-8 right-8">
             <Dropdown
@@ -110,7 +126,23 @@
 
 <div class="p-4 md:p-6">
     <h4 class="text-2xl font-semibold mb-4">{list.name}</h4>
-
+    {#if list.expand?.author}
+        <p class="my-3 text-gray-500 text-sm">
+            {$_("by")}
+            <img
+                class="rounded-full w-8 aspect-square mx-1 inline"
+                src={getFileURL(
+                    list.expand.author,
+                    list.expand.author.avatar,
+                ) ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
+                alt="avatar"
+            />
+            <a class="underline" href="/profile/{list.expand.author.id}"
+                >{list.expand.author.username}</a
+            >
+        </p>
+    {/if}
     <hr />
     <div
         class="grid grid-cols-2 my-4 gap-4 font-semibold whitespace-nowrap flex-wrap justify-around"

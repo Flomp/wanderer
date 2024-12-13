@@ -2,6 +2,12 @@
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import Search, {
+        type SearchItem,
+    } from "$lib/components/base/search.svelte";
+    import type { SelectItem } from "$lib/components/base/select.svelte";
+    import Select from "$lib/components/base/select.svelte";
+    import SkeletonCard from "$lib/components/base/skeleton_card.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import ListCard from "$lib/components/list/list_card.svelte";
     import ListPanel from "$lib/components/list/list_panel.svelte";
@@ -9,18 +15,29 @@
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
+    import UserSearch from "$lib/components/user_search.svelte";
     import { List } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
-    import {
-        lists,
-        lists_delete,
-        lists_index
-    } from "$lib/stores/list_store";
+    import { lists_delete, lists_index } from "$lib/stores/list_store";
     import { fetchGPX } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
     import * as M from "maplibre-gl";
 
-    import { onMount, tick } from "svelte";
+    import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import { slide } from "svelte/transition";
+
+    export let data;
+
+    const sortOptions: SelectItem[] = [
+        { text: $_("alphabetical"), value: "name" },
+        { text: $_("creation-date"), value: "created" },
+    ];
+
+    let pagination = {
+        page: data.lists.page,
+        totalPages: data.lists.totalPages,
+    };
 
     let openConfirmModal: () => void;
     let openShareModal: () => void;
@@ -30,19 +47,28 @@
     let markers: M.Marker[];
     let showMap: boolean = true;
 
-    let selectedList: List | null = null;
+    let selectedList: List | null = $page.url.searchParams.get("list")
+        ? data.lists.items[0]
+        : null;
     let selectedTrail: Trail | null = null;
 
     let activeTrailIndex: number = -1;
 
+    let loading: boolean = false;
+    let loadingNextPage: boolean = false;
+    let filterExpanded: boolean = false;
+
+    let loadAllListsOnNextBack = false;
+
+    let userQuery = "";
+
     onMount(() => {
-        if ($page.url.searchParams.get("list")) {
-            const listToFocus = $lists.find(
-                (l) => l.id == $page.url.searchParams.get("list"),
-            );
-            if (listToFocus) {
-                setCurrentList(listToFocus);
-            }
+        if ($page.url.searchParams.get("list") && selectedList) {
+            setCurrentList(selectedList);
+
+            // only the requested list has been loaded at this point
+            // load all lists the next time the user presses the back button
+            loadAllListsOnNextBack = true;
         }
     });
 
@@ -66,7 +92,7 @@
             return;
         }
         await lists_delete(selectedList);
-        await lists_index();
+        await updateFilter();
         selectedList = null;
     }
 
@@ -82,9 +108,14 @@
             }
         }
         selectedList = item;
+        document.getElementById("list-container")?.scrollTo({ top: 0 });
     }
 
     async function back() {
+        if (loadAllListsOnNextBack) {
+            await updateFilter();
+            loadAllListsOnNextBack = false;
+        }
         if (selectedTrail) {
             mapWithElevation.unFocusTrail(selectedTrail);
             selectedTrail = null;
@@ -111,6 +142,80 @@
     function unHighlightTrail(trail: Trail) {
         mapWithElevation.unHighlightTrail(trail.id!);
     }
+
+    async function onListScroll(e: any) {
+        const container = e.target as HTMLDivElement;
+        const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+
+        if (
+            scrollTop + clientHeight >= scrollHeight * 0.8 &&
+            pagination.page !== pagination.totalPages &&
+            !loadingNextPage
+        ) {
+            loadingNextPage = true;
+            await loadNextPage();
+            loadingNextPage = false;
+        }
+    }
+
+    async function loadNextPage() {
+        pagination.page += 1;
+        data.lists = await lists_index(data.filter, pagination.page);
+    }
+
+    async function updateFilter() {
+        loading = true;
+
+        if (selectedList || selectedTrail) {
+            selectedList = null;
+            selectedTrail = null;
+            map.flyTo({
+                animate: true,
+                zoom: 1,
+                center: [0, 0],
+            });
+        }
+
+        pagination.page = 0;
+        data.lists = await lists_index(data.filter, pagination.page);
+        loading = false;
+    }
+
+    async function setSort(value: "name" | "created") {
+        data.filter.sort = value;
+        await updateFilter();
+    }
+
+    async function setSortOrder() {
+        if (data.filter.sortOrder === "+") {
+            data.filter.sortOrder = "-";
+        } else {
+            data.filter.sortOrder = "+";
+        }
+        await updateFilter();
+    }
+
+    async function setPublicFilter(e: Event) {
+        data.filter.public = (e.target as HTMLInputElement).checked;
+        updateFilter();
+    }
+
+    async function setAuthorFilter(item: SearchItem) {
+        data.filter.author = item.value.id;
+        await updateFilter();
+    }
+
+    async function clearAuthorFilter() {
+        data.filter.author = "";
+        await updateFilter();
+    }
+
+    async function setSharedFilter(e: Event) {
+        data.filter.shared = (e.target as HTMLInputElement).checked;
+        updateFilter();
+    }
 </script>
 
 <svelte:head>
@@ -118,10 +223,10 @@
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[430px_1fr] gap-4 lg:gap-4 md:mx-4">
     <div
-        class="list-list md:mx-auto rounded-xl border border-input-border max-h-full w-full order-1 md:order-none"
+        class="list-list relative md:mx-auto rounded-xl border border-input-border max-h-full w-full order-1 md:order-none"
     >
         <div
-            class="flex gap-x-4 items-center justify-between p-4 bg-background z-50 rounded-xl"
+            class="flex gap-x-3 items-center px-3 py-4 bg-background z-50 rounded-xl"
         >
             <button
                 class="btn-icon"
@@ -129,29 +234,101 @@
                 disabled={!selectedList}
                 on:click={back}><i class="fa fa-arrow-left"></i></button
             >
-            <a class="btn-primary btn-large text-center" href="/lists/edit/new"
-                ><i class="fa fa-plus mr-2"></i>{$_("new-list")}</a
+            <Search bind:value={data.filter.q} on:update={updateFilter}
+            ></Search>
+            <button
+                class="btn-icon"
+                on:click={() => (filterExpanded = !filterExpanded)}
+                ><i class="fa fa-sliders"></i></button
             >
-            <!-- <button type="button" class="btn-icon" on:click={toggleMap}
-                ><i class="fa-regular fa-{showMap ? 'rectangle-list' : 'map'}"
-                ></i></button
-            > -->
+            <a
+                class="btn-primary tooltip"
+                data-title={$_("new-list")}
+                href="/lists/edit/new"><i class="fa fa-plus"></i></a
+            >
         </div>
+        {#if filterExpanded}
+            <div
+                class="absolute bg-background z-10 shadow-lg rounded-b-xl w-full px-14"
+                in:slide
+                out:slide
+            >
+                <p class="text-sm font-medium pb-1">{$_("sort")}</p>
+                <div class="flex items-center gap-2">
+                    <Select
+                        bind:value={data.filter.sort}
+                        items={sortOptions}
+                        on:change={(e) => setSort(e.detail)}
+                    ></Select>
+                    <button
+                        id="sort-order-btn"
+                        class="btn-icon"
+                        class:rotated={data.filter.sortOrder == "-"}
+                        on:click={() => setSortOrder()}
+                        ><i class="fa fa-arrow-up"></i></button
+                    >
+                </div>
+                {#if $currentUser}
+                    <hr class="my-4 border-separator" />
 
+                    <UserSearch
+                        on:click={(e) => setAuthorFilter(e.detail)}
+                        on:clear={clearAuthorFilter}
+                        bind:value={userQuery}
+                        clearAfterSelect={false}
+                        label={$_("author")}
+                    ></UserSearch>
+                    <div class="flex items-center my-4">
+                        <input
+                            id="public-checkbox"
+                            type="checkbox"
+                            checked={data.filter.public}
+                            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                            on:change={setPublicFilter}
+                        />
+                        <label for="public-checkbox" class="ms-2 text-sm"
+                            >{$_("public")}</label
+                        >
+                    </div>
+                    <div class="flex items-center my-4">
+                        <input
+                            id="shared-checkbox"
+                            type="checkbox"
+                            checked={data.filter.shared}
+                            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                            on:change={setSharedFilter}
+                        />
+                        <label for="shared-checkbox" class="ms-2 text-sm"
+                            >{$_("shared")}</label
+                        >
+                    </div>
+                {/if}
+            </div>
+        {/if}
         <hr class="border-separator" />
 
-        <div>
+        <div
+            id="list-container"
+            class="overflow-y-scroll overflow-x-clip max-h-full"
+            on:scroll={onListScroll}
+        >
             {#if !selectedList}
-                <div class="px-4 mt-2">
-                    {#each $lists as item, i}
-                        <div
-                            class="list-list-item my-1"
-                            on:click={() => setCurrentList(item)}
-                            role="presentation"
-                        >
-                            <ListCard list={item}></ListCard>
-                        </div>
-                    {/each}
+                <div class="px-4 mt-2" class:space-y-3={loading}>
+                    {#if loading}
+                        {#each { length: 3 } as _, index}
+                            <SkeletonCard></SkeletonCard>
+                        {/each}
+                    {:else}
+                        {#each data.lists.items as item, i}
+                            <div
+                                class="list-list-item"
+                                on:click={() => setCurrentList(item)}
+                                role="presentation"
+                            >
+                                <ListCard list={item}></ListCard>
+                            </div>
+                        {/each}
+                    {/if}
                 </div>
             {:else if selectedList && !selectedTrail}
                 <ListPanel
@@ -167,7 +344,7 @@
             {/if}
         </div>
     </div>
-    <div id="trail-map" class="md:sticky md:top-[62px]" class:hidden={!showMap}>
+    <div id="trail-map" class:hidden={!showMap}>
         <MapWithElevationMaplibre
             trails={selectedList?.expand?.trails ?? []}
             bind:map
@@ -192,7 +369,13 @@
         on:confirm={deleteList}
     ></ConfirmModal>
     {#if selectedList}
-        <ListShareModal list={selectedList} bind:openShareModal
+        <ListShareModal
+            list={selectedList}
+            bind:openShareModal
+            on:update={() => {
+                data.lists.items = data.lists.items;
+                selectedList = selectedList;
+            }}
         ></ListShareModal>
     {/if}
 </main>
@@ -201,6 +384,10 @@
     @media only screen and (min-width: 768px) {
         #trail-map {
             height: calc(100vh - 124px);
+        }
+
+        #list-container {
+            height: calc(100vh - 204px);
         }
     }
 </style>

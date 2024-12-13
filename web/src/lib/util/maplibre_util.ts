@@ -23,7 +23,7 @@ export class FontawesomeMarker extends M.Marker {
     }
 }
 
-export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker: M.Marker) => void): FontawesomeMarker {
+export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker: M.Marker, wpId?: string) => void): FontawesomeMarker {
     const marker = new FontawesomeMarker({
         icon: `fa fa-${waypoint.icon}`,
     }, {
@@ -44,7 +44,7 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
         .setPopup(popup)
 
     if (onDragEnd) {
-        marker.on("dragend", () => onDragEnd(marker));
+        marker.on("dragend", () => onDragEnd(marker, waypoint.id,));
     }
 
     return marker;
@@ -83,7 +83,7 @@ export function createPopupFromTrail(trail: Trail) {
     const thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail])
         : "/imgs/default_thumbnail.webp";
-    const popup = new M.Popup({maxWidth: "320px"});
+    const popup = new M.Popup({ maxWidth: "320px" });
     popup.setHTML(
         `<a href="/map/trail/${trail.id}" data-sveltekit-preload-data="off">
     <li class="flex items-center gap-4 cursor-pointer text-content max-w-80">

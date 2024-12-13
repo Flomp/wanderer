@@ -75,7 +75,7 @@
             {#if summitLogs.some((l) => l.text?.length)}
                 <th>{$_("description")}</th>
             {/if}
-            {#if showAuthor}
+            {#if showAuthor && summitLogs.some(l => l.expand.author)}
                 <th>
                     {$_("author", { values: { n: 1 } })}
                 </th>

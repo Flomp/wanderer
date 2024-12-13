@@ -5,30 +5,29 @@ import { pb } from "$lib/pocketbase";
 import { getFileURL } from "$lib/util/file_util";
 import { util } from "$lib/vendor/svelte-form-lib/util";
 import * as M from "maplibre-gl";
-import { ClientResponseError } from "pocketbase";
-import { get, writable, type Writable } from "svelte/store";
+import { ClientResponseError, type ListResult } from "pocketbase";
+import { writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
+import type { Hits, SearchResponse } from "meilisearch";
 
-export const trails: Writable<Trail[]> = writable([])
+let trails: Trail[] = []
 export const trail: Writable<Trail> = writable(new Trail(""));
 
 export const editTrail: Writable<Trail> = writable(new Trail(""));
 
-export async function trails_index(perPage: number = 21, random: boolean = false, setStore: boolean = true, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_index(perPage: number = 21, random: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail?' + new URLSearchParams({
         "per-page": perPage.toString(),
         expand: "category,waypoints,summit_logs",
-        sort: random ? "@random" : ""
+        sort: random ? "@random" : "",
     }), {
         method: 'GET',
     })
-    const response = await r.json()
+    const response: ListResult<Trail> = await r.json()
 
     if (r.ok) {
-        if (setStore) {
-            trails.set(response.items);
-        }
+        trails = response.items
         return response.items;
     } else {
         throw new ClientResponseError(response)
@@ -43,7 +42,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
         body: JSON.stringify({ q: filter.q, options: { filter: filterText, sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`], hitsPerPage: 12, page: page } }),
     });
 
-    const result = await r.json();
+    const result: { page: number, totalPages: number, hits: Hits<Record<string, any>> } = await r.json();
 
     if (!r.ok) {
         throw new ClientResponseError(result)
@@ -52,7 +51,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     const trailIds = result.hits.map((h: Record<string, any>) => h.id);
 
     if (trailIds.length == 0) {
-        return { trails: [], ...result };
+        return { items: [], ...result };
     }
 
     r = await f('/api/v1/trail?' + new URLSearchParams({
@@ -62,10 +61,10 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     }), {
         method: 'GET',
     })
-    const response = await r.json()
+    const response: ListResult<Trail> = await r.json()
 
     if (r.ok) {
-        return { trails: response.items, ...result };
+        return { items: response.items, ...result };
     } else {
         throw new ClientResponseError(response)
     }
@@ -96,9 +95,9 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
     const trailIds = result.hits?.map((h: Record<string, any>) => h.id) ?? [];
 
     if (trailIds.length == 0) {
-        const currentTrails: Trail[] = get(trails);
+        const currentTrails: Trail[] = trails;
         const comparison = compareObjectArrays<Trail>(currentTrails, []);
-
+        trails = [];
         return { trails: [], ...comparison }
     }
 
@@ -123,8 +122,8 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
             }
         }
 
-
-        const comparison = compareObjectArrays<Trail>(get(trails), response.items)
+        const comparison = compareObjectArrays<Trail>(trails, response.items)
+        trails = response.items;
 
         return { trails: response.items, ...comparison };
     } else {

@@ -40,7 +40,7 @@
                 class="tooltip"
                 data-title={$_("make-thumbnail")}
                 on:click={handleThumbnailClick}
-                ><i class="fa fa-file-image text-primary"></i></button
+                ><i class="fa fa-file-image text-content"></i></button
             >
         {/if}
         {#if showExifControls}
@@ -49,7 +49,7 @@
                 class="tooltip"
                 data-title={$_("get-position-from-exif")}
                 on:click={handleExifClick}
-                ><i class="fa fa-magnifying-glass-location text-primary"></i></button
+                ><i class="fa fa-magnifying-glass-location text-content"></i></button
             >
         {/if}
         <button

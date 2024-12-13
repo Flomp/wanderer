@@ -22,10 +22,9 @@
     import { Waypoint } from "$lib/models/waypoint";
     import { categories } from "$lib/stores/category_store";
     import {
-        lists,
         lists_add_trail,
         lists_index,
-        lists_remove_trail,
+        lists_remove_trail
     } from "$lib/stores/list_store";
     import { summitLog } from "$lib/stores/summit_log_store";
     import { show_toast } from "$lib/stores/toast_store";
@@ -34,6 +33,7 @@
         trails_create,
         trails_update,
     } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store.js";
     import {
         anchors,
         appendToRoute,
@@ -53,11 +53,7 @@
     } from "$lib/util/format_util";
     import {
         fromFile,
-        fromFIT,
-        fromKML,
-        fromTCX,
-        gpx2trail,
-        isFITFile,
+        gpx2trail
     } from "$lib/util/gpx_util";
 
     import {
@@ -73,7 +69,7 @@
     import { scale } from "svelte/transition";
     import { array, number, object, string } from "yup";
 
-    export let data: { trail: Trail };
+    export let data;
 
     let map: M.Map;
 
@@ -387,21 +383,24 @@
             savedWaypoint.id = cryptoRandomString({ length: 15 });
             $form.expand.waypoints = [...$form.expand.waypoints, savedWaypoint];
         }
-        const marker = createMarkerFromWaypoint(savedWaypoint, (event) => {
-            var marker = event;
-            var position = marker.getLngLat();
-            const editableWaypointIndex = $form.expand.waypoints.findIndex(
-                (w) => w.id == savedWaypoint.id,
-            );
-            const editableWaypoint =
-                $form.expand.waypoints[editableWaypointIndex];
-            editableWaypoint!.lat = position.lat;
-            editableWaypoint!.lon = position.lng;
-            $form.expand.waypoints = [...$form.expand.waypoints];
-        });
+        const marker = createMarkerFromWaypoint(savedWaypoint, moveMarker);
 
         marker.addTo(map);
         savedWaypoint.marker = marker;
+    }
+
+    function moveMarker(marker: M.Marker, wpId?: string) {
+        const position = marker.getLngLat();
+        const editableWaypointIndex = $form.expand.waypoints.findIndex(
+            (w) => w.id == wpId,
+        );
+        const editableWaypoint = $form.expand.waypoints[editableWaypointIndex];
+        if (!editableWaypoint) {
+            return;
+        }
+        editableWaypoint.lat = position.lat;
+        editableWaypoint.lon = position.lng;
+        $form.expand.waypoints = [...$form.expand.waypoints];
     }
 
     function beforeSummitLogModalOpen() {
@@ -452,7 +451,7 @@
             } else {
                 await lists_add_trail(list, $form);
             }
-            await lists_index();
+            await lists_index({ q: "", author: $currentUser?.id ?? "" }, 1, -1);
         } catch (e) {
             console.error(e);
             show_toast({
@@ -841,13 +840,13 @@
             on:click={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
-        {#if $lists.length}
+        {#if data.lists.items.length}
             <hr class="border-separator" />
             <h3 class="text-xl font-semibold">
                 {$_("list", { values: { n: 2 } })}
             </h3>
             <div class="flex gap-4 flex-wrap">
-                {#each $lists as list}
+                {#each data.lists.items as list}
                     {#if $form.id && list.trails?.includes($form.id)}
                         <div
                             class="flex gap-2 items-center border border-input-border rounded-xl p-2"
@@ -903,6 +902,8 @@
         <MapWithElevationMaplibre
             trails={mapTrail}
             drawing={drawingActive}
+            showTerrain={true}
+            onMarkerDragEnd={moveMarker}
             bind:map
             on:click={(e) => handleMapClick(e.detail)}
         ></MapWithElevationMaplibre>
@@ -915,6 +916,7 @@
 <SummitLogModal bind:openModal={openSummitLogModal} on:save={saveSummitLog}
 ></SummitLogModal>
 <ListSelectModal
+    lists={data.lists.items}
     bind:openModal={openListSelectModal}
     on:change={(e) => handleListSelection(e.detail)}
 ></ListSelectModal>
