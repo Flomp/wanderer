@@ -18,7 +18,7 @@
     });
 
     onMount(() => {
-        switchTabs(0);
+        switchTabs(activeTab ?? 0);
     });
 
     function switchTabs(index: number) {
@@ -26,7 +26,7 @@
 
         const childElement = tabs?.children[index + 1] as HTMLElement;
         const newWidth = childElement?.getBoundingClientRect().width ?? 0;
-        const newPosition = childElement.offsetLeft;
+        const newPosition = childElement?.offsetLeft;
         indicatorWidth.set(newWidth);
         indicatorPosition.set(newPosition);
 

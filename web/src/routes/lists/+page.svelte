@@ -143,7 +143,7 @@
         mapWithElevation.unHighlightTrail(trail.id!);
     }
 
-    async function onListScroll(e: any) {
+    async function onListScroll(e: Event) {
         const container = e.target as HTMLDivElement;
         const scrollTop = container.scrollTop;
         const scrollHeight = container.scrollHeight;

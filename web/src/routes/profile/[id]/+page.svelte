@@ -1,8 +1,42 @@
 <script lang="ts">
+    import ActivityCard from "$lib/components/profile/activity_card.svelte";
+    import { activities_index } from "$lib/stores/activity_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
+
     export let data;
+
+    let loading: boolean = false;
+
+    $: pagination = {
+        page: data.activities.page,
+        totalPages: data.activities.totalPages,
+    };
+
+    async function onListScroll(e: Event) {
+        if (
+            window.innerHeight + window.scrollY >=
+                0.8 * document.body.offsetHeight &&
+            pagination.page !== pagination.totalPages &&
+            !loading
+        ) {
+            loading = true;
+            await loadNextPage();
+            loading = false;
+        }
+    }
+
+    async function loadNextPage() {
+        pagination.page += 1;
+        data.activities = await activities_index(data.user.id, pagination.page);
+    }
 </script>
+
+<svelte:window on:scroll={onListScroll} />
+
+<svelte:head>
+    <title>{$_("profile")} | wanderer</title>
+</svelte:head>
 
 <div class="mx-8 space-y-6">
     <div class="space-y-4">
@@ -58,7 +92,18 @@
             {/each}
         </div>
     </div>
-    <div>
+    <div class="space-y-4">
         <h4 class="text-xl font-semibold">Timeline</h4>
+
+        {#each data.activities.items as activity}
+            <a
+                class="block"
+                href={activity.type == "trail"
+                    ? `/trail/view/${activity.id}`
+                    : `/trail/view/${activity.trail_id}?t=3`}
+            >
+                <ActivityCard {activity} user={data.user}></ActivityCard>
+            </a>
+        {/each}
     </div>
 </div>

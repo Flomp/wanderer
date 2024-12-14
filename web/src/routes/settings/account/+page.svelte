@@ -7,8 +7,8 @@
         type SelectItem,
     } from "$lib/components/base/select.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
-    import EmailModal from "$lib/components/profile/email_modal.svelte";
-    import PasswordModal from "$lib/components/profile/password_modal.svelte";
+    import EmailModal from "$lib/components/settings/email_modal.svelte";
+    import PasswordModal from "$lib/components/settings/password_modal.svelte";
     import { show_toast } from "$lib/stores/toast_store";
     import {
         currentUser,

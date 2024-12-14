@@ -37,6 +37,7 @@
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
     export let markers: M.Marker[] = [];
+    export let activeTab = 0;
 
     const tabs = [
         $_("description"),
@@ -49,7 +50,6 @@
     const trailIsShared =
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 
-    let activeTab = 0;
 
     let thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail])

@@ -1,6 +1,7 @@
 <script lang="ts">
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import { trails_search_filter } from "$lib/stores/trail_store";
+    import { _ } from "svelte-i18n";
 
     export let data;
 
@@ -23,7 +24,9 @@
         data.trails = await trails_search_filter(data.filter, page);
     }
 </script>
-
+<svelte:head>
+    <title>{$_("profile")} | wanderer</title>
+</svelte:head>
 <TrailList
     {pagination}
     {loading}

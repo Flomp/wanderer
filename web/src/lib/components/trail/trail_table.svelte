@@ -38,7 +38,7 @@
 </script>
 
 <div
-    class="table-container w-full border border-input-border rounded-xl overflow-x-scroll"
+    class="table-container w-full border border-input-border rounded-xl overflow-x-scroll overflow-y-clip"
 >
     <table class="w-full">
         <thead>
