@@ -30,6 +30,7 @@
 <TrailList
     {pagination}
     {loading}
+    fullWidthCards={true}
     trails={data.trails.items}
     filter={data.filter}
     on:update={() => handleFilterUpdate()}

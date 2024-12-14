@@ -23,12 +23,13 @@
     on:click
     {type}
 >
-    {#if !loading}
+    <div class:invisible={loading}>
         {#if icon}
             <i class="fa fa-{icon} mr-2"></i>
         {/if}
         <slot />
-    {:else}
-        <div class="spinner"></div>
+    </div>
+    {#if loading}
+        <div class="absolute aspect-square spinner"></div>
     {/if}
 </button>

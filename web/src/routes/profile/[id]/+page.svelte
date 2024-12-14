@@ -53,8 +53,12 @@
             <p class="whitespace-pre-wrap text-sm">{data.user.bio}</p>
         {:else if data.isOwnProfile}
             <a class="btn-primary inline-block" href="/settings/profile"
-                >+ Add Bio</a
+                >+ {$_("add-bio")}</a
             >
+        {:else}
+            <p class="w-full text-center text-gray-500 text-sm">
+                {$_("empty-bio", { values: { username: data.user.username } })}
+            </p>
         {/if}
     </div>
     <div class="space-y-4">
@@ -62,6 +66,17 @@
             {$_("list", { values: { n: 2 } })}
         </h4>
         <div class="flex gap-x-4 overflow-x-scroll">
+            {#if !data.lists.length && data.isOwnProfile}
+                <a class="btn-primary inline-block" href="/lists/edit/new"
+                    >+ {$_("new-list")}</a
+                >
+            {:else if !data.lists.length}
+                <p class="w-full text-center text-gray-500 text-sm">
+                    {$_("empty-lists", {
+                        values: { username: data.user.username },
+                    })}
+                </p>
+            {/if}
             {#each data.lists as list}
                 <a
                     href="/lists?list={list.id}"
@@ -94,7 +109,17 @@
     </div>
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">Timeline</h4>
-
+        {#if !data.activities.items.length && data.isOwnProfile}
+            <a class="btn-primary inline-block" href="/trails/edit/new"
+                >+ {$_("new-trail")}</a
+            >
+        {:else if !data.activities.items.length}
+            <p class="w-full text-center text-gray-500 text-sm">
+                {$_("empty-activities", {
+                    values: { username: data.user.username },
+                })}
+            </p>
+        {/if}
         {#each data.activities.items as activity}
             <a
                 class="block"

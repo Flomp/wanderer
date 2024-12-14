@@ -11,6 +11,7 @@
     import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
+    export let fullWidth: boolean = false;
 
     $: thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail])
@@ -20,7 +21,9 @@
 </script>
 
 <div
-    class="trail-card relative rounded-2xl border border-input-border min-w-72 cursor-pointer"
+    class="trail-card relative rounded-2xl border border-input-border {fullWidth
+        ? 'min-w-72'
+        : 'w-72'} cursor-pointer"
     on:mouseenter
     on:mouseleave
     role="listitem"
@@ -65,7 +68,8 @@
             {/if}
             {#if trail.expand.author}
                 <p class="text-xs text-gray-500 mb-3">
-                    {$_("by")} <img
+                    {$_("by")}
+                    <img
                         class="rounded-full w-5 aspect-square mx-1 inline"
                         src={getFileURL(
                             trail.expand.author,

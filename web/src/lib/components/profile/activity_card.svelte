@@ -24,8 +24,7 @@
         />
         <div>
             <a class="underline" href="/profile/{user.id}"> {user.username} </a>
-            {activity.type === "trail" ? "planned" : "completed"}
-            a trail
+            {activity.type === "trail" ? $_("planned-a-trail") : $_("completed-a-trail")}
             <p class="text-xs text-gray-500 mb-3">
                 {new Date(activity.date).toLocaleDateString(undefined, {
                     month: "long",

@@ -85,8 +85,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 6px solid #fff;
-    border-color: #fff transparent #fff transparent;
+    border: 6px solid rgba(var(--content));
+    border-color: rgba(var(--content)) transparent rgba(var(--content)) transparent;
     animation: spinner 1.2s linear infinite;
 }
 

@@ -17,8 +17,8 @@
         page: 1,
         totalPages: 1,
     };
-
     export let loading: boolean = false;
+    export let fullWidthCards: boolean = false;
 
     const displayOptions: SelectItem[] = [
         { text: $_("card", { values: { n: 2 } }), value: "cards" },
@@ -180,7 +180,7 @@
                         data-sveltekit-preload-data="off"
                     >
                         {#if selectedDisplayOption === "cards"}
-                            <TrailCard {trail}></TrailCard>
+                            <TrailCard fullWidth={fullWidthCards} {trail}></TrailCard>
                         {:else}
                             <TrailListItem {trail}></TrailListItem>
                         {/if}
