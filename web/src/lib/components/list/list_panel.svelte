@@ -111,17 +111,13 @@
             >
         </div>
     {/if}
-    {#if list.avatar}
-        <img
-            class="w-full object-cover"
-            src={getFileURL(list, list.avatar)}
-            alt="avatar"
-        />
-    {:else}
-        <div class="flex w-full shrink-0 items-center justify-center min-h-72">
-            <i class="fa fa-table-list text-5xl"></i>
-        </div>
-    {/if}
+    <img
+        class="w-full object-cover max-h-64"
+        src={list.avatar
+            ? getFileURL(list, list.avatar)
+            : "/imgs/default_list_thumbnail.webp"}
+        alt="avatar"
+    />
 </div>
 
 <div class="p-4 md:p-6">

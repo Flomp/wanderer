@@ -6,7 +6,7 @@
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
     import Modal from "../base/modal.svelte";
-    
+
     export let lists: List[];
 
     export let openModal: (() => void) | undefined = undefined;
@@ -41,19 +41,14 @@
                 on:click={() => handleSelect(list)}
                 role="presentation"
             >
-                {#if list.avatar}
-                    <img
-                        class="w-12 aspect-square rounded-full"
-                        src={getFileURL(list, list.avatar)}
-                        alt="avatar"
-                    />
-                {:else}
-                    <div
-                        class="flex w-12 aspect-square shrink-0 items-center justify-center"
-                    >
-                        <i class="fa fa-table-list text-5xl"></i>
-                    </div>
-                {/if}
+                <img
+                    class="w-12 aspect-square rounded-full"
+                    src={list.avatar
+                        ? getFileURL(list, list.avatar)
+                        : "/imgs/default_list_thumbnail.webp"}
+                    alt="avatar"
+                />
+
                 <h5 class="text-md font-semibold">{list.name}</h5>
 
                 <i

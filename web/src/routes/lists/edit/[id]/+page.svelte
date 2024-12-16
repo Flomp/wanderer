@@ -257,10 +257,8 @@
                 />
             {:else}
                 <div
-                    class="flex items-center justify-center w-32 aspect-square rounded-full object-cover border border-gray-200"
-                >
-                    <i class="fa fa-table-list text-5xl"></i>
-                </div>
+                    class="w-32 aspect-square rounded-full bg-menu-item-background-focus border-gray-200"
+                ></div>
             {/if}
             <button
                 class="btn-secondary"

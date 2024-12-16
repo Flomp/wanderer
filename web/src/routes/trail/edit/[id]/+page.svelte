@@ -24,7 +24,7 @@
     import {
         lists_add_trail,
         lists_index,
-        lists_remove_trail
+        lists_remove_trail,
     } from "$lib/stores/list_store";
     import { summitLog } from "$lib/stores/summit_log_store";
     import { show_toast } from "$lib/stores/toast_store";
@@ -51,10 +51,7 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import {
-        fromFile,
-        gpx2trail
-    } from "$lib/util/gpx_util";
+    import { fromFile, gpx2trail } from "$lib/util/gpx_util";
 
     import {
         createAnchorMarker,
@@ -851,15 +848,14 @@
                         <div
                             class="flex gap-2 items-center border border-input-border rounded-xl p-2"
                         >
-                            {#if list.avatar}
-                                <img
-                                    class="w-8 aspect-square rounded-full object-cover"
-                                    src={getFileURL(list, list.avatar)}
-                                    alt="avatar"
-                                />
-                            {:else}
-                                <i class="fa fa-table-list text-2xl"></i>
-                            {/if}
+                            <img
+                                class="w-8 aspect-square rounded-full object-cover"
+                                src={list.avatar
+                                    ? getFileURL(list, list.avatar)
+                                    : "/imgs/default_list_thumbnail.webp"}
+                                alt="avatar"
+                            />
+
                             <span class="text-sm">{list.name}</span>
                         </div>
                     {/if}

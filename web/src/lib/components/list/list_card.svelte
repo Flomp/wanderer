@@ -38,24 +38,17 @@
     class="flex items-start gap-6 p-4 hover:bg-menu-item-background-hover rounded-xl transition-colors cursor-pointer"
     class:bg-menu-item-background-hover={active}
 >
-    {#if list.avatar}
-        <img
-            class="w-16 md:w-20 aspect-square rounded-full object-cover"
-            src={getFileURL(list, list.avatar)}
-            alt="avatar"
-        />
-    {:else}
-        <div
-            class="flex w-16 md:w-20 aspect-square shrink-0 items-center justify-center"
-        >
-            <i class="fa fa-table-list text-5xl"></i>
-        </div>
-    {/if}
+    <img
+        class="w-16 md:w-20 aspect-square rounded-full object-cover"
+        src={list.avatar
+            ? getFileURL(list, list.avatar)
+            : "/imgs/default_list_thumbnail.webp"}
+        alt="avatar"
+    />
+
     <div class="self-start min-w-0 basis-full transition-transform">
         <div class="flex items-center gap-3">
-            <h5
-                class="text-xl font-semibold overflow-hidden overflow-ellipsis"
-            >
+            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis">
                 {list.name}
             </h5>
             {#if list.public}

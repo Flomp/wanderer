@@ -14,7 +14,7 @@
     let fullDescription: boolean = false;
 </script>
 
-<div class="activity-card p-6 space-y-6 shadow-md rounded-xl">
+<div class="activity-card p-6 space-y-6 rounded-xl border border-input-border">
     <div class="flex gap-x-4 items-start">
         <img
             class="rounded-full w-10 aspect-square overflow-hidden"

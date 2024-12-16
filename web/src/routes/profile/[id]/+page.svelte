@@ -82,19 +82,14 @@
                     href="/lists?list={list.id}"
                     class="relative w-64 h-48 rounded-xl overflow-hidden group shrink-0"
                 >
-                    {#if list.avatar}
-                        <img
-                            class="w-full h-full object-cover transition-transform group-hover:scale-110"
-                            src={getFileURL(list, list.avatar)}
-                            alt="avatar"
-                        />
-                    {:else}
-                        <div
-                            class="flex w-16 md:w-20 aspect-square shrink-0 items-center justify-center"
-                        >
-                            <i class="fa fa-table-list text-5xl"></i>
-                        </div>
-                    {/if}
+                    <img
+                        class="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        src={list.avatar
+                            ? getFileURL(list, list.avatar)
+                            : "/imgs/default_list_thumbnail.webp"}
+                        alt="avatar"
+                    />
+
                     <div
                         class="absolute bottom-0 w-full h-2/3 bg-gradient-to-b from-transparent to-black opacity-50"
                     ></div>
