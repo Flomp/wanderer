@@ -3,6 +3,7 @@
         text: string;
         value: string;
         icon?: string;
+        description?: string;
     };
 </script>
 
@@ -32,6 +33,13 @@
             class="w-4 h-4 accent-primary border-input-border focus:ring-input-ring focus:ring-2"
             on:change={() => handleRadioChange(i)}
         />
-        <label for="{name}-radio-{i}" class="ms-2 text-sm">{item.text}</label>
+        <div class="ms-2 text-sm">
+            <label for="{name}-radio-{i}"
+                >{item.text}
+                {#if item.description}
+                    <p class="text-gray-500">{item.description}</p>
+                {/if}
+            </label>
+        </div>
     </div>
 {/each}

@@ -7,6 +7,8 @@
     const settingsLinks: SelectItem[] = [
         { text: $_("profile"), value: "/settings/profile" },
         { text: $_("my-account"), value: "/settings/account" },
+        { text: $_("privacy"), value: "/settings/privacy" },
+
         {
             text: $_("language") + " & " + $_("units"),
             value: "/settings/language",

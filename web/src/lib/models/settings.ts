@@ -9,6 +9,7 @@ class Settings {
   tilesets?: {name: string, url: string}[]
   terrain?: { terrain: string, hillshading: string};
   user?: string;
+  privacy?: {account: "public" | "private", trails: "public" | "private", lists: "public" | "private"}
 
   constructor(
     unit: "metric" | "imperial",

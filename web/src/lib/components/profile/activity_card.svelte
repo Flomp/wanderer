@@ -23,8 +23,16 @@
             alt="avatar"
         />
         <div>
-            <a class="underline" href="/profile/{user.id}"> {user.username} </a>
-            {activity.type === "trail" ? $_("planned-a-trail") : $_("completed-a-trail")}
+            {#if !user.private}
+                <a class="underline" href="/profile/{user.id}"
+                    >{user.username}</a
+                >
+            {:else}
+                <span>{user.username}</span>
+            {/if}
+            {activity.type === "trail"
+                ? $_("planned-a-trail")
+                : $_("completed-a-trail")}
             <p class="text-xs text-gray-500 mb-3">
                 {new Date(activity.date).toLocaleDateString(undefined, {
                     month: "long",
@@ -83,7 +91,13 @@
                 ? activity.description?.substring(0, 100)
                 : activity.description}
             {#if (activity.description?.length ?? 0) > 100 && !fullDescription}
-                <button on:click={() => (fullDescription = true)}>
+                <button
+                    on:click={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        fullDescription = true;
+                    }}
+                >
                     ... <span class="underline">{$_("read-more")}</span></button
                 >
             {/if}

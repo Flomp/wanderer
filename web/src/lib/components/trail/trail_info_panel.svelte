@@ -50,7 +50,6 @@
     const trailIsShared =
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 
-
     let thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail])
         : "/imgs/default_thumbnail.webp";
@@ -68,14 +67,14 @@
     onMount(async () => {});
 
     function openMarkerPopup(i: number) {
-        if((markers[i] as M.Marker).getPopup().isOpen()) {
+        if ((markers[i] as M.Marker).getPopup().isOpen()) {
             return;
         }
         (markers[i] as M.Marker).togglePopup();
     }
 
     function closeMarkerPopup(i: number) {
-        if(!(markers[i] as M.Marker).getPopup().isOpen()) {
+        if (!(markers[i] as M.Marker).getPopup().isOpen()) {
             return;
         }
         (markers[i] as M.Marker).togglePopup();
@@ -195,11 +194,15 @@
                                     `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <a
-                                class="underline"
-                                href="/profile/{trail.expand.author.id}"
-                                >{trail.expand.author.username}</a
-                            >
+                            {#if !trail.expand.author.private}
+                                <a
+                                    class="underline"
+                                    href="/profile/{trail.expand.author.id}"
+                                    >{trail.expand.author.username}</a
+                                >
+                            {:else}
+                                <span>{trail.expand.author.username}</span>
+                            {/if}
                         </p>
                     {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">

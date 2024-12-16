@@ -119,6 +119,7 @@
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
         initialValues: {
             ...data.trail,
+            public: $page.data.settings?.privacy.trails === "public",
             category:
                 data.trail.category ||
                 $page.data.settings?.category ||

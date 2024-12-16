@@ -134,9 +134,13 @@
                     `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
                 alt="avatar"
             />
-            <a class="underline" href="/profile/{list.expand.author.id}"
-                >{list.expand.author.username}</a
-            >
+            {#if !list.expand.author.private}
+                <a class="underline" href="/profile/{list.expand.author.id}"
+                    >{list.expand.author.username}</a
+                >
+            {:else}
+                <span>{list.expand.author.username}</span>
+            {/if}
         </p>
     {/if}
     <hr />

@@ -17,4 +17,5 @@ export type UserAnonymous = {
     avatar?: string;
     bio?: string;
     created?: string;
+    private: boolean;
 }

@@ -136,7 +136,19 @@
                 class="tooltip flex justify-center"
                 data-title={log.expand.author.username}
             >
-                <a href="/profile/{log.expand.author.id}">
+                {#if !log.expand.author.private}
+                    <a href="/profile/{log.expand.author.id}">
+                        <img
+                            class="rounded-full w-7 aspect-square"
+                            src={getFileURL(
+                                log.expand?.author,
+                                log.expand?.author.avatar,
+                            ) ||
+                                `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand?.author.username}&backgroundType=gradientLinear`}
+                            alt="avatar"
+                        />
+                    </a>
+                {:else}
                     <img
                         class="rounded-full w-7 aspect-square"
                         src={getFileURL(
@@ -146,7 +158,7 @@
                             `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand?.author.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                </a>
+                {/if}
             </p>
         </td>
     {/if}

@@ -47,7 +47,10 @@
     let openPublishConfirmModal: () => void;
 
     const { form, errors, handleChange, handleSubmit } = createForm<List>({
-        initialValues: data.list!,
+        initialValues: {
+            ...data.list!,
+            public: $page.data.settings?.privacy.lists === "public",
+        },
         validationSchema: listSchema,
         onSubmit: async (submittedList) => {
             if (await checkPrerequisites()) {
