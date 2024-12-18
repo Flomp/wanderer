@@ -2,8 +2,9 @@ import * as xml2js from 'isomorphic-xml2js';
 import Metadata from './metadata';
 import Route from './route';
 import Track from './track';
-import { allDatesToISOString, haversineDistance, removeEmpty } from './utils';
+import { allDatesToISOString, removeEmpty } from './utils';
 import Waypoint from './waypoint';
+import GpxMetricsComputation from './gpx-metrics-computation';
 
 const defaultAttributes = {
   version: '1.1',
@@ -78,6 +79,8 @@ export default class GPX {
     let totalDuration = 0;
     let totalDistance = 0;
 
+    const filter = new GpxMetricsComputation(5, 10);
+
     for (const track of this.trk ?? []) {
       for (const segment of track.trkseg ?? []) {
         const points = segment.trkpt ?? [];
@@ -91,29 +94,15 @@ export default class GPX {
           }
         }
 
-        const pointLength = points.length
-        for (let i = 1; i < pointLength; i++) {
-          const prevPoint = points[i - 1];
-          const point = points[i];
-          const elevation = point.ele ?? 0
-          const previousElevation = prevPoint.ele ?? 0
-          const elevationDiff = elevation - previousElevation;
-          if (elevationDiff > 0) {
-            totalElevationGain += elevationDiff;
-          } else {
-            totalElevationLoss += Math.abs(elevationDiff)
-          }
-
-          const distance = haversineDistance(
-            prevPoint.$.lat ?? 0,
-            prevPoint.$.lon ?? 0,
-            point.$.lat ?? 0,
-            point.$.lon ?? 0,
-          );
-          totalDistance += distance;
+        for (const point of points) {
+          filter.addAndFilter(point);
         }
       }
     }
+
+    totalElevationGain = filter.totalElevationGainSmoothed;
+    totalElevationLoss = filter.totalElevationLossSmoothed;
+    totalDistance = filter.totalDistance;
 
     return { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss, duration: totalDuration }
   }
