@@ -39,13 +39,38 @@
     in:fade={{ duration: 150 }}
     out:fade={{ duration: 150 }}
 >
-    <img class="rounded-full w-10 aspect-square" src={avatarSrc} alt="avatar" />
+    {#if comment.expand?.author.private}
+        <img
+            class="rounded-full w-10 aspect-square"
+            src={avatarSrc}
+            alt="avatar"
+        />
+    {:else}
+        <a
+            href="/profile/{comment.expand?.author.id}"
+            class="text-sm font-semibold"
+        >
+            <img
+                class="rounded-full w-10 aspect-square"
+                src={avatarSrc}
+                alt="avatar"
+            />
+        </a>
+    {/if}
     <div>
         <div class="flex items-center">
             <p class="">
-                <span class="text-sm font-semibold"
-                    >{comment.expand?.author.username}</span
-                >
+                {#if comment.expand?.author.private}
+                    <span class="text-sm font-semibold"
+                        >{comment.expand?.author.username}</span
+                    >
+                {:else}
+                    <a
+                        href="/profile/{comment.expand?.author.id}"
+                        class="text-sm font-semibold"
+                        >{comment.expand?.author.username}</a
+                    >
+                {/if}
                 <span class="text-xs text-gray-500 ml-2"
                     >{$_(`n-${timeSince.unit}-ago`, {
                         values: { n: timeSince.value },

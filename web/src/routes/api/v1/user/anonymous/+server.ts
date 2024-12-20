@@ -6,7 +6,13 @@ export async function GET(event: RequestEvent) {
     const page = event.url.searchParams.get("page") ?? "0";
     const perPage = event.url.searchParams.get("per-page") ?? "10";
     const sort = event.url.searchParams.get("sort") ?? ""
-    const filter = event.url.searchParams.get("filter") ?? "";
+    let filter = event.url.searchParams.get("filter") ?? "";
+
+    if (!filter.length) {
+        filter = "private=false"
+    } else {
+        filter += "&&private=false"
+    }
 
     try {
         const r = await pb.collection('users_anonymous')
