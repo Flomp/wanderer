@@ -1,5 +1,5 @@
 import type { Follow } from '$lib/models/follow';
-import type { User } from '$lib/models/user';
+import type { UserAnonymous } from '$lib/models/user';
 import { pb } from '$lib/pocketbase';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 
@@ -21,8 +21,8 @@ export async function GET(event: RequestEvent) {
                 .getList<Follow>(parseInt(page), parseInt(perPage), { sort: sort ?? "", filter: filter ?? "", requestKey: filter })
         }
         for (const follow of r.items) {
-            const follower = await pb.collection('users_anonymous').getOne<User>(follow.follower, {requestKey: filter})
-            const followee = await pb.collection('users_anonymous').getOne<User>(follow.followee, {requestKey: filter})
+            const follower = await pb.collection('users_anonymous').getOne<UserAnonymous>(follow.follower, { requestKey: filter })
+            const followee = await pb.collection('users_anonymous').getOne<UserAnonymous>(follow.followee, { requestKey: filter })
             follow.expand = {
                 follower, followee
             }

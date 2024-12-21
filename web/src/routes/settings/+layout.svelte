@@ -13,6 +13,7 @@
             text: $_("language") + " & " + $_("units"),
             value: "/settings/language",
         },
+        { text: $_("notifications"), value: "/settings/notifications" },
         { text: $_("map"), value: "/settings/map" },
         { text: `${$_("import")}/${$_("export")}`, value: "/settings/export" },
         {

@@ -1,0 +1,141 @@
+<script lang="ts">
+    import type { Notification } from "$lib/models/notification";
+    import { fly } from "svelte/transition";
+    import NotificationCard from "./notification_card.svelte";
+    import { page } from "$app/stores";
+    import {
+        notifications_index,
+        notifications_mark_as_seen,
+    } from "$lib/stores/notification_store";
+    import { currentUser } from "$lib/stores/user_store";
+    import { goto } from "$app/navigation";
+    import { onMount } from "svelte";
+    import SkeletonListItem from "../base/skeleton_list_item.svelte";
+    import SkeletonNotificationCard from "../base/skeleton_notification_card.svelte";
+
+    let notifications: Notification[] = [];
+
+    const pagination = {
+        page: $page.data.notifications.page,
+        totalPages: $page.data.notifications.totalPages,
+    };
+
+    let loadingNextPage: boolean = false;
+    let isOpen = false;
+
+    $: unreadCount = notifications.reduce(
+        (value, n) => (value += n.seen ? 0 : 1),
+        0,
+    );
+
+    onMount(() => {
+        if (!notifications.length && $page.data.notifications?.items?.length) {
+            notifications = $page.data.notifications.items;
+        }
+    });
+
+    async function toggleMenu(e: MouseEvent) {
+        e.stopPropagation();
+        e.preventDefault();
+        isOpen = !isOpen;
+        pagination.page = 0;
+        await loadNextPage();
+    }
+
+    function handleWindowClick(e: MouseEvent) {
+        if (
+            (e.target as HTMLElement).parentElement?.classList.contains(
+                "dropdown-toggle",
+            )
+        ) {
+            return;
+        }
+
+        isOpen = false;
+    }
+
+    async function onListScroll(e: Event) {
+        const container = e.target as HTMLDivElement;
+        const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+
+        if (
+            scrollTop + clientHeight >= scrollHeight * 0.8 &&
+            pagination.page !== pagination.totalPages &&
+            !loadingNextPage
+        ) {
+            await loadNextPage();
+        }
+    }
+
+    async function loadNextPage() {
+        loadingNextPage = true;
+
+        if (!$currentUser) {
+            return;
+        }
+        pagination.page += 1;
+        const result = await notifications_index(
+            { recipient: $currentUser.id },
+            pagination.page,
+        );
+
+        notifications = result.items;
+        loadingNextPage = false;
+    }
+
+    async function handleNotificationClick(e: CustomEvent) {
+        await notifications_mark_as_seen(e.detail.notification);
+        e.detail.notification.seen = true;
+        notifications = notifications;
+
+        if (e.detail.link) {
+            goto(e.detail.link);
+        }
+    }
+</script>
+
+<svelte:window on:mouseup={handleWindowClick} />
+
+<div class="dropdown relative">
+    {#if unreadCount > 0}
+        <div
+            class="absolute -top-1 -right-1 text-sm rounded-full bg-content text-content-inverse w-4 aspect-square text-center"
+        >
+            {unreadCount}
+        </div>
+    {/if}
+    <div class="dropdown-toggle">
+        <button on:click={toggleMenu} class="btn-icon">
+            <i class="fa fa-bell"></i>
+        </button>
+    </div>
+
+    {#if isOpen}
+        <ul
+            class="menu absolute bg-menu-background border border-input-border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-scroll mt-4 max-h-96 w-64"
+            class:none={isOpen}
+            on:scroll={onListScroll}
+            style="z-index: 1001"
+            in:fly={{ y: -10, duration: 150 }}
+            out:fly={{ y: -10, duration: 150 }}
+        >
+            {#if loadingNextPage}
+                {#each { length: 5 } as _, index}
+                    <SkeletonNotificationCard></SkeletonNotificationCard>
+                {/each}
+            {:else}
+                {#each notifications as notification}
+                    <NotificationCard
+                        on:click={handleNotificationClick}
+                        {notification}
+                    ></NotificationCard>
+                {/each}
+            {/if}
+        </ul>
+    {/if}
+</div>
+
+<style>
+</style>

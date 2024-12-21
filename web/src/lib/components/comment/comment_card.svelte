@@ -35,20 +35,20 @@
 </script>
 
 <div
-    class="flex gap-4 items-center"
+    class="flex gap-4 items-start"
     in:fade={{ duration: 150 }}
     out:fade={{ duration: 150 }}
 >
     {#if comment.expand?.author.private}
         <img
-            class="rounded-full w-10 aspect-square"
+            class="rounded-full w-10 aspect-square shrink-0"
             src={avatarSrc}
             alt="avatar"
         />
     {:else}
         <a
             href="/profile/{comment.expand?.author.id}"
-            class="text-sm font-semibold"
+            class="text-sm font-semibold shrink-0"
         >
             <img
                 class="rounded-full w-10 aspect-square"
@@ -97,7 +97,7 @@
             <TextField extraClasses="mt-2" bind:value={editedComment}
             ></TextField>
         {:else}
-            <p>{comment.text}</p>
+            <p class="whitespace-pre-wrap text-sm">{comment.text}</p>
         {/if}
     </div>
 </div>

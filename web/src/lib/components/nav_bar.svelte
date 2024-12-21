@@ -4,12 +4,15 @@
     import { theme, toggleTheme } from "$lib/stores/theme_store";
     import { currentUser, logout } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
+    import { _ } from "svelte-i18n";
     import { backInOut, cubicOut } from "svelte/easing";
     import { tweened } from "svelte/motion";
     import Drawer from "./base/drawer.svelte";
     import Dropdown from "./base/dropdown.svelte";
     import LogoTextLight from "./logo/logo_text_light.svelte";
-    import { _, format } from "svelte-i18n";
+    import { page } from "$app/stores";
+    import NotificationCard from "./notification/notification_card.svelte";
+    import NotificationDropdown from "./notification/notification_dropdown.svelte";
 
     let navBarItems = [
         { text: "Home", value: "/" },
@@ -200,6 +203,7 @@
             <a class="btn-primary btn-large" href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
+            <NotificationDropdown></NotificationDropdown>
             <Dropdown
                 items={dropdownItems}
                 on:change={(e) => handleDropdownClick(e.detail)}

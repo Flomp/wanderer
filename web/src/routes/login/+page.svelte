@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
+    import { goto, invalidate, invalidateAll } from "$app/navigation";
     import { page } from "$app/stores";
     import { env } from "$env/dynamic/public";
     import Button from "$lib/components/base/button.svelte";
@@ -45,7 +45,7 @@
             loading = true;
             try {
                 await login(newUser);
-                goto($page.url.searchParams.get("r") ?? "/");
+                window.location.href = $page.url.searchParams.get("r") ?? "/";
             } catch (e) {
                 if (
                     e instanceof ClientResponseError &&

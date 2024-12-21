@@ -257,6 +257,7 @@
             $form.id = prevId;
             $form.expand.gpx_data = gpxData;
             $form.category = $page.data.settings.category || $categories[0].id;
+            $form.public = $page.data.settings?.privacy.trails === "public";
 
             const log = new SummitLog(parseResult.trail.date as string, {
                 distance: $form.distance,
