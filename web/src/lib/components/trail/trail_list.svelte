@@ -49,15 +49,16 @@
         if (storedDisplayOption) {
             selectedDisplayOption = storedDisplayOption;
         }
-        if (filter && storedSort) {
-            filter.sort = storedSort as typeof filter.sort;
+        if (filter) {
+            filter.sort =
+                (storedSort as typeof filter.sort | null) ?? filter.sort;
         }
-        if (filter && storedSortOrder) {
-            filter.sortOrder = storedSortOrder as typeof filter.sortOrder;
+        if (filter) {
+            filter.sortOrder =
+                (storedSortOrder as typeof filter.sortOrder | null) ??
+                filter.sortOrder;
         }
-        if (storedSort || storedSortOrder) {
-            dispatch("update", filter);
-        }
+        dispatch("update", filter);
     });
 
     function setDisplayOption() {
@@ -148,9 +149,9 @@
             {:else}
                 {#each { length: 12 } as _, index}
                     {#if selectedDisplayOption === "cards"}
-                    <div class="flex-1">
-                        <SkeletonCard></SkeletonCard>
-                    </div>
+                        <div class="flex-1">
+                            <SkeletonCard></SkeletonCard>
+                        </div>
                     {:else if selectedDisplayOption === "list"}
                         <SkeletonListItem></SkeletonListItem>
                     {/if}
@@ -180,7 +181,8 @@
                         data-sveltekit-preload-data="off"
                     >
                         {#if selectedDisplayOption === "cards"}
-                            <TrailCard fullWidth={fullWidthCards} {trail}></TrailCard>
+                            <TrailCard fullWidth={fullWidthCards} {trail}
+                            ></TrailCard>
                         {:else}
                             <TrailListItem {trail}></TrailListItem>
                         {/if}
