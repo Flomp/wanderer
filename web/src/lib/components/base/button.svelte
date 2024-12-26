@@ -12,7 +12,7 @@
 </script>
 
 <button
-    class="{extraClasses} flex items-center justify-center"
+    class="relative {extraClasses} flex items-center justify-center"
     class:btn-primary={primary}
     class:btn-secondary={secondary}
     class:btn-large={large}
