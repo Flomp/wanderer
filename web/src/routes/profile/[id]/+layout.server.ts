@@ -1,8 +1,4 @@
-import type { Follow } from "$lib/models/follow";
-import type { Settings } from "$lib/models/settings";
-import type { UserAnonymous } from "$lib/models/user";
-import { follows_a_b, follows_counts, follows_index } from "$lib/stores/follow_store";
-import { settings_show } from "$lib/stores/settings_store";
+import { follows_a_b, follows_counts } from "$lib/stores/follow_store";
 import { users_show } from "$lib/stores/user_store";
 import { error, type ServerLoad } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";

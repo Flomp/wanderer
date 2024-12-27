@@ -23,7 +23,6 @@
     import { categories } from "$lib/stores/category_store";
     import {
         lists_add_trail,
-        lists_index,
         lists_remove_trail,
     } from "$lib/stores/list_store";
     import { summitLog } from "$lib/stores/summit_log_store";
@@ -33,7 +32,6 @@
         trails_create,
         trails_update,
     } from "$lib/stores/trail_store";
-    import { currentUser } from "$lib/stores/user_store.js";
     import {
         anchors,
         appendToRoute,
@@ -71,7 +69,7 @@
     let map: M.Map;
 
     let mapTrail: Trail[] = [];
-    $: gpxData = $form.expand?.gpx_data;
+    $: gpxData = $form.expand!?.gpx_data;
     $: if (gpxData) {
         updateTrailOnMap();
     }
@@ -119,7 +117,9 @@
     const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
         initialValues: {
             ...data.trail,
-            public: $page.data.settings?.privacy.trails === "public",
+            public: data.trail.id
+                ? data.trail.public
+                : $page.data.settings?.privacy.trails === "public",
             category:
                 data.trail.category ||
                 $page.data.settings?.category ||
@@ -160,8 +160,8 @@
                     (p) => !p.startsWith("data:image/svg+xml;base64"),
                 );
 
-                if ($form.expand.gpx_data && overwriteGPX) {
-                    gpxFile = new Blob([$form.expand.gpx_data], {
+                if ($form.expand!.gpx_data && overwriteGPX) {
+                    gpxFile = new Blob([$form.expand!.gpx_data], {
                         type: "text/xml",
                     });
                 }
@@ -219,8 +219,8 @@
         clearAnchorMarker();
         clearRoute();
 
-        if ($form.expand.gpx_data) {
-            const gpx = await GPX.parse($form.expand.gpx_data);
+        if ($form.expand!.gpx_data) {
+            const gpx = await GPX.parse($form.expand!.gpx_data);
             if (!(gpx instanceof Error)) {
                 setRoute(gpx);
                 initRouteAnchors(gpx);
@@ -255,7 +255,7 @@
             const parseResult = await gpx2trail(gpxData, selectedFile.name);
             $form = parseResult.trail;
             $form.id = prevId;
-            $form.expand.gpx_data = gpxData;
+            $form.expand!.gpx_data = gpxData;
             $form.category = $page.data.settings.category || $categories[0].id;
             $form.public = $page.data.settings?.privacy.trails === "public";
 
@@ -266,18 +266,18 @@
                 duration: $form.duration ? $form.duration * 60 : undefined,
             });
 
-            log.expand.gpx_data = gpxData;
+            log.expand!.gpx_data = gpxData;
             const blob = new Blob([gpxData], { type: selectedFile.type });
             log._gpx = new File([blob], selectedFile.name, {
                 type: selectedFile.type,
             });
 
-            $form.expand.summit_logs.push(log);
+            $form.expand!.summit_logs.push(log);
 
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
 
-            for (const waypoint of $form.expand.waypoints) {
+            for (const waypoint of $form.expand!.waypoints) {
                 saveWaypoint(waypoint);
             }
         } catch (e) {
@@ -307,10 +307,10 @@
     }
 
     function clearWaypoints() {
-        for (const waypoint of $form.expand.waypoints) {
+        for (const waypoint of $form.expand!.waypoints) {
             waypoint.marker?.remove();
         }
-        $form.expand.waypoints = [];
+        $form.expand!.waypoints = [];
         $form.waypoints = [];
     }
 
@@ -365,22 +365,25 @@
     }
 
     function deleteWaypoint(index: number) {
-        $form.expand.waypoints.splice(index, 1);
+        $form.expand!.waypoints.splice(index, 1);
         $form.waypoints.splice(index, 1);
-        $form.expand.waypoints = $form.expand.waypoints;
+        $form.expand!.waypoints = $form.expand!.waypoints;
     }
 
     function saveWaypoint(savedWaypoint: Waypoint) {
-        let editedWaypointIndex = $form.expand.waypoints.findIndex(
+        let editedWaypointIndex = $form.expand!.waypoints.findIndex(
             (s) => s.id == savedWaypoint.id,
         );
 
         if (editedWaypointIndex >= 0) {
-            $form.expand.waypoints[editedWaypointIndex].marker?.remove();
-            $form.expand.waypoints[editedWaypointIndex] = savedWaypoint;
+            $form.expand!.waypoints[editedWaypointIndex].marker?.remove();
+            $form.expand!.waypoints[editedWaypointIndex] = savedWaypoint;
         } else {
             savedWaypoint.id = cryptoRandomString({ length: 15 });
-            $form.expand.waypoints = [...$form.expand.waypoints, savedWaypoint];
+            $form.expand!.waypoints = [
+                ...$form.expand!.waypoints,
+                savedWaypoint,
+            ];
         }
         const marker = createMarkerFromWaypoint(savedWaypoint, moveMarker);
 
@@ -390,16 +393,16 @@
 
     function moveMarker(marker: M.Marker, wpId?: string) {
         const position = marker.getLngLat();
-        const editableWaypointIndex = $form.expand.waypoints.findIndex(
+        const editableWaypointIndex = $form.expand!.waypoints.findIndex(
             (w) => w.id == wpId,
         );
-        const editableWaypoint = $form.expand.waypoints[editableWaypointIndex];
+        const editableWaypoint = $form.expand!.waypoints[editableWaypointIndex];
         if (!editableWaypoint) {
             return;
         }
         editableWaypoint.lat = position.lat;
         editableWaypoint.lon = position.lng;
-        $form.expand.waypoints = [...$form.expand.waypoints];
+        $form.expand!.waypoints = [...$form.expand!.waypoints];
     }
 
     function beforeSummitLogModalOpen() {
@@ -410,16 +413,16 @@
     function saveSummitLog(e: CustomEvent<SummitLog>) {
         const savedSummitLog = e.detail;
 
-        let editedSummitLogIndex = $form.expand.summit_logs.findIndex(
+        let editedSummitLogIndex = $form.expand!.summit_logs.findIndex(
             (s) => s.id == savedSummitLog.id,
         );
 
         if (editedSummitLogIndex >= 0) {
-            $form.expand.summit_logs[editedSummitLogIndex] = savedSummitLog;
+            $form.expand!.summit_logs[editedSummitLogIndex] = savedSummitLog;
         } else {
             savedSummitLog.id = cryptoRandomString({ length: 15 });
-            $form.expand.summit_logs = [
-                ...$form.expand.summit_logs,
+            $form.expand!.summit_logs = [
+                ...$form.expand!.summit_logs,
                 savedSummitLog,
             ];
         }
@@ -434,9 +437,9 @@
             summitLog.set(currentSummitLog);
             openSummitLogModal();
         } else if (e.detail.value === "delete") {
-            $form.expand.summit_logs.splice(index, 1);
+            $form.expand!.summit_logs.splice(index, 1);
             $form.summit_logs.splice(index, 1);
-            $form.expand.summit_logs = $form.expand.summit_logs;
+            $form.expand!.summit_logs = $form.expand!.summit_logs;
         }
     }
 
@@ -446,11 +449,15 @@
         }
         try {
             if (list.trails?.includes($form.id!)) {
-                await lists_remove_trail(list, $form);
+                list = await lists_remove_trail(list, $form);
             } else {
-                await lists_add_trail(list, $form);
+                list = await lists_add_trail(list, $form);
             }
-            await lists_index({ q: "", author: $currentUser?.id ?? "" }, 1, -1);
+            const index = data.lists.items.findIndex((l) => l.id == list.id);
+            if (index >= 0) {
+                data.lists.items[index] = list;
+            }
+            // await lists_index({ q: "", author: $currentUser?.id ?? "" }, 1, -1);
         } catch (e) {
             console.error(e);
             show_toast({
@@ -612,7 +619,7 @@
         $form.duration = totals.duration;
         $form.elevation_gain = totals.elevationGain;
         $form.elevation_loss = totals.elevationLoss;
-        $form.expand.gpx_data = route.toString();
+        $form.expand!.gpx_data = route.toString();
     }
 
     function updateTrailOnMap() {
@@ -794,7 +801,7 @@
             {$_("waypoints", { values: { n: 2 } })}
         </h3>
         <ul>
-            {#each $form.expand.waypoints ?? [] as waypoint, i}
+            {#each $form.expand?.waypoints ?? [] as waypoint, i}
                 <li on:mouseenter={() => openMarkerPopup(waypoint)}>
                     <WaypointCard
                         {waypoint}
@@ -823,7 +830,7 @@
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">{$_("summit-book")}</h3>
         <ul>
-            {#each $form.expand.summit_logs ?? [] as log, i}
+            {#each $form.expand?.summit_logs ?? [] as log, i}
                 <li>
                     <SummitLogCard
                         {log}

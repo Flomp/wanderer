@@ -1,28 +1,16 @@
 import type { Notification } from '$lib/models/notification';
 import type { UserAnonymous } from '$lib/models/user';
 import { pb } from '$lib/pocketbase';
+import { Collection, list } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
-    const page = event.url.searchParams.get("page") ?? "0";
-    const perPage = event.url.searchParams.get("per-page") ?? "10";
-    const sort = event.url.searchParams.get('sort') ?? ""
-    const filter = event.url.searchParams.get("filter") ?? "";
-
     try {
-        let r;
-        if (parseInt(perPage) < 0) {
-            r = {
-                items: await pb.collection('notifications')
-                    .getFullList<Notification>({ sort: sort, filter: filter, requestKey: filter })
-            }
-        } else {
-            r = await pb.collection('notifications')
-                .getList<Notification>(parseInt(page), parseInt(perPage), { sort: sort ?? "", filter: filter ?? "", requestKey: filter })
-        }
+        const r = await list<Notification>(event, Collection.notifications);
+
         for (const notification of r.items) {
-            const recipient = await pb.collection('users_anonymous').getOne<UserAnonymous>(notification.recipient, { requestKey: filter })
-            const author = await pb.collection('users_anonymous').getOne<UserAnonymous>(notification.author, { requestKey: filter })
+            const recipient = await pb.collection('users_anonymous').getOne<UserAnonymous>(notification.recipient, { requestKey: null })
+            const author = await pb.collection('users_anonymous').getOne<UserAnonymous>(notification.author, { requestKey: null })
             notification.expand = {
                 recipient, author
             }

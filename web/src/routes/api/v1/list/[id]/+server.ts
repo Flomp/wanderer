@@ -1,33 +1,36 @@
+import { ListUpdateSchema } from "$lib/models/api/list_schema";
 import type { List } from "$lib/models/list";
 import { pb } from "$lib/pocketbase";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
+import { json, type RequestEvent } from "@sveltejs/kit";
 
 export async function GET(event: RequestEvent) {
     try {
-        const r = await pb.collection('lists')
-            .getOne<List>(event.params.id as string, { expand: "trails,trails.waypoints,trails.category,list_share_via_list" })
+        const r = await show<List>(event, Collection.lists)
+        r.expand = {
+            author: await pb.collection('users_anonymous').getOne(r.author!)
+        }
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e)
     }
 }
 
 export async function POST(event: RequestEvent) {
-    const data = await event.request.json()
-
     try {
-        const r = await pb.collection('lists').update<List>(event.params.id as string, data)
+        const r = await update<List>(event, ListUpdateSchema, Collection.lists)
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }
 
 export async function DELETE(event: RequestEvent) {
     try {
-        const r = await pb.collection('lists').delete(event.params.id as string)
-        return json({ 'acknowledged': r });
+        const r = await remove(event, Collection.lists)
+        return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }
+

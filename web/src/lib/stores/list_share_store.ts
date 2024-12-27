@@ -1,5 +1,5 @@
 import type { ListShare } from "$lib/models/list_share";
-import { ClientResponseError } from "pocketbase";
+import { ClientResponseError, type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const shares: Writable<ListShare[]> = writable([])
@@ -16,9 +16,9 @@ export async function list_share_index(list: string, f: (url: RequestInfo | URL,
         throw new ClientResponseError(await r.json())
     }
 
-    const response: ListShare[] = await r.json();
+    const response: ListResult<ListShare> = await r.json();
 
-    shares.set(response);
+    shares.set(response.items);
 
     return response;
 

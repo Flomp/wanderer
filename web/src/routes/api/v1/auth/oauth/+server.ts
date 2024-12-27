@@ -3,6 +3,7 @@ import { env as private_env } from "$env/dynamic/private";
 
 import { pb } from "$lib/pocketbase";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { z } from "zod";
 
 const redirectURL = private_env.ORIGIN + "/login/redirect"
 
@@ -23,12 +24,18 @@ export async function GET(event: RequestEvent) {
 }
 
 export async function POST(event: RequestEvent) {
-    const data = await event.request.json();
     try {
+        const data = await event.request.json();
+        const safeData = z.object({
+            name: z.string(),
+            code: z.string(),
+            codeVerifier: z.string()
+        }).parse(data)
+
         const r = await pb.collection('users').authWithOAuth2Code(
-            data.name,
-            data.code,
-            data.codeVerifier,
+            safeData.name,
+            safeData.code,
+            safeData.codeVerifier,
             redirectURL,
         )
         return json(r)

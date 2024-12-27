@@ -1,33 +1,31 @@
+import { ListShareUpdateSchema } from "$lib/models/api/list_share_schema";
 import type { ListShare } from "$lib/models/list_share";
-import { pb } from "$lib/pocketbase";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
+import { json, type RequestEvent } from "@sveltejs/kit";
 
 export async function GET(event: RequestEvent) {
     try {
-        const r = await pb.collection('list_share')
-            .getOne<ListShare>(event.params.id as string)
+        const r = await show<ListShare>(event, Collection.list_share)
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e)
     }
 }
 
 export async function POST(event: RequestEvent) {
-    const data = await event.request.json()
-
     try {
-        const r = await pb.collection('list_share').update<ListShare>(event.params.id as string, data)
+        const r = await update<ListShare>(event, ListShareUpdateSchema, Collection.list_share)
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }
 
 export async function DELETE(event: RequestEvent) {
     try {
-        const r = await pb.collection('list_share').delete(event.params.id as string)
-        return json({ 'acknowledged': r });
+        const r = await remove(event, Collection.list_share)
+        return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }

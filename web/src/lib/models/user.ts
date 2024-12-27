@@ -7,7 +7,6 @@ export type User = {
     password: string,
     avatar?: string;
     bio?: string;
-    language?: string;
     created?: string;
 }
 

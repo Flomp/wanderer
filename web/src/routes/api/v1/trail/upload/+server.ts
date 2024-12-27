@@ -24,10 +24,10 @@ export async function PUT(event: RequestEvent) {
                 elevation_loss: trail.elevation_loss,
                 duration: trail.duration ? trail.duration * 60 : undefined,
             })
-            log.expand.gpx_data = gpxData;
+            log.expand!.gpx_data = gpxData;
             log._gpx = new File([gpxFile], (data.get("name") as string | null) ?? "file");
 
-            trail.expand.summit_logs.push(log);
+            trail.expand!.summit_logs.push(log);
         } catch (e: any) {
             throw new ClientResponseError({ status: 400, response: { message: "Invalid file" } })
         }

@@ -51,7 +51,7 @@
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 
     let thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
+        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
         : "/imgs/default_thumbnail.webp";
 
     let openGallery: (idx?: number) => void;
@@ -99,7 +99,7 @@
         comments_create(newComment).then((c) => {
             newComment.text = "";
             c.expand = {
-                author: $currentUser!,
+                author: { ...$currentUser!, private: false },
             };
 
             const newCommentList = [c, ...$comments];
@@ -182,7 +182,7 @@
                             )}
                         </h5>
                     {/if}
-                    {#if trail.expand.author}
+                    {#if trail.expand?.author}
                         <p class="my-3">
                             {$_("by")}
                             <img
@@ -218,7 +218,7 @@
                         </h3>
                     </div>
                 </div>
-                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand.trail_share_via_trail?.length || trail.public}
+                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
                     <TrailDropdown {trail} {mode}></TrailDropdown>
                 {/if}
             </div>
@@ -251,7 +251,7 @@
                         >{formatElevation(trail.elevation_loss)}</span
                     >
                 </div>
-                {#if trail.expand.category}
+                {#if trail.expand?.category}
                     <div class="flex flex-col items-center">
                         <span>{$_("category")}</span>
                         <span class="font-semibold text-lg"
@@ -286,7 +286,7 @@
             {/if}
             {#if activeTab == 1}
                 <ul>
-                    {#each trail.expand.waypoints ?? [] as waypoint, i}
+                    {#each trail.expand?.waypoints ?? [] as waypoint, i}
                         <li
                             on:mouseenter={() => openMarkerPopup(i)}
                             on:mouseleave={() => closeMarkerPopup(i)}
@@ -322,7 +322,7 @@
             {#if activeTab == 3}
                 <div class="overflow-x-auto">
                     <SummitLogTable
-                        summitLogs={trail.expand.summit_logs}
+                        summitLogs={trail.expand?.summit_logs}
                         showAuthor
                         showRoute
                         showPhotos

@@ -15,7 +15,7 @@
     export let showDescription: boolean = true;
 
     $: thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
+        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
         : "/imgs/default_thumbnail.webp";
 </script>
 
@@ -49,7 +49,7 @@
                 })}
             </p>
         {/if}
-        {#if trail.expand.author}
+        {#if trail.expand?.author}
             <p class="text-xs text-gray-500 mb-3">
                 {$_("by")}
                 <img

@@ -1,41 +1,49 @@
+import { RecordIdSchema } from '$lib/models/api/base_schema';
+import { UserUpdateSchema } from '$lib/models/api/user_schema';
 import type { User } from '$lib/models/user';
 import { pb } from '$lib/pocketbase';
+import { Collection, handleError, remove, show } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit'
 
 export async function GET(event: RequestEvent) {
     try {
-        const r = await pb.collection('users')
-            .getOne<User>(event.params.id as string)
+        const r = await show<User>(event, Collection.users)
+
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e);
     }
 }
 
 export async function POST(event: RequestEvent) {
     const data = await event.request.json()
     try {
-        if (data.email != pb.authStore.model!.email) {
-            const r = await pb.collection('users').requestEmailChange(data.email);
-            pb.authStore.model!.email = data.email;
+        const params = event.params
+        const safeParams = RecordIdSchema.parse(params);
+
+        const safeData = UserUpdateSchema.parse(data);
+
+        if (safeData.email && safeData.email != pb.authStore.model!.email) {
+            const r = await pb.collection('users').requestEmailChange(safeData.email);
+            pb.authStore.model!.email = safeData.email;
         }
-        const r = await pb.collection('users').update<User>(event.params.id as string, data)
-        if (data.password) {
-            const r = await pb.collection('users').authWithPassword(data.email ?? data.username!, data.password);
+        const r = await pb.collection('users').update<User>(safeParams.id, safeData)
+        if (safeData.password) {
+            const r = await pb.collection('users').authWithPassword(safeData.email ?? safeData.username!, safeData.password);
             return json(r.record)
         } else {
             return json(r);
         }
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e);
     }
 }
 
 export async function DELETE(event: RequestEvent) {
     try {
-        const r = await pb.collection('users').delete(event.params.id as string)
-        return json({ 'acknowledged': r });
+        const r = await remove(event, Collection.users)
+        return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e);
     }
 }

@@ -2,7 +2,7 @@ import { List, type ListFilter } from "$lib/models/list";
 import type { Trail } from "$lib/models/trail";
 import { pb } from "$lib/pocketbase";
 import { ClientResponseError, type ListResult } from "pocketbase";
-import { get, writable, type Writable } from "svelte/store";
+import { writable, type Writable } from "svelte/store";
 import { fetchGPX } from "./trail_store";
 
 let lists: List[] = []
@@ -14,9 +14,10 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
 
     const r = await f('/api/v1/list?' + new URLSearchParams({
         sort: `${filter?.sortOrder ?? "-"}${filter?.sort ?? "name"}`,
-        "per-page": perPage.toString(),
+        perPage: perPage.toString(),
         page: page.toString(),
-        filter: filterText
+        filter: filterText,
+        expand: "trails,trails.waypoints,trails.category,list_share_via_list"
     }), {
         method: 'GET',
     })
@@ -36,7 +37,9 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
 }
 
 export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const r = await f(`/api/v1/list/${id}`, {
+    const r = await f(`/api/v1/list/${id}?` + new URLSearchParams({
+        expand: "trails,trails.waypoints,trails.category,list_share_via_list"
+    }), {
         method: 'GET',
     })
     const response = await r.json()
@@ -132,6 +135,10 @@ export async function lists_add_trail(list: List, trail: Trail) {
     if (!r.ok) {
         throw new ClientResponseError(await r.json())
     }
+
+    const model: List = await r.json();
+
+    return model;
 }
 
 export async function lists_remove_trail(list: List, trail: Trail) {
@@ -145,6 +152,10 @@ export async function lists_remove_trail(list: List, trail: Trail) {
     if (!r.ok) {
         throw new ClientResponseError(await r.json())
     }
+
+    const model: List = await r.json();
+
+    return model;
 }
 
 export async function lists_delete(list: List) {

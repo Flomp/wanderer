@@ -1,19 +1,20 @@
 import { env } from '$env/dynamic/public';
+import { UserCreateSchema } from '$lib/models/api/user_schema';
 import type { User } from '$lib/models/user';
-import { pb } from '$lib/pocketbase';
-import { error, json, type RequestEvent } from '@sveltejs/kit'
+import { Collection, create, handleError } from '$lib/util/api_util';
+import { json, type RequestEvent } from '@sveltejs/kit';
 import { ClientResponseError } from 'pocketbase';
 
 export async function PUT(event: RequestEvent) {
-    const data = await event.request.json()
     try {
         if (env.PUBLIC_DISABLE_SIGNUP === "true") {
             throw new ClientResponseError({ status: 401, response: { messgage: "Forbidden" } })
         }
-        const r = await pb.collection('users').create<User>(data)
+        const r = await create<User>(event, UserCreateSchema, Collection.users)
+
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e);
     }
 }
 

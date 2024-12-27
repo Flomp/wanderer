@@ -104,7 +104,10 @@
         ) {
             for (const trail of item.expand.trails) {
                 const gpxData: string = await fetchGPX(trail);
-                trail.expand.gpx_data = gpxData;
+                if(!trail.expand) {
+                    (trail as any).expand = {}
+                }
+                trail.expand!.gpx_data = gpxData;
             }
         }
         selectedList = item;

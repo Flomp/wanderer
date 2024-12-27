@@ -103,7 +103,7 @@
                 if (!trail.expand) {
                     (trail as any).expand = {};
                 }
-                trail.expand.gpx_data = gpxData;
+                trail.expand!.gpx_data = gpxData;
                 const trailFolder = zip.folder(`${trail.name}`);
                 let fileData: string = await trail2gpx(trail);
                 if (exportSettings.fileFormat == "json") {

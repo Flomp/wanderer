@@ -179,14 +179,14 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         throw new ClientResponseError({ status: 401, response: { message: "Forbidden" } });
     }
 
-    for (const waypoint of trail.expand.waypoints) {
+    for (const waypoint of trail.expand?.waypoints ?? []) {
         const model = await waypoints_create({
             ...waypoint,
             marker: undefined,
         }, f);
         trail.waypoints.push(model.id!);
     }
-    for (const summitLog of trail.expand.summit_logs) {
+    for (const summitLog of trail.expand?.summit_logs ?? []) {
         const model = await summit_logs_create(summitLog, f);
         trail.summit_logs.push(model.id!);
     }
@@ -227,7 +227,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
 
 export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: File[], gpx?: File | Blob | null) {
 
-    const waypointUpdates = compareObjectArrays<Waypoint>(oldTrail.expand.waypoints ?? [], newTrail.expand.waypoints ?? []);
+    const waypointUpdates = compareObjectArrays<Waypoint>(oldTrail.expand?.waypoints ?? [], newTrail.expand?.waypoints ?? []);
 
     for (const addedWaypoint of waypointUpdates.added) {
         const model = await waypoints_create({
@@ -238,7 +238,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     }
 
     for (const updatedWaypoint of waypointUpdates.updated) {
-        const oldWaypoint = oldTrail.expand.waypoints.find(w => w.id == updatedWaypoint.id);
+        const oldWaypoint = oldTrail.expand?.waypoints.find(w => w.id == updatedWaypoint.id);
         const model = await waypoints_update(oldWaypoint!, {
             ...updatedWaypoint,
             marker: undefined,
@@ -249,7 +249,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         const success = await waypoints_delete(deletedWaypoint);
     }
 
-    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand.summit_logs ?? [], newTrail.expand.summit_logs ?? []);
+    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand?.summit_logs ?? [], newTrail.expand?.summit_logs ?? []);
 
     for (const summitLog of summitLogUpdates.added) {
         const model = await summit_logs_create(summitLog);
@@ -257,7 +257,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     }
 
     for (const updatedSummitLog of summitLogUpdates.updated) {
-        const oldSummitLog = oldTrail.expand.summit_logs.find(w => w.id == updatedSummitLog.id);
+        const oldSummitLog = oldTrail.expand?.summit_logs.find(w => w.id == updatedSummitLog.id);
 
         const model = await summit_logs_update(oldSummitLog!, updatedSummitLog);
     }
@@ -266,7 +266,9 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         const success = await summit_logs_delete(deletedSummitLog);
     }
 
-    let r = await fetch('/api/v1/trail/' + newTrail.id, {
+    let r = await fetch(`/api/v1/trail/${newTrail.id}?` + new URLSearchParams({
+        expand: "category,waypoints,summit_logs,trail_share_via_trail",
+    }), {
         method: 'POST',
         body: JSON.stringify({ ...newTrail, expand: undefined }),
     })
@@ -312,12 +314,12 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
 
 
 export async function trails_delete(trail: Trail) {
-    if (trail.expand.waypoints) {
+    if (trail.expand?.waypoints) {
         for (const waypoint of trail.expand.waypoints) {
             await waypoints_delete(waypoint);
         }
     }
-    if (trail.expand.summit_logs) {
+    if (trail.expand?.summit_logs) {
         for (const summit_log of trail.expand.summit_logs) {
             await summit_logs_delete(summit_log);
         }

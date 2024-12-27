@@ -11,7 +11,7 @@ class Waypoint {
     icon?: string;
     marker?: M.Marker;
     photos: string[];
-    _photos: File[];
+    _photos?: File[];
     author?: string;
 
     constructor(lat: number, lon: number, params?: {

@@ -35,7 +35,7 @@ export async function gpx2trail(gpxString: string, fallbackName?: string) {
         wp.id = cryptoRandomString({ length: 15 });
         wp.name = wpt.name ?? ""
         wp.description = wpt.desc;
-        trail.expand.waypoints.push(wp);
+        trail.expand!.waypoints.push(wp);
     }
 
     const totals = gpx.getTotals()

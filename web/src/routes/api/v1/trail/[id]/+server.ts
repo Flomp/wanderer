@@ -1,20 +1,18 @@
 import type { Trail } from "$lib/models/trail";
 import { pb } from "$lib/pocketbase";
+import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { TrailUpdateSchema } from '$lib/models/api/trail_schema';
 
 export async function GET(event: RequestEvent) {
-    const expand = event.url.searchParams.get("expand") ?? ""
-
     try {
-        const r = await pb.collection('trails')
-            .getOne<Trail>(event.params.id as string, { expand: expand ?? "" })
-
+        const r = await show<Trail>(event, Collection.trails)
 
         if (pb.authStore.model) {
             if (!r.expand) {
                 r.expand = {} as any
             }
-            r.expand.author = await pb.collection("users_anonymous").getOne(r.author!);
+            r.expand!.author = await pb.collection("users_anonymous").getOne(r.author!);
         }
 
         // remove time from dates
@@ -25,33 +23,31 @@ export async function GET(event: RequestEvent) {
             if (!log.expand) {
                 log.expand = {} as any
             }
-            if(log.author) {
-                log.expand.author = await pb.collection("users_anonymous").getOne(log.author);
+            if (log.author) {
+                log.expand!.author = await pb.collection("users_anonymous").getOne(log.author);
             }
         }
         return json(r)
     } catch (e: any) {
-        console.error(e)
-        throw error(e.status || 500, e);
+        throw handleError(e)
     }
 }
 
 
 export async function POST(event: RequestEvent) {
-    const data = await event.request.json()
     try {
-        const r = await pb.collection("trails").update<Trail>(event.params.id as string, data, { expand: "category,waypoints,summit_logs" });
+        const r = await update<Trail>(event, TrailUpdateSchema, Collection.trails)
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }
 
 export async function DELETE(event: RequestEvent) {
     try {
-        const r = await pb.collection('trails').delete(event.params.id as string)
-        return json({ 'acknowledged': r });
+        const r = await remove(event, Collection.trails)
+        return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }

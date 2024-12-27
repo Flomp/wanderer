@@ -1,5 +1,5 @@
 import type { TrailShare } from "$lib/models/trail_share";
-import { ClientResponseError } from "pocketbase";
+import { ClientResponseError, type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const shares: Writable<TrailShare[]> = writable([])
@@ -16,11 +16,11 @@ export async function trail_share_index(data: {trail?: string, user?: string}, f
         throw new ClientResponseError(await r.json())
     }
 
-    const response: TrailShare[] = await r.json();
+    const response: ListResult<TrailShare> = await r.json();
 
-    shares.set(response);
+    shares.set(response.items);
 
-    return response;
+    return response.items;
 
 }
 

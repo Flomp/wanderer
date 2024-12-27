@@ -18,14 +18,14 @@ class Trail {
     difficulty?: "easy" | "moderate" | "difficult"
     lat?: number;
     lon?: number;
-    thumbnail: number;
+    thumbnail?: number;
     photos: string[];
     gpx?: string;
     created?: string;
     category?: string;
     waypoints: string[];
     summit_logs: string[];
-    expand: {
+    expand?: {
         category?: Category;
         waypoints: Waypoint[]
         summit_logs: SummitLog[]

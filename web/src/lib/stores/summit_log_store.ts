@@ -1,6 +1,6 @@
 import { SummitLog, type SummitLogFilter } from "$lib/models/summit_log";
 import { pb } from "$lib/pocketbase";
-import { ClientResponseError } from "pocketbase";
+import { ClientResponseError, type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 import { fetchGPX } from "./trail_store";
 
@@ -14,6 +14,8 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
 
     const r = await f('/api/v1/summit-log?' + new URLSearchParams({
         filter: filterText,
+        expand: "trails_via_summit_logs.category",
+        sort: "+date",
     }), {
         method: 'GET',
     })
@@ -22,9 +24,9 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
         throw new ClientResponseError(await r.json())
     }
 
-    const fetchedSummitLogs: SummitLog[] = await r.json();
+    const fetchedSummitLogs: ListResult<SummitLog> = await r.json();
 
-    for (const log of fetchedSummitLogs) {
+    for (const log of fetchedSummitLogs.items) {
         if (!log.gpx) {
             continue
         }
@@ -36,7 +38,7 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
         log.expand.gpx_data = gpxData;
     }
 
-    summitLogs.set(fetchedSummitLogs);
+    summitLogs.set(fetchedSummitLogs.items);
 
     return fetchedSummitLogs;
 }
@@ -82,7 +84,7 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
     }
 
     if (r.ok) {
-        return await r.json();
+        return model;
     } else {
         throw new ClientResponseError(await r.json())
     }

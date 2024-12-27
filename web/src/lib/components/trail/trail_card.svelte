@@ -14,7 +14,7 @@
     export let fullWidth: boolean = false;
 
     $: thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
+        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
         : "/imgs/default_thumbnail.webp";
 
     $: trailIsShared = (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
@@ -66,7 +66,7 @@
                     })}
                 </p>
             {/if}
-            {#if trail.expand.author}
+            {#if trail.expand?.author}
                 <p class="text-xs text-gray-500 mb-3">
                     {$_("by")}
                     <img

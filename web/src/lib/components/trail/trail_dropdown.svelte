@@ -34,7 +34,7 @@
 
     const allowEdit =
         trail.author == $currentUser?.id ||
-        trail.expand.trail_share_via_trail?.some((s) => s.permission == "edit");
+        trail.expand?.trail_share_via_trail?.some((s) => s.permission == "edit");
 
     const dropdownItems: DropdownItem[] = [
         mode == "overview"
@@ -142,7 +142,7 @@
                 }
                 if (exportSettings.summitLog) {
                     let summitLogString = "";
-                    for (const summitLog of trail.expand.summit_logs) {
+                    for (const summitLog of trail.expand?.summit_logs ?? []) {
                         summitLogString += `${summitLog.date},${summitLog.text}\n`;
                     }
                     zip.file(

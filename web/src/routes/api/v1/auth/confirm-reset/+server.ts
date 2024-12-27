@@ -1,17 +1,16 @@
 import { pb } from "$lib/pocketbase";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
-import { ClientResponseError } from "pocketbase";
+import { z } from "zod";
 
 export async function POST(event: RequestEvent) {
     try {
-        let data;
-        try {
-            data = await event.request.json()
-        } catch (e) {
-            throw new ClientResponseError({ status: 400, response: { message: "Invalid json" } })
-        }
-
-        const r = await pb.collection('users').confirmPasswordReset(data.token, data.password, data.passwordConfirm);
+        const data = await event.request.json()
+        const safeData = z.object({
+            token: z.string(),
+            password: z.string(),
+            passwordConfirm: z.string()
+        }).refine(d => d.password === d.passwordConfirm).parse(data)
+        const r = await pb.collection('users').confirmPasswordReset(safeData.token, safeData.password, safeData.passwordConfirm);
         return json(r);
     } catch (e: any) {
         throw error(e.status, e);

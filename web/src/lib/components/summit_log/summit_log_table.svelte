@@ -32,13 +32,13 @@
     onMount(async () => {});
 
     async function openMap(log: SummitLog) {
-        if (!log.expand.gpx_data) {
+        if (!log.expand?.gpx_data) {
             return;
         }
 
         trail = (await gpx2trail(log.expand.gpx_data)).trail;
         trail.id = log.id;
-        trail.expand.gpx_data = log.expand.gpx_data;
+        trail.expand!.gpx_data = log.expand.gpx_data;
 
         openMapModal();
         await tick();
@@ -75,7 +75,7 @@
             {#if summitLogs.some((l) => l.text?.length)}
                 <th>{$_("description")}</th>
             {/if}
-            {#if showAuthor && summitLogs.some(l => l.expand.author)}
+            {#if showAuthor && summitLogs.some(l => l.expand?.author)}
                 <th>
                     {$_("author", { values: { n: 1 } })}
                 </th>

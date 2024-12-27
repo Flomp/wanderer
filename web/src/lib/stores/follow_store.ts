@@ -7,7 +7,8 @@ export async function follows_index(data: { follower?: string, followee?: string
     const r = await f('/api/v1/follow?' + new URLSearchParams({
         filter: data.follower ? `follower='${data.follower}'` : data.followee ? `followee='${data.followee}'` : '',
         page: page.toString(),
-        "per-page": perPage.toString()
+        perPage: perPage.toString(),
+        requestKey: "page"
     }), {
         method: 'GET',
     })

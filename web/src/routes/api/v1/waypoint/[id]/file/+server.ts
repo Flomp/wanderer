@@ -1,13 +1,12 @@
 import type { Waypoint } from "$lib/models/waypoint";
-import { pb } from "$lib/pocketbase";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { Collection, handleError, upload } from "$lib/util/api_util";
+import { json, type RequestEvent } from "@sveltejs/kit";
 
 export async function POST(event: RequestEvent) {
-    const data = await event.request.formData()
     try {
-        const r = await pb.collection("waypoints").update<Waypoint>(event.params.id as string, data,);
+        const r = await upload<Waypoint>(event, Collection.waypoints);
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e);
     }
 }

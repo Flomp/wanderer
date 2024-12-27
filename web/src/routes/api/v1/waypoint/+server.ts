@@ -1,23 +1,22 @@
+import { WaypointCreateSchema } from '$lib/models/api/waypoint_schema';
 import type { Waypoint } from '$lib/models/waypoint';
-import { pb } from '$lib/pocketbase';
-import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { Collection, create, handleError, list } from '$lib/util/api_util';
+import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
     try {
-        const r: Waypoint[] = await pb.collection('waypoints').getFullList<Waypoint>()
+        const r = await list<Waypoint>(event, Collection.waypoints);
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e);
     }
 }
 
 export async function PUT(event: RequestEvent) {
-    const data = await event.request.json();
-
     try {
-        const r = await pb.collection('waypoints').create<Waypoint>(data)
+        const r = await create<Waypoint>(event, WaypointCreateSchema, Collection.waypoints)
         return json(r);
-    } catch (e: any) {
-        throw error(e.status, e)
+    } catch (e) {
+        throw handleError(e)
     }
 }

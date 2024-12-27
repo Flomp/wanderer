@@ -5,7 +5,7 @@ let activities: Activity[] = [];
 
 export async function activities_index(author: string, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/activity?' + new URLSearchParams({
-        "per-page": perPage.toString(),
+        "perPage": perPage.toString(),
         page: page.toString(),
         filter: `author="${author}"`
     }), {

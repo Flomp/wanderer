@@ -6,16 +6,16 @@ class SummitLog {
   date: string;
   text?: string;
   gpx?: string;
-  _gpx: File | null;
+  _gpx?: File | null;
   photos: string[];
-  _photos: File[];
+  _photos?: File[];
   distance?: number
   elevation_gain?: number
   elevation_loss?: number
   duration?: number
   author?: string;
 
-  expand: {
+  expand?: {
     gpx_data?: string;
     trails_via_summit_logs?: Trail[];
     author?: UserAnonymous

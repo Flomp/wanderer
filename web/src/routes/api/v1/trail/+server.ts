@@ -1,49 +1,33 @@
+import { TrailCreateSchema } from '$lib/models/api/trail_schema';
 import type { Trail } from '$lib/models/trail';
 import { pb } from '$lib/pocketbase';
+import { Collection, create, handleError, list } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
-    const page = event.url.searchParams.get("page") ?? "0";
-    const perPage = event.url.searchParams.get("per-page") ?? "21";
-    const expand = event.url.searchParams.get("expand") ?? ""
-    const sort = event.url.searchParams.get("sort") ?? ""
-    const filter = event.url.searchParams.get("filter") ?? "";
-
     try {
-        let r;
-        if (parseInt(perPage) < 0) {
-            r = {
-                items: await pb.collection('trails')
-                    .getFullList<Trail>({ expand: expand, sort: sort, filter: filter })
-            }
-        } else {
-            r = await pb.collection('trails')
-                .getList<Trail>(parseInt(page), parseInt(perPage), { expand: expand ?? "", sort: sort ?? "", filter: filter ?? "" })
-        }
+        const r = await list<Trail>(event, Collection.trails);
 
         for (const t of r.items) {
             if (!t.author || !pb.authStore.model) {
                 continue;
             }
-            if(!t.expand) {
+            if (!t.expand) {
                 t.expand = {} as any
             }
-            t.expand.author = await pb.collection("users_anonymous").getOne(t.author);
+            t.expand!.author = await pb.collection("users_anonymous").getOne(t.author);
         }
         return json(r)
     } catch (e: any) {
-        console.error(e)
-        throw error(e.status, e);
+        throw handleError(e);
     }
 }
 
 export async function PUT(event: RequestEvent) {
-    const data = await event.request.json();
     try {
-        const r = await pb.collection('trails').create<Trail>(data)
-
+        const r = await create<Trail>(event, TrailCreateSchema, Collection.trails)
         return json(r);
-    } catch (e: any) {
-        throw error(e.status, e)
+    } catch (e) {
+        throw handleError(e)
     }
 }

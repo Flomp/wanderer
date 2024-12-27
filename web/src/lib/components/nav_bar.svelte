@@ -203,7 +203,9 @@
             <a class="btn-primary btn-large" href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
-            <NotificationDropdown></NotificationDropdown>
+            {#if $page.data.notifications}
+                <NotificationDropdown></NotificationDropdown>
+            {/if}
             <Dropdown
                 items={dropdownItems}
                 on:change={(e) => handleDropdownClick(e.detail)}
