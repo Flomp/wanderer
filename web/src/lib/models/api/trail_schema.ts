@@ -3,10 +3,11 @@ import type { Trail } from "../trail";
 
 
 const TrailCreateSchema = z.object({
-    name: z.string(),
+    id: z.string().length(15).optional(),
+    name: z.string().min(1, "required"),
     description: z.string().optional(),
     location: z.string().optional(),
-    date: z.string().date(),
+    date: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date"),
     public: z.boolean(),
     difficulty: z.enum(["easy", "moderate", "difficult"]).optional(),
     lat: z.number().optional(),
@@ -29,7 +30,7 @@ const TrailUpdateSchema = z.object({
     name: z.string(),
     description: z.string().optional(),
     location: z.string().optional(),
-    date: z.string().date(),
+    date: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date"),
     public: z.boolean().optional(),
     difficulty: z.enum(["easy", "moderate", "difficult"]).optional(),
     lat: z.number().optional(),

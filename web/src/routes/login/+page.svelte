@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { goto, invalidate, invalidateAll } from "$app/navigation";
     import { page } from "$app/stores";
     import { env } from "$env/dynamic/public";
     import Button from "$lib/components/base/button.svelte";
@@ -10,10 +9,11 @@
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { login } from "$lib/stores/user_store";
-    import { createForm } from "$lib/vendor/svelte-form-lib";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
     import { ClientResponseError, type AuthProviderInfo } from "pocketbase";
     import { _ } from "svelte-i18n";
-    import { object, string } from "yup";
+    import { z } from "zod";
 
     let loading: boolean = false;
 
@@ -31,18 +31,21 @@
         loginLabel = `${$_("email")}`;
     }
 
-    const { form, errors, handleChange, handleSubmit } = createForm<User>({
+    const { form, errors, data } = createForm<User>({
         initialValues: {
             id: "",
             username: "",
             password: "",
         },
-        validationSchema: object<User>({
-            username: string().required($_("required")),
-            password: string().required($_("required")),
+        extend: validator({
+            schema: z.object({
+                username: z.string().min(1, "required"),
+                password: z.string().min(1, "required"),
+            }),
         }),
         onSubmit: async (newUser) => {
             loading = true;
+
             try {
                 await login(newUser);
                 window.location.href = $page.url.searchParams.get("r") ?? "/";
@@ -80,7 +83,7 @@
 <main class="flex justify-center">
     <form
         class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-4 w-[28rem] mt-8"
-        on:submit={handleSubmit}
+        use:form
     >
         {#if $theme == "light"}
             <LogoTextTwoLineDark></LogoTextTwoLineDark>
@@ -93,8 +96,6 @@
                 <TextField
                     name="username"
                     label={loginLabel}
-                    bind:value={$form.username}
-                    on:change={handleChange}
                     error={$errors.username}
                 ></TextField>
                 <div class="flex flex-col">
@@ -102,8 +103,6 @@
                         name="password"
                         label={$_("password")}
                         type="password"
-                        bind:value={$form.password}
-                        on:change={handleChange}
                         error={$errors.password}
                     ></TextField>
                     <a

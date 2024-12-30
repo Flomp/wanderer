@@ -16,7 +16,7 @@ export class List {
         author?: UserAnonymous;
 
     }
-    author?: string;
+    author: string;
 
     constructor(name: string, trails: Trail[], params?: { description?: string, public?: boolean, avatar?: string, author?: string }) {
         this.name = name;
@@ -24,8 +24,8 @@ export class List {
         this.expand = { trails: trails };
         this.trails = trails.map(t => t.id!);
         this.description = params?.description;
-        this.avatar = params?.description;
-        this.author = params?.author;
+        this.avatar = params?.avatar;
+        this.author = params?.author ?? "000000000000000";
     }
 }
 

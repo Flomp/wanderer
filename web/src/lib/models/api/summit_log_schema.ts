@@ -4,7 +4,7 @@ import type { SummitLog } from "../summit_log";
 
 const SummitLogCreateSchema = z.object({
     id: z.string().length(15).optional(),
-    date: z.string().date(),
+    date: z.string().date().refine((val) => !isNaN(Date.parse(val)), "invalid-date"),
     text: z.string().optional(),
     gpx: z.string().optional(),
     distance: z.number().nonnegative().optional(),
@@ -16,7 +16,7 @@ const SummitLogCreateSchema = z.object({
 }) satisfies ZodType<SummitLog>
 
 const SummitLogUpdateSchema = z.object({
-    date: z.string().date().optional(),
+    date: z.string().date().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date").optional(),
     text: z.string().optional(),
     gpx: z.string().optional(),
     distance: z.number().nonnegative().optional(),

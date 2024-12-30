@@ -2,14 +2,14 @@ import type { SummitLog } from "$lib/models/summit_log";
 import { Trail, type TrailFilter, type TrailFilterValues } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
+import { deepEqual } from "$lib/util/deep_util";
 import { getFileURL } from "$lib/util/file_util";
-import { util } from "$lib/vendor/svelte-form-lib/util";
 import * as M from "maplibre-gl";
+import type { Hits } from "meilisearch";
 import { ClientResponseError, type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
-import type { Hits, SearchResponse } from "meilisearch";
 
 let trails: Trail[] = []
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -469,7 +469,7 @@ function compareObjectArrays<T extends { id?: string }>(oldArray: T[], newArray:
         const oldObj = oldArray.find(oldObj => oldObj.id === newObj.id)
         if (!oldObj) {
             newObjects.push(newObj);
-        } else if (!util.deepEqual(newObj, oldObj)) {
+        } else if (!deepEqual(newObj, oldObj)) {
             updatedObjects.push(newObj);
         } else {
             unchangedObjects.push(newObj);

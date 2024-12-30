@@ -22,8 +22,9 @@ export const load: Load = async ({ params, fetch, data }) => {
 
         } catch (e) {           
             if (e instanceof ClientResponseError) {
-                return error(e.status as any, e.message)
+                throw error(e.status as any, e.message)
             }
+            throw e
         }
     }
 

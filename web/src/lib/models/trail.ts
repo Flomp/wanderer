@@ -36,7 +36,7 @@ class Trail {
     }
     tags?: string[];
     description?: string;
-    author?: string;
+    author: string;
 
     constructor(name: string,
         params?: {
@@ -70,10 +70,10 @@ class Trail {
         this.location = params?.location;
         this.date = params?.date ?? new Date().toISOString().split('T')[0];
         this.public = params?.public ?? false
-        this.distance = params?.distance;
-        this.elevation_gain = params?.elevation_gain;
-        this.elevation_loss = params?.elevation_loss;
-        this.duration = params?.duration;
+        this.distance = params?.distance ?? 0;
+        this.elevation_gain = params?.elevation_gain ?? 0;
+        this.elevation_loss = params?.elevation_loss ?? 0;
+        this.duration = params?.duration ?? 0;
         this.difficulty = params?.difficulty ?? "easy";
         this.lat = params?.lat;
         this.lon = params?.lon;
@@ -92,6 +92,7 @@ class Trail {
         this.tags = params?.tags ?? []
         this.description = params?.description ?? "";
         this.created = params?.created;
+        this.author = "000000000000000"
     }
 }
 

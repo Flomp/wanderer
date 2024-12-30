@@ -9,8 +9,8 @@
     import { createEventDispatcher } from "svelte";
 
     export let name: string = "";
-    export let value: any;
     export let items: SelectItem[] = [];
+    export let value: any = items.at(0)?.value ?? "";
     export let label: string = "";
     export let disabled: boolean = false;
 

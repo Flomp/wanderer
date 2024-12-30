@@ -13,7 +13,7 @@ class SummitLog {
   elevation_gain?: number
   elevation_loss?: number
   duration?: number
-  author?: string;
+  author: string;
 
   expand?: {
     gpx_data?: string;
@@ -33,6 +33,7 @@ class SummitLog {
     this._gpx = null
     this.photos = params?.photos ?? []
     this._photos = [];
+    this.author = "000000000000000"
   }
 }
 

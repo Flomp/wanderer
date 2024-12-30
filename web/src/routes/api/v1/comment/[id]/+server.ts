@@ -7,9 +7,11 @@ import { json, type RequestEvent } from "@sveltejs/kit";
 export async function GET(event: RequestEvent) {
     try {
         const r = await show<Comment>(event, Collection.comments)
-        r.expand = {
-            author: await pb.collection('users_anonymous').getOne(r.author)
+        if (!r.expand) {
+            r.expand = {} as any
         }
+        r.expand!.author = await pb.collection('users_anonymous').getOne(r.author)
+
         return json(r)
     } catch (e: any) {
         throw handleError(e)

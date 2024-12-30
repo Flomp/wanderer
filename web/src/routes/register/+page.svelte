@@ -8,38 +8,38 @@
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { login, users_create } from "$lib/stores/user_store";
-    import { createForm } from "$lib/vendor/svelte-form-lib";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
     import { _ } from "svelte-i18n";
-    import { object, string } from "yup";
+    import { z } from "zod";
+
     let loading: boolean = false;
-    const { form, errors, handleChange, handleSubmit } = createForm<User>({
+    const { form, errors } = createForm<User>({
         initialValues: {
             id: "",
             username: "",
             email: "",
             password: "",
         },
-        validationSchema: object<User>({
-            username: string()
-                .min(
+        extend: validator({
+            schema: z.object({
+                username: z.string().min(
                     3,
                     $_("must-be-at-least-n-characters-long", {
                         values: { n: 3 },
                     }),
-                )
-                .required($_("required"))
-                .matches(/^[\w][\w\.]*$/, { message: $_("invalid-username") }),
-            email: string()
-                .email($_("not-a-valid-email-address"))
-                .required($_("required")),
-            password: string()
-                .min(
+                ),
+                email: z
+                    .string()
+                    .min(1, "required")
+                    .email("not-a-valid-email-address"),
+                password: z.string().min(
                     8,
                     $_("must-be-at-least-n-characters-long", {
                         values: { n: 8 },
                     }),
-                )
-                .required($_("required")),
+                ),
+            }),
         }),
         onSubmit: async (newUser) => {
             loading = true;
@@ -77,7 +77,7 @@
 <main class="flex justify-center">
     <form
         class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-8 w-[28rem] mt-8"
-        on:submit={handleSubmit}
+        use:form
     >
         {#if $theme == "light"}
             <LogoTextTwoLineDark></LogoTextTwoLineDark>
@@ -89,23 +89,14 @@
             <TextField
                 name="username"
                 label={$_("username")}
-                bind:value={$form.username}
-                on:change={handleChange}
                 error={$errors.username}
             ></TextField>
-            <TextField
-                name="email"
-                label={$_("email")}
-                bind:value={$form.email}
-                on:change={handleChange}
-                error={$errors.email}
+            <TextField name="email" label={$_("email")} error={$errors.email}
             ></TextField>
             <TextField
                 name="password"
                 label={$_("password")}
                 type="password"
-                bind:value={$form.password}
-                on:change={handleChange}
                 error={$errors.password}
             ></TextField>
             <Button

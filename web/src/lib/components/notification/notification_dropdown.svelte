@@ -125,13 +125,17 @@
                 {#each { length: 5 } as _, index}
                     <SkeletonNotificationCard></SkeletonNotificationCard>
                 {/each}
-            {:else}
+            {:else if notifications.length}
                 {#each notifications as notification}
                     <NotificationCard
                         on:click={handleNotificationClick}
                         {notification}
                     ></NotificationCard>
                 {/each}
+            {:else}
+                <p class="text-gray-500 text-sm text-center py-6">
+                    No notifications
+                </p>
             {/if}
         </ul>
     {/if}

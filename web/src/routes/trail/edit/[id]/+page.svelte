@@ -14,6 +14,9 @@
     import PhotoPicker from "$lib/components/trail/photo_picker.svelte";
     import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import WaypointModal from "$lib/components/waypoint/waypoint_modal.svelte";
+    import { SummitLogCreateSchema } from "$lib/models/api/summit_log_schema.js";
+    import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
+    import { WaypointCreateSchema } from "$lib/models/api/waypoint_schema.js";
     import GPX from "$lib/models/gpx/gpx";
     import type { List } from "$lib/models/list";
     import { SummitLog } from "$lib/models/summit_log";
@@ -31,7 +34,7 @@
         trail,
         trails_create,
         trails_update,
-    } from "$lib/stores/trail_store";
+    } from "$lib/stores/trail_store.js";
     import {
         anchors,
         appendToRoute,
@@ -55,21 +58,21 @@
         createAnchorMarker,
         createMarkerFromWaypoint,
     } from "$lib/util/maplibre_util";
-    import { createForm } from "$lib/vendor/svelte-form-lib";
+    import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
+    import { createForm } from "felte";
     import * as M from "maplibre-gl";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
-    import { array, number, object, string } from "yup";
+    import { z } from "zod";
 
     export let data;
 
     let map: M.Map;
-
     let mapTrail: Trail[] = [];
-    $: gpxData = $form.expand!?.gpx_data;
+    $: gpxData = $formData.expand!?.gpx_data;
     $: if (gpxData) {
         updateTrailOnMap();
     }
@@ -89,20 +92,18 @@
     let drawingActive = false;
     let overwriteGPX = false;
 
-    const trailSchema = object<Trail>({
-        id: string().optional(),
-        name: string().required($_("required")),
-        location: string().optional(),
-        distance: number().optional(),
-        difficulty: string()
-            .oneOf(["easy", "moderate", "difficult"])
+    const ClientTrailCreateSchema = TrailCreateSchema.extend({
+        expand: z
+            .object({
+                gpx_data: z.string().optional(),
+                summit_logs: z.array(SummitLogCreateSchema),
+                waypoints: z.array(
+                    WaypointCreateSchema.extend({
+                        marker: z.any().optional(),
+                    }),
+                ),
+            })
             .optional(),
-        elevation_gain: number().optional(),
-        duration: number().optional(),
-        thumbnail: string().optional(),
-        photos: array(string()).optional(),
-        gpx: string().optional(),
-        description: string().optional(),
     });
 
     const modesOfTransport = [
@@ -114,7 +115,12 @@
 
     let autoRouting = true;
 
-    const { form, errors, handleChange, handleSubmit } = createForm<Trail>({
+    const {
+        form,
+        errors,
+        data: formData,
+        setFields,
+    } = createForm<z.infer<typeof ClientTrailCreateSchema>>({
         initialValues: {
             ...data.trail,
             public: data.trail.id
@@ -125,28 +131,10 @@
                 $page.data.settings?.category ||
                 $categories[0].id,
         },
-        validationSchema: trailSchema,
-        onError: (errors) => {
-            if (errors.name) {
-                const nameInput = document.querySelector(
-                    "input[name=name]",
-                ) as HTMLElement;
-
-                if (window.innerWidth < 768) {
-                    window?.scroll({
-                        top: nameInput.offsetTop - 24,
-                        behavior: "smooth",
-                    });
-                } else {
-                    const form = document.getElementById("trail-form");
-                    form?.scroll({
-                        top: nameInput.offsetTop - 130,
-                        behavior: "smooth",
-                    });
-                }
-            }
-        },
-        onSubmit: async (submittedTrail) => {
+        extend: validator({
+            schema: ClientTrailCreateSchema,
+        }),
+        onSubmit: async (form) => {
             loading = true;
             try {
                 const htmlForm = document.getElementById(
@@ -154,43 +142,43 @@
                 ) as HTMLFormElement;
                 const formData = new FormData(htmlForm);
                 if (!formData.get("public")) {
-                    submittedTrail.public = false;
+                    form.public = false;
                 }
-                submittedTrail.photos = submittedTrail.photos.filter(
+                form.photos = form.photos.filter(
                     (p) => !p.startsWith("data:image/svg+xml;base64"),
                 );
 
-                if ($form.expand!.gpx_data && overwriteGPX) {
-                    gpxFile = new Blob([$form.expand!.gpx_data], {
+                if ($formData.expand!.gpx_data && overwriteGPX) {
+                    gpxFile = new Blob([$formData.expand!.gpx_data], {
                         type: "text/xml",
                     });
                 }
 
                 if (
-                    (!$form.lat || !$form.lon) &&
+                    (!$formData.lat || !$formData.lon) &&
                     route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
                 ) {
-                    $form.lat = route.trk
+                    $formData.lat = route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lat;
-                    $form.lon = route.trk
+                    $formData.lon = route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lon;
                 }
 
-                if (!submittedTrail.id) {
+                if (!form.id) {
                     const createdTrail = await trails_create(
-                        submittedTrail,
+                        form as Trail,
                         photoFiles,
                         gpxFile,
                     );
-                    $form.id = createdTrail.id;
+                    $formData.id = createdTrail.id;
                 } else {
                     await trails_update(
                         $trail,
-                        submittedTrail,
+                        form as Trail,
                         photoFiles,
                         gpxFile,
                     );
@@ -219,8 +207,8 @@
         clearAnchorMarker();
         clearRoute();
 
-        if ($form.expand!.gpx_data) {
-            const gpx = await GPX.parse($form.expand!.gpx_data);
+        if ($formData.expand!.gpx_data) {
+            const gpx = await GPX.parse($formData.expand!.gpx_data);
             if (!(gpx instanceof Error)) {
                 setRoute(gpx);
                 initRouteAnchors(gpx);
@@ -251,19 +239,27 @@
         gpxFile = file;
 
         try {
-            const prevId = $form.id;
+            const prevId = $formData.id;
             const parseResult = await gpx2trail(gpxData, selectedFile.name);
-            $form = parseResult.trail;
-            $form.id = prevId;
-            $form.expand!.gpx_data = gpxData;
-            $form.category = $page.data.settings.category || $categories[0].id;
-            $form.public = $page.data.settings?.privacy.trails === "public";
+            setFields(parseResult.trail);
+            $formData.id = prevId;
+            $formData.expand!.gpx_data = gpxData;
+            setFields(
+                "category",
+                $page.data.settings.category || $categories[0].id,
+            );
+            setFields(
+                "public",
+                $page.data.settings?.privacy.trails === "public",
+            );
 
             const log = new SummitLog(parseResult.trail.date as string, {
-                distance: $form.distance,
-                elevation_gain: $form.elevation_gain,
-                elevation_loss: $form.elevation_loss,
-                duration: $form.duration ? $form.duration * 60 : undefined,
+                distance: $formData.distance,
+                elevation_gain: $formData.elevation_gain,
+                elevation_loss: $formData.elevation_loss,
+                duration: $formData.duration
+                    ? $formData.duration * 60
+                    : undefined,
             });
 
             log.expand!.gpx_data = gpxData;
@@ -272,16 +268,16 @@
                 type: selectedFile.type,
             });
 
-            $form.expand!.summit_logs.push(log);
+            $formData.expand!.summit_logs.push(log);
 
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
 
-            for (const waypoint of $form.expand!.waypoints) {
+            for (const waypoint of $formData.expand!.waypoints) {
                 saveWaypoint(waypoint);
             }
         } catch (e) {
-            console.log(e);
+            console.error(e);
 
             show_toast({
                 icon: "close",
@@ -295,23 +291,25 @@
             body: JSON.stringify({
                 q: "",
                 options: {
-                    filter: [`_geoRadius(${$form.lat}, ${$form.lon}, 10000)`],
-                    sort: [`_geoPoint(${$form.lat}, ${$form.lon}):asc`],
+                    filter: [
+                        `_geoRadius(${$formData.lat}, ${$formData.lon}, 10000)`,
+                    ],
+                    sort: [`_geoPoint(${$formData.lat}, ${$formData.lon}):asc`],
                     limit: 1,
                 },
             }),
         });
         const closestCity = (await r.json()).hits[0];
 
-        $form.location = closestCity.name;
+        setFields("location", closestCity.name);
     }
 
     function clearWaypoints() {
-        for (const waypoint of $form.expand!.waypoints) {
+        for (const waypoint of $formData.expand!.waypoints) {
             waypoint.marker?.remove();
         }
-        $form.expand!.waypoints = [];
-        $form.waypoints = [];
+        $formData.expand!.waypoints = [];
+        $formData.waypoints = [];
     }
 
     function clearAnchorMarker() {
@@ -365,23 +363,23 @@
     }
 
     function deleteWaypoint(index: number) {
-        $form.expand!.waypoints.splice(index, 1);
-        $form.waypoints.splice(index, 1);
-        $form.expand!.waypoints = $form.expand!.waypoints;
+        $formData.expand!.waypoints.splice(index, 1);
+        $formData.waypoints.splice(index, 1);
+        $formData.expand!.waypoints = $formData.expand!.waypoints;
     }
 
     function saveWaypoint(savedWaypoint: Waypoint) {
-        let editedWaypointIndex = $form.expand!.waypoints.findIndex(
+        let editedWaypointIndex = $formData.expand!.waypoints.findIndex(
             (s) => s.id == savedWaypoint.id,
         );
 
         if (editedWaypointIndex >= 0) {
-            $form.expand!.waypoints[editedWaypointIndex].marker?.remove();
-            $form.expand!.waypoints[editedWaypointIndex] = savedWaypoint;
+            $formData.expand!.waypoints[editedWaypointIndex].marker?.remove();
+            $formData.expand!.waypoints[editedWaypointIndex] = savedWaypoint;
         } else {
             savedWaypoint.id = cryptoRandomString({ length: 15 });
-            $form.expand!.waypoints = [
-                ...$form.expand!.waypoints,
+            $formData.expand!.waypoints = [
+                ...$formData.expand!.waypoints,
                 savedWaypoint,
             ];
         }
@@ -393,16 +391,17 @@
 
     function moveMarker(marker: M.Marker, wpId?: string) {
         const position = marker.getLngLat();
-        const editableWaypointIndex = $form.expand!.waypoints.findIndex(
+        const editableWaypointIndex = $formData.expand!.waypoints.findIndex(
             (w) => w.id == wpId,
         );
-        const editableWaypoint = $form.expand!.waypoints[editableWaypointIndex];
+        const editableWaypoint =
+            $formData.expand!.waypoints[editableWaypointIndex];
         if (!editableWaypoint) {
             return;
         }
         editableWaypoint.lat = position.lat;
         editableWaypoint.lon = position.lng;
-        $form.expand!.waypoints = [...$form.expand!.waypoints];
+        $formData.expand!.waypoints = [...$formData.expand!.waypoints];
     }
 
     function beforeSummitLogModalOpen() {
@@ -413,16 +412,17 @@
     function saveSummitLog(e: CustomEvent<SummitLog>) {
         const savedSummitLog = e.detail;
 
-        let editedSummitLogIndex = $form.expand!.summit_logs.findIndex(
+        let editedSummitLogIndex = $formData.expand!.summit_logs.findIndex(
             (s) => s.id == savedSummitLog.id,
         );
 
         if (editedSummitLogIndex >= 0) {
-            $form.expand!.summit_logs[editedSummitLogIndex] = savedSummitLog;
+            $formData.expand!.summit_logs[editedSummitLogIndex] =
+                savedSummitLog;
         } else {
             savedSummitLog.id = cryptoRandomString({ length: 15 });
-            $form.expand!.summit_logs = [
-                ...$form.expand!.summit_logs,
+            $formData.expand!.summit_logs = [
+                ...$formData.expand!.summit_logs,
                 savedSummitLog,
             ];
         }
@@ -437,21 +437,21 @@
             summitLog.set(currentSummitLog);
             openSummitLogModal();
         } else if (e.detail.value === "delete") {
-            $form.expand!.summit_logs.splice(index, 1);
-            $form.summit_logs.splice(index, 1);
-            $form.expand!.summit_logs = $form.expand!.summit_logs;
+            $formData.expand!.summit_logs.splice(index, 1);
+            $formData.summit_logs.splice(index, 1);
+            $formData.expand!.summit_logs = $formData.expand!.summit_logs;
         }
     }
 
     async function handleListSelection(list: List) {
-        if (!$form.id) {
+        if (!$formData.id) {
             return;
         }
         try {
-            if (list.trails?.includes($form.id!)) {
-                list = await lists_remove_trail(list, $form);
+            if (list.trails?.includes($formData.id!)) {
+                list = await lists_remove_trail(list, $formData as Trail);
             } else {
-                list = await lists_add_trail(list, $form);
+                list = await lists_add_trail(list, $formData as Trail);
             }
             const index = data.lists.items.findIndex((l) => l.id == list.id);
             if (index >= 0) {
@@ -615,21 +615,22 @@
     function updateTrailWithRouteData() {
         overwriteGPX = true;
         const totals = route.getTotals();
-        $form.distance = totals.distance;
-        $form.duration = totals.duration;
-        $form.elevation_gain = totals.elevationGain;
-        $form.elevation_loss = totals.elevationLoss;
-        $form.expand!.gpx_data = route.toString();
+        $formData.distance = totals.distance;
+        $formData.duration = totals.duration;
+        $formData.elevation_gain = totals.elevationGain;
+        $formData.elevation_loss = totals.elevationLoss;
+        $formData.expand!.gpx_data = route.toString();
     }
 
     function updateTrailOnMap() {
-        mapTrail = [{ ...$form }];
+        mapTrail = [{ ...($formData as Trail) }];
     }
 </script>
 
 <svelte:head>
     <title
-        >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-trail")} | wanderer</title
+        >{$formData.id ? `${$formData.name} | ${$_("edit")}` : $_("new-trail")} |
+        wanderer</title
     >
 </svelte:head>
 
@@ -637,7 +638,7 @@
     <form
         id="trail-form"
         class="overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0"
-        on:submit={handleSubmit}
+        use:form
     >
         <h3 class="text-xl font-semibold">{$_("pick-a-trail")}</h3>
         <Button
@@ -683,24 +684,27 @@
             >
         </div>
 
-        <div class="grid grid-cols-2 gap-4 justify-around">
+        <fieldset
+            class="grid grid-cols-2 gap-4 justify-around"
+            data-felte-keep-on-remove
+        >
             {#if editingBasicInfo}
                 <TextField
-                    bind:value={$form.distance}
+                    bind:value={$formData.distance}
                     name="distance"
                     label={$_("distance")}
                 ></TextField>
                 <TextField
-                    bind:value={$form.duration}
+                    bind:value={$formData.duration}
                     name="duration"
                     label={$_("est-duration")}
                 ></TextField><TextField
-                    bind:value={$form.elevation_gain}
+                    bind:value={$formData.elevation_gain}
                     name="elevation_gain"
                     label={$_("elevation-gain")}
                 ></TextField>
                 <TextField
-                    bind:value={$form.elevation_loss}
+                    bind:value={$formData.elevation_loss}
                     name="elevation_loss"
                     label={$_("elevation-loss")}
                 ></TextField>
@@ -708,75 +712,63 @@
                 <div>
                     <p>{$_("distance")}</p>
                     <span class="font-medium"
-                        >{formatDistance($form.distance)}</span
+                        >{formatDistance($formData.distance)}</span
                     >
                     <input
                         type="hidden"
                         name="distance"
-                        value={$form.distance}
+                        value={$formData.distance}
                     />
                 </div>
                 <div>
                     <p>{$_("est-duration")}</p>
                     <span class="font-medium"
-                        >{formatTimeHHMM($form.duration)}</span
+                        >{formatTimeHHMM($formData.duration)}</span
                     >
                     <input
                         type="hidden"
                         name="duration"
-                        value={$form.duration}
+                        value={$formData.duration}
                     />
                 </div>
                 <div>
                     <p>{$_("elevation-gain")}</p>
                     <span class="font-medium"
-                        >{formatElevation($form.elevation_gain)}</span
+                        >{formatElevation($formData.elevation_gain)}</span
                     >
                     <input
                         type="hidden"
                         name="elevation_gain"
-                        value={$form.elevation_gain}
+                        value={$formData.elevation_gain}
                     />
                 </div>
                 <div>
                     <p>{$_("elevation-loss")}</p>
                     <span class="font-medium"
-                        >{formatElevation($form.elevation_loss)}</span
+                        >{formatElevation($formData.elevation_loss)}</span
                     >
                     <input
                         type="hidden"
                         name="elevation_gain"
-                        value={$form.elevation_gain}
+                        value={$formData.elevation_gain}
                     />
                 </div>
             {/if}
-            <input type="hidden" name="lat" value={$form.lat} />
-            <input type="hidden" name="lon" value={$form.lon} />
-        </div>
-        <TextField
-            name="name"
-            label={$_("name")}
-            on:change={handleChange}
-            error={$errors.name}
-            bind:value={$form.name}
+        </fieldset>
+        <TextField name="name" label={$_("name")} error={$errors.name}
         ></TextField>
         <TextField
             name="location"
             label={$_("location")}
             error={$errors.location}
-            bind:value={$form.location}
         ></TextField>
-        <Datepicker label={$_("date")} bind:value={$form.date}></Datepicker>
-        <Textarea
-            name="description"
-            label={$_("describe-your-trail")}
-            bind:value={$form.description}
+        <Datepicker label={$_("date")} bind:value={$formData.date}></Datepicker>
+        <Textarea name="description" label={$_("describe-your-trail")}
         ></Textarea>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4">
             <Select
                 name="difficulty"
                 label={$_("difficulty")}
-                bind:value={$form.difficulty}
                 items={[
                     { text: $_("easy"), value: "easy" },
                     { text: $_("moderate"), value: "moderate" },
@@ -786,7 +778,6 @@
             <Select
                 name="category"
                 label={$_("category")}
-                bind:value={$form.category}
                 items={$categories.map((c) => ({
                     text: $_(c.name),
                     value: c.id,
@@ -794,14 +785,13 @@
             ></Select>
         </div>
 
-        <Toggle name="public" label={$_("public")} bind:value={$form.public}
-        ></Toggle>
+        <Toggle name="public" label={$_("public")}></Toggle>
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">
             {$_("waypoints", { values: { n: 2 } })}
         </h3>
         <ul>
-            {#each $form.expand?.waypoints ?? [] as waypoint, i}
+            {#each $formData.expand?.waypoints ?? [] as waypoint, i}
                 <li on:mouseenter={() => openMarkerPopup(waypoint)}>
                     <WaypointCard
                         {waypoint}
@@ -822,15 +812,15 @@
         <h3 class="text-xl font-semibold">{$_("photos")}</h3>
         <PhotoPicker
             id="trail"
-            parent={$form}
-            bind:photos={$form.photos}
-            bind:thumbnail={$form.thumbnail}
+            parent={$formData}
+            bind:photos={$formData.photos}
+            bind:thumbnail={$formData.thumbnail}
             bind:photoFiles
         ></PhotoPicker>
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">{$_("summit-book")}</h3>
         <ul>
-            {#each $form.expand?.summit_logs ?? [] as log, i}
+            {#each $formData.expand?.summit_logs ?? [] as log, i}
                 <li>
                     <SummitLogCard
                         {log}
@@ -853,7 +843,7 @@
             </h3>
             <div class="flex gap-4 flex-wrap">
                 {#each data.lists.items as list}
-                    {#if $form.id && list.trails?.includes($form.id)}
+                    {#if $formData.id && list.trails?.includes($formData.id)}
                         <div
                             class="flex gap-2 items-center border border-input-border rounded-xl p-2"
                         >
@@ -873,7 +863,7 @@
             <Button
                 secondary={true}
                 tooltip={$_("save-your-trail-first")}
-                disabled={!$form.id}
+                disabled={!$formData.id}
                 type="button"
                 on:click={openListSelectModal}
                 ><i class="fa fa-plus mr-2"></i>{$_("add-to-list")}</Button

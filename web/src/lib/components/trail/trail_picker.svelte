@@ -3,7 +3,7 @@
 
     import { fromFile, toGeoJson } from "$lib/util/gpx_util";
     import { createEventDispatcher, onMount } from "svelte";
-    export let trailFile: File | null;
+    export let trailFile: File | undefined | null;
     export let trailData: string | undefined;
     export let label: string = "";
 
@@ -31,7 +31,7 @@
             attributionControl: false,
             dragPan: false,
             scrollZoom: false,
-            preserveDrawingBuffer: true
+            preserveDrawingBuffer: true,
         });
     }
 
@@ -95,9 +95,12 @@
             },
         });
         layer = map.getLayer(layerId) as M.LineLayerSpecification;
-        source = map.getSource(sourceId) as M.GeoJSONSource;        
-        map.resize()
-        map.fitBounds(geojson.bbox as M.LngLatBoundsLike, {animate: false, padding: 8});
+        source = map.getSource(sourceId) as M.GeoJSONSource;
+        map.resize();
+        map.fitBounds(geojson.bbox as M.LngLatBoundsLike, {
+            animate: false,
+            padding: 8,
+        });
     }
 
     function removeTrailFromMap() {

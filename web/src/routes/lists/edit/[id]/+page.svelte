@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { listSchema, type List } from "$lib/models/list";
-    import { createForm } from "$lib/vendor/svelte-form-lib/index";
+    import { type List } from "$lib/models/list";
     import { _ } from "svelte-i18n";
 
     import { page } from "$app/stores";
@@ -10,8 +9,12 @@
     } from "$lib/components/base/search.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
+    import Toggle from "$lib/components/base/toggle.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
+    import { ListCreateSchema } from "$lib/models/api/list_schema.js";
+    import { ListShareCreateSchema } from "$lib/models/api/list_share_schema.js";
+    import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
     import type { Trail } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
@@ -21,14 +24,16 @@
         trail_share_index,
     } from "$lib/stores/trail_share_store.js";
     import { trails_show, trails_update } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import Toggle from "$lib/components/base/toggle.svelte";
-    import { currentUser } from "$lib/stores/user_store.js";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
+    import { z } from "zod";
 
     export let data;
 
@@ -46,13 +51,32 @@
     let openConfirmModal: () => void;
     let openPublishConfirmModal: () => void;
 
-    const { form, errors, handleChange, handleSubmit } = createForm<List>({
+    const ClientListCreateSchema = ListCreateSchema.extend({
+        _photos: z.array(z.instanceof(File)).optional(),
+        avatar: z.string().or(z.instanceof(File)).optional(),
+        expand: z
+            .object({
+                trails: z.array(TrailCreateSchema).optional(),
+                list_share_via_list: z.array(ListShareCreateSchema).optional(),
+            })
+            .optional(),
+    });
+
+    const {
+        form,
+        errors,
+        data: formData,
+    } = createForm<z.infer<typeof ClientListCreateSchema>>({
         initialValues: {
-            ...data.list!,
-            public: $page.data.settings?.privacy.lists === "public",
+            ...data.list,
+            public: data.list.id
+                ? data.list.public
+                : $page.data.settings?.privacy.lists === "public",
         },
-        validationSchema: listSchema,
-        onSubmit: async (submittedList) => {
+        extend: validator({
+            schema: ClientListCreateSchema,
+        }),
+        onSubmit: async (form) => {
             if (await checkPrerequisites()) {
                 await saveList();
             }
@@ -61,10 +85,10 @@
 
     async function checkPrerequisites() {
         if (
-            (data.list?.public === false && $form.public === true) ||
-            ($form.public === true &&
+            (data.list?.public === false && $formData.public === true) ||
+            ($formData.public === true &&
                 data.list?.expand?.trails?.length !==
-                    $form.expand?.trails?.length)
+                    $formData.expand?.trails?.length)
         ) {
             openPublishConfirmModal();
             return false;
@@ -82,11 +106,14 @@
         ).files![0];
         loading = true;
         try {
-            if ($form.id) {
-                await lists_update($form, avatarFile);
+            if ($formData.id) {
+                await lists_update($formData as List, avatarFile);
             } else {
-                const createdList = await lists_create($form, avatarFile);
-                $form.id = createdList.id;
+                const createdList = await lists_create(
+                    $formData as List,
+                    avatarFile,
+                );
+                $formData.id = createdList.id;
             }
             show_toast({
                 type: "success",
@@ -135,7 +162,7 @@
         const response = await r.json();
 
         searchDropdownItems = response.hits
-            .filter((h: List) => !$form.trails?.includes(h.id!))
+            .filter((h: List) => !$formData.trails?.includes(h.id!))
             .map((t: Record<string, any>) => ({
                 text: t.name,
                 description: `${t.location ?? "-"}`,
@@ -146,30 +173,30 @@
 
     async function handleSearchClick(item: SearchItem) {
         const trail = await trails_show(item.value, true);
-        $form.trails?.push(trail.id!);
-        $form.expand = {
-            trails: [...($form.expand?.trails ?? []), trail],
-            list_share_via_list: $form.expand?.list_share_via_list,
+        $formData.trails?.push(trail.id!);
+        $formData.expand = {
+            trails: [...($formData.expand?.trails ?? []), trail],
+            list_share_via_list: $formData.expand?.list_share_via_list,
         };
     }
 
     function deleteTrail(trail: Trail) {
-        $form.trails = $form.trails?.filter((id) => id !== trail.id);
-        $form.expand!.trails = $form.expand!.trails!.filter(
+        $formData.trails = $formData.trails?.filter((id) => id !== trail.id);
+        $formData.expand!.trails = $formData.expand!.trails!.filter(
             (t) => t.id !== trail.id,
         );
     }
 
     async function findNewTrailShares() {
         const usersWithAccess: string[] = [
-            $form.author!,
-            ...($form.expand?.list_share_via_list ?? []).map((s) => s.user),
+            $formData.author!,
+            ...($formData.expand?.list_share_via_list ?? []).map((s) => s.user),
         ];
         for (const userId of usersWithAccess) {
             const existingTrailShares = await trail_share_index({
                 user: userId,
             });
-            for (const trail of $form.expand?.trails ?? []) {
+            for (const trail of $formData.expand?.trails ?? []) {
                 if (
                     trail.author == userId ||
                     trail.author != $currentUser?.id
@@ -195,7 +222,7 @@
     }
 
     async function publishTrails() {
-        for (const trail of $form.expand?.trails ?? []) {
+        for (const trail of $formData.expand?.trails ?? []) {
             if (trail.author !== $currentUser?.id) {
                 continue;
             }
@@ -207,27 +234,32 @@
     function moveTrail(trail: Trail, index: number, direction: 1 | -1) {
         (document?.activeElement as HTMLElement).blur();
 
-        if (!$form.trails || !$form.expand || !$form.expand.trails) {
+        if (
+            !$formData.trails ||
+            !$formData.expand ||
+            !$formData.expand.trails
+        ) {
             return;
         }
-        const previousTrail = $form.expand?.trails?.at(index + direction);
-        const previousTrailId = $form.trails?.at(index + direction);
+        const previousTrail = $formData.expand?.trails?.at(index + direction);
+        const previousTrailId = $formData.trails?.at(index + direction);
 
         if (!previousTrail || !previousTrailId) {
             return;
         }
 
-        $form.expand!.trails![index] = previousTrail;
-        $form.expand!.trails![index + direction] = trail;
+        $formData.expand!.trails![index] = previousTrail;
+        $formData.expand!.trails![index + direction] = trail;
 
-        $form.trails[index] = previousTrailId;
-        $form.trails[index + direction] = trail.id!;
+        $formData.trails[index] = previousTrailId;
+        $formData.trails[index + direction] = trail.id!;
     }
 </script>
 
 <svelte:head>
     <title
-        >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-list")} | wanderer</title
+        >{$formData.id ? `${$formData.name} | ${$_("edit")}` : $_("new-list")} |
+        wanderer</title
     >
 </svelte:head>
 
@@ -235,7 +267,7 @@
     <form
         id="list-form"
         class="flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0 overflow-y-scroll"
-        on:submit={handleSubmit}
+        use:form
     >
         <h2 class="text-2xl font-semibold">
             {$page.params.id === "new" ? $_("new-list") : $_("edit-list")}
@@ -270,23 +302,15 @@
             >
         </div>
 
-        <TextField
-            name="name"
-            label={$_("name")}
-            bind:value={$form.name}
-            error={$errors.name}
-            on:change={handleChange}
+        <TextField name="name" label={$_("name")} error={$errors.name}
         ></TextField>
 
         <Textarea
             name="description"
             label={$_("description")}
-            bind:value={$form.description}
             error={$errors.description}
-            on:change={handleChange}
         ></Textarea>
-        <Toggle name="public" label={$_("public")} bind:value={$form.public}
-        ></Toggle>
+        <Toggle name="public" label={$_("public")}></Toggle>
         <h3 class="text-xl font-semibold">
             {$_("trail", { values: { n: 2 } })}
         </h3>
@@ -296,8 +320,8 @@
             placeholder="{$_('search-trails')}..."
             items={searchDropdownItems}
         ></Search>
-        {#if $form.expand?.trails?.length}
-            {#each $form.expand?.trails ?? [] as trail, i}
+        {#if $formData.expand?.trails?.length}
+            {#each $formData.expand?.trails ?? [] as trail, i}
                 <div
                     class="flex gap-4 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors items-center"
                     class:bg-secondary-hover={i == activeTrailIndex}
@@ -312,7 +336,7 @@
                             src={trail.photos.length
                                 ? getFileURL(
                                       trail,
-                                      trail.photos[trail.thumbnail],
+                                      trail.photos[trail.thumbnail ?? 0],
                                   )
                                 : "/imgs/default_thumbnail.webp"}
                             alt=""
@@ -363,7 +387,7 @@
                                 <i class="fa fa-chevron-up"></i>
                             </button>
                         {/if}
-                        {#if i < $form.expand?.trails?.length - 1}
+                        {#if i < $formData.expand?.trails?.length - 1}
                             <button
                                 on:click|stopPropagation={() =>
                                     moveTrail(trail, i, 1)}
@@ -384,7 +408,7 @@
             {/each}
         {:else}
             <span class="text-center text-sm text-gray-500 my-8"
-                >No routes added</span
+                >{$_("no-routes-added")}</span
             >
         {/if}
         <Button
@@ -397,7 +421,7 @@
     </form>
     <div id="trail-map" class="max-h-full">
         <MapWithElevationMaplibre
-            trails={$form.expand?.trails ?? []}
+            trails={$formData.expand?.trails ?? []}
             bind:activeTrail={activeTrailIndex}
             bind:this={map}
         ></MapWithElevationMaplibre>

@@ -3,9 +3,7 @@
     import { page } from "$app/stores";
     import { type RadioItem } from "$lib/components/base/radio_group.svelte";
     import { type SearchItem } from "$lib/components/base/search.svelte";
-    import {
-        type SelectItem,
-    } from "$lib/components/base/select.svelte";
+    import { type SelectItem } from "$lib/components/base/select.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import EmailModal from "$lib/components/settings/email_modal.svelte";
     import PasswordModal from "$lib/components/settings/password_modal.svelte";
@@ -48,22 +46,6 @@
         selectedMapFocus = settings?.mapFocus ?? "trails";
     });
 
-    async function searchCities(q: string) {
-        const r = await fetch("/api/v1/search/cities500", {
-            method: "POST",
-            body: JSON.stringify({ q: q, options: { limit: 5 } }),
-        });
-        const result = await r.json();
-        searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
-            text: h.name,
-            description: `${h.division ? `${h.division} | ` : ""}${
-                country_codes[h["country code"] as keyof typeof country_codes]
-            }`,
-            value: h,
-            icon: "city",
-        }));
-    }
-
     async function deleteAccount() {
         await users_delete($currentUser!);
         logout();
@@ -73,6 +55,11 @@
     async function updateEmail(email: string) {
         try {
             await users_update({ ...$currentUser!, email: email });
+            show_toast({
+                text: $_("email-updated"),
+                icon: "check",
+                type: "success",
+            });
         } catch (e) {
             show_toast({
                 text: "Error updating email",
@@ -107,34 +94,36 @@
 <svelte:head>
     <title>{$_("settings")} | wanderer</title>
 </svelte:head>
-    {#if $currentUser}
-        <h2 class="text-2xl font-semibold">{$_("my-account")}</h2>
-        <hr class="mt-4 mb-6 border-input-border" />
-        <div class="space-y-6">
-            <h4 class="text-xl font-medium">{$_("login-details")}</h4>
-            <button class="btn-secondary block" on:click={openEmailModal}
-                >{$_("change-email")}</button
+{#if $currentUser}
+    <h2 class="text-2xl font-semibold">{$_("my-account")}</h2>
+    <hr class="mt-4 mb-6 border-input-border" />
+    <div class="space-y-6">
+        <h4 class="text-xl font-medium">{$_("login-details")}</h4>
+        <button class="btn-secondary block" on:click={openEmailModal}
+            >{$_("change-email")}</button
+        >
+        <button class="btn-secondary" on:click={openPasswordModal}
+            >{$_("change-password")}</button
+        >
+        <div class="space-y-4">
+            <h4 class="text-xl text-red-400 font-medium">
+                {$_("danger-zone")}
+            </h4>
+            <button class="btn-danger" on:click={openConfirmModal}
+                >{$_("delete-account")}</button
             >
-            <button class="btn-secondary" on:click={openPasswordModal}
-                >{$_("change-password")}</button
-            >            
-            <div class="space-y-4">
-                <h4 class="text-xl text-red-400 font-medium">{$_("danger-zone")}</h4>
-                <button class="btn-danger" on:click={openConfirmModal}
-                    >{$_("delete-account")}</button
-                >
-            </div>
         </div>
-        <EmailModal
-            email={$currentUser.email}
-            on:save={(e) => updateEmail(e.detail)}
-            bind:openModal={openEmailModal}
-        ></EmailModal>
-        <PasswordModal
-            on:save={(e) => updatePassword(e.detail)}
-            bind:openModal={openPasswordModal}
-        ></PasswordModal>
-    {/if}
+    </div>
+    <EmailModal
+        email={$currentUser.email}
+        on:save={(e) => updateEmail(e.detail)}
+        bind:openModal={openEmailModal}
+    ></EmailModal>
+    <PasswordModal
+        on:save={(e) => updatePassword(e.detail)}
+        bind:openModal={openPasswordModal}
+    ></PasswordModal>
+{/if}
 <ConfirmModal
     text={$_("account-delete-confirm")}
     bind:openModal={openConfirmModal}
