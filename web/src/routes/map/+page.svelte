@@ -152,10 +152,9 @@
             $page.url.searchParams.has("lat") &&
             $page.url.searchParams.has("lon")
         ) {
-            map.setCenter([
-                parseFloat($page.url.searchParams.get("lon")!),
-                parseFloat($page.url.searchParams.get("lat")!),
-            ]);
+            const lat = $page.url.searchParams.get("lat");
+            const lon = $page.url.searchParams.get("lon");
+            map.setCenter([parseFloat(lon!), parseFloat(lat!)]);
             map.setZoom(14);
         } else if (settings && settings.mapFocus == "trails") {
             const boundingBox: M.LngLatBoundsLike = [

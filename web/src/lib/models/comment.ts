@@ -3,7 +3,7 @@ import type { UserAnonymous } from "./user";
 export class Comment {
     id?: string;
     text: string;
-    rating: number;
+    rating?: number;
     author: string;
     trail: string;
     created?: string;

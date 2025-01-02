@@ -18,7 +18,7 @@ export const editTrail: Writable<Trail> = writable(new Trail(""));
 
 export async function trails_index(perPage: number = 21, random: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail?' + new URLSearchParams({
-        "per-page": perPage.toString(),
+        "perPage": perPage.toString(),
         expand: "category,waypoints,summit_logs",
         sort: random ? "@random" : "",
     }), {
@@ -102,7 +102,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
     }
 
     r = await fetch('/api/v1/trail?' + new URLSearchParams({
-        "per-page": "-1",
+        "perPage": "-1",
         filter: `'${trailIds.join(',')}'~id`,
         expand: "category,waypoints,summit_logs",
         sort: `+name`,

@@ -12,6 +12,7 @@ interface Activity {
     elevation_loss: number;
     type: "trail" | "summit_log"
     author: string;
+    created: string;
 }
 
 export { type Activity }

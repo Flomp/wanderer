@@ -1,7 +1,7 @@
 import type { Notification } from '$lib/models/notification';
 import type { UserAnonymous } from '$lib/models/user';
 import { pb } from '$lib/pocketbase';
-import { Collection, list } from '$lib/util/api_util';
+import { Collection, handleError, list } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
@@ -17,6 +17,6 @@ export async function GET(event: RequestEvent) {
         }
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e);
     }
 }

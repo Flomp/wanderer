@@ -1,4 +1,3 @@
-import { object, string } from "yup";
 import type { Trail } from "./trail";
 import type { ListShare } from "./list_share";
 import type { UserAnonymous } from "./user";
@@ -37,10 +36,3 @@ export interface ListFilter {
     shared?: boolean;
     sortOrder?: "+" | "-"
 }
-
-export const listSchema = object<List>({
-    id: string().optional(),
-    name: string().required(),
-    description: string().optional(),
-    avatar: string().optional()
-});

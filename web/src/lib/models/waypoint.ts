@@ -1,5 +1,4 @@
 import * as M from "maplibre-gl";
-import { number, object, string } from "yup";
 
 class Waypoint {
     id?: string;

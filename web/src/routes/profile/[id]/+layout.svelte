@@ -46,7 +46,7 @@
 <div
     class="grid grid-cols-1 lg:grid-cols-[356px_minmax(0,_1fr)] gap-4 max-w-6xl mx-auto items-start"
 >
-    <div class="border border-input-border rounded-xl">
+    <div class="border border-input-border rounded-xl sticky top-8">
         {#if data.user}
             <div class="flex items-center gap-x-6 px-6 my-6">
                 <img

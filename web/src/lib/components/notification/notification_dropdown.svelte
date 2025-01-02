@@ -1,17 +1,17 @@
 <script lang="ts">
-    import type { Notification } from "$lib/models/notification";
-    import { fly } from "svelte/transition";
-    import NotificationCard from "./notification_card.svelte";
+    import { goto } from "$app/navigation";
     import { page } from "$app/stores";
+    import type { Notification } from "$lib/models/notification";
     import {
         notifications_index,
         notifications_mark_as_seen,
     } from "$lib/stores/notification_store";
     import { currentUser } from "$lib/stores/user_store";
-    import { goto } from "$app/navigation";
     import { onMount } from "svelte";
-    import SkeletonListItem from "../base/skeleton_list_item.svelte";
+    import { fly } from "svelte/transition";
     import SkeletonNotificationCard from "../base/skeleton_notification_card.svelte";
+    import NotificationCard from "./notification_card.svelte";
+    import { _ } from "svelte-i18n";
 
     let notifications: Notification[] = [];
 
@@ -134,7 +134,7 @@
                 {/each}
             {:else}
                 <p class="text-gray-500 text-sm text-center py-6">
-                    No notifications
+                    {$_("no-notifications")}
                 </p>
             {/if}
         </ul>

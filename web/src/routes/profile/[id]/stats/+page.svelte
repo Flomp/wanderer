@@ -217,7 +217,7 @@
 
     async function loadSummitLogs() {
         const logs = await summit_logs_index($page.params.id, filter);
-        summitLogs.set(logs);
+        summitLogs.set(logs.items);
     }
 </script>
 

@@ -8,7 +8,7 @@ export async function notifications_index(data: { recipient: string, seen?: bool
         filter: `created>=@month&&recipient='${data.recipient}'` + (data.seen !== undefined ? `&&seen=${data.seen}` : ''),
         sort: '+seen,-created',
         page: page.toString(),
-        "per-page": perPage.toString()
+        "perPage": perPage.toString()
     }), {
         method: 'GET',
     })

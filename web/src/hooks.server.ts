@@ -20,7 +20,7 @@ function csrf(allowedPaths: string[]): Handle {
         request.method === "PATCH" ||
         request.method === "DELETE") &&
       request.headers.get("origin") !== url.origin &&
-      !allowedPaths.includes(url.pathname);
+      !allowedPaths.some(p => url.pathname.startsWith(p));
 
     if (forbidden) {
       const message = `Cross-site ${request.method} form submissions are forbidden`;
@@ -111,4 +111,4 @@ const auth: Handle = async ({ event, resolve }) => {
   return response
 }
 
-export const handle = sequence(csrf(['/api/v1/trail/upload']), auth)
+export const handle = sequence(csrf(['/api/v1']), auth)

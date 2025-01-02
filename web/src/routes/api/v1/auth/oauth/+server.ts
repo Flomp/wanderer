@@ -4,6 +4,7 @@ import { env as private_env } from "$env/dynamic/private";
 import { pb } from "$lib/pocketbase";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
+import { handleError } from "$lib/util/api_util";
 
 const redirectURL = private_env.ORIGIN + "/login/redirect"
 
@@ -18,7 +19,7 @@ export async function GET(event: RequestEvent) {
         }
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e);
     }
 
 }
@@ -40,7 +41,7 @@ export async function POST(event: RequestEvent) {
         )
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e);
     }
 
 }

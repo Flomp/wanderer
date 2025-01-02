@@ -5,13 +5,13 @@ import { z } from "zod";
 export async function GET(event: RequestEvent) {
 
     const safeParams = z.object({
-        collection: z.string().length(15),
+        collection: z.string(),
         record: z.string().length(15),
         file: z.string()
     }).safeParse(event.params)
 
     if (!safeParams.success) {
-        throw error(400, 'Invalid params')
+        throw error(400, safeParams.error)
     }
 
     const parts = [];

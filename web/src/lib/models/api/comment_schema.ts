@@ -3,7 +3,7 @@ import type { Comment } from "../comment";
 
 const CommentCreateSchema = z.object({
     text: z.string(),
-    rating: z.number(),
+    rating: z.number().optional(),
     author: z.string().length(15),
     trail: z.string().length(15),
 

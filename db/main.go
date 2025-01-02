@@ -256,7 +256,7 @@ func createCommentHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateE
 				"id":      commentTrail.Id,
 				"author":  commentAuthor.GetString("username"),
 				"trail":   commentTrail.GetString("name"),
-				"comment": e.Record.GetString("text")[:128],
+				"comment": e.Record.GetString("text"),
 			},
 			Seen:   false,
 			Author: e.Record.GetString("author"),

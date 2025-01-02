@@ -7,7 +7,8 @@ export async function activities_index(author: string, page: number = 1, perPage
     const r = await f('/api/v1/activity?' + new URLSearchParams({
         "perPage": perPage.toString(),
         page: page.toString(),
-        filter: `author="${author}"`
+        filter: `author="${author}"`,
+        sort: "-created"
     }), {
         method: 'GET',
     })

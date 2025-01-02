@@ -34,7 +34,7 @@
                 ? $_("planned-a-trail")
                 : $_("completed-a-trail")}
             <p class="text-xs text-gray-500 mb-3">
-                {new Date(activity.date).toLocaleDateString(undefined, {
+                {new Date(activity.created).toLocaleDateString(undefined, {
                     month: "long",
                     day: "2-digit",
                     year: "numeric",

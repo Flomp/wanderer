@@ -60,11 +60,13 @@ export async function show<T>(event: RequestEvent, collection: Collection) {
 }
 
 export async function create<T>(event: RequestEvent, schema: ZodSchema, collection: Collection) {
-    const data = await event.request.json();
+    const searchParams = Object.fromEntries(event.url.searchParams);
+    const safeSearchParams = RecordOptionsSchema.parse(searchParams);
 
+    const data = await event.request.json();
     const safeData = schema.parse(data);
 
-    const r = await pb.collection(Collection[collection]).create<T>(safeData)
+    const r = await pb.collection(Collection[collection]).create<T>(safeData, safeSearchParams)
 
     return r
 }
@@ -106,10 +108,12 @@ export async function remove(event: RequestEvent, collection: Collection) {
 
 export function handleError(e: any) {
     if (e instanceof ZodError) {
-        return error(400, e.message)
+        return error(400, { message: "invalid_params", details: e.issues } as any)
     } else if (e instanceof ClientResponseError && e.status > 0) {
-        return error(e.status as NumericRange<400, 599>, e.message)
+        return error(e.status as NumericRange<400, 599>, { message: e.message, detail: e.originalError.data } as any)
+    } else if (e instanceof SyntaxError) {
+        return error(400, "invalid_json")
     } else {
-        return e
+        return error(500, e.toString())
     }
 }
