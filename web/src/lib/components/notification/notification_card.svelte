@@ -45,7 +45,7 @@
                     },
                 });
             case NotificationType.trailCreate:
-                return $_("notification-new-trail", {
+                return $_("notification-trail-create", {
                     values: { user: n.expand.author.username },
                 });
             case NotificationType.trailShare:

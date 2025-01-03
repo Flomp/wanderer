@@ -103,7 +103,7 @@
         <div
             class="absolute -top-1 left-4 text-sm rounded-full bg-content text-content-inverse px-1 text-center"
         >
-            {unreadCount}
+            {unreadCount}{unreadCount >= 10 ? "+" : ""}
         </div>
     {/if}
     <div class="dropdown-toggle">

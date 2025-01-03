@@ -35,27 +35,27 @@
 
     const notificationItems: { text: string; key: NotificationType }[] = [
         {
-            text: $_("notification-trail-comment"),
+            text: $_("settings-notification-trail-comment"),
             key: NotificationType.trailComment,
         },
         {
-            text: $_("notification-new-follower"),
+            text: $_("settings-notification-new-follower"),
             key: NotificationType.newFollower,
         },
         {
-            text: $_("notification-trail-create"),
+            text: $_("settings-notification-trail-create"),
             key: NotificationType.trailCreate,
         },
         {
-            text: $_("notification-trail-share"),
+            text: $_("settings-notification-trail-share"),
             key: NotificationType.trailShare,
         },
         {
-            text: $_("notification-list-create"),
+            text: $_("settings-notification-list-create"),
             key: NotificationType.listCreate,
         },
         {
-            text: $_("notification-list-share"),
+            text: $_("settings-notification-list-share"),
             key: NotificationType.listShare,
         },
     ];

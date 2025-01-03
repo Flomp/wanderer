@@ -7,8 +7,7 @@
 
     let loading: boolean = false;
 
-    const key: "follower" | "followee" =
-        $page.params.type == "following" ? "followee" : "follower";
+    $: key = ($page.params.type == "following" ? "followee" : "follower") as "follower" | "followee";
 
     $: pagination = {
         page: data.follows.page,

@@ -1,7 +1,9 @@
 <script>
     import { page } from "$app/stores";
 </script>
-
+<svelte:head>
+    <title>{$page.status} | wanderer</title>
+</svelte:head>
 <div
     class="flex flex-col gap-y-4 items-center justify-center relative"
     style="height: calc(100dvh - 120px); font-size: 4rem"
