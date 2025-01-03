@@ -1,11 +1,12 @@
 import type { TrailShare } from "$lib/models/trail_share";
-import { ClientResponseError, type ListResult } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
+import { type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const shares: Writable<TrailShare[]> = writable([])
 
 
-export async function trail_share_index(data: {trail?: string, user?: string}, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trail_share_index(data: { trail?: string, user?: string }, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail-share?' + new URLSearchParams({
         filter: data.trail ? `trail='${data.trail}'` : data.user ? `user='${data.user}'` : '',
     }), {
@@ -13,7 +14,8 @@ export async function trail_share_index(data: {trail?: string, user?: string}, f
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const response: ListResult<TrailShare> = await r.json();
@@ -31,7 +33,8 @@ export async function trail_share_create(share: TrailShare) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }
 
@@ -42,7 +45,8 @@ export async function trail_share_update(share: TrailShare) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }
 
@@ -52,6 +56,7 @@ export async function trail_share_delete(share: TrailShare) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }

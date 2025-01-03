@@ -101,7 +101,7 @@
 <div class="dropdown relative">
     {#if unreadCount > 0}
         <div
-            class="absolute -top-1 -right-1 text-sm rounded-full bg-content text-content-inverse w-4 aspect-square text-center"
+            class="absolute -top-1 left-4 text-sm rounded-full bg-content text-content-inverse px-1 text-center"
         >
             {unreadCount}
         </div>

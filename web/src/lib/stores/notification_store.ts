@@ -1,5 +1,6 @@
 import type { Notification } from "$lib/models/notification";
-import { ClientResponseError, type ListResult } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
+import { type ListResult } from "pocketbase";
 
 let notifications: Notification[] = [];
 
@@ -14,7 +15,8 @@ export async function notifications_index(data: { recipient: string, seen?: bool
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const fetchedNotifications: ListResult<Notification> = await r.json();
@@ -29,10 +31,11 @@ export async function notifications_index(data: { recipient: string, seen?: bool
 export async function notifications_mark_as_seen(notification: Notification) {
     let r = await fetch('/api/v1/notification/' + notification.id, {
         method: 'POST',
-        body: JSON.stringify(notification),
+        body: JSON.stringify({ seen: true }),
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }

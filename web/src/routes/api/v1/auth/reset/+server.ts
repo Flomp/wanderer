@@ -1,7 +1,6 @@
 import { pb } from "$lib/pocketbase";
 import { handleError } from "$lib/util/api_util";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
-import { ClientResponseError } from "pocketbase";
 import { z } from "zod";
 
 export async function POST(event: RequestEvent) {

@@ -1,8 +1,6 @@
-import { pb } from "$lib/pocketbase";
-import { lists_index } from "$lib/stores/list_store";
 import { trails_show } from "$lib/stores/trail_store";
+import { APIError } from "$lib/util/api_util";
 import { error, type Load } from "@sveltejs/kit";
-import { ClientResponseError } from "pocketbase";
 
 export const load: Load = async ({ params, fetch }) => {
     try {
@@ -10,7 +8,7 @@ export const load: Load = async ({ params, fetch }) => {
 
         return { trail }
     } catch (e) {
-        if (e instanceof ClientResponseError && e.status == 404) {
+        if (e instanceof APIError && e.status == 404) {
             error(404, {
                 message: 'Not found'
             });

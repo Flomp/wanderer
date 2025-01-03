@@ -1,5 +1,6 @@
 import type { Follow } from "$lib/models/follow";
-import { ClientResponseError, type ListResult } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
+import { type ListResult } from "pocketbase";
 
 let follows: Follow[] = [];
 
@@ -14,7 +15,8 @@ export async function follows_index(data: { follower?: string, followee?: string
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const fetchedFollows: ListResult<Follow> = await r.json();
@@ -34,7 +36,8 @@ export async function follows_a_b(a: string, b: string, f: (url: RequestInfo | U
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const response: ListResult<Follow> = await r.json();
@@ -48,7 +51,8 @@ export async function follows_counts(id: string, f: (url: RequestInfo | URL, con
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const response: { followers: number, following: number } = await r.json();
@@ -63,7 +67,8 @@ export async function follows_create(follow: Follow) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }
 
@@ -74,7 +79,8 @@ export async function follows_update(follow: Follow) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }
 
@@ -84,6 +90,7 @@ export async function follows_delete(follow: Follow) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }

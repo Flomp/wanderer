@@ -1,6 +1,7 @@
 import { SummitLog } from "$lib/models/summit_log";
 import type { Trail } from "$lib/models/trail";
 import { trails_create } from "$lib/stores/trail_store";
+import { handleError } from "$lib/util/api_util";
 import { fromFile, fromFIT, fromKML, fromTCX, gpx2trail, isFITFile } from "$lib/util/gpx_util";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";
@@ -35,15 +36,11 @@ export async function PUT(event: RequestEvent) {
         try {
             trail = await trails_create(trail, [], gpxFile, event.fetch);
         } catch (e: any) {
-            console.log(e);
-
-            throw e
+            throw handleError(e)
         }
         return json(trail);
 
     } catch (e: any) {
-        console.log(e);
-
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }

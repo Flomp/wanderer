@@ -1,6 +1,7 @@
 import type { User, UserAnonymous } from "$lib/models/user";
 import { pb } from "$lib/pocketbase";
-import { ClientResponseError, type AuthMethodsList } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
+import { type AuthMethodsList } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const currentUser: Writable<User | null> = writable<User | null>()
@@ -12,8 +13,10 @@ export async function users_create(user: User) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
 
     const createdUser: User = await r.json();
 
@@ -26,13 +29,14 @@ export async function users_search(q: string, includeSelf: boolean = true) {
     }), {
         method: 'GET',
     })
-    const response = await r.json()
-
-    if (r.ok) {
-        return response.items;
-    } else {
-        throw new ClientResponseError(response)
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    const response = await r.json()
+    return response.items;
+
 }
 
 export async function users_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -40,12 +44,13 @@ export async function users_show(id: string, f: (url: RequestInfo | URL, config?
         method: 'GET',
     })
     const response: UserAnonymous = await r.json()
-
-    if (r.ok) {
-        return response;
-    } else {
-        throw new ClientResponseError(response)
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return response;
+
 }
 
 export async function users_auth_methods(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<AuthMethodsList> {
@@ -53,11 +58,12 @@ export async function users_auth_methods(f: (url: RequestInfo | URL, config?: Re
         method: 'GET',
     })
 
-    if (r.ok) {
-        return await r.json()
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+    return await r.json()
+
 
 }
 
@@ -68,11 +74,11 @@ export async function login(user: User) {
         body: JSON.stringify(user),
     })
 
-    if (r.ok) {
-        pb.authStore.loadFromCookie(document.cookie)
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+    pb.authStore.loadFromCookie(document.cookie)
 
 }
 
@@ -81,12 +87,12 @@ export async function oauth_login(data: { name: string, code: string, codeVerifi
         method: 'POST',
         body: JSON.stringify(data)
     })
-
-    if (r.ok) {
-        pb.authStore.loadFromCookie(document.cookie)
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    pb.authStore.loadFromCookie(document.cookie)
 
 }
 
@@ -102,8 +108,10 @@ export async function users_update(user: User | { [K in keyof User]?: User[K] },
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
 
     if (avatar) {
         const formData = new FormData();
@@ -117,8 +125,10 @@ export async function users_update(user: User | { [K in keyof User]?: User[K] },
         })
 
         if (!r.ok) {
-            throw new ClientResponseError(await r.json())
+            const response = await r.json();
+            throw new APIError(r.status, response.message, response.detail)
         }
+
     }
 
     const model: User = await r.json();
@@ -131,8 +141,10 @@ export async function users_delete(user: User) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
 }
 
 export async function users_reset_password(reset: { email: string }) {
@@ -140,12 +152,13 @@ export async function users_reset_password(reset: { email: string }) {
         method: 'POST',
         body: JSON.stringify(reset),
     })
-
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }
 
 export async function users_confirm_reset(reset: { password: string, passwordConfirm: string, token: string }) {
@@ -153,10 +166,11 @@ export async function users_confirm_reset(reset: { password: string, passwordCon
         method: 'POST',
         body: JSON.stringify(reset),
     })
-
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }

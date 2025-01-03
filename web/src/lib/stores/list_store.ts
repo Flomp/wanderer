@@ -1,9 +1,10 @@
 import { List, type ListFilter } from "$lib/models/list";
 import type { Trail } from "$lib/models/trail";
 import { pb } from "$lib/pocketbase";
-import { ClientResponseError, type ListResult } from "pocketbase";
+import { type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 import { fetchGPX } from "./trail_store";
+import { APIError } from "$lib/util/api_util";
 
 let lists: List[] = []
 export const list: Writable<List | null> = writable(null)
@@ -23,7 +24,8 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const fetchedLists: ListResult<List> = await r.json();
@@ -42,6 +44,12 @@ export async function lists_show(id: string, f: (url: RequestInfo | URL, config?
     }), {
         method: 'GET',
     })
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
     const response = await r.json()
 
     for (const trail of response.expand?.trails ?? []) {
@@ -50,9 +58,7 @@ export async function lists_show(id: string, f: (url: RequestInfo | URL, config?
     }
 
 
-    if (!r.ok) {
-        throw new ClientResponseError(response)
-    }
+
 
     list.set(response);
 
@@ -72,8 +78,9 @@ export async function lists_create(list: List, avatar?: File) {
         body: JSON.stringify(list),
     })
 
-    if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+   if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const model: List = await r.json();
@@ -89,11 +96,12 @@ export async function lists_create(list: List, avatar?: File) {
         body: formData,
     })
 
-    if (r.ok) {
-        return await r.json()
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
 }
 
 export async function lists_update(list: List, avatar?: File) {
@@ -103,7 +111,8 @@ export async function lists_update(list: List, avatar?: File) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const model: List = await r.json();
@@ -120,7 +129,8 @@ export async function lists_update(list: List, avatar?: File) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }
 
@@ -133,7 +143,8 @@ export async function lists_add_trail(list: List, trail: Trail) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const model: List = await r.json();
@@ -150,7 +161,8 @@ export async function lists_remove_trail(list: List, trail: Trail) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const model: List = await r.json();
@@ -164,7 +176,8 @@ export async function lists_delete(list: List) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }
 

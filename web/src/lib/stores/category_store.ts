@@ -1,7 +1,7 @@
-import { pb } from "$lib/pocketbase";
 import type { Category } from "$lib/models/category";
+import { APIError } from "$lib/util/api_util";
+import { type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
-import { ClientResponseError, type ListResult } from "pocketbase";
 
 export const categories: Writable<Category[]> = writable([])
 
@@ -9,9 +9,9 @@ export async function categories_index(f: (url: RequestInfo | URL, config?: Requ
     const r = await f('/api/v1/category', {
         method: 'GET',
     })
-
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const response: ListResult<Category> = await r.json();

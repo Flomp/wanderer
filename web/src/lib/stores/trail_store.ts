@@ -6,10 +6,11 @@ import { deepEqual } from "$lib/util/deep_util";
 import { getFileURL } from "$lib/util/file_util";
 import * as M from "maplibre-gl";
 import type { Hits } from "meilisearch";
-import { ClientResponseError, type ListResult } from "pocketbase";
+import { type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
+import { APIError } from "$lib/util/api_util";
 
 let trails: Trail[] = []
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -26,12 +27,14 @@ export async function trails_index(perPage: number = 21, random: boolean = false
     })
     const response: ListResult<Trail> = await r.json()
 
-    if (r.ok) {
-        trails = response.items
-        return response.items;
-    } else {
-        throw new ClientResponseError(response)
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    trails = response.items
+    return response.items;
+
 }
 
 export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -42,11 +45,13 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
         body: JSON.stringify({ q: filter.q, options: { filter: filterText, sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`], hitsPerPage: 12, page: page } }),
     });
 
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
     const result: { page: number, totalPages: number, hits: Hits<Record<string, any>> } = await r.json();
 
-    if (!r.ok) {
-        throw new ClientResponseError(result)
-    }
 
     const trailIds = result.hits.map((h: Record<string, any>) => h.id);
 
@@ -61,13 +66,16 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
     }), {
         method: 'GET',
     })
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
     const response: ListResult<Trail> = await r.json()
 
-    if (r.ok) {
-        return { items: response.items, ...result };
-    } else {
-        throw new ClientResponseError(response)
-    }
+    return { items: response.items, ...result };
+
 }
 
 export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, loadGPX: boolean = true) {
@@ -109,26 +117,30 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
     }), {
         method: 'GET',
     })
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
+
     const response = await r.json()
 
-    if (r.ok) {
-        if (loadGPX) {
-            for (const trail of response.items) {
-                const gpxData: string = await fetchGPX(trail);
-                if (!trail.expand) {
-                    trail.expand = {};
-                }
-                trail.expand.gpx_data = gpxData;
+    if (loadGPX) {
+        for (const trail of response.items) {
+            const gpxData: string = await fetchGPX(trail);
+            if (!trail.expand) {
+                trail.expand = {};
             }
+            trail.expand.gpx_data = gpxData;
         }
-
-        const comparison = compareObjectArrays<Trail>(trails, response.items)
-        trails = response.items;
-
-        return { trails: response.items, ...comparison };
-    } else {
-        throw new ClientResponseError(response)
     }
+
+    const comparison = compareObjectArrays<Trail>(trails, response.items)
+    trails = response.items;
+
+    return { trails: response.items, ...comparison };
+
 
 }
 
@@ -138,11 +150,13 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     }), {
         method: 'GET',
     })
-    const response = await r.json()
 
     if (!r.ok) {
-        throw new ClientResponseError(response)
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    const response = await r.json()
 
     if (loadGPX) {
         if (!response.expand) {
@@ -175,10 +189,6 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
 
 export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
-    if (!pb.authStore.model) {
-        throw new ClientResponseError({ status: 401, response: { message: "Forbidden" } });
-    }
-
     for (const waypoint of trail.expand?.waypoints ?? []) {
         const model = await waypoints_create({
             ...waypoint,
@@ -199,8 +209,10 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
 
     let model: Trail = await r.json();
 
@@ -218,11 +230,13 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         body: formData,
     })
 
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }
 
 export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: File[], gpx?: File | Blob | null) {
@@ -274,8 +288,10 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
 
     let model: Trail = await r.json();
 
@@ -303,8 +319,10 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
 
 
     trail.set(model);
@@ -329,11 +347,14 @@ export async function trails_delete(trail: Trail) {
         method: 'DELETE',
     })
 
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+
+    return await r.json();
+
 }
 
 export async function trails_get_filter_values(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
@@ -341,23 +362,26 @@ export async function trails_get_filter_values(f: (url: RequestInfo | URL, confi
         method: 'GET',
     })
 
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }
 
 export async function trails_get_bounding_box(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
     const r = await f('/api/v1/trail/bounding-box', {
         method: 'GET',
     })
-
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }
 
 export async function trails_upload(file: File, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
@@ -370,12 +394,13 @@ export async function trails_upload(file: File, f: (url: RequestInfo | URL, conf
         method: 'PUT',
         body: fd
     })
-
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }
 
 export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {

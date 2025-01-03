@@ -1,5 +1,6 @@
 import type { ListShare } from "$lib/models/list_share";
-import { ClientResponseError, type ListResult } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
+import { type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
 export const shares: Writable<ListShare[]> = writable([])
@@ -13,7 +14,8 @@ export async function list_share_index(list: string, f: (url: RequestInfo | URL,
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const response: ListResult<ListShare> = await r.json();
@@ -31,8 +33,9 @@ export async function list_share_create(share: ListShare) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
-    }    
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
 }
 
 export async function list_share_update(share: ListShare) {
@@ -42,7 +45,8 @@ export async function list_share_update(share: ListShare) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }
 
@@ -52,6 +56,7 @@ export async function list_share_delete(share: ListShare) {
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 }

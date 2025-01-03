@@ -1,18 +1,18 @@
 import { invalidateAll } from "$app/navigation";
 import { Settings } from "$lib/models/settings";
-import { ClientResponseError } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
 
 export async function settings_show(userId: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/settings/' + userId, {
         method: 'GET',
     })
-
-    const response = await r.json();
-    if (r.ok) {
-        return response;
-    } else {
-        throw new ClientResponseError(response)
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+    const response = await r.json();
+
+    return response
 }
 
 export async function settings_create(settings: Settings) {
@@ -21,11 +21,13 @@ export async function settings_create(settings: Settings) {
         body: JSON.stringify(settings),
     })
 
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }
 
 export async function settings_update(settings: Settings) {
@@ -33,13 +35,14 @@ export async function settings_update(settings: Settings) {
         method: 'POST',
         body: JSON.stringify(settings),
     })
-
-    if (r.ok) {
-        await invalidateAll()
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    await invalidateAll()
+    return await r.json();
+
 }
 
 export async function settings_delete(settings: Settings) {
@@ -47,9 +50,11 @@ export async function settings_delete(settings: Settings) {
         method: 'DELETE',
     })
 
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }

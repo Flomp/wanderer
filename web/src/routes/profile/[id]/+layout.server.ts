@@ -1,7 +1,7 @@
 import { follows_a_b, follows_counts } from "$lib/stores/follow_store";
 import { users_show } from "$lib/stores/user_store";
-import { error, type ServerLoad } from "@sveltejs/kit";
-import { ClientResponseError } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
+import { error, type NumericRange, type ServerLoad } from "@sveltejs/kit";
 
 export const load: ServerLoad = async ({ params, locals, fetch }) => {
 
@@ -23,9 +23,9 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
         return { user, isOwnProfile, ...followCounts, follow: follow }
 
     } catch (e) {
-        if (e instanceof ClientResponseError && e.status == 404) {
-            error(404, {
-                message: 'Not found'
+        if (e instanceof APIError) {
+            error(e.status as NumericRange<400, 599>, {
+                message: e.status == 404 ? 'Not found' : e.message
             });
         } else {
             throw e

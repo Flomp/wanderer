@@ -4,6 +4,20 @@ import { pb } from "$lib/pocketbase";
 import { ZodError, type ZodSchema } from "zod";
 import { RecordListOptionsSchema, RecordIdSchema, RecordOptionsSchema } from "$lib/models/api/base_schema";
 
+export class APIError extends Error {
+    status: number;
+    message: string;
+    detail: any;
+
+    constructor(status: number, message: string, detail?: any) {
+        super();
+        this.status = status;
+        this.message = message;
+        this.detail = detail
+    }
+}
+
+
 export enum Collection {
     users = "users",
     categories = "categories",
@@ -108,7 +122,7 @@ export async function remove(event: RequestEvent, collection: Collection) {
 
 export function handleError(e: any) {
     if (e instanceof ZodError) {
-        return error(400, { message: "invalid_params", details: e.issues } as any)
+        return error(400, { message: "invalid_params", detail: e.issues } as any)
     } else if (e instanceof ClientResponseError && e.status > 0) {
         return error(e.status as NumericRange<400, 599>, { message: e.message, detail: e.originalError.data } as any)
     } else if (e instanceof SyntaxError) {

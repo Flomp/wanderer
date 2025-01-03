@@ -9,9 +9,10 @@
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { login } from "$lib/stores/user_store";
+    import { APIError } from "$lib/util/api_util";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
-    import { ClientResponseError, type AuthProviderInfo } from "pocketbase";
+    import { type AuthProviderInfo } from "pocketbase";
     import { _ } from "svelte-i18n";
     import { z } from "zod";
 
@@ -51,7 +52,7 @@
                 window.location.href = $page.url.searchParams.get("r") ?? "/";
             } catch (e) {
                 if (
-                    e instanceof ClientResponseError &&
+                    e instanceof APIError &&
                     e.message == "Failed to authenticate."
                 ) {
                     show_toast({

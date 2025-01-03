@@ -1,5 +1,6 @@
 import type { Activity } from "$lib/models/activity";
-import { ClientResponseError, type ListResult } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
+import { type ListResult } from "pocketbase";
 
 let activities: Activity[] = [];
 
@@ -14,7 +15,8 @@ export async function activities_index(author: string, page: number = 1, perPage
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const fetchedActivities: ListResult<Activity> = await r.json();
