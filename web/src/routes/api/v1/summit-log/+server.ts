@@ -1,9 +1,8 @@
 import { SummitLogCreateSchema } from '$lib/models/api/summit_log_schema';
 import type { SummitLog } from '$lib/models/summit_log';
 import { pb } from '$lib/pocketbase';
-import { create, handleError } from '$lib/util/api_util';
-import { Collection, list } from '$lib/util/api_util';
-import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { Collection, create, handleError, list } from '$lib/util/api_util';
+import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
     try {
@@ -29,6 +28,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<SummitLog>(event, SummitLogCreateSchema, Collection.summit_logs)
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }

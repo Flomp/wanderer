@@ -7,7 +7,7 @@ const UserCreateSchema = (z.object({
     password: z.string().min(8, "must-be-at-least-n-characters-long"),
     passwordConfirm: z.string().optional()
 
-}) satisfies ZodType<User>).refine((data) => data.password === data.passwordConfirm, {
+}) satisfies ZodType<Partial<User>>).refine((data) => data.password === data.passwordConfirm, {
     message: "passwords-must-match",
     path: ["passwordConfirm"],
 })

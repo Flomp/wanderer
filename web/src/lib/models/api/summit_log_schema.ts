@@ -12,8 +12,8 @@ const SummitLogCreateSchema = z.object({
     elevation_loss: z.number().nonnegative().optional(),
     duration: z.number().nonnegative().optional(),
     author: z.string().length(15),
-    photos: z.array(z.string())
-}) satisfies ZodType<SummitLog>
+    photos: z.array(z.string()).default([])
+}) satisfies ZodType<Partial<SummitLog>>
 
 const SummitLogUpdateSchema = z.object({
     date: z.string().date().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date").optional(),

@@ -130,7 +130,7 @@
             {/if}
         </td>
     {/if}
-    {#if showAuthor && log.expand.author}
+    {#if showAuthor && log.expand?.author}
         <td>
             <p
                 class="tooltip flex justify-center"
@@ -162,7 +162,7 @@
             </p>
         </td>
     {/if}
-    {#if showRoute && log.expand.gpx_data}
+    {#if showRoute && log.expand?.gpx_data}
         <td>
             <button on:click={openRoute} class="btn-icon">
                 <i class="fa fa-map-location-dot px-[3px] text-xl"></i></button
