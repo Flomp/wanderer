@@ -4,6 +4,7 @@ import tailwind from '@astrojs/tailwind';
 
 import node from "@astrojs/node";
 
+import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi'
 // https://astro.build/config
 export default defineConfig({
   integrations: [starlight({
@@ -19,6 +20,15 @@ export default defineConfig({
     components: {
       Footer: './src/components/footer.astro'
     },
+    plugins: [
+      starlightOpenAPI([
+        {
+          base: 'api-reference',
+          label: 'API Reference',
+          schema: 'wanderer.openapi.yaml',
+        },
+      ]),
+    ],
     sidebar: [{
       label: 'Getting Started',
       items: [{
@@ -68,12 +78,8 @@ export default defineConfig({
         label: 'API',
         link: '/guides/api/'
       }]
-    }, {
-      label: 'API Reference',
-      autogenerate: {
-        directory: 'api-reference'
-      }
-    }],
+    },
+    ...openAPISidebarGroups,],
     customCss: ['./src/custom.css', './src/tailwind.css', '@fontsource/ibm-plex-sans/400.css', '@fontsource/ibm-plex-sans/600.css', '@fontsource/ibm-plex-mono/400.css', '@fontsource/ibm-plex-mono/600.css']
   }), tailwind({
     applyBaseStyles: false
