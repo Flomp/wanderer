@@ -104,7 +104,7 @@
 <div class="dropdown relative">
     {#if unreadCount > 0}
         <div
-            class="absolute -top-1 left-4 text-sm rounded-full bg-content text-content-inverse px-1 text-center"
+            class="absolute pointer-events-none -top-1 left-4 text-sm rounded-full bg-content text-content-inverse px-1 text-center"
         >
             {unreadCount}{unreadCount >= 10 ? "+" : ""}
         </div>
@@ -117,7 +117,7 @@
 
     {#if isOpen}
         <ul
-            class="menu absolute bg-menu-background border border-input-border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-scroll mt-4 max-h-96 w-64"
+            class="menu absolute bg-menu-background border border-input-border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-scroll mt-4 max-h-96 w-72"
             class:none={isOpen}
             on:scroll={onListScroll}
             style="z-index: 1001"

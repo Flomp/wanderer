@@ -83,7 +83,7 @@
                     ? null
                     : `/profile/${n.author}`;
             case NotificationType.trailComment:
-                return `/trail/view/${n.metadata?.id}`;
+                return `/trail/view/${n.metadata?.id}?t=4`;
             case NotificationType.trailCreate:
                 return `/trail/view/${n.metadata?.id}`;
             case NotificationType.trailShare:

@@ -396,15 +396,15 @@
                             >
                         </div>
                     {/if}
-                    <ul class="space-y-4">
-                        {#if commentsLoading}
-                            {#each { length: 3 } as _, index}
-                                <SkeletonNotificationCard
-                                ></SkeletonNotificationCard>
-                            {/each}
-                        {:else if $comments.length == 0}
-                            <EmptyStateComment></EmptyStateComment>
-                        {:else}
+                    {#if commentsLoading}
+                        {#each { length: 3 } as _, index}
+                            <SkeletonNotificationCard
+                            ></SkeletonNotificationCard>
+                        {/each}
+                    {:else if $comments.length == 0}
+                        <div class="my-4"><EmptyStateComment></EmptyStateComment></div>
+                    {:else}
+                        <ul class="space-y-4">
                             {#each $comments ?? [] as comment}
                                 <li>
                                     <CommentCard
@@ -418,8 +418,8 @@
                                     ></CommentCard>
                                 </li>
                             {/each}
-                        {/if}
-                    </ul>
+                        </ul>
+                    {/if}
                 </div>
             {/if}
             {#if mode == "overview"}
