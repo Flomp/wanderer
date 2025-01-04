@@ -39,6 +39,9 @@
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
     import EmptyStateComment from "../empty_states/empty_state_comment.svelte";
+    import EmptyStatePhotos from "../empty_states/empty_state_photos.svelte";
+    import EmptyStateWaypoint from "../empty_states/empty_state_waypoint.svelte";
+    import EmptyStateDescription from "../empty_states/empty_state_description.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
@@ -299,44 +302,58 @@
             class:md:grid-cols-[1fr_18rem]={mode == "overview"}
         >
             {#if activeTab == 0}
-                <article class="text-justify whitespace-pre-line text-sm">
-                    {trail.description}
-                </article>
+                {#if trail.description?.length}
+                    <article class="text-justify whitespace-pre-line text-sm">
+                        {trail.description}
+                    </article>
+                {:else}
+                    <EmptyStateDescription></EmptyStateDescription>
+                {/if}
             {/if}
             {#if activeTab == 1}
-                <ul>
-                    {#each trail.expand?.waypoints ?? [] as waypoint, i}
-                        <li
-                            on:mouseenter={() => openMarkerPopup(i)}
-                            on:mouseleave={() => closeMarkerPopup(i)}
-                        >
-                            <WaypointCard {waypoint}></WaypointCard>
-                        </li>
-                    {/each}
-                </ul>
+                {#if trail.expand?.waypoints.length}
+                    <ul>
+                        {#each trail.expand?.waypoints ?? [] as waypoint, i}
+                            <li
+                                on:mouseenter={() => openMarkerPopup(i)}
+                                on:mouseleave={() => closeMarkerPopup(i)}
+                            >
+                                <WaypointCard {waypoint}></WaypointCard>
+                            </li>
+                        {/each}
+                    </ul>
+                {:else}
+                    <EmptyStateWaypoint></EmptyStateWaypoint>
+                {/if}
             {/if}
             {#if activeTab == 2}
-                <div
-                    id="photo-gallery"
-                    class="grid grid-cols-1 {mode == 'overview'
-                        ? 'sm:grid-cols-2 md:grid-cols-3'
-                        : ''} gap-4"
-                >
-                    <PhotoGallery
-                        photos={trail.photos.map((p) => getFileURL(trail, p))}
-                        bind:open={openGallery}
-                    ></PhotoGallery>
-                    {#each trail.photos ?? [] as photo, i}
-                        <!-- svelte-ignore a11y-click-events-have-key-events -->
-                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                        <img
-                            class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                            on:click={() => openGallery(i)}
-                            src={getFileURL(trail, photo)}
-                            alt=""
-                        />
-                    {/each}
-                </div>
+                {#if trail.photos.length}
+                    <div
+                        id="photo-gallery"
+                        class="grid grid-cols-1 {mode == 'overview'
+                            ? 'sm:grid-cols-2 md:grid-cols-3'
+                            : ''} gap-4"
+                    >
+                        <PhotoGallery
+                            photos={trail.photos.map((p) =>
+                                getFileURL(trail, p),
+                            )}
+                            bind:open={openGallery}
+                        ></PhotoGallery>
+                        {#each trail.photos ?? [] as photo, i}
+                            <!-- svelte-ignore a11y-click-events-have-key-events -->
+                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                            <img
+                                class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                                on:click={() => openGallery(i)}
+                                src={getFileURL(trail, photo)}
+                                alt=""
+                            />
+                        {/each}
+                    </div>
+                {:else}
+                    <EmptyStatePhotos></EmptyStatePhotos>
+                {/if}
             {/if}
             {#if activeTab == 3}
                 <div class="overflow-x-auto">
@@ -386,7 +403,7 @@
                                 ></SkeletonNotificationCard>
                             {/each}
                         {:else if $comments.length == 0}
-                            <EmptyStateComment width={192}></EmptyStateComment>
+                            <EmptyStateComment></EmptyStateComment>
                         {:else}
                             {#each $comments ?? [] as comment}
                                 <li>

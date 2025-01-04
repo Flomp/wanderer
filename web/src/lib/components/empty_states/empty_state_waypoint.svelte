@@ -1,6 +1,6 @@
 <script lang="ts">
-    import emptyStateCommentDark from "$lib/assets/svgs/empty_states/empty_state_comment_dark.svg";
-    import emptyStateCommentLight from "$lib/assets/svgs/empty_states/empty_state_comment_light.svg";
+    import emptyStateWaypointDark from "$lib/assets/svgs/empty_states/empty_state_waypoint_dark.svg";
+    import emptyStateWaypointLight from "$lib/assets/svgs/empty_states/empty_state_waypoint_light.svg";
     import { theme } from "$lib/stores/theme_store";
 
     import { _ } from "svelte-i18n";
@@ -11,9 +11,9 @@
     <img
         style="width: {width}px"
         class="rounded-full aspect-square"
-        src={$theme === "light" ? emptyStateCommentLight : emptyStateCommentDark}
+        src={$theme === "light" ? emptyStateWaypointLight : emptyStateWaypointDark}
         alt="Empty State showing a wanderer going into the distance"
     />
 
-    <h3 class="text-xl font-medium text-center text-gray-500">{$_("no-comments-so-far")}...</h3>
+    <h3 class="text-xl font-medium text-center text-gray-500">{$_("no-waypoints-yet")}...</h3>
 </div>
