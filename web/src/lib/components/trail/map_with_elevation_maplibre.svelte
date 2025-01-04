@@ -140,7 +140,7 @@
 
         const r: GeoJSON[] = [];
         trails.forEach((t) => {
-            if (t.expand.gpx_data) {
+            if (t.expand?.gpx_data) {
                 r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
             } else if (t.lat && t.lon) {
                 r.push({
@@ -165,7 +165,7 @@
         if (data[activeTrail] && showElevation) {
             epc?.setData(
                 data[activeTrail]!,
-                trails.at(activeTrail)!.expand.waypoints,
+                trails.at(activeTrail)!.expand?.waypoints,
             );
             epc?.showProfile();
         }
@@ -409,7 +409,7 @@
         if (data[activeTrail] && showElevation) {
             epc?.setData(
                 data[activeTrail]!,
-                trails.at(activeTrail)!.expand.waypoints,
+                trails.at(activeTrail)!.expand?.waypoints,
             );
             epc?.showProfile();
         }
@@ -490,7 +490,7 @@
         if (!map) {
             return;
         }
-        for (const waypoint of trails[activeTrail]?.expand.waypoints ?? []) {
+        for (const waypoint of trails[activeTrail]?.expand?.waypoints ?? []) {
             const marker = createMarkerFromWaypoint(waypoint, onMarkerDragEnd);
             marker.addTo(map);
             markers.push(marker);

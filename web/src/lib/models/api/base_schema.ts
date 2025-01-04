@@ -7,7 +7,7 @@ const RecordOptionsSchema = z.object({
 })
 
 const RecordListOptionsSchema = RecordOptionsSchema.extend({
-    page: z.number({ coerce: true }).int().positive().optional(),
+    page: z.number({ coerce: true }).int().nonnegative().optional(),
     perPage: z.number({ coerce: true }).int().optional(),
     sort: z.string().optional(),
     filter: z.string().optional(),

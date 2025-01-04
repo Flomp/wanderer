@@ -325,7 +325,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -348,13 +348,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 0
                         type: number
@@ -583,7 +583,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -602,13 +602,13 @@ paths:
                           type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_type
                         expected: string
                         received: undefined
@@ -794,7 +794,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -817,13 +817,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 0
                         type: number
@@ -1232,7 +1232,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -1255,13 +1255,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 0
                         type: number
@@ -1659,7 +1659,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -1678,13 +1678,13 @@ paths:
                           type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_type
                         expected: string
                         received: number
@@ -1834,7 +1834,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -1857,13 +1857,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -2028,7 +2028,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -2051,13 +2051,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -2163,7 +2163,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -2186,13 +2186,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -2283,7 +2283,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -2306,13 +2306,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -2442,7 +2442,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -2465,13 +2465,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -2755,7 +2755,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -2778,13 +2778,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 0
                         type: number
@@ -3060,7 +3060,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -3083,13 +3083,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -3192,7 +3192,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -3215,13 +3215,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -3379,7 +3379,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -3402,13 +3402,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -3514,7 +3514,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -3537,13 +3537,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -4044,7 +4044,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -4067,7 +4067,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         x-400:Invalid sort/expand/filter:
           description: ''
@@ -4449,7 +4449,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -4468,13 +4468,13 @@ paths:
                           type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_type
                         expected: string
                         received: number
@@ -4577,7 +4577,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -4600,13 +4600,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -5006,7 +5006,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -5029,7 +5029,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         x-400:Invalid sort/expand/filter:
           description: ''
@@ -5197,7 +5197,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -5220,13 +5220,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -5421,7 +5421,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -5444,13 +5444,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -5556,7 +5556,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -5579,13 +5579,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -5810,7 +5810,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -5829,13 +5829,13 @@ paths:
                           type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_type
                         expected: string
                         received: number
@@ -5949,7 +5949,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -5972,13 +5972,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -6135,7 +6135,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -6158,13 +6158,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -6366,7 +6366,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -6389,13 +6389,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -6501,7 +6501,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -6524,13 +6524,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -6985,7 +6985,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -7008,7 +7008,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         x-400:Invalid sort/expand/filter:
           description: ''
@@ -7246,7 +7246,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -7265,13 +7265,13 @@ paths:
                           type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_type
                         expected: string
                         received: number
@@ -7449,7 +7449,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -7472,13 +7472,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -7666,7 +7666,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -7689,13 +7689,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -7801,7 +7801,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -7824,13 +7824,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -8245,7 +8245,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -8268,13 +8268,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 0
                         type: number
@@ -8509,7 +8509,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -8528,13 +8528,13 @@ paths:
                           type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_type
                         expected: string
                         received: number
@@ -8644,7 +8644,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -8667,13 +8667,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -8812,7 +8812,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -8835,13 +8835,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -8999,7 +8999,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -9022,13 +9022,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -9134,7 +9134,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -9157,13 +9157,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -9515,7 +9515,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -9534,13 +9534,13 @@ paths:
                           type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_type
                         expected: string
                         received: number
@@ -9925,7 +9925,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -9948,7 +9948,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         x-400:Invalid sort/expand/filter:
           description: ''
@@ -10440,7 +10440,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -10463,7 +10463,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         x-400:Invalid sort/expand/filter:
           description: ''
@@ -10636,7 +10636,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -10659,13 +10659,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -11135,7 +11135,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -11158,7 +11158,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         x-400:Invalid sort/expand/filter:
           description: ''
@@ -11402,7 +11402,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -11423,13 +11423,13 @@ paths:
                         - path
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_string
                         validation: date
                         message: Invalid date
@@ -11624,7 +11624,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -11647,13 +11647,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -11861,7 +11861,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -11884,13 +11884,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -11996,7 +11996,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -12019,13 +12019,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -12202,7 +12202,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -12225,13 +12225,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -13027,7 +13027,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -13050,7 +13050,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         x-400:Invalid sort/expand/filter:
           description: ''
@@ -13388,7 +13388,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -13409,13 +13409,13 @@ paths:
                         - path
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: invalid_string
                         validation: date
                         message: Invalid date
@@ -13657,7 +13657,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -13680,13 +13680,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -13967,7 +13967,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -13990,7 +13990,7 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
           headers: {}
         '404':
           description: ''
@@ -14079,7 +14079,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -14102,13 +14102,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string
@@ -14333,7 +14333,7 @@ paths:
                 properties:
                   message:
                     type: string
-                  details:
+                  detail:
                     type: array
                     items:
                       type: object
@@ -14356,13 +14356,13 @@ paths:
                             type: string
                 required:
                   - message
-                  - details
+                  - detail
               examples:
                 '1':
                   summary: Exception
                   value:
                     message: invalid_params
-                    details:
+                    detail:
                       - code: too_small
                         minimum: 15
                         type: string

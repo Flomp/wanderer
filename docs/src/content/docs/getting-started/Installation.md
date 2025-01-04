@@ -115,9 +115,10 @@ To update all containers to a new version simply run `docker compose pull && doc
 While not recommended it is absolutely possible to install wanderer from source. 
 
 ### Prerequisites
-1. git installed && `git clone https://github.com/Flomp/wanderer.git` 
+1. git installed && `git clone https://github.com/Flomp/wanderer.git --branch v0.12.0 --single-branch` 
 2. go >= 1.21.1 installed
 3. node >= 18.17.0 installed
+4. npm >= 8.15.0 installed
 
 ### meilisearch
 wanderer uses meilisearch without any further modifications. As a result, you can simply head over to [their website](https://www.meilisearch.com/docs/learn/getting_started/installation) and follow the instructions for your preferred platform. We assume that you put the binary in the `wanderer/search` directory. If you did not, adapt the launch script below accordingly.
@@ -157,15 +158,26 @@ Caution: Ensure that you change the `MEILI_MASTER_KEY` to a different value if y
 ```bash
 trap "kill 0" EXIT
 
+# learn more about the configuration:
+# https://wanderer.to/getting-started/configuration/
+# required
 export ORIGIN=http://localhost:3000
 export MEILI_URL=http://127.0.0.1:7700
-export MEILI_MASTER_KEY=CHANGE_ME!
+export MEILI_MASTER_KEY=YOU_SHOULD_DEFINITELY_CHANGE_ME
 export PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
 export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
 
+# optional
+# export MEILI_NO_ANALYTICS=true
+# export BODY_SIZE_LIMIT=Infinity
+# export PUBLIC_DISABLE_SIGNUP=false
+# export UPLOAD_FOLDER=/app/uploads
+# export UPLOAD_USER=
+# export UPLOAD_PASSWORD=
+
 cd search && ./meilisearch --master-key $MEILI_MASTER_KEY &
 cd db && ./pocketbase serve &
-cd web/build && node build &
+cd web && node build &
 
 wait
 ```

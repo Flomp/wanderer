@@ -132,6 +132,15 @@
 
     function handleMapInit() {
         if (
+            $page.url.searchParams.has("lat") &&
+            $page.url.searchParams.has("lon")
+        ) {
+            const lat = $page.url.searchParams.get("lat");
+            const lon = $page.url.searchParams.get("lon");
+            map.setCenter([parseFloat(lon!), parseFloat(lat!)]);
+            map.setZoom(14);
+            console.log("Set map center to: " + lat + " " + lon);
+        } else if (
             $page.url.searchParams.has("tl_lat") &&
             $page.url.searchParams.has("tl_lon") &&
             $page.url.searchParams.has("br_lat") &&
@@ -148,14 +157,6 @@
                 ],
             ];
             map.fitBounds(boundingBox, { animate: false });
-        } else if (
-            $page.url.searchParams.has("lat") &&
-            $page.url.searchParams.has("lon")
-        ) {
-            const lat = $page.url.searchParams.get("lat");
-            const lon = $page.url.searchParams.get("lon");
-            map.setCenter([parseFloat(lon!), parseFloat(lat!)]);
-            map.setZoom(14);
         } else if (settings && settings.mapFocus == "trails") {
             const boundingBox: M.LngLatBoundsLike = [
                 [maxBoundingBox.min_lon, maxBoundingBox.max_lat],

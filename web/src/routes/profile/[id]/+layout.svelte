@@ -17,7 +17,7 @@
             text: $_("trail", { values: { n: 2 } }),
             value: `/profile/${$page.params.id}/trails`,
         },
-        { text: $_('statistics'), value: `/profile/${$page.params.id}/stats` },
+        { text: $_("statistics"), value: `/profile/${$page.params.id}/stats` },
     ];
 
     $: activeIndex = profileLinks.findIndex(
@@ -80,14 +80,14 @@
                 href="/profile/{data.user.id}/users/followers"
             >
                 <p class="font-semibold">{data.followers}</p>
-                <p>{$_('followers')}</p>
+                <p>{$_("followers")}</p>
             </a>
             <a
                 class:font-bold={$page.url.pathname.endsWith("following")}
                 href="/profile/{data.user.id}/users/following"
             >
                 <p class="font-semibold">{data.following}</p>
-                <p>{$_('following')}</p>
+                <p>{$_("following")}</p>
             </a>
         </div>
         {#if !data.isOwnProfile}
@@ -113,6 +113,12 @@
                 >
             {/each}
         </div>
+        {#if data.isOwnProfile}
+            <div class="px-6 mb-4 flex flex-col gap-2">
+                <button class="btn-secondary basis-full">Share profile</button>
+                <a class="btn-secondary text-center basis-full" href="/settings/profile">{$_("settings")}</a>
+            </div>
+        {/if}
     </div>
     <slot></slot>
 </div>

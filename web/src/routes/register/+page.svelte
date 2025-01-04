@@ -28,7 +28,7 @@
                     $_("must-be-at-least-n-characters-long", {
                         values: { n: 3 },
                     }),
-                ),
+                ).regex(/^[\w][\w\.]*$/, $_("invalid-username")),
                 email: z
                     .string()
                     .min(1, "required")

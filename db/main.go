@@ -114,7 +114,7 @@ func createTrailHandler(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 		if e.Record.GetBool("public") {
 			notification := util.Notification{
 				Type: util.TrailCreate,
-				Metadata: map[string]interface{}{
+				Metadata: map[string]string{
 					"id":    e.Record.Id,
 					"trail": e.Record.GetString("name"),
 				},
@@ -163,7 +163,7 @@ func createTrailShareHandler(app *pocketbase.PocketBase, client meilisearch.Serv
 
 		notification := util.Notification{
 			Type: util.TrailShare,
-			Metadata: map[string]interface{}{
+			Metadata: map[string]string{
 				"id":     shareTrail.Id,
 				"trail":  shareTrail.GetString("name"),
 				"author": shareTrailAuthor.GetString("username"),
@@ -185,7 +185,7 @@ func createListShareHandler(app *pocketbase.PocketBase) func(e *core.RecordCreat
 
 		notification := util.Notification{
 			Type: util.ListShare,
-			Metadata: map[string]interface{}{
+			Metadata: map[string]string{
 				"id":     shareList.Id,
 				"list":   shareList.GetString("name"),
 				"author": shareListAuthor.GetString("username"),
@@ -211,7 +211,7 @@ func createListHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEven
 		}
 		notification := util.Notification{
 			Type: util.ListCreate,
-			Metadata: map[string]interface{}{
+			Metadata: map[string]string{
 				"id":   e.Record.Id,
 				"list": e.Record.GetString("name"),
 			},
@@ -231,7 +231,7 @@ func createFollowHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEv
 
 		notification := util.Notification{
 			Type: util.NewFollower,
-			Metadata: map[string]interface{}{
+			Metadata: map[string]string{
 				"follower": follower.GetString("username"),
 			},
 			Seen:   false,
@@ -252,7 +252,7 @@ func createCommentHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateE
 
 		notification := util.Notification{
 			Type: util.TrailComment,
-			Metadata: map[string]interface{}{
+			Metadata: map[string]string{
 				"id":      commentTrail.Id,
 				"author":  commentAuthor.GetString("username"),
 				"trail":   commentTrail.GetString("name"),
