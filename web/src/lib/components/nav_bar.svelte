@@ -1,5 +1,6 @@
 <script lang="ts">
     import { afterNavigate, goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import LogoText from "$lib/components/logo/logo_text.svelte";
     import { theme, toggleTheme } from "$lib/stores/theme_store";
     import { currentUser, logout } from "$lib/stores/user_store";
@@ -10,8 +11,6 @@
     import Drawer from "./base/drawer.svelte";
     import Dropdown from "./base/dropdown.svelte";
     import LogoTextLight from "./logo/logo_text_light.svelte";
-    import { page } from "$app/stores";
-    import NotificationCard from "./notification/notification_card.svelte";
     import NotificationDropdown from "./notification/notification_dropdown.svelte";
 
     let navBarItems = [

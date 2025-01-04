@@ -3,11 +3,15 @@
     import { page } from "$app/stores";
     import Button from "$lib/components/base/button.svelte";
     import type { SelectItem } from "$lib/components/base/select.svelte";
+    import ProfileShareModal from "$lib/components/profile/profile_share_modal.svelte";
     import { follows_create, follows_delete } from "$lib/stores/follow_store";
     import { currentUser } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
+
     export let data;
+
+    let openShareModal: () => void;
 
     let followLoading: boolean = false;
 
@@ -115,9 +119,18 @@
         </div>
         {#if data.isOwnProfile}
             <div class="px-6 mb-4 flex flex-col gap-2">
-                <button class="btn-secondary basis-full">Share profile</button>
-                <a class="btn-secondary text-center basis-full" href="/settings/profile">{$_("settings")}</a>
+                <button
+                    class="btn-secondary basis-full"
+                    on:click={() => openShareModal()}
+                    >{$_("share-profile")}</button
+                >
+                <a
+                    class="btn-secondary text-center basis-full"
+                    href="/settings/profile">{$_("settings")}</a
+                >
             </div>
+            <ProfileShareModal bind:openModal={openShareModal}
+            ></ProfileShareModal>
         {/if}
     </div>
     <slot></slot>

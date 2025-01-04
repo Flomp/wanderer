@@ -1,9 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
-    import { type RadioItem } from "$lib/components/base/radio_group.svelte";
-    import { type SearchItem } from "$lib/components/base/search.svelte";
-    import { type SelectItem } from "$lib/components/base/select.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import EmailModal from "$lib/components/settings/email_modal.svelte";
     import PasswordModal from "$lib/components/settings/password_modal.svelte";
@@ -14,26 +11,14 @@
         users_delete,
         users_update,
     } from "$lib/stores/user_store";
-    import { country_codes } from "$lib/util/country_code_util";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
 
     const settings = $page.data.settings;
 
-    const mapFocus: SelectItem[] = [
-        { text: $_("trail", { values: { n: 2 } }), value: "trails" },
-        { text: $_("location"), value: "location" },
-    ];
-
-    const units: RadioItem[] = [
-        { text: $_("metric"), value: "metric" },
-        { text: $_("imperial"), value: "imperial" },
-    ];
-
     let selectedLanguage = "en";
     let selectedMapFocus = "trails";
 
-    let searchDropdownItems: SearchItem[] = [];
     let citySearchQuery: string = "";
 
     let openConfirmModal: () => void;
