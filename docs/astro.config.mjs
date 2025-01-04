@@ -10,8 +10,8 @@ export default defineConfig({
   integrations: [starlight({
     title: 'wanderer Documentation',
     logo: {
-      light: '/src/assets/logo_dark_text.svg',
-      dark: '/src/assets/logo_light_text.svg',
+      light: '/src/assets/logo_text_dark.svg',
+      dark: '/src/assets/logo_text_light.svg',
       replacesTitle: true
     },
     social: {
