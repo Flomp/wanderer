@@ -28,7 +28,7 @@
         { text: $_("imperial"), value: "imperial" },
     ];
 
-    let selectedLanguage = "en";
+    let selectedLanguage = settings.language ?? "en";
 
     async function handleLanguageSelection(
         value: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt",

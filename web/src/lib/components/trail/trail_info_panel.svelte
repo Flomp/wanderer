@@ -21,21 +21,24 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
 
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import { pb } from "$lib/pocketbase";
+    import { theme } from "$lib/stores/theme_store";
+    import { show_toast } from "$lib/stores/toast_store";
+    import * as M from "maplibre-gl";
     import "photoswipe/style.css";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Button from "../base/button.svelte";
+    import SkeletonNotificationCard from "../base/skeleton_notification_card.svelte";
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
     import ShareInfo from "../share_info.svelte";
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
-    import { pb } from "$lib/pocketbase";
-    import * as M from "maplibre-gl";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
-    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
-    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
-    import { theme } from "$lib/stores/theme_store";
+    import EmptyStateComment from "../empty_states/empty_state_comment.svelte";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
@@ -62,6 +65,8 @@
     let openGallery: (idx?: number) => void;
 
     let newComment: Comment = new Comment("", 0, "", trail.id ?? "");
+
+    let commentsLoading: boolean = false;
     let commentCreateLoading: boolean = false;
     let commentDeleteLoading: boolean = false;
 
@@ -90,7 +95,9 @@
     }
 
     async function fetchComments() {
+        commentsLoading = true;
         await comments_index(trail);
+        commentsLoading = false;
     }
 
     async function createComment() {
@@ -101,7 +108,8 @@
         newComment.author = $currentUser.id;
         newComment.trail = trail.id;
 
-        comments_create(newComment).then((c) => {
+        try {
+            const c = await comments_create(newComment);
             newComment.text = "";
             c.expand = {
                 author: { ...$currentUser!, private: false },
@@ -109,9 +117,15 @@
 
             const newCommentList = [c, ...$comments];
             comments.set(newCommentList);
-        });
-
-        commentCreateLoading = false;
+        } catch (e) {
+            show_toast({
+                icon: "close",
+                type: "error",
+                text: $_("error-posting-comment"),
+            });
+        } finally {
+            commentCreateLoading = false;
+        }
     }
 
     async function editComment(data: { comment: Comment; text: string }) {
@@ -360,24 +374,34 @@
                                 on:click={createComment}
                                 loading={commentCreateLoading}
                                 secondary={true}
-                                disabled={newComment.text.length == 0}
-                                >Comment</Button
+                                disabled={commentCreateLoading ||
+                                    newComment.text.length == 0}>Comment</Button
                             >
                         </div>
                     {/if}
                     <ul class="space-y-4">
-                        {#each $comments ?? [] as comment}
-                            <li>
-                                <CommentCard
-                                    {comment}
-                                    mode={comment.author == $currentUser?.id
-                                        ? "edit"
-                                        : "show"}
-                                    on:delete={(e) => deleteComment(e.detail)}
-                                    on:edit={(e) => editComment(e.detail)}
-                                ></CommentCard>
-                            </li>
-                        {/each}
+                        {#if commentsLoading}
+                            {#each { length: 3 } as _, index}
+                                <SkeletonNotificationCard
+                                ></SkeletonNotificationCard>
+                            {/each}
+                        {:else if $comments.length == 0}
+                            <EmptyStateComment width={192}></EmptyStateComment>
+                        {:else}
+                            {#each $comments ?? [] as comment}
+                                <li>
+                                    <CommentCard
+                                        {comment}
+                                        mode={comment.author == $currentUser?.id
+                                            ? "edit"
+                                            : "show"}
+                                        on:delete={(e) =>
+                                            deleteComment(e.detail)}
+                                        on:edit={(e) => editComment(e.detail)}
+                                    ></CommentCard>
+                                </li>
+                            {/each}
+                        {/if}
                     </ul>
                 </div>
             {/if}

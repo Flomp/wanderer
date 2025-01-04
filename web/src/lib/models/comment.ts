@@ -7,6 +7,7 @@ export class Comment {
     author: string;
     trail: string;
     created?: string;
+    updated?: string;
     expand?: {
         author: UserAnonymous
     }

@@ -74,7 +74,7 @@
                 <span class="text-xs text-gray-500 ml-2"
                     >{$_(`n-${timeSince.unit}-ago`, {
                         values: { n: timeSince.value },
-                    })}</span
+                    })} {comment.updated != comment.created ? `(${$_("edited")})` : ""}</span
                 >
             </p>
             {#if mode == "edit"}
