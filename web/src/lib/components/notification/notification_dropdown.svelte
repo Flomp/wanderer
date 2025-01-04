@@ -12,6 +12,9 @@
     import SkeletonNotificationCard from "../base/skeleton_notification_card.svelte";
     import NotificationCard from "./notification_card.svelte";
     import { _ } from "svelte-i18n";
+    import emptyStateNotificationDark from "$lib/assets/svgs/empty_states/empty_state_notification_dark.svg";
+    import emptyStateNotificationLight from "$lib/assets/svgs/empty_states/empty_state_notification_light.svg";
+    import { theme } from "$lib/stores/theme_store";
 
     let notifications: Notification[] = [];
 
@@ -133,9 +136,17 @@
                     ></NotificationCard>
                 {/each}
             {:else}
-                <p class="text-gray-500 text-sm text-center py-6">
-                    {$_("no-notifications")}
-                </p>
+                <div class="text-center p-8">
+                    <img class="mx-auto"
+                        src={$theme === "light"
+                            ? emptyStateNotificationLight
+                            : emptyStateNotificationDark}
+                        alt="notification empty state"
+                    />
+                    <p class="text-gray-500 text-sm text-center mt-2">
+                        {$_("no-notifications")}
+                    </p>
+                </div>
             {/if}
         </ul>
     {/if}

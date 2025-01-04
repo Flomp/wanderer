@@ -6,6 +6,9 @@
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
     import Modal from "../base/modal.svelte";
+    import { theme } from "$lib/stores/theme_store";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
 
     export let lists: List[];
 
@@ -45,7 +48,9 @@
                     class="w-12 aspect-square rounded-full"
                     src={list.avatar
                         ? getFileURL(list, list.avatar)
-                        : "/imgs/default_list_thumbnail.webp"}
+                        : $theme === "light"
+                          ? emptyStateTrailLight
+                          : emptyStateTrailDark}
                     alt="avatar"
                 />
 

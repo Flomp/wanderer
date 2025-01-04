@@ -11,6 +11,9 @@
     import { country_codes } from "$lib/util/country_code_util";
     import { Canvas } from "@threlte/core";
     import { _ } from "svelte-i18n";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import { theme } from "$lib/stores/theme_store";
 
     export let data;
 
@@ -110,20 +113,21 @@
         class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none"
     >
         {#if data.trails.length == 0}
-            <div>
-                <img
-                    style="max-width: min(450px, 100%)"
-                    class="rounded-full aspect-square"
-                    src="/imgs/default_thumbnail.webp"
-                    alt="Empty State showing a wanderer going into the distance"
-                />
-            </div>
+            <img
+                style="width: min(450px, 100%)"
+                class="rounded-md"
+                src={$theme === "light"
+                    ? emptyStateTrailLight
+                    : emptyStateTrailDark}
+                alt="Empty state"
+            />
+        {:else}
+            {#each { length: Math.min(data.trails.length, 4) } as _, i}
+                <a href="/trail/view/{data.trails[i].id}">
+                    <TrailCard trail={data.trails[i]}></TrailCard></a
+                >
+            {/each}
         {/if}
-        {#each { length: Math.min(data.trails.length, 4) } as _, i}
-            <a href="/trail/view/{data.trails[i].id}">
-                <TrailCard trail={data.trails[i]}></TrailCard></a
-            >
-        {/each}
     </div>
     <div class="max-w-md md:mx-auto space-y-8">
         {#if data.trails.length == 0}

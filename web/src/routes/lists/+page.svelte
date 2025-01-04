@@ -9,6 +9,7 @@
     import Select from "$lib/components/base/select.svelte";
     import SkeletonCard from "$lib/components/base/skeleton_card.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
+    import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import ListCard from "$lib/components/list/list_card.svelte";
     import ListPanel from "$lib/components/list/list_panel.svelte";
     import ListShareModal from "$lib/components/list/list_share_modal.svelte";
@@ -104,8 +105,8 @@
         ) {
             for (const trail of item.expand.trails) {
                 const gpxData: string = await fetchGPX(trail);
-                if(!trail.expand) {
-                    (trail as any).expand = {}
+                if (!trail.expand) {
+                    (trail as any).expand = {};
                 }
                 trail.expand!.gpx_data = gpxData;
             }
@@ -321,6 +322,8 @@
                         {#each { length: 3 } as _, index}
                             <SkeletonCard></SkeletonCard>
                         {/each}
+                    {:else if data.lists.items.length == 0}
+                        <EmptyStateSearch width={356}></EmptyStateSearch>
                     {:else}
                         {#each data.lists.items as item, i}
                             <div

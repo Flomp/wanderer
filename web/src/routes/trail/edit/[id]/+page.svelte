@@ -67,6 +67,9 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import { theme } from "$lib/stores/theme_store.js";
 
     export let data;
 
@@ -851,7 +854,9 @@
                                 class="w-8 aspect-square rounded-full object-cover"
                                 src={list.avatar
                                     ? getFileURL(list, list.avatar)
-                                    : "/imgs/default_list_thumbnail.webp"}
+                                    : $theme === "light"
+                                      ? emptyStateTrailLight
+                                      : emptyStateTrailDark}
                                 alt="avatar"
                             />
 

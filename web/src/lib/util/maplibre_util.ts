@@ -6,6 +6,9 @@ import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
 import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
 import { haversineDistance } from "$lib/models/gpx/utils";
+import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+import { theme } from "$lib/stores/theme_store";
 
 export class FontawesomeMarker extends M.Marker {
     constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
@@ -81,8 +84,10 @@ export function createAnchorMarker(lat: number, lon: number, index: number, onDe
 
 export function createPopupFromTrail(trail: Trail) {
     const thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
-        : "/imgs/default_thumbnail.webp";
+        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+        : get(theme) === "light"
+          ? emptyStateTrailLight
+          : emptyStateTrailDark;
     const popup = new M.Popup({ maxWidth: "320px" });
     popup.setHTML(
         `<a href="/map/trail/${trail.id}" data-sveltekit-preload-data="off">

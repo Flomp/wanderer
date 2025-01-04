@@ -1,19 +1,21 @@
 <script lang="ts">
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { List } from "$lib/models/list";
+    import type { Trail } from "$lib/models/trail";
+    import { theme } from "$lib/stores/theme_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { _ } from "svelte-i18n";
-    import TrailListItem from "../trail/trail_list_item.svelte";
-    import type { Trail } from "$lib/models/trail";
     import { createEventDispatcher } from "svelte";
-    import { currentUser } from "$lib/stores/user_store";
+    import { _ } from "svelte-i18n";
     import Dropdown from "../base/dropdown.svelte";
     import ShareInfo from "../share_info.svelte";
-
+    import TrailListItem from "../trail/trail_list_item.svelte";
     export let list: List;
 
     const dispatch = createEventDispatcher();
@@ -115,7 +117,9 @@
         class="w-full object-cover max-h-64"
         src={list.avatar
             ? getFileURL(list, list.avatar)
-            : "/imgs/default_list_thumbnail.webp"}
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark}
         alt="avatar"
     />
 </div>

@@ -1,5 +1,9 @@
 <script lang="ts">
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
+    import { pb } from "$lib/pocketbase";
+    import { theme } from "$lib/stores/theme_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -8,14 +12,15 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
-    import { pb } from "$lib/pocketbase";
 
     export let trail: Trail;
     export let fullWidth: boolean = false;
 
     $: thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
-        : "/imgs/default_thumbnail.webp";
+        : $theme === "light"
+          ? emptyStateTrailLight
+          : emptyStateTrailDark;
 
     $: trailIsShared = (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 </script>
@@ -31,7 +36,7 @@
     <div
         class="relative w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl"
     >
-        <img id="header-img" src={thumbnail} alt="" />
+        <img width="100%" id="header-img" src={thumbnail} alt="" />
     </div>
     {#if (trail.public || trailIsShared) && pb.authStore.model}
         <div

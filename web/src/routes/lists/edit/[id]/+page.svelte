@@ -3,6 +3,8 @@
     import { _ } from "svelte-i18n";
 
     import { page } from "$app/stores";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import Button from "$lib/components/base/button.svelte";
     import Search, {
         type SearchItem,
@@ -18,6 +20,7 @@
     import type { Trail } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
+    import { theme } from "$lib/stores/theme_store.js";
     import { show_toast } from "$lib/stores/toast_store.js";
     import {
         trail_share_create,
@@ -338,7 +341,9 @@
                                       trail,
                                       trail.photos[trail.thumbnail ?? 0],
                                   )
-                                : "/imgs/default_thumbnail.webp"}
+                                : $theme === "light"
+                                  ? emptyStateTrailLight
+                                  : emptyStateTrailDark}
                             alt=""
                         />
                     </div>

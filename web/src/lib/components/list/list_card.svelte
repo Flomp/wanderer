@@ -1,5 +1,8 @@
 <script lang="ts">
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { List } from "$lib/models/list";
+    import { theme } from "$lib/stores/theme_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -8,6 +11,7 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
+
     export let list: List;
     export let active: boolean = false;
 
@@ -42,7 +46,9 @@
         class="w-16 md:w-20 aspect-square rounded-full object-cover"
         src={list.avatar
             ? getFileURL(list, list.avatar)
-            : "/imgs/default_list_thumbnail.webp"}
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark}
         alt="avatar"
     />
 

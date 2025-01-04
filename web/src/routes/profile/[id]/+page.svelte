@@ -3,6 +3,9 @@
     import { activities_index } from "$lib/stores/activity_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import { theme } from "$lib/stores/theme_store.js";
 
     export let data;
 
@@ -86,7 +89,9 @@
                         class="w-full h-full object-cover transition-transform group-hover:scale-110"
                         src={list.avatar
                             ? getFileURL(list, list.avatar)
-                            : "/imgs/default_list_thumbnail.webp"}
+                            : $theme === "light"
+                              ? emptyStateTrailLight
+                              : emptyStateTrailDark}
                         alt="avatar"
                     />
 

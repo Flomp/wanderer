@@ -33,6 +33,9 @@
     import { pb } from "$lib/pocketbase";
     import * as M from "maplibre-gl";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import { theme } from "$lib/stores/theme_store";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
@@ -50,9 +53,11 @@
     const trailIsShared =
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 
-    let thumbnail = trail.photos.length
+    $: thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
-        : "/imgs/default_thumbnail.webp";
+        : $theme === "light"
+          ? emptyStateTrailLight
+          : emptyStateTrailDark;
 
     let openGallery: (idx?: number) => void;
 

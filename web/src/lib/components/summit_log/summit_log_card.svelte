@@ -2,6 +2,8 @@
     import type { SummitLog } from "$lib/models/summit_log";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
 
     import {
         formatDistance,
@@ -9,8 +11,10 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import { theme } from "$lib/stores/theme_store";
 
-    let thumbnail: string = "/imgs/default_thumbnail.webp";
+    let thumbnail: string =
+        $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark;
 
     $: Promise.all(
         (log._photos ?? []).map(async (f) => {
@@ -22,7 +26,8 @@
         } else if (v.length) {
             thumbnail = v[0];
         } else {
-            thumbnail = "/imgs/default_thumbnail.webp";
+            thumbnail =
+                $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark;
         }
     });
 
