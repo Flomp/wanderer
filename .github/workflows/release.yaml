@@ -111,13 +111,13 @@ jobs:
           echo "::set-output name=changelog::$(cat release-notes.txt)"
 
       # 3. Create GitHub Release
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ needs.versioning.outputs.version }}
-          release_name: "v${{ needs.versioning.outputs.version }}"
-          body: ${{ steps.changelog.outputs.changelog }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Create GitHub Release
+      #   uses: actions/create-release@v1
+      #   with:
+      #     tag_name: ${{ needs.versioning.outputs.version }}
+      #     release_name: "v${{ needs.versioning.outputs.version }}"
+      #     body: ${{ steps.changelog.outputs.changelog }}
+      #     draft: false
+      #     prerelease: false
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
