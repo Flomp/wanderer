@@ -112,7 +112,7 @@ jobs:
       - name: Extract release notes
         id: changelog
         run: |
-          VERSION="v${{ needs.versioning.outputs.version }}"
+          VERSION="${{ needs.versioning.outputs.version }}"
           CHANGELOG=awk -v ver="$VERSION" '
             BEGIN { in_section = 0 }
             /^# / {
