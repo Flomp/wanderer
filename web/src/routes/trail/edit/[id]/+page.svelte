@@ -128,7 +128,7 @@
             ...data.trail,
             public: data.trail.id
                 ? data.trail.public
-                : $page.data.settings?.privacy.trails === "public",
+                : $page.data.settings?.privacy?.trails === "public",
             category:
                 data.trail.category ||
                 $page.data.settings?.category ||
@@ -253,7 +253,7 @@
             );
             setFields(
                 "public",
-                $page.data.settings?.privacy.trails === "public",
+                $page.data.settings?.privacy?.trails === "public",
             );
 
             const log = new SummitLog(parseResult.trail.date as string, {

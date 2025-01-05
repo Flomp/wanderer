@@ -667,7 +667,7 @@
                     ) {
                         map!.addSource("terrain", {
                             type: "raster-dem",
-                            url: $page.data.settings.terrain.terrain,
+                            url: $page.data.settings?.terrain?.terrain,
                         });
                     }
                     if (
@@ -676,7 +676,7 @@
                     ) {
                         map!.addSource("hillshading", {
                             type: "raster-dem",
-                            url: $page.data.settings.terrain.hillshading,
+                            url: $page.data.settings?.terrain?.hillshading,
                         });
                         map!.addLayer({
                             id: "hillshading",
