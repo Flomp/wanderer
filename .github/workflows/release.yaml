@@ -6,7 +6,6 @@ on:
       version:
         description: "The version to release (e.g., 0.12.0)"
         required: true
-  push: Any
 
 jobs:
   # Job 1: Bump Versions and Create Tags
