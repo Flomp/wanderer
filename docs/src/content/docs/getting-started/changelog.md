@@ -2,12 +2,36 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.13.0
+### Features
+- Adds a profile page with timeline, trails and stats of the respective user
+- Adds notifications (on the website and via email) for various events (e.g. a new comment on your trail). Notifications can be toggled in the settings.
+- You can now follow other users
+- Settings page overhaul:
+  - Clearer setting sections
+  - Option to add a personal biography
+  - New privacy settings page
+  - New notification settings page
+- Lists can now be public
+- Lists can now be filtered and sorted
+- Trails can now be displayed as a table (thanks @tofublock)
+- Minor quality of life improvements:
+  - more descriptive error messages
+  - uniform empty states
 
+### Bug fixes
+- Fixes bug that caused trails to not be displayed for new users
+- Fixes various bugs related to improper API data validation
+
+### Docs
+- Improves and updates API reference
+- Improves clarity of "From source installation" guide
+- 
 ## v0.12.0
 
-> [!CAUTION]
+:::caution
 This release contains breaking changes. Most migrations will happen automatically, but you will need to take action in two places that will be clearly marked ⚠️ further down.
-
+:::
 ### Maintenance
 - Updates to meilisearch version 0.11.3. 
 - ⚠️ meilisearch indices are not compatible across minor versions. This means you will need to rename or delete your [`data.ms`](https://github.com/Flomp/wanderer/blob/8635de78b9f1510e2316b08e605b175a2615f4db/docker-compose.yml#L19) folder on your host system to force meilisearch to rebuild the index on the next start (note that this can take a little while). 
