@@ -113,14 +113,14 @@ jobs:
         id: changelog
         run: |
           VERSION="${{ needs.versioning.outputs.version }}"
-          CHANGELOG=awk -v ver="$VERSION" '
+          CHANGELOG=$(awk -v ver="$VERSION" '
             BEGIN { in_section = 0 }
             /^# / {
               if (in_section) exit
               if ($2 == ver) in_section = 1
             }
             in_section { print }
-          ' CHANGELOG.md > release-notes.txt
+          ' CHANGELOG.md)
           echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
 
       # 3. Create GitHub Release
