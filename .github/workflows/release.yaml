@@ -64,7 +64,7 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        
+
       # 3. Build and push Docker images
       - name: Build Docker Images
         env:
@@ -81,11 +81,15 @@ jobs:
           docker buildx build db/ --no-cache -t flomp/wanderer-db:v$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64
 
           # Build web image
-          cd web && npm run build && cd ..
+          cd web
+          npm ci && npm run build
+          cd ..
           docker buildx build web/ --no-cache -t flomp/wanderer-web:v$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64
 
           # Build docs image
-          cd docs && npm run build && cd ..
+          cd docs
+          npm ci && npm run build
+          cd ..
           docker buildx build docs/ --no-cache -t flomp/wanderer-docs:v$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64
 
   # Job 3: Publish the Release
