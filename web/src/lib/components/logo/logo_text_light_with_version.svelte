@@ -1,3 +1,7 @@
+<script lang="ts">
+    import { version } from "$app/environment";
+</script>
+
 <svg
     width="212"
     height="64"
@@ -97,5 +101,5 @@
         d="M43.857 43.3045C44.0569 43.0652 44.4246 43.0652 44.6245 43.3045L46.6259 45.7008C46.8978 46.0263 46.6663 46.5213 46.2421 46.5213H42.2394C41.8152 46.5213 41.5837 46.0263 41.8556 45.7008L43.857 43.3045Z"
         fill="#242734"
     />
-    <text x="170" y="64" fill="white" font-size="0.75rem">v0.12.0</text>
+    <text x="170" y="64" fill="white" font-size="0.75rem">v{version}</text>
 </svg>

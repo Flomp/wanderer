@@ -79,6 +79,7 @@
                 class="rounded-full w-24 aspect-square overflow-hidden relative group"
             >
                 <img
+                    class="object-cover h-full"
                     src={getFileURL($currentUser, $currentUser.avatar) ||
                         `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
                     alt="avatar"
