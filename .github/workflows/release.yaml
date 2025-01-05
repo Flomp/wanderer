@@ -101,7 +101,7 @@ jobs:
   # Job 3: Publish the Release
   release:
     runs-on: ubuntu-latest
-    needs: [versioning, docker-build]
+    needs: [versioning]
 
     steps:
       # 1. Checkout the repository
