@@ -30,7 +30,7 @@ jobs:
           VERSION=${{ github.event.inputs.version }}
           cd web && npm version $VERSION --no-git-tag-version && cd ..
           cd docs && npm version $VERSION --no-git-tag-version && cd ..
-          echo "::set-output name=version::v$VERSION"
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Commit and Tag
         run: |
@@ -62,6 +62,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
       # 3. Build and push Docker images
       - name: Build Docker Images
         env:
@@ -108,7 +111,7 @@ jobs:
             }
             in_section { print }
           ' CHANGELOG.md > release-notes.txt
-          echo "::set-output name=changelog::$(cat release-notes.txt)"
+          echo "changelog=$(cat release-notes.txt)" >> $GITHUB_OUTPUT
 
       # 3. Create GitHub Release
       # - name: Create GitHub Release
