@@ -43,7 +43,6 @@ jobs:
           git add web/package.json docs/package.json
           git commit -m "Release ${{ github.event.inputs.version }}"
           git tag "v${{ github.event.inputs.version }}"
-          git push origin main --tags
 
   # Job 2: Build Docker Images
   docker-build:
@@ -77,27 +76,27 @@ jobs:
           VERSION: ${{ needs.versioning.outputs.version }}
         run: |
           # Build search image
-          docker buildx build search/ --no-cache -t flomp/wanderer-search:v$VERSION -t flomp/wanderer-search:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build search/ --no-cache -t flomp/wanderer-search:v$VERSION -t flomp/wanderer-search:latest --platform=linux/amd64,linux/arm64
 
           # Build db image
           cd db
           env GOOS=linux GOARCH=arm64 go build -o pocketbase_arm64
           env GOOS=linux GOARCH=amd64 go build -o pocketbase_amd64
           cd ..
-          docker buildx build db/ --no-cache -t flomp/wanderer-db:v$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build db/ --no-cache -t flomp/wanderer-db:v$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64
 
           # Build web image
           export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
           cd web
           npm ci && npm run build
           cd ..
-          docker buildx build web/ --no-cache -t flomp/wanderer-web:v$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build web/ --no-cache -t flomp/wanderer-web:v$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64
 
           # Build docs image
           cd docs
           npm ci && npm run build
           cd ..
-          docker buildx build docs/ --no-cache -t flomp/wanderer-docs:v$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build docs/ --no-cache -t flomp/wanderer-docs:v$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64
 
   # Job 3: Publish the Release
   release:
@@ -125,13 +124,13 @@ jobs:
           echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
 
       # 3. Create GitHub Release
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ needs.versioning.outputs.version }}
-          release_name: "v${{ needs.versioning.outputs.version }}"
-          body: ${{ steps.changelog.outputs.changelog }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Create GitHub Release
+      #   uses: actions/create-release@v1
+      #   with:
+      #     tag_name: ${{ needs.versioning.outputs.version }}
+      #     release_name: "v${{ needs.versioning.outputs.version }}"
+      #     body: ${{ steps.changelog.outputs.changelog }}
+      #     draft: false
+      #     prerelease: false
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
