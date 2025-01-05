@@ -16,14 +16,17 @@ jobs:
       version: ${{ steps.set_version.outputs.version }}
 
     steps:
+      # 1. Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2. Setup node & npm
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22'
 
+      # 3. Bump versions using npm
       - name: Bump version in web and docs
         id: set_version
         run: |
@@ -32,6 +35,7 @@ jobs:
           cd docs && npm version $VERSION --no-git-tag-version && cd ..
           echo "version=v$VERSION" >> $GITHUB_OUTPUT
 
+      # 4. Tag and push the new versions
       - name: Commit and Tag
         run: |
           git config user.name "github-actions[bot]"
@@ -49,12 +53,7 @@ jobs:
       # 1. Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.22'
-
+        
       # 2. Log in to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -62,36 +61,26 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # 3. Setup docker multi platform builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 3. Build and push Docker images
+      # 4. Build and push Docker images
       - name: Build Docker Images
         env:
           VERSION: ${{ needs.versioning.outputs.version }}
         run: |
           # Build search image
-          docker buildx build search/ --no-cache -t flomp/wanderer-search:v$VERSION -t flomp/wanderer-search:latest --platform=linux/amd64,linux/arm64
+          docker buildx build search/ --no-cache -t flomp/wanderer-search:$VERSION -t flomp/wanderer-search:latest --platform=linux/amd64,linux/arm64
 
           # Build db image
-          cd db
-          env GOOS=linux GOARCH=arm64 go build -o pocketbase_arm64
-          env GOOS=linux GOARCH=amd64 go build -o pocketbase_amd64
-          cd ..
-          docker buildx build db/ --no-cache -t flomp/wanderer-db:v$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64
+          docker buildx build db/ --no-cache -t flomp/wanderer-db:$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64
 
           # Build web image
-          export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
-          cd web
-          npm ci && npm run build
-          cd ..
-          docker buildx build web/ --no-cache -t flomp/wanderer-web:v$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64
+          docker buildx build web/ --no-cache -t flomp/wanderer-web:$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64
 
           # Build docs image
-          cd docs
-          npm ci && npm run build
-          cd ..
-          docker buildx build docs/ --no-cache -t flomp/wanderer-docs:v$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64
+          docker buildx build docs/ --no-cache -t flomp/wanderer-docs:$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64
 
   # Job 3: Publish the Release
   release:
@@ -108,7 +97,7 @@ jobs:
         id: changelog
         run: |
           VERSION="v${{ needs.versioning.outputs.version }}"
-          awk -v ver="v$VERSION" '
+          CHANGELOG=awk -v ver="$VERSION" '
             BEGIN { in_section = 0 }
             /^# / {
               if (in_section) exit
@@ -116,7 +105,7 @@ jobs:
             }
             in_section { print }
           ' CHANGELOG.md > release-notes.txt
-          echo "changelog=$(cat release-notes.txt)" >> $GITHUB_OUTPUT
+          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
 
       # 3. Create GitHub Release
       # - name: Create GitHub Release
