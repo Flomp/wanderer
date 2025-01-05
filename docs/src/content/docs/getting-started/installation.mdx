@@ -2,6 +2,7 @@
 title: Installation
 description: Detailed installation instructions for docker and bare-metal
 ---
+import { version } from '../../../../package.json';
 
 wanderer consists of three components: 
 1. the frontend written with [SvelteKit](https://github.com/sveltejs/kit)
@@ -115,7 +116,7 @@ To update all containers to a new version simply run `docker compose pull && doc
 While not recommended it is absolutely possible to install wanderer from source. 
 
 ### Prerequisites
-1. git installed && `git clone https://github.com/Flomp/wanderer.git --branch v0.12.0 --single-branch` 
+1. git installed && git clone https://github.com/Flomp/wanderer.git --branch v{version} --single-branch
 2. go >= 1.21.1 installed
 3. node >= 18.17.0 installed
 4. npm >= 8.15.0 installed
