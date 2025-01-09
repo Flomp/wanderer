@@ -77,27 +77,27 @@ jobs:
           VERSION: ${{ needs.versioning.outputs.version }}
         run: |
           # Build search image
-          docker buildx build search/ --no-cache -t flomp/wanderer-search:v$VERSION -t flomp/wanderer-search:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build search/ --no-cache -t flomp/wanderer-search:$VERSION -t flomp/wanderer-search:latest --platform=linux/amd64,linux/arm64 --push
 
           # Build db image
           cd db
           env GOOS=linux GOARCH=arm64 go build -o pocketbase_arm64
           env GOOS=linux GOARCH=amd64 go build -o pocketbase_amd64
           cd ..
-          docker buildx build db/ --no-cache -t flomp/wanderer-db:v$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build db/ --no-cache -t flomp/wanderer-db:$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64 --push
 
           # Build web image
           export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
           cd web
           npm ci && npm run build
           cd ..
-          docker buildx build web/ --no-cache -t flomp/wanderer-web:v$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build web/ --no-cache -t flomp/wanderer-web:$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64 --push
 
           # Build docs image
           cd docs
           npm ci && npm run build
           cd ..
-          docker buildx build docs/ --no-cache -t flomp/wanderer-docs:v$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64 --push
+          docker buildx build docs/ --no-cache -t flomp/wanderer-docs:$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64 --push
 
   # Job 3: Publish the Release
   release:
@@ -122,7 +122,9 @@ jobs:
             }
             in_section { print }
           ' CHANGELOG.md)
-          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+          echo 'changelog<<EOF' >> $GITHUB_OUTPUT
+          echo $CHANGELOG >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
 
       # 3. Create GitHub Release
       - name: Create GitHub Release
