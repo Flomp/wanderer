@@ -26,9 +26,9 @@
 </script>
 
 <div
-    class="trail-card relative rounded-2xl border border-input-border {fullWidth
-        ? 'min-w-72'
-        : 'w-72'} cursor-pointer"
+    class="trail-card relative rounded-2xl border border-input-border min-w-72 {fullWidth
+        ? ''
+        : 'lg:w-72'} cursor-pointer"
     on:mouseenter
     on:mouseleave
     role="listitem"

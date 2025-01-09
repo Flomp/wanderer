@@ -225,9 +225,9 @@
     <title>{$_("profile")} | wanderer</title>
 </svelte:head>
 
-<div class="grid grid-cols-1 sm:grid-cols-[272px_minmax(0,_1fr)] lg:grid-cols-[320px_minmax(0,_1fr)] gap-y-4 max-w-6xl mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,_1fr)] gap-y-4 max-w-6xl mx-auto">
     <div
-        class="flex flex-wrap md:flex-nowrap col-start-1 sm:col-start-2 gap-x-4 justify-end"
+        class="flex flex-wrap lg:flex-nowrap col-start-1 lg:col-start-2 gap-x-4 justify-end"
     >
         <MultiSelect
             on:change={(e) => updateFilterCategory(e.detail)}
@@ -246,7 +246,7 @@
             label={$_("before")}
         ></Datepicker>
     </div>
-    <div class="space-y-4 grow-0 sm:mr-4">
+    <div class="space-y-4 grow-0 lg:mr-4">
         <div class="border border-input-border rounded-xl p-6">
             <Calendar
                 on:click={(e) => handleDateClick(e.detail)}
@@ -274,7 +274,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div
             class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
         >
@@ -340,7 +340,7 @@
         </div>
 
         <div
-            class="h-full sm:col-span-2 space-y-2 border border-input-border rounded-xl p-6"
+            class="h-full lg:col-span-2 space-y-2 border border-input-border rounded-xl p-6"
         >
             <div class="flex justify-between">
                 <span class="text-gray-500 font-semibold text-lg"
@@ -383,7 +383,7 @@
     </div>
 
     <div
-        class="col-span-1 sm:col-span-2 border border-input-border rounded-xl p-6 space-y-6"
+        class="col-span-1 lg:col-span-2 border border-input-border rounded-xl p-6 space-y-6"
     >
         <span class="text-gray-500 font-semibold text-lg"
             ><i class="fa fa-table mr-3"></i>{$_("all-activities")}</span

@@ -899,14 +899,16 @@
                 ></Select>
             </div>
         {/if}
-        <MapWithElevationMaplibre
-            trails={mapTrail}
-            drawing={drawingActive}
-            showTerrain={true}
-            onMarkerDragEnd={moveMarker}
-            bind:map
-            on:click={(e) => handleMapClick(e.detail)}
-        ></MapWithElevationMaplibre>
+        <div id="trail-map">
+            <MapWithElevationMaplibre
+                trails={mapTrail}
+                drawing={drawingActive}
+                showTerrain={true}
+                onMarkerDragEnd={moveMarker}
+                bind:map
+                on:click={(e) => handleMapClick(e.detail)}
+            ></MapWithElevationMaplibre>
+        </div>
     </div>
 </main>
 <WaypointModal
@@ -922,11 +924,11 @@
 ></ListSelectModal>
 
 <style>
-    #map {
-        height: calc(400px);
+    #trail-map {
+        height: calc(50vh);
     }
     @media only screen and (min-width: 768px) {
-        #map,
+        #trail-map,
         form {
             height: calc(100vh - 124px);
         }

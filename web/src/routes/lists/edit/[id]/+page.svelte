@@ -458,6 +458,10 @@
 ></ConfirmModal>
 
 <style>
+    #trail-map {
+        height: calc(50vh);
+    }
+
     @media only screen and (min-width: 768px) {
         #trail-map,
         #list-form {

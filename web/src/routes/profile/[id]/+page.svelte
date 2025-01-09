@@ -41,7 +41,7 @@
     <title>{$_("profile")} | wanderer</title>
 </svelte:head>
 
-<div class="mx-8 space-y-6">
+<div class="space-y-6">
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">
             {$_("about")}

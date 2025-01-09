@@ -101,7 +101,7 @@
 </script>
 
 <div class="min-w-0">
-    <div class="flex items-end flex-wrap md:flex-nowrap gap-x-6 gap-y-2 mx-4">
+    <div class="flex items-end flex-wrap lg:flex-nowrap gap-x-6 gap-y-2 mx-4">
         <div class="basis-full order-1 md:order-none">
             <Pagination
                 page={pagination.page}
