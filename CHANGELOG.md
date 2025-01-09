@@ -1,3 +1,16 @@
+# v0.13.1
+
+## Features
+- Improves loading speed of the home page
+- Improves server side rendering of certain components
+
+## Translations
+- Various additions across multiple languages (thanks to all contributers)
+
+## Bug fixes
+- Fixes a bug that hid the map on some sites on mobile devices
+- Fixes responsive layouts on mobile devices
+
 # v0.13.0
 ## Features
 - Adds a profile page with timeline, trails and stats of the respective user
