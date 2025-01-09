@@ -3,14 +3,17 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v5"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
@@ -281,13 +284,13 @@ func changeUserEmailHandler(app *pocketbase.PocketBase) func(e *core.RecordReque
 
 func onBeforeServeHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
-		registerRoutes(e, client)
+		registerRoutes(e, app, client)
 		return bootstrapData(app, client)
 	}
 
 }
 
-func registerRoutes(e *core.ServeEvent, client meilisearch.ServiceManager) {
+func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meilisearch.ServiceManager) {
 	e.Router.GET("/public/search/token", func(c echo.Context) error {
 		searchRules := map[string]interface{}{
 			"cities500": map[string]string{},
@@ -300,6 +303,39 @@ func registerRoutes(e *core.ServeEvent, client meilisearch.ServiceManager) {
 			return err
 		}
 		return c.JSON(http.StatusOK, map[string]string{"token": token})
+	})
+	e.Router.GET("/trail/recommend", func(c echo.Context) error {
+		qSize := c.QueryParam("size")
+		size, err := strconv.Atoi(qSize)
+		if err != nil {
+			size = 4
+		}
+		user, success := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+
+		userId := ""
+		if success {
+			userId = user.Id
+		}
+		trails, err := app.Dao().FindRecordsByFilter(
+			"trails",
+			"author = {:userId} || public = true || ({:userId} != '' && trail_share_via_trail.user ?= {:userId})",
+			"",
+			-1,
+			0,
+			dbx.Params{"userId": userId},
+		)
+		if err != nil {
+			return err
+		}
+		if len(trails) < size {
+			size = len(trails)
+		}
+		rand.Shuffle(len(trails), func(i, j int) {
+			trails[i], trails[j] = trails[j], trails[i]
+		})
+		randomTrails := trails[:size]
+		return c.JSON(http.StatusOK, randomTrails)
+
 	})
 }
 

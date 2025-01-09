@@ -1,5 +1,6 @@
 import { type TrailBoundingBox, type TrailFilterValues } from '$lib/models/trail';
 import { pb } from '$lib/pocketbase';
+import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
@@ -15,6 +16,6 @@ export async function GET(event: RequestEvent) {
         const r = await pb.collection('trails_bounding_box').getOne<TrailBoundingBox>(pb.authStore.model!.id)
         return json(r)
     } catch (e: any) {
-        throw error(e.status || 500, e);
+        throw handleError(e);
     }
 }

@@ -122,9 +122,9 @@
                 alt="Empty state"
             />
         {:else}
-            {#each { length: Math.min(data.trails.length, 4) } as _, i}
-                <a href="/trail/view/{data.trails[i].id}">
-                    <TrailCard trail={data.trails[i]}></TrailCard></a
+            {#each data.trails as trail}
+                <a href="/trail/view/{trail.id}">
+                    <TrailCard {trail}></TrailCard></a
                 >
             {/each}
         {/if}

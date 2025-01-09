@@ -2,7 +2,7 @@ import { TrailCreateSchema } from '$lib/models/api/trail_schema';
 import type { Trail } from '$lib/models/trail';
 import { pb } from '$lib/pocketbase';
 import { Collection, create, handleError, list } from '$lib/util/api_util';
-import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
     try {
