@@ -7,15 +7,15 @@ const TrailCreateSchema = z.object({
     name: z.string().min(1, "required"),
     description: z.string().optional(),
     location: z.string().optional(),
-    date: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date"),
+    date: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date"),
     public: z.boolean(),
     difficulty: z.enum(["easy", "moderate", "difficult"]).optional(),
     lat: z.number().min(-90).max(90).optional(),
     lon: z.number().min(-180).max(180).optional(),
-    distance: z.number({coerce: true}).nonnegative().optional(),
-    elevation_gain: z.number({coerce: true}).nonnegative().optional(),
-    elevation_loss: z.number({coerce: true}).nonnegative().optional(),
-    duration: z.number({coerce: true}).nonnegative().optional(),
+    distance: z.number({ coerce: true }).nonnegative().optional(),
+    elevation_gain: z.number({ coerce: true }).nonnegative().optional(),
+    elevation_loss: z.number({ coerce: true }).nonnegative().optional(),
+    duration: z.number({ coerce: true }).nonnegative().optional(),
     photos: z.array(z.string()).default([]),
     thumbnail: z.number().int().nonnegative().optional(),
     waypoints: z.array(z.string()).default([]),
@@ -30,15 +30,15 @@ const TrailUpdateSchema = z.object({
     name: z.string(),
     description: z.string().optional(),
     location: z.string().optional(),
-    date: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date"),
+    date: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), "invalid-date"),
     public: z.boolean().optional(),
     difficulty: z.enum(["easy", "moderate", "difficult"]).optional(),
     lat: z.number().min(-90).max(90).optional(),
     lon: z.number().min(-180).max(180).optional(),
-    distance: z.number({coerce: true}).nonnegative().optional(),
-    elevation_gain: z.number({coerce: true}).nonnegative().optional(),
-    elevation_loss: z.number({coerce: true}).nonnegative().optional(),
-    duration: z.number({coerce: true}).nonnegative().optional(),
+    distance: z.number({ coerce: true }).nonnegative().optional(),
+    elevation_gain: z.number({ coerce: true }).nonnegative().optional(),
+    elevation_loss: z.number({ coerce: true }).nonnegative().optional(),
+    duration: z.number({ coerce: true }).nonnegative().optional(),
     photos: z.array(z.string()).optional(),
     "photos-": z.string().optional(),
     "photos+": z.string().optional(),
@@ -49,4 +49,8 @@ const TrailUpdateSchema = z.object({
     gpx: z.string().optional(),
 }) satisfies ZodType<Partial<Trail>>
 
-export { TrailCreateSchema, TrailUpdateSchema };
+const TrailRecommendSchema = z.object({
+    size: z.number({ coerce: true }).optional()
+})
+
+export { TrailCreateSchema, TrailUpdateSchema, TrailRecommendSchema };

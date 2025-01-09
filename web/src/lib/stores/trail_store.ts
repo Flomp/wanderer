@@ -37,6 +37,23 @@ export async function trails_index(perPage: number = 21, random: boolean = false
 
 }
 
+export async function trails_recommend(size: number, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const r = await f('/api/v1/trail/recommend?' + new URLSearchParams({
+        "size": size.toString(),
+    }), {
+        method: 'GET',
+    })
+    const response: Trail[] = await r.json()
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
+    return response;
+
+}
+
 export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     let filterText: string = buildFilterText(filter, true);
 
