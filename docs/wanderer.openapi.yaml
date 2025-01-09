@@ -5843,8 +5843,7 @@ paths:
                           - text
                         message: Expected string, received number
           headers: {}
-      security:
-        - CookieAuth: []
+      security: []
   /user/{id}/file:
     post:
       summary: file
