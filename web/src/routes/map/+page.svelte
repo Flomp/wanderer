@@ -39,7 +39,7 @@
 
     const MIN_ZOOM = 6;
 
-    let loading: boolean = false;
+    let loading: boolean = true;
 
     onMount(async () => {});
 

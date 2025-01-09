@@ -10,7 +10,7 @@
 
     let filterExpanded: boolean = true;
 
-    let loading: boolean = false;
+    let loading: boolean = true;
 
     const filter: TrailFilter = $page.data.filter;
     const pagination: { page: number; totalPages: number } = {

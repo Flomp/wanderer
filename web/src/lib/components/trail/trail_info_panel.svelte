@@ -42,6 +42,7 @@
     import EmptyStatePhotos from "../empty_states/empty_state_photos.svelte";
     import EmptyStateWaypoint from "../empty_states/empty_state_waypoint.svelte";
     import EmptyStateDescription from "../empty_states/empty_state_description.svelte";
+    import { browser } from "$app/environment";
 
     export let trail: Trail;
     export let mode: "overview" | "map" | "list" = "map";
@@ -53,7 +54,7 @@
         $_("waypoints", { values: { n: 2 } }),
         $_("photos"),
         $_("summit-book"),
-        ...($currentUser ? [$_("comment", { values: { n: 2 } })] : []),
+        ...(pb.authStore.model ? [$_("comment", { values: { n: 2 } })] : []),
     ];
 
     const trailIsShared =
@@ -69,11 +70,11 @@
 
     let newComment: Comment = new Comment("", 0, "", trail.id ?? "");
 
-    let commentsLoading: boolean = false;
+    let commentsLoading: boolean = activeTab == 4;
     let commentCreateLoading: boolean = false;
     let commentDeleteLoading: boolean = false;
 
-    $: if (activeTab == 4) {
+    $: if (browser && activeTab == 4) {
         fetchComments();
     }
 
@@ -402,7 +403,9 @@
                             ></SkeletonNotificationCard>
                         {/each}
                     {:else if $comments.length == 0}
-                        <div class="my-4"><EmptyStateComment></EmptyStateComment></div>
+                        <div class="my-4">
+                            <EmptyStateComment></EmptyStateComment>
+                        </div>
                     {:else}
                         <ul class="space-y-4">
                             {#each $comments ?? [] as comment}
