@@ -13,6 +13,7 @@
     import "../css/app.css";
     import "../css/components.css";
     import "../css/theme.css";
+    import PageLoadingBar from "$lib/components/page_loading_bar.svelte";
 
     beforeNavigate((n) => {
         if (!$currentUser && isRouteProtected(n.to?.url?.pathname ?? "")) {
@@ -68,6 +69,7 @@
 {/if}
 
 <NavBar></NavBar>
+<PageLoadingBar ></PageLoadingBar>
 <Toast></Toast>
 <slot />
 
