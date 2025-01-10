@@ -69,7 +69,7 @@
 {/if}
 
 <NavBar></NavBar>
-<PageLoadingBar ></PageLoadingBar>
+<PageLoadingBar class="text-content"></PageLoadingBar>
 <Toast></Toast>
 <slot />
 

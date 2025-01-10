@@ -138,7 +138,6 @@
             <a
                 class="inline-block btn-primary btn-large"
                 href="/trail/edit/new"
-                data-sveltekit-preload-data="off"
                 role="button">{$_("new-trail")}</a
             >
         {:else}
@@ -153,7 +152,6 @@
             <a
                 class="inline-block btn-primary btn-large"
                 href="/trails"
-                data-sveltekit-preload-data="off"
                 role="button">{$_("explore")}</a
             >
         {/if}
@@ -173,10 +171,7 @@
         class="grid grid-cols-1 lg:grid-cols-2 justify-items-center gap-8 py-8"
     >
         {#each $categories as category}
-            <a
-                href="/trails?category={category.id}"
-                data-sveltekit-preload-data="off"
-            >
+            <a href="/trails?category={category.id}">
                 <CategoryCard {category}></CategoryCard>
             </a>
         {/each}

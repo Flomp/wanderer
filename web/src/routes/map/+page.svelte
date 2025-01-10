@@ -256,7 +256,6 @@
                 {/if}
                 {#each trails as trail, i}
                     <a
-                        data-sveltekit-preload-data="off"
                         href="map/trail/{trail.id}"
                     >
                         <TrailCard

@@ -178,7 +178,6 @@
                         class="max-w-full flex-1"
                         class:basis-full={selectedDisplayOption === "list"}
                         href="/trail/view/{trail.id}"
-                        data-sveltekit-preload-data="off"
                     >
                         {#if selectedDisplayOption === "cards"}
                             <TrailCard fullWidth={fullWidthCards} {trail}

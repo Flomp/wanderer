@@ -92,10 +92,6 @@
     }
 
     $: user = browser ? $currentUser : pb.authStore.model;
-
-    function loggedIn() {
-        return user !== null && user !== undefined;
-    }
 </script>
 
 <Drawer bind:open={drawerOpen}>
@@ -112,17 +108,10 @@
     </div>
     <div class="flex flex-col px-12 gap-8">
         {#each navBarItems as item}
-            <a
-                class="font-semibold text-xl"
-                href={item.value}
-                data-sveltekit-preload-data="off">{item.text}</a
-            >
+            <a class="font-semibold text-xl" href={item.value}>{item.text}</a>
         {/each}
         {#if $currentUser}
-            <a
-                class="font-semibold text-xl"
-                href="/lists"
-                data-sveltekit-preload-data="off"
+            <a class="font-semibold text-xl" href="/lists"
                 >{$_("list", { values: { n: 2 } })}</a
             >
         {/if}
@@ -139,10 +128,7 @@
                 <a href="/profile/{user.id}">
                     <img
                         class="rounded-full w-10 aspect-square"
-                        src={getFileURL(
-                            user,
-                            user.avatar,
-                        ) ||
+                        src={getFileURL(user, user.avatar) ||
                             `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
@@ -172,7 +158,7 @@
 </Drawer>
 
 <nav class="flex justify-between items-center p-6">
-    <a href="/" data-sveltekit-preload-data="off">
+    <a href="/">
         {#if $theme == "light"}
             <LogoText></LogoText>
         {:else}
@@ -185,17 +171,10 @@
             style="width: {$indicatorWidth}px; left: {$indicatorPosition}px; scale: {$indicatorScale}"
         ></div>
         {#each navBarItems as item}
-            <a
-                class="font-semibold z-10"
-                href={item.value}
-                data-sveltekit-preload-data="off">{item.text}</a
-            >
+            <a class="font-semibold z-10" href={item.value}>{item.text}</a>
         {/each}
         {#if user}
-            <a
-                class="font-semibold z-10"
-                href="/lists"
-                data-sveltekit-preload-data="off"
+            <a class="font-semibold z-10" href="/lists"
                 >{$_("list", { values: { n: 2 } })}</a
             >
         {/if}
@@ -226,10 +205,7 @@
                     >
                         <img
                             class="rounded-full w-full h-full"
-                            src={getFileURL(
-                                user,
-                                user.avatar,
-                            ) ||
+                            src={getFileURL(user, user.avatar) ||
                                 `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
                             alt="avatar"
                         />
