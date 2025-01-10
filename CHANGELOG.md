@@ -5,7 +5,7 @@
 - Improves server side rendering of certain components
 
 ## Translations
-- Various additions across multiple languages (thanks to all contributers)
+- Various additions across multiple languages (thanks to all contributors)
 
 ## Bug fixes
 - Fixes a bug that hid the map on some sites on mobile devices

@@ -2,6 +2,7 @@
     import { invalidateAll } from "$app/navigation";
     import { page } from "$app/stores";
     import Button from "$lib/components/base/button.svelte";
+    import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
     import type { SelectItem } from "$lib/components/base/select.svelte";
     import ProfileShareModal from "$lib/components/profile/profile_share_modal.svelte";
     import { follows_create, follows_delete } from "$lib/stores/follow_store";
@@ -15,13 +16,22 @@
 
     let followLoading: boolean = false;
 
-    const profileLinks: SelectItem[] = [
-        { text: $_("profile"), value: `/profile/${$page.params.id}` },
+    const profileLinks: DropdownItem[] = [
+        {
+            text: $_("profile"),
+            value: `/profile/${$page.params.id}`,
+            icon: "user",
+        },
         {
             text: $_("trail", { values: { n: 2 } }),
             value: `/profile/${$page.params.id}/trails`,
+            icon: "route",
         },
-        { text: $_("statistics"), value: `/profile/${$page.params.id}/stats` },
+        {
+            text: $_("statistics"),
+            value: `/profile/${$page.params.id}/stats`,
+            icon: "chart-pie",
+        },
     ];
 
     $: activeIndex = profileLinks.findIndex(
@@ -113,7 +123,8 @@
                 <a
                     class="block mx-2 px-4 py-3 my-1 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors rounded-md"
                     class:bg-menu-item-background-hover={i == activeIndex}
-                    href={link.value}>{link.text}</a
+                    href={link.value}
+                    ><i class="fa fa-{link.icon} mr-2"></i>{link.text}</a
                 >
             {/each}
         </div>

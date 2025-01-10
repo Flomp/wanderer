@@ -54,6 +54,8 @@ jobs:
       # 1. Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
 
       - name: Setup Go
         uses: actions/setup-go@v4
@@ -108,7 +110,8 @@ jobs:
       # 1. Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
-
+        with:
+          ref: ${{ github.ref }}
       # 2. Extract release notes from CHANGELOG.md
       - name: Extract release notes
         id: changelog
@@ -123,7 +126,7 @@ jobs:
             in_section { print }
           ' CHANGELOG.md)
           echo 'changelog<<EOF' >> $GITHUB_OUTPUT
-          echo $CHANGELOG >> $GITHUB_OUTPUT
+          printf "%s\n" "$CHANGELOG" >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
 
       # 3. Create GitHub Release
@@ -131,7 +134,7 @@ jobs:
         uses: actions/create-release@v1
         with:
           tag_name: ${{ needs.versioning.outputs.version }}
-          release_name: "v${{ needs.versioning.outputs.version }}"
+          release_name: "${{ needs.versioning.outputs.version }}"
           body: ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false

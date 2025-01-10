@@ -74,7 +74,7 @@
             ...data.list,
             public: data.list.id
                 ? data.list.public
-                : $page.data.settings?.privacy.lists === "public",
+                : $page.data.settings?.privacy?.lists === "public",
         },
         extend: validator({
             schema: ClientListCreateSchema,
