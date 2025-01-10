@@ -14,6 +14,11 @@
     import { _ } from "svelte-i18n";
     import { linear } from "svelte/easing";
     import { tweened } from "svelte/motion";
+    import emptyStateUploadDark from "$lib/assets/svgs/empty_states/empty_state_upload_dark.svg";
+    import emptyStateUploadLight from "$lib/assets/svgs/empty_states/empty_state_upload_light.svg";
+    import { theme } from "$lib/stores/theme_store";
+    import { onMount } from "svelte";
+    import JSConfetti from "js-confetti";
 
     const uploadProgress = tweened(0, {
         duration: 300,
@@ -24,6 +29,17 @@
 
     let offerUpload: boolean = false;
     let uploading: boolean = false;
+
+    let jsConfetti: JSConfetti;
+
+    onMount(() => {
+        jsConfetti = new JSConfetti({
+            canvas:
+                (document.getElementById(
+                    "confetti-canvas",
+                ) as HTMLCanvasElement | null) ?? undefined,
+        });
+    });
 
     function openFileBrowser() {
         document.getElementById("file-input")!.click();
@@ -40,6 +56,9 @@
 
     function handleDrop(e: DragEvent) {
         e.preventDefault();
+        if (uploading) {
+            return;
+        }
         offerUpload = false;
         handleFileSelection(e.dataTransfer?.files);
     }
@@ -75,9 +94,20 @@
         }
 
         setTimeout(() => {
-            uploadProgress.set(0);
+            uploadProgress.set(0, { duration: 0 });
             uploading = false;
-        }, 1000);
+            jsConfetti.addConfetti({
+                confettiRadius: 4,
+                confettiColors: [
+                    "#F4C842",
+                    "#3C9D9B",
+                    "#D1C4E9",
+                    "#FF6F61",
+                    "#A9D9C1",
+                    "#F2F2F2",
+                ],
+            });
+        }, 500);
 
         if (errorsThrown == 0) {
             show_toast({
@@ -174,7 +204,17 @@
         on:dragleave={handleDragLeave}
         on:drop={handleDrop}
     >
-        {$_("import-hint")}
+        <canvas id="confetti-canvas" class="absolute" style="width: 100%; height: 200%"> </canvas>
+        <div class="">
+            <img
+                class="rounded-full aspect-square mx-auto"
+                src={$theme === "light"
+                    ? emptyStateUploadLight
+                    : emptyStateUploadDark}
+                alt="Empty State showing a wanderer going into the distance"
+            />
+            {$_("import-hint")}
+        </div>
     </button>
 
     <input
