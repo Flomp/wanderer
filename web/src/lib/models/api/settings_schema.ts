@@ -4,7 +4,7 @@ import type { Settings } from "../settings";
 
 const SettingsCreateSchema = z.object({
     unit: z.enum(["metric", "imperial"]).optional(),
-    language: z.enum(["en", "de", "fr", "hu", "it", "nl", "pl", "pt", "zh"]).optional(),
+    language: z.enum(["en", "de", "es", "fr", "hu", "it", "nl", "pl", "pt", "zh"]).optional(),
     mapFocus: z.enum(["trails", "location"]).optional(),
     location: z.object({
         name: z.string(),

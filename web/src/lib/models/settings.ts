@@ -3,7 +3,7 @@ import type { NotificationType } from "./notification";
 class Settings {
   id?: string;
   unit?: "metric" | "imperial";
-  language?: "en" | "de" | "fr" | "hu" | "it" | "nl" | "pl" | "pt" | "zh";
+  language?: "en" | "de" | "es" | "fr" | "hu" | "it" | "nl" | "pl" | "pt" | "zh";
   mapFocus?: "trails" | "location";
   location?: { name: string, lat: number, lon: number };
   category?: string;
@@ -15,7 +15,7 @@ class Settings {
 
   constructor(
     unit: "metric" | "imperial",
-    language: "en" | "de" | "fr" | "hu" | "it" | "nl" | "pl" | "pt" | "zh",
+    language: "en" | "de" | "es" | "fr" | "hu" | "it" | "nl" | "pl" | "pt" | "zh",
     mapFocus: "trails" | "location",
     user: string,
     params?: {

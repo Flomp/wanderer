@@ -15,6 +15,7 @@
         { text: $_("chinese"), value: "zh" },
         { text: $_("german"), value: "de" },
         { text: $_("english"), value: "en" },
+        { text: $_("spanish"), value: "es" },
         { text: $_("french"), value: "fr" },
         { text: $_("hungarian"), value: "hu" },
         { text: $_("italian"), value: "it" },
@@ -33,11 +34,11 @@
     async function handleLanguageSelection(
         value: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt",
     ) {
-        locale.set(value);
         await settings_update({
             id: settings!.id,
             language: value,
         });
+        window.location.reload();
     }
 
     async function handleUnitSelection(e: RadioItem) {
