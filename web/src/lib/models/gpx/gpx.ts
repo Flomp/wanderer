@@ -119,11 +119,13 @@ export default class GPX {
   }
 
   static parse(gpxString: string): Promise<GPX | Error> {
-    return new Promise<GPX | Error>((resolve, reject) => xml2js.parseString(gpxString, {
+    const sanitizedGPX = gpxString.replace(/\sxmlns=""/g, '');
+
+    return new Promise<GPX | Error>((resolve, reject) => xml2js.parseString(sanitizedGPX, {
       explicitArray: false,
-      attrValueProcessors: [(str: string | number) => {
-        if (!isNaN(Number(str))) {
-          str = Number.isInteger(Number(str)) ? parseInt(String(str), 10) : parseFloat(String(str));
+      attrValueProcessors: [(str: string) => {
+        if (str.length && !isNaN(Number(str))) {
+          return Number.isInteger(Number(str)) ? parseInt(String(str), 10) : parseFloat(String(str));
         }
         return str;
       }
@@ -157,7 +159,10 @@ export default class GPX {
     if (!xmlString.includes(`xmlns="${defaultAttributes["xmlns"]}"`)) {
       xmlString = xmlString.replace('<gpx', `<gpx xmlns="${defaultAttributes["xmlns"]}"`);
     }
-  
+
+    // Safari for some ungodly reason adds empty xmlns attributes to every tag...
+    xmlString = xmlString.replace(/ xmlns=""/g, '');
+
     return xmlString;
   }
 }

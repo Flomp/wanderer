@@ -2,8 +2,8 @@ import { SummitLog } from "$lib/models/summit_log";
 import type { Trail } from "$lib/models/trail";
 import { trails_create } from "$lib/stores/trail_store";
 import { handleError } from "$lib/util/api_util";
-import { fromFile, fromFIT, fromKML, fromTCX, gpx2trail, isFITFile } from "$lib/util/gpx_util";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { fromFile, gpx2trail } from "$lib/util/gpx_util";
+import { json, type RequestEvent } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";
 
 export async function PUT(event: RequestEvent) {
@@ -30,6 +30,7 @@ export async function PUT(event: RequestEvent) {
 
             trail.expand!.summit_logs.push(log);
         } catch (e: any) {
+            console.error(e)
             throw new ClientResponseError({ status: 400, response: { message: "Invalid file" } })
         }
 

@@ -123,8 +123,8 @@
             />
         {:else}
             {#each data.trails as trail}
-                <a href="/trail/view/{trail.id}">
-                    <TrailCard {trail}></TrailCard></a
+                <a class="w-full md:max-w-72" href="/trail/view/{trail.id}">
+                    <TrailCard {trail} fullWidth></TrailCard></a
                 >
             {/each}
         {/if}
