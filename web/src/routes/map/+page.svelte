@@ -120,7 +120,22 @@
 
     async function handleMapMove() {
         const bounds = map.getBounds();
-        await searchTrails(bounds.getNorthEast(), bounds.getSouthWest());
+
+        const normalizedBounds = {
+            southWest: new M.LngLat(
+                ((((bounds.getSouthWest().lng + 180) % 360) + 360) % 360) - 180,
+                bounds.getSouthWest().lat,
+            ),
+            northEast: new M.LngLat(
+                ((((bounds.getNorthEast().lng + 180) % 360) + 360) % 360) - 180,
+                bounds.getNorthEast().lat,
+            ),
+        };        
+
+        await searchTrails(
+            normalizedBounds.northEast,
+            normalizedBounds.southWest,
+        );
 
         $page.url.searchParams.set("tl_lat", bounds.getNorth().toString());
         $page.url.searchParams.set("tl_lon", bounds.getEast().toString());
