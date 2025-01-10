@@ -13,6 +13,7 @@
     import Dropdown from "./base/dropdown.svelte";
     import LogoTextLight from "./logo/logo_text_light.svelte";
     import NotificationDropdown from "./notification/notification_dropdown.svelte";
+    import { browser } from "$app/environment";
 
     let navBarItems = [
         { text: "Home", value: "/" },
@@ -89,6 +90,12 @@
             goto("/settings/profile");
         }
     }
+
+    $: user = browser ? $currentUser : pb.authStore.model;
+
+    function loggedIn() {
+        return user !== null && user !== undefined;
+    }
 </script>
 
 <Drawer bind:open={drawerOpen}>
@@ -122,30 +129,28 @@
     </div>
     <hr class="my-6 border-input-border" />
     <div class="flex flex-col basis-full">
-        {#if pb.authStore.model}
-            <a
-                class="btn-primary text-center mx-4"
-                href="/trail/edit/new"
+        {#if user}
+            <a class="btn-primary text-center mx-4" href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
             <div class="basis-full"></div>
             <hr class="border-input-border" />
             <div class="flex gap-4 items-center justify-between m-4">
-                <a href="/profile/{pb.authStore.model.id}">
+                <a href="/profile/{user.id}">
                     <img
                         class="rounded-full w-10 aspect-square"
                         src={getFileURL(
-                            pb.authStore.model,
-                            pb.authStore.model.avatar,
+                            user,
+                            user.avatar,
                         ) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${pb.authStore.model.username}&backgroundType=gradientLinear`}
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
                 </a>
-                <a href="/profile/{pb.authStore.model.id}">
-                    <p class="text-sm">{pb.authStore.model.username}</p>
+                <a href="/profile/{user.id}">
+                    <p class="text-sm">{user.username}</p>
                     <p class="text-sm text-gray-500">
-                        {pb.authStore.model.email}
+                        {user.email}
                     </p>
                 </a>
                 <button
@@ -186,7 +191,7 @@
                 data-sveltekit-preload-data="off">{item.text}</a
             >
         {/each}
-        {#if pb.authStore.model}
+        {#if user}
             <a
                 class="font-semibold z-10"
                 href="/lists"
@@ -195,7 +200,7 @@
             >
         {/if}
     </menu>
-    {#if pb.authStore.model}
+    {#if user}
         <div class="hidden lg:flex gap-6 items-center">
             <button
                 class="btn-icon fa-regular fa-{$theme === 'light'
@@ -222,10 +227,10 @@
                         <img
                             class="rounded-full w-full h-full"
                             src={getFileURL(
-                                pb.authStore.model,
-                                pb.authStore.model.avatar,
+                                user,
+                                user.avatar,
                             ) ||
-                                `https://api.dicebear.com/7.x/initials/svg?seed=${pb.authStore.model.username}&backgroundType=gradientLinear`}
+                                `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
                             alt="avatar"
                         />
                     </button>
