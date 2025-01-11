@@ -24,13 +24,13 @@ export function bbox(
             result[3] = coord[1];
         }
     });
-
+    
     return result;
 }
 
 export function findStartAndEndPoints(geojson: GeoJsonObject): Position[] {
     const startEndPoints: Position[] = [];
-    
+
     // Check if it's a FeatureCollection
     if ((geojson as any).features) {
         (geojson as any).features.forEach((feature: any) => {
@@ -48,6 +48,43 @@ export function findStartAndEndPoints(geojson: GeoJsonObject): Position[] {
     }
 
     return startEndPoints;
+}
+
+export function splitMultiLineStringToLineStrings(geojson: GeoJsonObject): FeatureCollection {
+    const features: Feature[] = [];
+
+    (geojson as any).features.forEach((feature: any) => {
+        if (feature.geometry.type === "MultiLineString") {
+            feature.geometry.coordinates.forEach((lineString: any, lineIndex: number) => {
+                features.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "LineString",
+                        coordinates: lineString,
+                    },
+                    properties: {
+                        ...feature.properties,
+                        featureId: features.length,
+                        segmentId: lineIndex,
+                    },
+                });
+            });
+        } else if (feature.geometry.type === "LineString") {
+            features.push({
+                ...feature,
+                properties: {
+                    ...feature.properties,
+                    featureId: features.length,
+                    segmentId: 0
+                },
+            });
+        }
+    });
+
+    return {
+        type: "FeatureCollection",
+        features: features,
+    };
 }
 
 function extractStartAndEndPointsFromGeometry(geometry: any, startEndPoints: Position[]) {

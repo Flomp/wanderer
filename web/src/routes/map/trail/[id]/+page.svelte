@@ -19,6 +19,8 @@
     <div id="trail-details" class="sticky top-[62px]">
         <MapWithElevationMaplibre
             trails={[$trail]}
+            waypoints={$trail.expand?.waypoints}
+            activeTrail={0}
             bind:markers
             showTerrain={true}
         ></MapWithElevationMaplibre>

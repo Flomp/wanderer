@@ -53,8 +53,6 @@
         : null;
     let selectedTrail: Trail | null = null;
 
-    let activeTrailIndex: number = -1;
-
     let loading: boolean = false;
     let loadingNextPage: boolean = false;
     let filterExpanded: boolean = false;
@@ -62,6 +60,12 @@
     let loadAllListsOnNextBack = false;
 
     let userQuery = "";
+
+    $: selectedTrailIndex = selectedTrail
+        ? (selectedList?.expand?.trails?.indexOf(selectedTrail) ?? null)
+        : null;
+
+    $: selectedTrailWaypoints = selectedTrail?.expand?.waypoints;
 
     onMount(() => {
         if ($page.url.searchParams.get("list") && selectedList) {
@@ -121,7 +125,6 @@
             loadAllListsOnNextBack = false;
         }
         if (selectedTrail) {
-            mapWithElevation.unFocusTrail(selectedTrail);
             selectedTrail = null;
         } else if (selectedList) {
             selectedList = null;
@@ -135,7 +138,6 @@
 
     function selectTrail(trail: Trail) {
         selectedTrail = trail;
-        mapWithElevation.focusTrail(trail);
         window.scrollTo({ top: 0 });
     }
 
@@ -353,14 +355,15 @@
     <div id="trail-map" class:hidden={!showMap}>
         <MapWithElevationMaplibre
             trails={selectedList?.expand?.trails ?? []}
+            waypoints={selectedTrailWaypoints}
             bind:map
             bind:this={mapWithElevation}
             bind:markers
+            activeTrail={selectedTrailIndex}
             fitBounds="animate"
             on:select={(e) => {
                 selectedTrail = e.detail;
             }}
-            bind:activeTrail={activeTrailIndex}
             showInfoPopup={true}
             showTerrain={true}
         ></MapWithElevationMaplibre>

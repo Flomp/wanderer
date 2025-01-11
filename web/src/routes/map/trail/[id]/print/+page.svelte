@@ -516,6 +516,8 @@
             <div class="basis-full">
                 <MapWithElevationMaplibre
                     trails={[$trail]}
+                    waypoints={$trail.expand?.waypoints}
+                    activeTrail={0}
                     on:zoom={(e) => updateScale(e.detail)}
                     bind:map
                     {showGrid}

@@ -13,7 +13,7 @@ import GPXWaypoint from "$lib/models/gpx/waypoint";
 import EasyFit from "$lib/vendor/easy-fit/easy-fit";
 import type { GeoJSON, Feature, FeatureCollection, GeoJsonProperties, Position } from 'geojson';
 import * as xmldom from 'xmldom';
-import { bbox } from "./geojson_util";
+import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string) {
@@ -130,7 +130,7 @@ export async function fromFile(file: File | Blob) {
         });
     }
 
-    return {gpxData, gpxFile};
+    return { gpxData, gpxFile };
 }
 
 export function fromKML(kmlData: string) {
@@ -317,9 +317,10 @@ export function isFITFile(buffer: ArrayBuffer) {
 
 export function toGeoJson(gpxData: string) {
     const parser = browser ? new DOMParser() : new xmldom.DOMParser();
-    const geojson = gpx(
+    let geojson = gpx(
         parser.parseFromString(gpxData, "text/xml"),
     ) as GeoJSON;
+    geojson = splitMultiLineStringToLineStrings(geojson);
     geojson.bbox = bbox(geojson)
     return geojson
 }

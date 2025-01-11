@@ -80,7 +80,7 @@
             const file = files[i];
             try {
                 uploadProgress.set((progress += 100 / (files.length * 2)));
-                await trails_upload(file);
+                // await trails_upload(file);
             } catch (e) {
                 errorsThrown += 1;
                 show_toast({
@@ -98,14 +98,7 @@
             uploading = false;
             jsConfetti.addConfetti({
                 confettiRadius: 4,
-                confettiColors: [
-                    "#F4C842",
-                    "#3C9D9B",
-                    "#D1C4E9",
-                    "#FF6F61",
-                    "#A9D9C1",
-                    "#F2F2F2",
-                ],
+                emojis: ['🍃', '🍁'],
             });
         }, 500);
 

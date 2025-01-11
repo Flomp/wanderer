@@ -696,7 +696,7 @@ export class ElevationProfile {
                             wpDiv.style.top = `8px`; // Position horizontally
 
                             // Add custom HTML content (e.g., icon + label)
-                            wpDiv.innerHTML = `<div class="tooltip" data-title="${this.waypoints[index].name ?? "?"}"><i class="fa fa-${this.waypoints.at(index)?.icon ?? 'circle'}"></i></div>`;
+                            wpDiv.innerHTML = `<div class="tooltip" data-title="${this.waypoints[index]?.name ?? "?"}"><i class="fa fa-${this.waypoints.at(index)?.icon ?? 'circle'}"></i></div>`;
 
                             waypointContainer.appendChild(wpDiv); // Add to container
                         });
@@ -864,7 +864,7 @@ export class ElevationProfile {
     async setData(data: GeoJsonObject, waypoints?: Waypoint[]) {
         // Concatenates the positions that may come from multiple LineStrings or MultiLineString
         const { positions, times } = geoJsonObjectToPositionsAndTimes(data);
-
+    
         this.times = times;
 
         this.elevatedPositions = smoothElevations(positions, Math.ceil(positions.length / 100));
@@ -896,7 +896,7 @@ export class ElevationProfile {
         this.cumulatedDPlus = [];
         this.grade = [];
         this.waypoints = waypoints ?? [];
-        // this.waypointPositions = [];
+        this.waypointPositions = [];
 
         let cumulatedDPlus = 0;
         let cumulatedTime = 0;

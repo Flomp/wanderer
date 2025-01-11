@@ -37,11 +37,11 @@
     } from "$lib/stores/trail_store.js";
     import {
         anchors,
-        appendToRoute,
         calculateRouteBetween,
         clearRoute,
         deleteFromRoute,
         editRoute,
+        insertIntoRoute,
         route,
         setRoute,
     } from "$lib/stores/valhalla_store";
@@ -54,6 +54,9 @@
     } from "$lib/util/format_util";
     import { fromFile, gpx2trail } from "$lib/util/gpx_util";
 
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import { theme } from "$lib/stores/theme_store.js";
     import {
         createAnchorMarker,
         createMarkerFromWaypoint,
@@ -67,9 +70,6 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
-    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
-    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
-    import { theme } from "$lib/stores/theme_store.js";
 
     export let data;
 
@@ -94,6 +94,7 @@
 
     let drawingActive = false;
     let overwriteGPX = false;
+    let draggingMarker = false;
 
     const ClientTrailCreateSchema = TrailCreateSchema.extend({
         expand: z
@@ -171,7 +172,7 @@
                         ?.trkpt?.at(0)?.$.lon;
                 }
 
-                if (!form.id) {
+                if ($page.params.id === "new") {
                     const createdTrail = await trails_create(
                         form as Trail,
                         photoFiles,
@@ -213,6 +214,19 @@
         if ($formData.expand!.gpx_data) {
             const gpx = await GPX.parse($formData.expand!.gpx_data);
             if (!(gpx instanceof Error)) {
+                if (gpx.rte && !gpx.trk) {
+                    gpx.trk = [
+                        {
+                            trkseg: [
+                                {
+                                    trkpt: gpx.rte?.at(0)?.rtept,
+                                },
+                            ],
+                        },
+                    ];
+                    gpx.rte = undefined;
+                }
+
                 setRoute(gpx);
                 initRouteAnchors(gpx);
             }
@@ -245,7 +259,7 @@
             const prevId = $formData.id;
             const parseResult = await gpx2trail(gpxData, selectedFile.name);
             setFields(parseResult.trail);
-            $formData.id = prevId;
+            $formData.id = prevId ?? cryptoRandomString({ length: 15 });
             $formData.expand!.gpx_data = gpxData;
             setFields(
                 "category",
@@ -273,12 +287,20 @@
 
             $formData.expand!.summit_logs.push(log);
 
+            if (parseResult.gpx.rte?.length && !parseResult.gpx.trk) {
+                parseResult.gpx.trk = [
+                    {
+                        trkseg: [
+                            {
+                                trkpt: parseResult.gpx.rte?.at(0)?.rtept,
+                            },
+                        ],
+                    },
+                ];
+                parseResult.gpx.rte = undefined;
+            }
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
-
-            for (const waypoint of $formData.expand!.waypoints) {
-                saveWaypoint(waypoint);
-            }
         } catch (e) {
             console.error(e);
 
@@ -329,12 +351,18 @@
             const points = segment.trkpt ?? [];
 
             if (points.length > 0) {
-                addAnchor(points[0].$.lat!, points[0].$.lon!, false);
+                addAnchor(
+                    points[0].$.lat!,
+                    points[0].$.lon!,
+                    anchors.length,
+                    false,
+                );
             }
             if (i == segments.length - 1) {
                 addAnchor(
                     points[points.length - 1].$.lat!,
                     points[points.length - 1].$.lon!,
+                    anchors.length,
                     false,
                 );
             }
@@ -369,6 +397,7 @@
         $formData.expand!.waypoints.splice(index, 1);
         $formData.waypoints.splice(index, 1);
         $formData.expand!.waypoints = $formData.expand!.waypoints;
+        // updateTrailOnMap();
     }
 
     function saveWaypoint(savedWaypoint: Waypoint) {
@@ -377,7 +406,6 @@
         );
 
         if (editedWaypointIndex >= 0) {
-            $formData.expand!.waypoints[editedWaypointIndex].marker?.remove();
             $formData.expand!.waypoints[editedWaypointIndex] = savedWaypoint;
         } else {
             savedWaypoint.id = cryptoRandomString({ length: 15 });
@@ -385,11 +413,9 @@
                 ...$formData.expand!.waypoints,
                 savedWaypoint,
             ];
-        }
-        const marker = createMarkerFromWaypoint(savedWaypoint, moveMarker);
 
-        marker.addTo(map);
-        savedWaypoint.marker = marker;
+            // updateTrailOnMap();
+        }
     }
 
     function moveMarker(marker: M.Marker, wpId?: string) {
@@ -405,6 +431,7 @@
         editableWaypoint.lat = position.lat;
         editableWaypoint.lon = position.lng;
         $formData.expand!.waypoints = [...$formData.expand!.waypoints];
+        // updateTrailOnMap();
     }
 
     function beforeSummitLogModalOpen() {
@@ -493,7 +520,7 @@
         }
         const anchorCount = anchors.length;
         if (anchorCount == 0) {
-            addAnchor(e.lngLat.lat, e.lngLat.lng);
+            addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
         } else {
             const previousAnchor = anchors[anchorCount - 1];
             try {
@@ -505,8 +532,8 @@
                     selectedModeOfTransport,
                     autoRouting,
                 );
-                appendToRoute(routeWaypoints);
-                addAnchor(e.lngLat.lat, e.lngLat.lng);
+                insertIntoRoute(routeWaypoints);
+                addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
                 updateTrailWithRouteData();
             } catch (e) {
                 console.error(e);
@@ -519,7 +546,12 @@
         }
     }
 
-    function addAnchor(lat: number, lon: number, addtoMap: boolean = true) {
+    function addAnchor(
+        lat: number,
+        lon: number,
+        index: number,
+        addtoMap: boolean = true,
+    ) {
         const anchor: ValhallaAnchor = {
             id: cryptoRandomString({ length: 15 }),
             lat: lat,
@@ -528,9 +560,12 @@
         const marker = createAnchorMarker(
             lat,
             lon,
-            anchors.length + 1,
+            index + 1,
             () => {
                 removeAnchor(anchors.findIndex((a) => a.id == anchor.id));
+            },
+            (e) => {
+                draggingMarker = true;
             },
             (_) => {
                 if (!drawingActive) {
@@ -540,13 +575,16 @@
                 anchor.lat = position.lat;
                 anchor.lon = position.lng;
                 recalculateRoute(anchors.findIndex((a) => a.id == anchor.id));
+                draggingMarker = false;
             },
         );
         if (addtoMap) {
             marker.addTo(map);
         }
         anchor.marker = marker;
-        anchors.push(anchor);
+        anchors.splice(index, 0, anchor);
+
+        return anchor;
     }
 
     function removeAnchor(anchorIndex: number) {
@@ -583,21 +621,75 @@
         }
         let nextRouteSegment;
         let previousRouteSegment;
-        if (anchorIndex < anchors.length - 1) {
-            const nextAnchor = anchors[anchorIndex + 1];
+        try {
+            if (anchorIndex < anchors.length - 1) {
+                const nextAnchor = anchors[anchorIndex + 1];
 
-            nextRouteSegment = await calculateRouteBetween(
-                anchor.lat,
-                anchor.lon,
-                nextAnchor.lat,
-                nextAnchor.lon,
-                selectedModeOfTransport,
-                autoRouting,
-            );
+                nextRouteSegment = await calculateRouteBetween(
+                    anchor.lat,
+                    anchor.lon,
+                    nextAnchor.lat,
+                    nextAnchor.lon,
+                    selectedModeOfTransport,
+                    autoRouting,
+                );
+            }
+            if (anchorIndex > 0) {
+                const previousAnchor = anchors[anchorIndex - 1];
+                previousRouteSegment = await calculateRouteBetween(
+                    previousAnchor.lat,
+                    previousAnchor.lon,
+                    anchor.lat,
+                    anchor.lon,
+                    selectedModeOfTransport,
+                    autoRouting,
+                );
+            }
+
+            if (nextRouteSegment) {
+                editRoute(anchorIndex, nextRouteSegment);
+            }
+            if (previousRouteSegment) {
+                editRoute(anchorIndex - 1, previousRouteSegment);
+            }
+
+            updateTrailWithRouteData();
+        } catch (e) {
+            console.error(e);
+            show_toast({
+                text: "Error calculating route",
+                icon: "close",
+                type: "error",
+            });
         }
-        if (anchorIndex > 0) {
-            const previousAnchor = anchors[anchorIndex - 1];
-            previousRouteSegment = await calculateRouteBetween(
+    }
+
+    async function handleSegmentDragEnd(data: {
+        segment: number;
+        event: M.MapMouseEvent;
+    }) {
+        if (draggingMarker) {
+            return;
+        }
+        const anchor = addAnchor(
+            data.event.lngLat.lat,
+            data.event.lngLat.lng,
+            data.segment + 1,
+        );
+        for (let i = data.segment + 2; i < anchors.length; i++) {
+            const anchor = anchors[i];
+            const markerIcon = anchor.marker?.getElement();
+            if (markerIcon) {
+                const markerText = markerIcon.textContent ?? "0";
+                const markerIndex = parseInt(markerText);
+                markerIcon.textContent = markerIndex + 1 + "";
+            }
+        }
+        const previousAnchor = anchors[data.segment];
+        const nextAnchor = anchors[data.segment + 2];
+
+        try {
+            const previousRouteSegment = await calculateRouteBetween(
                 previousAnchor.lat,
                 previousAnchor.lon,
                 anchor.lat,
@@ -605,14 +697,26 @@
                 selectedModeOfTransport,
                 autoRouting,
             );
+            const nextRouteSegment = await calculateRouteBetween(
+                anchor.lat,
+                anchor.lon,
+                nextAnchor.lat,
+                nextAnchor.lon,
+                selectedModeOfTransport,
+                autoRouting,
+            );
+
+            editRoute(data.segment, previousRouteSegment);
+            insertIntoRoute(nextRouteSegment, data.segment + 1);
+            updateTrailWithRouteData();
+        } catch (e) {
+            console.error(e);
+            show_toast({
+                text: "Error calculating route",
+                icon: "close",
+                type: "error",
+            });
         }
-        if (nextRouteSegment) {
-            editRoute(anchorIndex, nextRouteSegment);
-        }
-        if (previousRouteSegment) {
-            editRoute(anchorIndex - 1, previousRouteSegment);
-        }
-        updateTrailWithRouteData();
     }
 
     function updateTrailWithRouteData() {
@@ -623,10 +727,13 @@
         $formData.elevation_gain = totals.elevationGain;
         $formData.elevation_loss = totals.elevationLoss;
         $formData.expand!.gpx_data = route.toString();
+        if (!$formData.id) {
+            $formData.id = cryptoRandomString({ length: 15 });
+        }
     }
 
     function updateTrailOnMap() {
-        mapTrail = [{ ...($formData as Trail) }];
+        mapTrail = [$formData as Trail];
     }
 </script>
 
@@ -902,11 +1009,14 @@
         <div id="trail-map">
             <MapWithElevationMaplibre
                 trails={mapTrail}
+                waypoints={$formData.expand?.waypoints}
                 drawing={drawingActive}
                 showTerrain={true}
                 onMarkerDragEnd={moveMarker}
+                activeTrail={0}
                 bind:map
                 on:click={(e) => handleMapClick(e.detail)}
+                on:segmentDragEnd={(e) => handleSegmentDragEnd(e.detail)}
             ></MapWithElevationMaplibre>
         </div>
     </div>

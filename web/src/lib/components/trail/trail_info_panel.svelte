@@ -429,6 +429,8 @@
                 <div class="relative h-72 rounded-xl overflow-hidden">
                     <MapWithElevationMaplibre
                         trails={[trail]}
+                        activeTrail={0}
+                        waypoints={trail.expand?.waypoints}
                         showElevation={false}
                         showStyleSwitcher={false}
                         showFullscreen={true}

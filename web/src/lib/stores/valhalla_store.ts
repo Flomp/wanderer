@@ -68,13 +68,14 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
     return waypoints
 }
 
-export async function appendToRoute(waypoints: Waypoint[]) {
-    const segment = new TrackSegment({ trkpt: [] })
+export async function insertIntoRoute(waypoints: Waypoint[], index?: number) {
+    const segment = new TrackSegment({ trkpt: waypoints })
 
-    for (const wpt of waypoints) {
-        segment.trkpt!.push(wpt)
+    if (index) {
+        route.trk?.at(0)?.trkseg?.splice(index, 0, segment);
+    } else {
+        route.trk?.at(0)?.trkseg?.push(segment);
     }
-    route.trk?.at(0)?.trkseg?.push(segment);
 }
 
 export async function editRoute(index: number, waypoints: Waypoint[]) {

@@ -1,14 +1,15 @@
-import type { Trail } from "$lib/models/trail";
-import type { Waypoint } from "$lib/models/waypoint";
-import M from "maplibre-gl";
-import { getFileURL } from "./file_util";
-import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
-import { get } from "svelte/store";
-import { _ } from "svelte-i18n";
-import { haversineDistance } from "$lib/models/gpx/utils";
 import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
 import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+import { haversineDistance } from "$lib/models/gpx/utils";
+import type { Trail } from "$lib/models/trail";
+import type { Waypoint } from "$lib/models/waypoint";
 import { theme } from "$lib/stores/theme_store";
+import M from "maplibre-gl";
+import { _ } from "svelte-i18n";
+import { get } from "svelte/store";
+import { getFileURL } from "./file_util";
+import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
+import { icons } from "./icon_util";
 
 export class FontawesomeMarker extends M.Marker {
     constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
@@ -34,13 +35,32 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
         color: "#6b7280"
 
     })
-    const popup = new M.Popup({ offset: 25, closeButton: false }).setHTML(
-        "<b>" +
-        waypoint.name +
-        "</b>" +
-        (waypoint.description && waypoint.description.length > 0
-            ? "<br>" + waypoint.description
-            : ""),
+
+    const content = document.createElement("div");
+
+    const spanElement = document.createElement("span");
+    const iconElement = document.createElement("i");
+    const iconName = icons.includes(waypoint.icon ?? "") ? waypoint.icon : "circle";
+    iconElement.classList.add("fa", `fa-${iconName}`)
+    spanElement.appendChild(iconElement);
+
+    const nameElement = document.createElement("b");
+    nameElement.textContent = waypoint.name ?? "-";
+    if(waypoint.name?.length) {
+        nameElement.classList.add("ml-2")
+    }
+    spanElement.appendChild(nameElement);
+    content.appendChild(spanElement);
+
+    if (waypoint.description && waypoint.description.length > 0) {
+        const descriptionElement = document.createElement("p");
+        descriptionElement.textContent = waypoint.description;
+        content.appendChild(descriptionElement);
+    }
+
+
+    const popup = new M.Popup({ offset: 25, closeButton: false }).setDOMContent(
+        content
     );
     marker
         .setLngLat([waypoint.lon, waypoint.lat])
@@ -53,10 +73,11 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
     return marker;
 }
 
-export function createAnchorMarker(lat: number, lon: number, index: number, onDeleteClick: () => void, onDragEnd: (event: M.Marker) => void): FontawesomeMarker {
+export function createAnchorMarker(lat: number, lon: number, index: number,
+    onDeleteClick: () => void, onDragStart: (event: Event) => void, onDragEnd: (event: Event) => void): FontawesomeMarker {
 
     const anchorElement = document.createElement("span")
-    anchorElement.className = "cursor-pointer rounded-full w-6 h-6 border border-black text-center bg-background-inverse text-content-inverse"
+    anchorElement.className = "route-anchor cursor-pointer rounded-full w-6 h-6 border border-black text-center bg-background-inverse text-content-inverse"
     anchorElement.textContent = "" + index
     const marker = new M.Marker(
         {
@@ -69,12 +90,14 @@ export function createAnchorMarker(lat: number, lon: number, index: number, onDe
     const deleteButton = document.createElement("button");
     deleteButton.className = "fa fa-trash text-red-500 rounded-full aspect-square h-8 text-lg";
     deleteButton.addEventListener("click", onDeleteClick)
-    const popup = new M.Popup({})
+    const popup = new M.Popup({ closeButton: false })
     popup.setDOMContent(deleteButton)
     marker.setPopup(popup);
 
+    marker.on("dragstart", onDragStart);
     marker.on("dragend", onDragEnd);
     marker.getElement().addEventListener("click", (e) => {
+        e.preventDefault()
         e.stopPropagation();
         marker.togglePopup();
     })
@@ -86,8 +109,8 @@ export function createPopupFromTrail(trail: Trail) {
     const thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
         : get(theme) === "light"
-          ? emptyStateTrailLight
-          : emptyStateTrailDark;
+            ? emptyStateTrailLight
+            : emptyStateTrailDark;
     const popup = new M.Popup({ maxWidth: "320px" });
     popup.setHTML(
         `<a href="/map/trail/${trail.id}" data-sveltekit-preload-data="off">
