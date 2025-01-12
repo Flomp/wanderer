@@ -97,7 +97,7 @@
             !drawing &&
             fitBounds !== "off" &&
             data.some((d) => d.bbox !== undefined)
-        ) {            
+        ) {
             focusTrail(trails[activeTrail]);
         }
     } else if (activeTrail === null && trails.length) {
@@ -179,13 +179,13 @@
         return r;
     }
 
-    function initMap(mapLoaded: boolean) {        
+    function initMap(mapLoaded: boolean) {
         if (!map) {
             return;
         }
 
         refreshElevationProfile();
-        if (showElevation) {
+        if (showElevation && data.length) {
             epc?.showProfile();
         }
 
@@ -201,22 +201,24 @@
                 removeTrailLayer(layerId);
             }
         });
-
+        
         if (
             !drawing &&
             fitBounds !== "off" &&
             data.some((d) => d.bbox !== undefined)
-        ) {            
+        ) {
             if (activeTrail !== null && mapLoaded) {
                 focusTrail(trails[activeTrail]);
             } else {
                 flyToBounds();
             }
+        } else if(drawing && activeTrail !== null && mapLoaded) {            
+            addCaretLayer(trails[activeTrail]?.id)
         }
     }
 
-    export function refreshElevationProfile() {
-        if (activeTrail !== null && data[activeTrail]) {
+    export function refreshElevationProfile() {       
+        if (activeTrail !== null && data[activeTrail]) {            
             epc?.setData(data[activeTrail]!, waypoints);
         }
     }
@@ -283,6 +285,7 @@
         map?.off("mouseleave", id, layers[id].listener.onLeave!);
         map?.off("mouseup", id, layers[id].listener.onMouseUp!);
         map?.off("mousemove", id, layers[id].listener.onMouseMove!);
+        map?.off("mousedown", id, layers[id].listener.onMouseDown!);
 
         delete layers[id];
     }
@@ -347,10 +350,9 @@
                 highlightTrail(id, trails[activeTrail ?? -1]?.id == id);
             layers[id].listener.onLeave = (e) => unHighlightTrail(id);
             layers[id].listener.onMouseUp = (e) => {
-                activeTrail = trails.indexOf(trail);
+                activeTrail = trails.findIndex(t => t.id == trail.id);
             };
-            layers[id].listener.onMouseMove =
-                moveElevationMarkerToCursorPosition;
+            layers[id].listener.onMouseMove = moveCrosshairToCursorPosition;
             layers[id].listener.onMouseDown = (e) => handDragStart(e, id);
 
             map.on("mouseenter", id, layers[id].listener.onEnter);
@@ -363,6 +365,11 @@
         if (!drawing) {
             addStartEndMarkers(trail, id, geojson);
         }
+    }
+
+    function moveCrosshairToCursorPosition(e: M.MapMouseEvent) {
+        epc?.moveCrosshair(e.lngLat.lat, e.lngLat.lng);
+        moveElevationMarkerToCursorPosition(e);
     }
 
     function moveElevationMarkerToCursorPosition(e: M.MapMouseEvent) {
@@ -394,6 +401,7 @@
 
     function handleDragEnd(e: M.MapMouseEvent) {
         map?.off("mousemove", moveElevationMarkerToCursorPosition);
+        epc?.hideCrosshair();
         dispatch("segmentDragEnd", { segment: draggingSegment, event: e });
         draggingSegment = null;
     }
@@ -405,7 +413,7 @@
         if (map.getLayer("direction-carets")) {
             removeCaretLayer();
         }
-        
+
         map.addLayer({
             id: "direction-carets",
             type: "symbol",
@@ -459,27 +467,26 @@
             return;
         }
         elevationMarker.setOpacity("0");
+        epc?.hideCrosshair();
         hoveringTrail = false;
         map?.setPaintProperty(id, "line-width", 5);
         // map?.setPaintProperty(id, "line-color", "#648ad5");
     }
 
     function focusTrail(trail: Trail) {
-       
-        activeTrail = trails.findIndex(t => t.id == trail.id);
+        activeTrail = trails.findIndex((t) => t.id == trail.id);
         if (activeTrail < 0) {
             activeTrail = null;
             return;
         }
-       
+
         const currentlyFocussedTrail = trails[activeTrail];
         if (currentlyFocussedTrail && currentlyFocussedTrail != trail) {
             unFocusTrail(currentlyFocussedTrail);
         }
         dispatch("select", trail);
-        
+
         try {
-            highlightTrail(trail.id!);
             refreshElevationProfile();
             if (showElevation) {
                 epc?.showProfile();
@@ -488,7 +495,7 @@
             addCaretLayer(trail.id!);
             flyToBounds();
         } catch (e) {
-            console.warn(e)
+            console.warn(e);
         }
     }
 
@@ -743,7 +750,11 @@
                     elevationMarker.setOpacity("0");
                 },
                 onMove: (data) => {
-                    elevationMarker.setLngLat(data.position as M.LngLatLike);
+                    if (!hoveringTrail) {
+                        elevationMarker.setLngLat(
+                            data.position as M.LngLatLike,
+                        );
+                    }
                 },
             });
             map.addControl(epc);
