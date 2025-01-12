@@ -70,6 +70,10 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
+    import Search, {
+        type SearchItem,
+    } from "$lib/components/base/search.svelte";
+    import { country_codes } from "$lib/util/country_code_util.js";
 
     export let data;
 
@@ -95,6 +99,8 @@
     let drawingActive = false;
     let overwriteGPX = false;
     let draggingMarker = false;
+
+    let searchDropdownItems: SearchItem[] = [];
 
     const ClientTrailCreateSchema = TrailCreateSchema.extend({
         expand: z
@@ -523,6 +529,12 @@
             addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
         } else {
             const previousAnchor = anchors[anchorCount - 1];
+            const anchor = addAnchor(
+                e.lngLat.lat,
+                e.lngLat.lng,
+                anchors.length,
+            );
+            const markerText = startAnchorLoading(anchor);
             try {
                 const routeWaypoints = await calculateRouteBetween(
                     previousAnchor.lat,
@@ -533,7 +545,6 @@
                     autoRouting,
                 );
                 insertIntoRoute(routeWaypoints);
-                addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
                 updateTrailWithRouteData();
             } catch (e) {
                 console.error(e);
@@ -542,6 +553,8 @@
                     icon: "close",
                     type: "error",
                 });
+            } finally {
+                stopAnchorLoading(anchor, markerText);
             }
         }
     }
@@ -567,14 +580,16 @@
             (e) => {
                 draggingMarker = true;
             },
-            (_) => {
+            async (_) => {
                 if (!drawingActive) {
                     return;
                 }
                 const position = marker.getLngLat();
                 anchor.lat = position.lat;
                 anchor.lon = position.lng;
-                recalculateRoute(anchors.findIndex((a) => a.id == anchor.id));
+                await recalculateRoute(
+                    anchors.findIndex((a) => a.id == anchor.id),
+                );
                 draggingMarker = false;
             },
         );
@@ -587,7 +602,32 @@
         return anchor;
     }
 
-    function removeAnchor(anchorIndex: number) {
+    function startAnchorLoading(anchor: ValhallaAnchor) {
+        const markerIcon = anchor.marker?.getElement();
+        if (!markerIcon) {
+            return null;
+        }
+        markerIcon.classList.add("spinner", "spinner-light", "spinner-small");
+        const savedMarkerNumber = markerIcon.textContent;
+        markerIcon.textContent = "";
+
+        return savedMarkerNumber;
+    }
+
+    function stopAnchorLoading(anchor: ValhallaAnchor, index: string | null) {
+        const markerIcon = anchor.marker?.getElement();
+        if (!markerIcon || !index) {
+            return;
+        }
+        markerIcon.classList.remove(
+            "spinner",
+            "spinner-light",
+            "spinner-small",
+        );
+        markerIcon.textContent = index;
+    }
+
+    async function removeAnchor(anchorIndex: number) {
         if (!drawingActive) {
             return;
         }
@@ -610,11 +650,13 @@
             updateTrailWithRouteData();
         } else {
             deleteFromRoute(anchorIndex - 1);
-            recalculateRoute(anchorIndex);
+            await recalculateRoute(anchorIndex);
         }
     }
 
     async function recalculateRoute(anchorIndex: number) {
+        const markerText = startAnchorLoading(anchors[anchorIndex]);
+
         const anchor = anchors[anchorIndex];
         if (!anchor) {
             return;
@@ -661,6 +703,8 @@
                 icon: "close",
                 type: "error",
             });
+        } finally {
+            stopAnchorLoading(anchors[anchorIndex], markerText);
         }
     }
 
@@ -676,6 +720,8 @@
             data.event.lngLat.lng,
             data.segment + 1,
         );
+        const markerText = startAnchorLoading(anchor);
+
         for (let i = data.segment + 2; i < anchors.length; i++) {
             const anchor = anchors[i];
             const markerIcon = anchor.marker?.getElement();
@@ -716,6 +762,8 @@
                 icon: "close",
                 type: "error",
             });
+        } finally {
+            stopAnchorLoading(anchor, markerText);
         }
     }
 
@@ -735,6 +783,30 @@
     function updateTrailOnMap() {
         mapTrail = [$formData as Trail];
     }
+
+    function handleSearchClick(item: SearchItem) {
+        map.flyTo({
+            center: [item.value._geo.lng, item.value._geo.lat],
+            zoom: 13,
+            animate: false,
+        });
+    }
+
+    async function searchCities(q: string) {
+        const r = await fetch("/api/v1/search/cities500", {
+            method: "POST",
+            body: JSON.stringify({ q: q, options: { limit: 5 } }),
+        });
+        const result = await r.json();
+        searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
+            text: h.name,
+            description: `${h.division ? `${h.division} | ` : ""}${
+                country_codes[h["country code"] as keyof typeof country_codes]
+            }`,
+            value: h,
+            icon: "city",
+        }));
+    }
 </script>
 
 <svelte:head>
@@ -750,12 +822,22 @@
         class="overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0"
         use:form
     >
+        <Search
+            on:update={(e) => searchCities(e.detail)}
+            on:click={(e) => handleSearchClick(e.detail)}
+            placeholder="{$_('search-cities')}..."
+            items={searchDropdownItems}
+        ></Search>
+        <hr class="border-input-border" />
         <h3 class="text-xl font-semibold">{$_("pick-a-trail")}</h3>
         <Button
             primary={true}
             type="button"
             disabled={drawingActive}
-            on:click={openFileBrowser}>{$_("upload-file")}</Button
+            on:click={openFileBrowser}
+            >{$formData.expand?.gpx_data
+                ? $_("upload-new-file")
+                : $_("upload-file")}</Button
         >
         {#if PUBLIC_VALHALLA_URL}
             <div class="flex gap-4 items-center w-full">
@@ -768,9 +850,13 @@
                 type="button"
                 on:click={drawingActive ? stopDrawing : startDrawing}
             >
-                {drawingActive
-                    ? $_("stop-drawing")
-                    : $_("draw-a-route")}</button
+                {$formData.expand?.gpx_data
+                    ? drawingActive
+                        ? $_("stop-editing")
+                        : $_("edit-route")
+                    : drawingActive
+                      ? $_("stop-drawing")
+                      : $_("draw-a-route")}</button
             >
         {/if}
         <input

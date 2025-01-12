@@ -94,6 +94,25 @@
     border-color: rgba(var(--primary)) transparent rgba(var(--primary)) transparent;
 }
 
+.spinner-light:after {
+    border: 6px solid #fff;
+    border-color: #fff transparent #fff transparent;
+}
+
+.spinner-small {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    align-content: center;
+    justify-content: center;
+}
+
+.spinner-small:after {
+    border-width: 2px;
+    width: 16px;
+    height: 16px;
+}
+
 @keyframes spinner {
     0% {
         transform: rotate(0deg);
