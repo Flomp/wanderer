@@ -80,7 +80,7 @@
             const file = files[i];
             try {
                 uploadProgress.set((progress += 100 / (files.length * 2)));
-                // await trails_upload(file);
+                await trails_upload(file);
             } catch (e) {
                 errorsThrown += 1;
                 show_toast({

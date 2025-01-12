@@ -619,7 +619,7 @@ export class ElevationProfile {
                                     tooltipInfo.push(
                                         `After: ${this.cumulatedDistanceAdjustedUnit[
                                             tooltipItem.dataIndex
-                                        ].toFixed(4)} ${distanceUnit} ${this.cumulatedTime.length ? '(' + formatTimeHHMM(this.cumulatedTime[tooltipItem.dataIndex]) + ')' : ''}`
+                                        ].toFixed(2)} ${distanceUnit} ${this.cumulatedTime.length ? '(' + formatTimeHHMM(this.cumulatedTime[tooltipItem.dataIndex]) + ')' : ''}`
                                     );
                                 }
 

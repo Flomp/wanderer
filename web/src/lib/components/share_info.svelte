@@ -12,7 +12,7 @@
     export let large: boolean = false;
     export let type: "trail" | "list"
 
-    const shareData = type == "trail" ? (subject as Trail).expand.trail_share_via_trail : (subject as List).expand?.list_share_via_list
+    const shareData = type == "trail" ? (subject as Trail).expand?.trail_share_via_trail : (subject as List).expand?.list_share_via_list
 
     let showInfo: boolean = false;
     let loading: boolean = false;

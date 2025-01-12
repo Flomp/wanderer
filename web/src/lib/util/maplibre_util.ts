@@ -59,7 +59,7 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
     }
 
 
-    const popup = new M.Popup({ offset: 25, closeButton: false }).setDOMContent(
+    const popup = new M.Popup({ offset: 25 }).setDOMContent(
         content
     );
     marker
@@ -86,12 +86,27 @@ export function createAnchorMarker(lat: number, lon: number, index: number,
         }
     );
     marker.setLngLat([lon, lat]);
+    const popup = new M.Popup()
+
+    const popupContent = document.createElement("div");
+    const anchorH = document.createElement("h5")
+    anchorH.classList.add("text-base", "font-medium");
+    anchorH.textContent = get(_)("route-point") +  " #" + index;
 
     const deleteButton = document.createElement("button");
-    deleteButton.className = "fa fa-trash text-red-500 rounded-full aspect-square h-8 text-lg";
+    deleteButton.className = "btn-secondary w-full mt-2 text-sm";
+    const deleteButtonIcon = document.createElement("i")
+    deleteButtonIcon.classList.add("fa", "fa-trash", "mr-2")
+    deleteButton.appendChild(deleteButtonIcon)
+    const deleteButtonText = document.createElement("span")
+    deleteButtonText.textContent = get(_)("delete")
+    deleteButton.appendChild(deleteButtonIcon)
+    deleteButton.appendChild(deleteButtonText)
     deleteButton.addEventListener("click", onDeleteClick)
-    const popup = new M.Popup({ closeButton: false })
-    popup.setDOMContent(deleteButton)
+
+    popupContent.appendChild(anchorH)
+    popupContent.appendChild(deleteButton)
+    popup.setDOMContent(popupContent)
     marker.setPopup(popup);
 
     marker.on("dragstart", onDragStart);
@@ -111,7 +126,7 @@ export function createPopupFromTrail(trail: Trail) {
         : get(theme) === "light"
             ? emptyStateTrailLight
             : emptyStateTrailDark;
-    const popup = new M.Popup({ maxWidth: "320px", closeButton: false });
+    const popup = new M.Popup({ maxWidth: "320px" });
     // Create a container element for the popup content
     const linkElement = document.createElement("a");
     linkElement.href = `/map/trail/${trail.id}`; // Set href safely

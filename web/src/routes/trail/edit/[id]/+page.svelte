@@ -644,7 +644,9 @@
         }
         if (anchorIndex == 0) {
             deleteFromRoute(anchorIndex);
-            updateTrailWithRouteData();
+            if ($formData.expand?.gpx_data) {
+                updateTrailWithRouteData();
+            }
         } else if (anchorIndex == anchors.length) {
             deleteFromRoute(anchorIndex - 1);
             updateTrailWithRouteData();
@@ -694,8 +696,9 @@
             if (previousRouteSegment) {
                 editRoute(anchorIndex - 1, previousRouteSegment);
             }
-
-            updateTrailWithRouteData();
+            if ($formData.expand?.gpx_data) {
+                updateTrailWithRouteData();
+            }
         } catch (e) {
             console.error(e);
             show_toast({
@@ -775,6 +778,7 @@
         $formData.elevation_gain = totals.elevationGain;
         $formData.elevation_loss = totals.elevationLoss;
         $formData.expand!.gpx_data = route.toString();
+
         if (!$formData.id) {
             $formData.id = cryptoRandomString({ length: 15 });
         }

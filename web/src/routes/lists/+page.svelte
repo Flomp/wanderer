@@ -138,6 +138,7 @@
 
     function selectTrail(trail: Trail) {
         selectedTrail = trail;
+        mapWithElevation.unHighlightTrail(trail.id!);
         window.scrollTo({ top: 0 });
     }
 

@@ -110,6 +110,8 @@
             elevationGridColor: "#ddd2",
             labelColor: "#ddd8",
             crosshairColor: "#fff5",
+            tooltipBackgroundColor: "#242734",
+            tooltipTextColor: "#fff",
         });
     } else {
         epc?.toggleTheme({
@@ -117,6 +119,8 @@
             elevationGridColor: "#0002",
             labelColor: "#0009",
             crosshairColor: "#0005",
+            tooltipBackgroundColor: "#fff",
+            tooltipTextColor: "#000",
         });
     }
 
@@ -185,10 +189,11 @@
         }
 
         refreshElevationProfile();
-        if (showElevation && data.length) {
+        if (showElevation && data.length && activeTrail !== null) {
             epc?.showProfile();
+        } else {
+            epc?.hideProfile();
         }
-
         trails.forEach((t, i) => {
             const layerId = t.id!;
             addTrailLayer(t, layerId, i, data[i]);
@@ -201,7 +206,7 @@
                 removeTrailLayer(layerId);
             }
         });
-        
+
         if (
             !drawing &&
             fitBounds !== "off" &&
@@ -212,13 +217,13 @@
             } else {
                 flyToBounds();
             }
-        } else if(drawing && activeTrail !== null && mapLoaded) {            
-            addCaretLayer(trails[activeTrail]?.id)
+        } else if (drawing && activeTrail !== null && mapLoaded) {
+            addCaretLayer(trails[activeTrail]?.id);
         }
     }
 
-    export function refreshElevationProfile() {       
-        if (activeTrail !== null && data[activeTrail]) {            
+    export function refreshElevationProfile() {
+        if (activeTrail !== null && data[activeTrail]) {
             epc?.setData(data[activeTrail]!, waypoints);
         }
     }
@@ -350,7 +355,7 @@
                 highlightTrail(id, trails[activeTrail ?? -1]?.id == id);
             layers[id].listener.onLeave = (e) => unHighlightTrail(id);
             layers[id].listener.onMouseUp = (e) => {
-                activeTrail = trails.findIndex(t => t.id == trail.id);
+                activeTrail = trails.findIndex((t) => t.id == trail.id);
             };
             layers[id].listener.onMouseMove = moveCrosshairToCursorPosition;
             layers[id].listener.onMouseDown = (e) => handDragStart(e, id);
@@ -456,7 +461,7 @@
     ) {
         if (showElevationMarker) {
             elevationMarker.setOpacity("1");
-        }
+        }        
         map?.setPaintProperty(id, "line-width", 7);
         hoveringTrail = true;
         // map?.setPaintProperty(id, "line-color", "#2766e3");
@@ -478,11 +483,6 @@
         if (activeTrail < 0) {
             activeTrail = null;
             return;
-        }
-
-        const currentlyFocussedTrail = trails[activeTrail];
-        if (currentlyFocussedTrail && currentlyFocussedTrail != trail) {
-            unFocusTrail(currentlyFocussedTrail);
         }
         dispatch("select", trail);
 
@@ -566,6 +566,10 @@
         }
 
         const startEndPoint = findStartAndEndPoints(geojson);
+
+        if(!startEndPoint.length) {
+            return;
+        }
 
         layers[id].startMarker
             .setLngLat(startEndPoint[0] as M.LngLatLike)
@@ -741,6 +745,8 @@
                 profileLineWidth: 3,
                 displayDistanceGrid: true,
                 tooltipDisplayDPlus: false,
+                tooltipBackgroundColor: $theme == "light" ? "#fff" : "#242734",
+                tooltipTextColor: $theme == "light" ? "#000" : "#fff",
                 zoom: false,
                 container: elevationProfileContainer,
                 onEnter: () => {
@@ -749,7 +755,7 @@
                 onLeave: () => {
                     elevationMarker.setOpacity("0");
                 },
-                onMove: (data) => {
+                onMove: (data) => {                    
                     if (!hoveringTrail) {
                         elevationMarker.setLngLat(
                             data.position as M.LngLatLike,
@@ -856,11 +862,14 @@
     }
 
     :global(.maplibregl-popup-content) {
-        @apply bg-background rounded-md;
+        @apply bg-background rounded-md shadow-xl pt-5;
     }
 
     :global(.maplibregl-popup-close-button) {
         top: 4px;
         right: 8px;
+        line-height: 0;
+        padding-bottom: 2.5px;
+        @apply bg-menu-item-background-focus w-3 aspect-square rounded-full;
     }
 </style>

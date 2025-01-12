@@ -161,7 +161,7 @@
                 alt=""
             />
             <div
-                class="absolute bottom-0 w-full h-2/3 bg-gradient-to-b from-transparent to-black opacity-50"
+                class="absolute bottom-0 w-full h-full bg-gradient-to-b from-transparent to-black opacity-60"
             ></div>
             {#if (trail.public || trailIsShared) && pb.authStore.model}
                 <div
@@ -172,7 +172,7 @@
                 >
                     {#if trail.public && pb.authStore.model}
                         <span
-                            class="tooltip text-2xl"
+                            class="tooltip"
                             class:mr-3={trail.public && trailIsShared}
                             data-title={$_("public")}
                         >
@@ -180,7 +180,7 @@
                         </span>
                     {/if}
                     {#if trailIsShared}
-                        <ShareInfo type="trail" subject={trail} large={true}
+                        <ShareInfo type="trail" subject={trail}
                         ></ShareInfo>
                     {/if}
                 </div>
