@@ -17,7 +17,7 @@ const WaypointUpdateSchema = z.object({
     description: z.string().optional(),
     lat: z.number({coerce: true}).min(-90).max(90).optional(),
     lon: z.number({coerce: true}).min(-180).max(180).optional(),
-    icon: z.string().optional(),
+    icon: z.string().default("circle").optional(),
     photos: z.array(z.string()).optional(),
     "photos-": z.string().optional(),
     "photos+": z.string().optional(),

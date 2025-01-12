@@ -48,7 +48,7 @@
         dispatch("update", q);
     }
 
-    function handleItemClick(item: ComboboxItem) {
+    function handleItemClick(item: ComboboxItem) {        
         value = item.value;
         dispatch("click", item);
     }

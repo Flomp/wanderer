@@ -52,8 +52,8 @@
     $: filteredIcons =
         ($data.icon?.length ?? 0) > 2
             ? icons
-                  .filter((i) => i.includes($data.icon ?? ""))
-                  .map((i) => ({ text: i, value: i, icon: i }))
+                  .filter((i) => i.replaceAll("-", " ").includes($data.icon?.toLowerCase() ?? ""))
+                  .map((i) => ({ text: i.replaceAll("-", " "), value: i, icon: i }))
             : [];
 
     function getCoordinatesFromPhoto(src: string) {
@@ -100,6 +100,7 @@
             <Combobox
                 name="icon"
                 icon={$data.icon}
+                bind:value={$data.icon}
                 items={filteredIcons}
                 label={$_("icon")}
             ></Combobox>
