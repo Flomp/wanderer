@@ -46,7 +46,7 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
 
     const nameElement = document.createElement("b");
     nameElement.textContent = waypoint.name ?? "-";
-    if(waypoint.name?.length) {
+    if (waypoint.name?.length) {
         nameElement.classList.add("ml-2")
     }
     spanElement.appendChild(nameElement);
@@ -111,31 +111,87 @@ export function createPopupFromTrail(trail: Trail) {
         : get(theme) === "light"
             ? emptyStateTrailLight
             : emptyStateTrailDark;
-    const popup = new M.Popup({ maxWidth: "320px" });
-    popup.setHTML(
-        `<a href="/map/trail/${trail.id}" data-sveltekit-preload-data="off">
-    <li class="flex items-center gap-4 cursor-pointer text-content max-w-80">
-        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
-        </div>
-        <div>
-            <h4 class="font-semibold text-lg">${trail.name}</h4>
-            <div class="flex gap-x-4">
-            ${trail.location ? `<h5><i class="fa fa-location-dot mr-2"></i>${trail.location}</h5>` : ""}
-            <h5><i class="fa fa-gauge mr-2"></i>${get(_)(trail.difficulty as string)}</h5>
-            </div>
-            <div class="grid grid-cols-2 mt-2 gap-x-4 gap-y-2 text-sm text-gray-500 flex-wrap"><span class="shrink-0"><i
-                        class="fa fa-left-right mr-2"></i>${formatDistance(
-            trail.distance,
-        )}</span><span class="shrink-0"><i class="fa fa-clock mr-2"></i>${formatTimeHHMM(
-            trail.duration,
-        )}</span><span class="shrink-0"><i class="fa fa-arrow-trend-up mr-2"></i>${formatElevation(
-            trail.elevation_gain,
-        )}</span></span> <span class="shrink-0"><i class="fa fa-arrow-trend-down mr-2"></i>${formatElevation(
-            trail.elevation_loss,
-        )}</span></div>
-        </div>
-    </li>
-</a>`)
+    const popup = new M.Popup({ maxWidth: "320px", closeButton: false });
+    // Create a container element for the popup content
+    const linkElement = document.createElement("a");
+    linkElement.href = `/map/trail/${trail.id}`; // Set href safely
+    linkElement.setAttribute("data-sveltekit-preload-data", "off");
+
+    // Create a list item element
+    const listItem = document.createElement("li");
+    listItem.className = "flex items-center gap-4 cursor-pointer text-content max-w-80";
+
+    // Create the image container
+    const imageContainer = document.createElement("div");
+    imageContainer.className = "shrink-0";
+
+    // Create the image element
+    const img = document.createElement("img");
+    img.className = "h-14 w-14 object-cover rounded-xl";
+    img.src = thumbnail; // Set image source safely
+    img.alt = ""; // Always include a safe alt attribute
+    imageContainer.appendChild(img);
+
+    // Create the text container
+    const textContainer = document.createElement("div");
+
+    // Add trail name
+    const trailName = document.createElement("h4");
+    trailName.className = "font-semibold text-lg";
+    trailName.textContent = trail.name; // Set trail name safely
+    textContainer.appendChild(trailName);
+
+    // Add location and difficulty, if available
+    if (trail.location || trail.difficulty) {
+        const detailsContainer = document.createElement("div");
+        detailsContainer.className = "flex gap-x-4";
+
+        if (trail.location) {
+            const locationElement = document.createElement("h5");
+            locationElement.innerHTML = `<i class="fa fa-location-dot mr-2"></i>`; // Safe static icon
+            locationElement.appendChild(document.createTextNode(trail.location)); // Safely append location text
+            detailsContainer.appendChild(locationElement);
+        }
+
+        const difficultyElement = document.createElement("h5");
+        difficultyElement.innerHTML = `<i class="fa fa-gauge mr-2"></i>`; // Safe static icon
+        difficultyElement.appendChild(document.createTextNode(get(_)(trail.difficulty as string))); // Safely append difficulty
+        detailsContainer.appendChild(difficultyElement);
+
+        textContainer.appendChild(detailsContainer);
+    }
+
+    // Create the grid container for additional stats
+    const statsContainer = document.createElement("div");
+    statsContainer.className =
+        "grid grid-cols-2 mt-2 gap-x-4 gap-y-2 text-sm text-gray-500 flex-wrap";
+
+    const stats = [
+        { icon: "fa-left-right", value: formatDistance(trail.distance) },
+        { icon: "fa-clock", value: formatTimeHHMM(trail.duration) },
+        { icon: "fa-arrow-trend-up", value: formatElevation(trail.elevation_gain) },
+        { icon: "fa-arrow-trend-down", value: formatElevation(trail.elevation_loss) },
+    ];
+
+    // Loop through stats and add them
+    stats.forEach(({ icon, value }) => {
+        const statElement = document.createElement("span");
+        statElement.className = "shrink-0";
+        statElement.innerHTML = `<i class="fa ${icon} mr-2"></i>`; // Safe static icon
+        statElement.appendChild(document.createTextNode(value)); // Safely append stat value
+        statsContainer.appendChild(statElement);
+    });
+
+    textContainer.appendChild(statsContainer);
+
+    // Assemble the popup
+    listItem.appendChild(imageContainer);
+    listItem.appendChild(textContainer);
+    linkElement.appendChild(listItem);
+
+    // Safely set the content using setDOMContent
+    popup.setDOMContent(linkElement);
+
     return popup;
 }
 
