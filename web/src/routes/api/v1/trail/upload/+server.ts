@@ -26,7 +26,8 @@ export async function PUT(event: RequestEvent) {
                 duration: trail.duration ? trail.duration * 60 : undefined,
             })
             log.expand!.gpx_data = gpxData;
-            log._gpx = new File([gpxFile], (data.get("name") as string | null) ?? "file");
+            const fileName = (data.get("name") as string | null)?.length ? data.get("name") as string : "file"
+            log._gpx = new File([gpxFile], fileName);
 
             trail.expand!.summit_logs.push(log);
         } catch (e: any) {
