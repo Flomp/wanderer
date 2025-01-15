@@ -528,34 +528,34 @@
         if (anchorCount == 0) {
             addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
         } else {
-            const previousAnchor = anchors[anchorCount - 1];
-            const anchor = addAnchor(
-                e.lngLat.lat,
-                e.lngLat.lng,
-                anchors.length,
+            await addAnchorAndRecalculate(e.lngLat.lat, e.lngLat.lng);
+        }
+    }
+
+    async function addAnchorAndRecalculate(lat: number, lon: number) {
+        const previousAnchor = anchors[anchors.length - 1];
+        const anchor = addAnchor(lat, lon, anchors.length);
+        const markerText = startAnchorLoading(anchor);
+        try {
+            const routeWaypoints = await calculateRouteBetween(
+                previousAnchor.lat,
+                previousAnchor.lon,
+                lat,
+                lon,
+                selectedModeOfTransport,
+                autoRouting,
             );
-            const markerText = startAnchorLoading(anchor);
-            try {
-                const routeWaypoints = await calculateRouteBetween(
-                    previousAnchor.lat,
-                    previousAnchor.lon,
-                    e.lngLat.lat,
-                    e.lngLat.lng,
-                    selectedModeOfTransport,
-                    autoRouting,
-                );
-                insertIntoRoute(routeWaypoints);
-                updateTrailWithRouteData();
-            } catch (e) {
-                console.error(e);
-                show_toast({
-                    text: "Error calculating route",
-                    icon: "close",
-                    type: "error",
-                });
-            } finally {
-                stopAnchorLoading(anchor, markerText);
-            }
+            insertIntoRoute(routeWaypoints);
+            updateTrailWithRouteData();
+        } catch (e) {
+            console.error(e);
+            show_toast({
+                text: "Error calculating route",
+                icon: "close",
+                type: "error",
+            });
+        } finally {
+            stopAnchorLoading(anchor, markerText);
         }
     }
 
@@ -576,6 +576,14 @@
             index + 1,
             () => {
                 removeAnchor(anchors.findIndex((a) => a.id == anchor.id));
+            },
+            () => {
+                const thisAnchor = anchors.find((a) => a.id == anchor.id);
+                addAnchorAndRecalculate(
+                    thisAnchor?.lat ?? lat,
+                    thisAnchor?.lon ?? lon,
+                );
+                marker.togglePopup();
             },
             (e) => {
                 draggingMarker = true;
@@ -815,7 +823,7 @@
 
 <svelte:head>
     <title
-        >{$formData.id ? `${$formData.name} | ${$_("edit")}` : $_("new-trail")} |
+        >{$page.params.id !== "new" ? `${$formData.name} | ${$_("edit")}` : $_("new-trail")} |
         wanderer</title
     >
 </svelte:head>

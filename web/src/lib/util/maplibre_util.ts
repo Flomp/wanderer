@@ -74,7 +74,8 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
 }
 
 export function createAnchorMarker(lat: number, lon: number, index: number,
-    onDeleteClick: () => void, onDragStart: (event: Event) => void, onDragEnd: (event: Event) => void): FontawesomeMarker {
+    onDeleteClick: () => void, onLoopClick: () => void,
+    onDragStart: (event: Event) => void, onDragEnd: (event: Event) => void): FontawesomeMarker {
 
     const anchorElement = document.createElement("span")
     anchorElement.className = "route-anchor cursor-pointer rounded-full w-6 h-6 border border-black text-center bg-background-inverse text-content-inverse"
@@ -91,7 +92,7 @@ export function createAnchorMarker(lat: number, lon: number, index: number,
     const popupContent = document.createElement("div");
     const anchorH = document.createElement("h5")
     anchorH.classList.add("text-base", "font-medium");
-    anchorH.textContent = get(_)("route-point") +  " #" + index;
+    anchorH.textContent = get(_)("route-point") + " #" + index;
 
     const deleteButton = document.createElement("button");
     deleteButton.className = "btn-secondary w-full mt-2 text-sm";
@@ -104,8 +105,20 @@ export function createAnchorMarker(lat: number, lon: number, index: number,
     deleteButton.appendChild(deleteButtonText)
     deleteButton.addEventListener("click", onDeleteClick)
 
+    const loopButton = document.createElement("button");
+    loopButton.className = "btn-secondary w-full mt-2 text-sm block";
+    const loopButtonIcon = document.createElement("i")
+    loopButtonIcon.classList.add("fa", "fa-person-walking-arrow-loop-left", "mr-2")
+    loopButton.appendChild(loopButtonIcon)
+    const loopButtonText = document.createElement("span")
+    loopButtonText.textContent = get(_)("loop")
+    loopButton.appendChild(loopButtonIcon)
+    loopButton.appendChild(loopButtonText)
+    loopButton.addEventListener("click", onLoopClick)
+
     popupContent.appendChild(anchorH)
     popupContent.appendChild(deleteButton)
+    popupContent.appendChild(loopButton)
     popup.setDOMContent(popupContent)
     marker.setPopup(popup);
 
