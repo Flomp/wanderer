@@ -461,7 +461,7 @@
     ) {
         if (showElevationMarker) {
             elevationMarker.setOpacity("1");
-        }        
+        }
         map?.setPaintProperty(id, "line-width", 7);
         hoveringTrail = true;
         // map?.setPaintProperty(id, "line-color", "#2766e3");
@@ -567,7 +567,7 @@
 
         const startEndPoint = findStartAndEndPoints(geojson);
 
-        if(!startEndPoint.length) {
+        if (!startEndPoint.length) {
             return;
         }
 
@@ -735,6 +735,22 @@
             "top-left",
         );
 
+        map.addControl(
+            new M.GeolocateControl({
+                positionOptions: {
+                    enableHighAccuracy: true,
+                },
+                fitBoundsOptions: {
+                    animate: fitBounds == "animate"
+                },
+                trackUserLocation: true,
+            }),
+        );
+
+        if (showStyleSwitcher) {
+            map.addControl(switcherControl);
+        }
+
         if (showElevation) {
             epc = new ElevationProfileControl({
                 visible: false,
@@ -755,7 +771,7 @@
                 onLeave: () => {
                     elevationMarker.setOpacity("0");
                 },
-                onMove: (data) => {                    
+                onMove: (data) => {
                     if (!hoveringTrail) {
                         elevationMarker.setLngLat(
                             data.position as M.LngLatLike,
@@ -764,9 +780,6 @@
                 },
             });
             map.addControl(epc);
-        }
-        if (showStyleSwitcher) {
-            map.addControl(switcherControl);
         }
 
         if (showFullscreen) {
