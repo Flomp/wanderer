@@ -12,6 +12,7 @@ description: What changed in the last patch?
 -  Improves route editor interface
 -  Adds location search to trail create and edit form
 -  You can now focus the map on your geolocation
+-  Updates max. photo size for waypoints, summit logs and trails to 20MB
 
 ### Bug fixes
 - Fixes bug that caused new users to not be redirected after registering
