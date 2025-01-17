@@ -12,7 +12,7 @@
     export let thumbnail: number = 0;
     export let showThumbnailControls: boolean = true;
     export let showExifControls: boolean = false;
-    export let maxSizeBytes = 5242880;
+    export let maxSizeBytes = 20971520;
 
     let photoPreviews: string[] = [];
 
@@ -62,7 +62,7 @@
                 show_toast({
                     type: "error",
                     text: $_("file-too-big", {
-                        values: { file: file.name, size: "5 MB" },
+                        values: { file: file.name, size: "20 MB" },
                     }),
                     icon: "close",
                 });
