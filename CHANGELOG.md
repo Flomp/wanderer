@@ -1,3 +1,26 @@
+# v0.13.2
+
+## Security
+- Fixes potential XSS attack vector in waypoint and summit log map popups
+
+## Features
+-  Adds page loading bar
+-  Improves route editor interface
+-  Adds location search to trail create and edit form
+-  You can now focus the map on your geolocation
+
+## Bug fixes
+- Fixes bug that caused new users to not be redirected after registering
+- Fixes bug that caused map coordinates to not wrap properly
+- Fixes bug that caused new users to not be able to create lists
+- Clicking on an icon in the waypoint icon picker now picks the correct icon
+- Fixes bulk auto-upload
+- Deleting an account now properly cascade deltes all associated objects from the database
+
+## Translations
+- New translation: Spanish (thanks to @xccose)
+- Updated translations (thanks to all contributors)
+
 # v0.13.1
 
 ## Features
