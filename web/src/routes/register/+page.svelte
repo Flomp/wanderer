@@ -1,17 +1,20 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
+    import { goto, invalidateAll } from "$app/navigation";
+    import { page } from "$app/stores";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
+    import { Language, type Settings } from "$lib/models/settings";
     import type { User } from "$lib/models/user";
+    import { settings_update } from "$lib/stores/settings_store";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { login, users_create } from "$lib/stores/user_store";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
     import { _ } from "svelte-i18n";
-    import { z } from "zod";
+    import { INVALID, z } from "zod";
 
     let loading: boolean = false;
     const { form, errors } = createForm<User>({
@@ -23,12 +26,15 @@
         },
         extend: validator({
             schema: z.object({
-                username: z.string().min(
-                    3,
-                    $_("must-be-at-least-n-characters-long", {
-                        values: { n: 3 },
-                    }),
-                ).regex(/^[\w][\w\.]*$/, $_("invalid-username")),
+                username: z
+                    .string()
+                    .min(
+                        3,
+                        $_("must-be-at-least-n-characters-long", {
+                            values: { n: 3 },
+                        }),
+                    )
+                    .regex(/^[\w][\w\.]*$/, $_("invalid-username")),
                 email: z
                     .string()
                     .min(1, "required")
@@ -57,14 +63,25 @@
             }
             try {
                 await login(newUser);
-                goto(`/`);
             } catch (e) {
                 show_toast({
                     icon: "close",
                     type: "error",
                     text: $_("error-during-login"),
                 });
+            }
+            try {
+                await invalidateAll();
+                const language = Object.values(Language).includes(
+                    window.navigator.language as Language,
+                )
+                    ? (window.navigator.language as Language)
+                    : Language.en;
+                await settings_update({ id: $page.data.settings.id, language });
+            } catch (e) {
+                console.error(e);
             } finally {
+                window.location.href = "/";
                 loading = false;
             }
         },

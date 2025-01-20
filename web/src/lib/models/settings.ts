@@ -1,9 +1,22 @@
 import type { NotificationType } from "./notification";
 
+export enum Language {
+  en = "en",
+  de = "de",
+  es = "es",
+  fr = "fr",
+  hu = "hu",
+  it = "it",
+  nl = "nl",
+  pl = "pl",
+  pt = "pt",
+  zh = "zh"
+}
+
 class Settings {
   id?: string;
   unit?: "metric" | "imperial";
-  language?: "en" | "de" | "es" | "fr" | "hu" | "it" | "nl" | "pl" | "pt" | "zh";
+  language?: Language;
   bio?: string;
   mapFocus?: "trails" | "location";
   location?: { name: string, lat: number, lon: number };
@@ -16,7 +29,7 @@ class Settings {
 
   constructor(
     unit: "metric" | "imperial",
-    language: "en" | "de" | "es" | "fr" | "hu" | "it" | "nl" | "pl" | "pt" | "zh",
+    language: Language,
     mapFocus: "trails" | "location",
     user: string,
     params?: {

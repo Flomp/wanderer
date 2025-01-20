@@ -6,6 +6,7 @@
     import Select, {
         type SelectItem,
     } from "$lib/components/base/select.svelte";
+    import type { Language } from "$lib/models/settings";
     import { settings_update } from "$lib/stores/settings_store";
     import { _, locale } from "svelte-i18n";
 
@@ -32,7 +33,7 @@
     let selectedLanguage = settings?.language ?? "en";
 
     async function handleLanguageSelection(
-        value: "en" | "de" | "fr" | "hu" | "nl" | "pl" | "pt",
+        value: Language,
     ) {
         await settings_update({
             id: settings!.id,
