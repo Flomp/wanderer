@@ -16,7 +16,7 @@
     let selectedCategory =
         $page.data.settings?.category || data.categories[0].id;
 
-    let bio = $currentUser?.bio ?? "";
+    let bio = data.settings?.bio ?? "";
 
     const categoryItems: SelectItem[] = data.categories.map((c: Category) => ({
         text: $_(c.name),
@@ -43,12 +43,12 @@
     }
 
     async function handleBioSave() {
-        if (!$currentUser) {
+        if (!data.settings) {
             return;
         }
         try {
-            $currentUser.bio = bio;
-            await users_update($currentUser);
+            data.settings.bio = bio;
+            await settings_update(data.settings);
         } catch (e) {
             show_toast({
                 type: "error",
@@ -111,7 +111,7 @@
                 <Button
                     on:click={() => handleBioSave()}
                     primary
-                    disabled={$currentUser.bio === bio}>{$_("save")}</Button
+                    disabled={data.settings.bio === bio}>{$_("save")}</Button
                 >
             </div>
         </div>

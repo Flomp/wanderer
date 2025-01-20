@@ -46,14 +46,14 @@
         <h4 class="text-xl font-semibold">
             {$_("about")}
             {data.user.username}
-            {#if data.isOwnProfile && data.user.bio?.length}
+            {#if data.isOwnProfile && data.settings.bio?.length}
                 <a class="ml-4" href="/settings/profile"
                     ><i class="fa fa-pen text-base"></i></a
                 >
             {/if}
         </h4>
-        {#if data.user.bio?.length}
-            <p class="whitespace-pre-wrap text-sm">{data.user.bio}</p>
+        {#if data.settings.bio?.length}
+            <p class="whitespace-pre-wrap text-sm">{data.settings.bio}</p>
         {:else if data.isOwnProfile}
             <a class="btn-primary inline-block" href="/settings/profile"
                 >+ {$_("add-bio")}</a

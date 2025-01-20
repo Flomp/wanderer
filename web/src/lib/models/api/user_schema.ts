@@ -18,7 +18,6 @@ const UserUpdateSchema = (z.object({
     password: z.string().min(8, "must-be-at-least-n-characters-long").optional(),
     oldPassword: z.string().min(8, "must-be-at-least-n-characters-long").optional(),
     passwordConfirm: z.string().min(8, "must-be-at-least-n-characters-long").optional(),
-    bio: z.string().optional()
 }) satisfies ZodType<Partial<User>>).refine((data) => data.password === data.passwordConfirm, {
     message: "passwords-must-match",
     path: ["passwordConfirm"],
