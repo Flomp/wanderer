@@ -94,7 +94,7 @@
             <h4 class="text-xl text-red-400 font-medium">
                 {$_("danger-zone")}
             </h4>
-            <button class="btn-danger" on:click={openConfirmModal}
+            <button id="delete-account" class="btn-danger" on:click={openConfirmModal}
                 >{$_("delete-account")}</button
             >
         </div>

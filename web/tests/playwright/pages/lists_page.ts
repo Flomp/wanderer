@@ -20,7 +20,7 @@ export class ListsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.createListButton = page.locator("#create-list-button");
+    this.createListButton = page.locator("#create-list");
     this.listModal = page.locator("#list-modal");
 
     this.listModalAvatar = this.listModal.locator('input[name="avatar"]')

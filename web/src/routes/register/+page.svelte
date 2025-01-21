@@ -117,6 +117,7 @@
                 error={$errors.password}
             ></TextField>
             <Button
+                id="submit"
                 primary={true}
                 extraClasses={"min-w-full"}
                 type="submit"
