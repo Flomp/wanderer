@@ -1,8 +1,7 @@
 <script lang="ts">
-    import { writable } from "svelte/store";
-    import type { SelectItem } from "./select.svelte";
     import { createEventDispatcher } from "svelte";
-    import {_} from "svelte-i18n"
+    import { _ } from "svelte-i18n";
+    import type { SelectItem } from "./select.svelte";
 
     export let items: SelectItem[] = [];
     export let value: SelectItem[] = [];

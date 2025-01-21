@@ -153,6 +153,7 @@
             {/if}
             <MultiSelect
                 on:change={(e) => setCategoryFilter(e.detail)}
+                value={categorySelectItems.filter(i => filter.category.includes(i.value))}
                 label={$_("categories")}
                 items={categorySelectItems}
                 placeholder={`${$_("filter-categories")}...`}
