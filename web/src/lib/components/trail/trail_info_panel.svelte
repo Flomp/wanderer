@@ -150,11 +150,11 @@
               ? emptyStateTrailLight
               : emptyStateTrailDark,
     );
-    // $effect(() => {
-    //     if (browser && activeTab == 4) {
-    //         fetchComments();
-    //     }
-    // });
+    $effect(() => {
+        if (browser && activeTab == 4) {
+            fetchComments();
+        }
+    });
 </script>
 
 <div

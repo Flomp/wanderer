@@ -20,6 +20,10 @@
 
     let editedComment = $state(comment.text);
 
+    $effect(() => {
+        editedComment = comment.text
+    })
+
     let avatarSrc = $derived(comment.expand?.author.avatar
         ? getFileURL(comment.expand.author, comment.expand.author.avatar)
         : `https://api.dicebear.com/7.x/initials/svg?seed=${comment.expand?.author.username ?? ""}&backgroundType=gradientLinear`);

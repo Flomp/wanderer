@@ -18,7 +18,7 @@
         label = "",
         value = $bindable(""),
         includeSelf = true,
-        clearAfterSelect = true
+        clearAfterSelect = true,
     }: Props = $props();
 
     let searchItems: SearchItem[] = $state([]);
@@ -65,13 +65,14 @@
     {label}
     bind:value
 >
-    <!-- @migration-task: migrate this slot by hand, `item-header` is an invalid identifier -->
-    <img
-        slot="item-header"
-        let:item
-        class="rounded-full w-8 aspect-square mr-2"
-        src={getFileURL(item.value, item.value.avatar) ||
-            `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}
-        alt="avatar"
-    />
+    {#snippet prepend({ item })}
+        <img
+            
+            
+            class="rounded-full w-8 aspect-square mr-2"
+            src={getFileURL(item.value, item.value.avatar) ||
+                `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}
+            alt="avatar"
+        />
+    {/snippet}
 </Search>

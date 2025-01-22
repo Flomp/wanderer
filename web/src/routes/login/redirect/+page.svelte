@@ -1,5 +1,3 @@
-<!-- @migration-task Error while migrating Svelte code: can't migrate `let error = page.url.searchParams.get("error");` to `$state` because there's a variable named state.
-     Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
@@ -7,8 +5,8 @@
     import type { AuthProviderInfo } from "pocketbase";
     import { onMount } from "svelte";
 
-    let error = page.url.searchParams.get("error");
-    let errorDescription = page.url.searchParams.get("error_description");
+    let error = $state(page.url.searchParams.get("error"));
+    let errorDescription = $state(page.url.searchParams.get("error_description"));
     const errorURI = page.url.searchParams.get("error_uri");
 
     const oauthState = page.url.searchParams.get("state");

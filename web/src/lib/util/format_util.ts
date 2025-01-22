@@ -17,7 +17,7 @@ export function formatDistance(meters?: number) {
         return "-";
     }
 
-    const unit = get(page).data.settings?.unit ?? "metric";
+    const unit = page.data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         if (meters >= 1000) {
@@ -38,7 +38,7 @@ export function formatElevation(meters?: number) {
         return "-";
     }
 
-    const unit = get(page).data.settings?.unit ?? "metric";
+    const unit = page.data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         return `${Math.round(meters)} m`
@@ -54,7 +54,7 @@ export function formatSpeed(speed?: number) {
         return "-";
     }
 
-    const unit = get(page).data.settings?.unit ?? "metric";
+    const unit = page.data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         return `${(speed * 3.6).toFixed(2)} km/h`

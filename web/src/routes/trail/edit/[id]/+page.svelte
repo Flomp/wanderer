@@ -65,39 +65,35 @@
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
     import * as M from "maplibre-gl";
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
     import { page } from "$app/state";
 
-    export let data;
+    let { data = $bindable() } = $props();
 
-    let map: M.Map;
-    let mapTrail: Trail[] = [];
-    $: gpxData = $formData.expand!?.gpx_data;
-    $: if (gpxData) {
-        updateTrailOnMap();
-    }
+    let map: M.Map | undefined = $state();
+    let mapTrail: Trail[] = $state([]);
 
     let waypointModal: WaypointModal;
     let summitLogModal: SummitLogModal;
     let listSelectModal: ListSelectModal;
 
-    let loading = false;
+    let loading = $state(false);
 
-    let editingBasicInfo: boolean = false;
+    let editingBasicInfo: boolean = $state(false);
 
-    let photoFiles: File[] = [];
+    let photoFiles: File[] = $state([]);
 
     let gpxFile: File | Blob | null = null;
 
-    let drawingActive = false;
+    let drawingActive = $state(false);
     let overwriteGPX = false;
     let draggingMarker = false;
 
-    let searchDropdownItems: SearchItem[] = [];
+    let searchDropdownItems: SearchItem[] = $state([]);
 
     const ClientTrailCreateSchema = TrailCreateSchema.extend({
         expand: z
@@ -118,9 +114,9 @@
         { text: $_("cycling"), value: "bicycle" },
         { text: $_("driving"), value: "auto" },
     ];
-    let selectedModeOfTransport = modesOfTransport[0].value;
+    let selectedModeOfTransport = $state(modesOfTransport[0].value);
 
-    let autoRouting = true;
+    let autoRouting = $state(true);
 
     const {
         form,
@@ -391,6 +387,9 @@
     }
 
     function beforeWaypointModalOpen() {
+        if (!map) {
+            return;
+        }
         const mapCenter = map.getCenter();
         waypoint.set(new Waypoint(mapCenter.lat, mapCenter.lng));
         waypointModal.openModal();
@@ -502,6 +501,9 @@
     }
 
     function startDrawing() {
+        if (!map) {
+            return;
+        }
         drawingActive = true;
         if (!route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.length) {
         }
@@ -598,7 +600,7 @@
                 draggingMarker = false;
             },
         );
-        if (addtoMap) {
+        if (addtoMap && map) {
             marker.addTo(map);
         }
         anchor.marker = marker;
@@ -794,7 +796,7 @@
     }
 
     function handleSearchClick(item: SearchItem) {
-        map.flyTo({
+        map?.flyTo({
             center: [item.value._geo.lng, item.value._geo.lat],
             zoom: 13,
             animate: false,
@@ -816,6 +818,12 @@
             icon: "city",
         }));
     }
+    let gpxData = $derived($formData.expand?.gpx_data);
+    $effect(() => {        
+        if (gpxData) {
+            untrack(() => updateTrailOnMap());
+        }
+    });
 </script>
 
 <svelte:head>
@@ -858,7 +866,7 @@
             <button
                 class="btn-primary"
                 type="button"
-                on:click={drawingActive ? stopDrawing : startDrawing}
+                onclick={drawingActive ? stopDrawing : startDrawing}
             >
                 {$formData.expand?.gpx_data
                     ? drawingActive
@@ -875,7 +883,7 @@
             id="fileInput"
             accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
             style="display: none;"
-            on:change={handleFileSelection}
+            onchange={handleFileSelection}
         />
         <hr class="border-separator" />
         <div class="flex gap-x-2">
@@ -885,7 +893,7 @@
                 type="button"
                 class="btn-icon"
                 style="font-size: 0.9rem"
-                on:click={() => (editingBasicInfo = !editingBasicInfo)}
+                onclick={() => (editingBasicInfo = !editingBasicInfo)}
                 ><i class="fa fa-{editingBasicInfo ? 'check' : 'pen'}"
                 ></i></button
             >
@@ -999,7 +1007,7 @@
         </h3>
         <ul>
             {#each $formData.expand?.waypoints ?? [] as waypoint, i}
-                <li on:mouseenter={() => openMarkerPopup(waypoint)}>
+                <li onmouseenter={() => openMarkerPopup(waypoint)}>
                     <WaypointCard
                         {waypoint}
                         mode="edit"
@@ -1012,7 +1020,7 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={beforeWaypointModalOpen}
+            onclick={beforeWaypointModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-waypoint")}</button
         >
         <hr class="border-separator" />
@@ -1040,7 +1048,7 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={beforeSummitLogModalOpen}
+            onclick={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
         {#if data.lists.items.length}

@@ -18,6 +18,8 @@
         formatSpeed,
         formatTimeHHMM,
     } from "$lib/util/format_util";
+    import Bar from "$lib/vendor/svelte-chartjs/bar.svelte";
+    import Pie from "$lib/vendor/svelte-chartjs/pie.svelte";
     import {
         ArcElement,
         BarElement,
@@ -28,7 +30,6 @@
         Title,
         Tooltip,
     } from "chart.js";
-    import { Bar, Pie } from "svelte-chartjs";
     import { _ } from "svelte-i18n";
 
     let { data } = $props();
@@ -236,12 +237,12 @@
             placeholder={`${$_("filter-categories")}...`}
         ></MultiSelect>
         <Datepicker
-            on:change={loadSummitLogs}
+            onchange={loadSummitLogs}
             bind:value={filter.startDate}
             label={$_("after")}
         ></Datepicker>
         <Datepicker
-            on:change={loadSummitLogs}
+            onchange={loadSummitLogs}
             bind:value={filter.endDate}
             label={$_("before")}
         ></Datepicker>

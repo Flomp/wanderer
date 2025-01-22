@@ -106,11 +106,9 @@
     ];
 
     let data = $derived(getData(trails));
-    $effect(() => {    
-        console.log("triggered");
-            
+    $effect(() => {
         if (data && map) {
-            initMap(map.loaded());
+            untrack(() => initMap(map?.loaded() ?? false));
         }
     });
     $effect(() => {
@@ -169,7 +167,7 @@
             }
         }
     });
-    $effect(() => {                
+    $effect(() => {
         if (waypoints) {
             untrack(() => {
                 showWaypoints();
@@ -497,7 +495,7 @@
         // map?.setPaintProperty(id, "line-color", "#648ad5");
     }
 
-    function adjustTrailFocus(d: typeof data) {        
+    function adjustTrailFocus(d: typeof data) {
         if (activeTrail !== null && trails[activeTrail] !== undefined) {
             if (
                 !drawing &&
@@ -518,7 +516,7 @@
             return;
         }
         dispatch("select", trail);
-        
+
         try {
             refreshElevationProfile();
             if (showElevation) {

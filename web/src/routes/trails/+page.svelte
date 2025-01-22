@@ -12,7 +12,7 @@
 
     let loading: boolean = $state(true);
 
-    const filter: TrailFilter = $state(page.data.filter);
+    let filter: TrailFilter = $state(page.data.filter);
     const pagination: { page: number; totalPages: number } = {
         page: 1,
         totalPages: 1,
@@ -52,12 +52,12 @@
 >
     <TrailFilterPanel
         categories={page.data.categories}
-        {filter}
+        bind:filter
         {filterExpanded}
         on:update={() => handleFilterUpdate()}
     ></TrailFilterPanel>
     <TrailList
-        {filter}
+        bind:filter
         {loading}
         {trails}
         {pagination}

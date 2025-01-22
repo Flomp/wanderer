@@ -1,3 +1,4 @@
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot making the component unusable -->
 <script lang="ts">
   import { theme } from "$lib/stores/theme_store";
   import { T } from "@threlte/core";
@@ -855,6 +856,4 @@
   {:catch error}
     <slot name="error" {error} />
   {/await}
-
-  <slot {ref} />
 </T>

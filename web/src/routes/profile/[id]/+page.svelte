@@ -6,6 +6,7 @@
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import { theme } from "$lib/stores/theme_store.js";
+    import { goto } from "$app/navigation";
 
     let { data = $bindable() } = $props();
 
@@ -121,14 +122,19 @@
             </p>
         {/if}
         {#each data.activities.items as activity}
-            <a
-                class="block"
-                href={activity.type == "trail"
-                    ? `/trail/view/${activity.id}`
-                    : `/trail/view/${activity.trail_id}?t=3`}
+            <div
+                role="presentation"
+                class="cursor-pointer"
+                onclick={() => {
+                    goto(
+                        activity.type == "trail"
+                            ? `/trail/view/${activity.id}`
+                            : `/trail/view/${activity.trail_id}?t=3`,
+                    );
+                }}
             >
                 <ActivityCard {activity} user={data.user}></ActivityCard>
-            </a>
+            </div>
         {/each}
     </div>
 </div>

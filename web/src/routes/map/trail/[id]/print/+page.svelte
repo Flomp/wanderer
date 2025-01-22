@@ -1,5 +1,3 @@
-<!-- @migration-task Error while migrating Svelte code: `dimensions` has already been declared
-https://svelte.dev/e/declaration_duplicate -->
 <script lang="ts">
     import { page } from "$app/state";
     import "$lib/assets/fonts/IBMPlexSans-Regular-normal";
@@ -17,8 +15,11 @@ https://svelte.dev/e/declaration_duplicate -->
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { calculatePixelPerMeter, calculateScaleFactor } from "$lib/util/maplibre_util";
-   
+    import {
+        calculatePixelPerMeter,
+        calculateScaleFactor,
+    } from "$lib/util/maplibre_util";
+
     import { createRect, createText } from "$lib/util/svg_util";
     import QrCodeWithLogo from "$lib/vendor/qr-code-with-logos/index";
     import { jsPDF } from "jspdf";
@@ -26,8 +27,8 @@ https://svelte.dev/e/declaration_duplicate -->
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
 
-    let map: M.Map;
-    let showGrid: boolean = true;
+    let map: M.Map | undefined = $state();
+    let showGrid: boolean = $state(true);
 
     const settings: Settings = page.data.settings;
 
@@ -58,25 +59,27 @@ https://svelte.dev/e/declaration_duplicate -->
             },
         },
     };
-    let selectedPaperSize = paperSizes[0].value;
+    let selectedPaperSize = $state(paperSizes[0].value);
 
     const orientations: { text: string; value: "portrait" | "landscape" }[] = [
         { text: "Portrait", value: "portrait" },
         { text: "Landscape", value: "landscape" },
     ];
-    let selectedOrientation: "portrait" | "landscape" = orientations[0].value;
+    let selectedOrientation: "portrait" | "landscape" = $state(
+        orientations[0].value,
+    );
 
     const gridOptions = [
         { text: $_("degrees"), value: "degree" },
         { text: $_("no-grid"), value: "off" },
     ];
-    let selectedGrid = gridOptions[0].value;
+    let selectedGrid = $state(gridOptions[0].value);
 
-    let scale: number = 1;
+    let scale: number = $state(1);
 
-    let printLoading: boolean = false;
+    let printLoading: boolean = $state(false);
 
-    let includeDescription: boolean = false;
+    let includeDescription: boolean = $state(false);
 
     onMount(() => {
         let qrcode = new QrCodeWithLogo({
@@ -89,6 +92,9 @@ https://svelte.dev/e/declaration_duplicate -->
     });
 
     async function print() {
+        if (!map) {
+            return;
+        }
         printLoading = true;
         const doc = new jsPDF(selectedOrientation, "mm", [
             paperDimensions[selectedPaperSize].pdf[
