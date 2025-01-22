@@ -13,14 +13,14 @@
     import JSZip from "jszip";
     import { _ } from "svelte-i18n";
     import { linear } from "svelte/easing";
-    import { tweened } from "svelte/motion";
+    import { Tween } from "svelte/motion";
     import emptyStateUploadDark from "$lib/assets/svgs/empty_states/empty_state_upload_dark.svg";
     import emptyStateUploadLight from "$lib/assets/svgs/empty_states/empty_state_upload_light.svg";
     import { theme } from "$lib/stores/theme_store";
     import { onMount } from "svelte";
     import JSConfetti from "js-confetti";
 
-    const uploadProgress = tweened(0, {
+    const uploadProgress = new Tween(0, {
         duration: 300,
         easing: linear,
     });
@@ -191,7 +191,7 @@
             : 'border border-content border-dashed'} rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
         class:bg-menu-item-background-hover={uploading}
         class:border-2={offerUpload && !uploading}
-        style="--progress: {$uploadProgress}%"
+        style="--progress: {uploadProgress.current}%"
         onclick={openFileBrowser}
         ondragover={handleDragOver}
         ondragleave={handleDragLeave}

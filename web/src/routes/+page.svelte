@@ -100,7 +100,7 @@
         ></Search>
     </div>
     <div class="hidden md:block">
-        <Canvas>
+        <Canvas toneMapping={0}>
             <Scene></Scene>
         </Canvas>
     </div>

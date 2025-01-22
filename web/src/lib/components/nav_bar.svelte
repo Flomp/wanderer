@@ -7,13 +7,13 @@
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
     import { backInOut, cubicOut } from "svelte/easing";
-    import { tweened } from "svelte/motion";
     import Drawer from "./base/drawer.svelte";
     import Dropdown from "./base/dropdown.svelte";
     import LogoTextLight from "./logo/logo_text_light.svelte";
     import NotificationDropdown from "./notification/notification_dropdown.svelte";
     import { browser } from "$app/environment";
     import { page } from "$app/state";
+    import { Tween } from "svelte/motion";
 
     let navBarItems = [
         { text: "Home", value: "/" },
@@ -27,17 +27,17 @@
         { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
     ];
 
-    const indicatorPosition = tweened(0, {
+    const indicatorPosition = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
 
-    const indicatorWidth = tweened(0, {
+    const indicatorWidth = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
 
-    const indicatorScale = tweened(0, {
+    const indicatorScale = new Tween(0, {
         duration: 600,
         easing: backInOut,
     });
@@ -168,7 +168,7 @@
     <menu id="nav-bar-links" class="hidden lg:flex gap-8 relative py-1 px-2">
         <div
             class="absolute h-full w-16 bg-menu-item-background-hover rounded-xl top-0 z-0"
-            style="width: {$indicatorWidth}px; left: {$indicatorPosition}px; scale: {$indicatorScale}"
+            style="width: {indicatorWidth.current}px; left: {indicatorPosition.current}px; scale: {indicatorScale.current}"
         ></div>
         {#each navBarItems as item}
             <a class="font-semibold z-10" href={item.value}>{item.text}</a>

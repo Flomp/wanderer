@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { cubicOut } from "svelte/easing";
-    import { tweened } from "svelte/motion";
+    import { Tween } from "svelte/motion";
 
     interface Props {
         tabs: string[];
@@ -11,12 +11,12 @@
 
     let { tabs, activeTab = $bindable(), extraClasses = "" }: Props = $props();
 
-    const indicatorPosition = tweened(0, {
+    const indicatorPosition = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
 
-    const indicatorWidth = tweened(0, {
+    const indicatorWidth = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
@@ -41,7 +41,7 @@
 <div id="tabs" class="flex gap-2 overflow-x-auto relative {extraClasses}">
     <div
         class="absolute h-full bg-menu-item-background-hover rounded-t-lg top-0 z-0"
-        style="width: {$indicatorWidth}px; left: {$indicatorPosition}px;"
+        style="width: {indicatorWidth.current}px; left: {indicatorPosition.current}px;"
     ></div>
     {#each tabs as tab, i}
         <button

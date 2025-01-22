@@ -1,62 +1,81 @@
-<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot making the component unusable -->
 <script lang="ts">
+  
   import { theme } from "$lib/stores/theme_store";
   import { T } from "@threlte/core";
   import { useDraco, useGltf } from "@threlte/extras";
   import { backInOut } from "svelte/easing";
-  import { tweened } from "svelte/motion";
+  import { Tween } from "svelte/motion";
   import { Group, Mesh } from "three";
 
   import { interactivity } from "@threlte/extras";
   interactivity();
 
   export const ref = new Group();
-  export let rotation: number = 0;
+  interface Props {
+    rotation?: number;
+    fallback?: import('svelte').Snippet;
+    errorSlot?: import('svelte').Snippet<[any]>;
+    [key: string]: any
+  }
 
-  let dog: Mesh;
+  let { rotation = 0, fallback, errorSlot, ...rest }: Props = $props();
+
+  let dog: Mesh | undefined = $state();
 
   const dracoLoader = useDraco()
   const gltf = useGltf("/models/mountain.glb", { dracoLoader });
 
-  const bark = new Audio("/audio/sophie.mp3");
+  const bark = $state(new Audio("/audio/sophie.mp3"));
   bark.volume = 0.5
 
-  const sunZPosition = tweened($theme == "light" ? 11.7 : -20, {
+  const sunZPosition = new Tween($theme == "light" ? 11.7 : -20, {
     duration: 1000,
     easing: backInOut,
   });
-  $: sunZPosition.set($theme == "light" ? 11.7 : -20);
+  $effect(() => {
+    sunZPosition.set($theme == "light" ? 11.7 : -20);
+  });
 
-  const moonZPosition = tweened($theme == "dark" ? 14 : -20, {
+  const moonZPosition = new Tween($theme == "dark" ? 14 : -20, {
     duration: 1000,
     easing: backInOut,
   });
-  $: moonZPosition.set($theme == "dark" ? 14 : -20);
+  $effect(() => {
+    moonZPosition.set($theme == "dark" ? 14 : -20);
+  });
 
-  const campfireLightIntensity = tweened($theme == "dark" ? 2 : 0, {
+  const campfireLightIntensity = new Tween($theme == "dark" ? 2 : 0, {
     duration: 500,
   });
-  $: campfireLightIntensity.set($theme == "dark" ? 2 : 0);
+  $effect(() => {
+    campfireLightIntensity.set($theme == "dark" ? 2 : 0);
+  });
 
-  const cabinLightIntensity = tweened($theme == "dark" ? 4 : 0, {
+  const cabinLightIntensity = new Tween($theme == "dark" ? 4 : 0, {
     duration: 400,
   });
-  $: cabinLightIntensity.set($theme == "dark" ? 4 : 0);
+  $effect(() => {
+    cabinLightIntensity.set($theme == "dark" ? 4 : 0);
+  });
 
-  const sunLightIntensity = tweened($theme == "light" ? 5 : 0, {
+  const sunLightIntensity = new Tween($theme == "light" ? 5 : 0, {
     duration: 500,
   });
-  $: sunLightIntensity.set($theme == "light" ? 5 : 0);
+  $effect(() => {
+    sunLightIntensity.set($theme == "light" ? 5 : 0);
+  });
 
-  const moonLightIntensity = tweened($theme == "dark" ? 0.8 : 0, {
+  const moonLightIntensity = new Tween($theme == "dark" ? 0.8 : 0, {
     duration: 500,
   });
-  $: moonLightIntensity.set($theme == "dark" ? 0.8 : 0);
+  $effect(() => {
+    moonLightIntensity.set($theme == "dark" ? 0.8 : 0);
+  });
 </script>
 
-<T is={ref} dispose={false} {...$$restProps}>
+<T is={ref} dispose={false} {...rest}>
   {#await gltf}
-    <slot name="fallback" />
+    {@render fallback?.()}
   {:then gltf}
     <T.Group
       position={[3.98, 4.61, 3.15]}
@@ -130,7 +149,7 @@
     <T.PointLight
       position={[14.37, 3.8, 4.11]}
       color="#C98A76"
-      intensity={$campfireLightIntensity}
+      intensity={campfireLightIntensity.current}
     ></T.PointLight>
     <T.Mesh
       geometry={gltf.nodes.campfire.geometry}
@@ -148,7 +167,7 @@
     <T.Mesh
       geometry={gltf.nodes.Moon.geometry}
       material={gltf.materials.DD9944}
-      position={[-23.68, $moonZPosition, -6.37]}
+      position={[-23.68, moonZPosition.current, -6.37]}
       rotation={[0, -0.81, 0]}
       scale={0.53}
       ><T.PointLight position={[0.5, 5, 0.5]} color="#a2cbf5" intensity={4}
@@ -156,12 +175,12 @@
       <T.DirectionalLight
         position={[20, 20, 40]}
         color="#a2cbf5"
-        intensity={$moonLightIntensity}
+        intensity={moonLightIntensity.current}
         castShadow
       ></T.DirectionalLight></T.Mesh
     >
     <T.Group
-      position={[-5.61, $sunZPosition, -26.34]}
+      position={[-5.61, sunZPosition.current, -26.34]}
       rotation={[0, 0.75, 0]}
       scale={0.11}
     >
@@ -184,7 +203,7 @@
         <T.DirectionalLight
           position={[20, 40, 20]}
           color="#FCF9D9"
-          intensity={$sunLightIntensity}
+          intensity={sunLightIntensity.current}
           castShadow
         /></T.Mesh
       >
@@ -193,7 +212,7 @@
       position={[-4.58, 4.85, 13.62]}
       angle={Math.PI / 5}
       color="#ffffff"
-      intensity={$campfireLightIntensity * 1.5}
+      intensity={campfireLightIntensity.current * 1.5}
       target={dog}
     ></T.SpotLight>
     <T.Mesh
@@ -764,7 +783,7 @@
     <T.PointLight
       position={[-8.6, 9.3, -1]}
       color="#FCF9D9"
-      intensity={$cabinLightIntensity}
+      intensity={cabinLightIntensity.current}
     ></T.PointLight>
     <T.Mesh
       geometry={gltf.nodes.Cabin.geometry}
@@ -799,12 +818,12 @@
         <T.PointLight
           position={[-1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensity}
+          intensity={campfireLightIntensity.current}
         ></T.PointLight>
         <T.PointLight
           position={[1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensity}
+          intensity={campfireLightIntensity.current}
         ></T.PointLight></T.Mesh
       >
     </T.Group>
@@ -823,12 +842,12 @@
         <T.PointLight
           position={[-1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensity}
+          intensity={campfireLightIntensity.current}
         ></T.PointLight>
         <T.PointLight
           position={[1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensity}
+          intensity={campfireLightIntensity.current}
         ></T.PointLight></T.Mesh
       >
     </T.Group>
@@ -844,16 +863,16 @@
         <T.PointLight
           position={[-1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensity}
+          intensity={campfireLightIntensity.current}
         ></T.PointLight>
         <T.PointLight
           position={[1, 0.8, 0]}
           color="#ffffff"
-          intensity={$campfireLightIntensity}
+          intensity={campfireLightIntensity.current}
         ></T.PointLight></T.Mesh
       >
     </T.Group>
   {:catch error}
-    <slot name="error" {error} />
+    {@render errorSlot?.({ error, })}
   {/await}
 </T>
