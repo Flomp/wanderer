@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import Button from "$lib/components/base/button.svelte";
     import type { SelectItem } from "$lib/components/base/select.svelte";
     import Select from "$lib/components/base/select.svelte";
@@ -11,12 +11,12 @@
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
 
-    export let data;
+    let { data = $bindable() } = $props();
 
     let selectedCategory =
-        $page.data.settings?.category || data.categories[0].id;
+        $state(page.data.settings?.category || data.categories[0].id);
 
-    let bio = data.settings?.bio ?? "";
+    let bio = $state(data.settings?.bio ?? "");
 
     const categoryItems: SelectItem[] = data.categories.map((c: Category) => ({
         text: $_(c.name),
@@ -61,7 +61,7 @@
 
     async function handleCategorySelection(value: string) {
         await settings_update({
-            id: $page.data.settings!.id,
+            id: page.data.settings!.id,
             category: value,
         });
     }
@@ -86,7 +86,7 @@
                 />
                 <button
                     class="absolute top-0 w-24 aspect-square opacity-0 group-hover:opacity-100 flex justify-center items-center bg-black/50 focus:bg-black/60 text-white cursor-pointer transition-opacity"
-                    on:click={openFileBrowser}
+                    onclick={openFileBrowser}
                 >
                     <i class="fa fa-pen"></i>
                 </button>
@@ -96,7 +96,7 @@
                     id="avatarInput"
                     accept="image/*"
                     style="display: none;"
-                    on:change={handleAvatarSelection}
+                    onchange={handleAvatarSelection}
                 />
             </div>
             <div>
@@ -109,7 +109,7 @@
             <Textarea bind:value={bio} rows={5}></Textarea>
             <div class="mt-3">
                 <Button
-                    on:click={() => handleBioSave()}
+                    onclick={() => handleBioSave()}
                     primary
                     disabled={data.settings.bio === bio}>{$_("save")}</Button
                 >

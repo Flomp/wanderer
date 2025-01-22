@@ -11,14 +11,24 @@
     import SkeletonCard from "../base/skeleton_card.svelte";
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
 
-    export let filter: TrailFilter | null = null;
-    export let trails: Trail[];
-    export let pagination: { page: number; totalPages: number } = {
+    interface Props {
+        filter?: TrailFilter | null;
+        trails: Trail[];
+        pagination?: { page: number; totalPages: number };
+        loading?: boolean;
+        fullWidthCards?: boolean;
+    }
+
+    let {
+        filter = $bindable(null),
+        trails,
+        pagination = {
         page: 1,
         totalPages: 1,
-    };
-    export let loading: boolean = false;
-    export let fullWidthCards: boolean = false;
+    },
+        loading = false,
+        fullWidthCards = false
+    }: Props = $props();
 
     const displayOptions: SelectItem[] = [
         { text: $_("card", { values: { n: 2 } }), value: "cards" },
@@ -26,7 +36,7 @@
         { text: $_("table"), value: "table" },
     ];
 
-    let selectedDisplayOption = displayOptions[0].value;
+    let selectedDisplayOption = $state(displayOptions[0].value);
 
     let dispatch = createEventDispatcher();
 
@@ -123,7 +133,7 @@
                             id="sort-order-btn"
                             class="btn-icon"
                             class:rotated={filter.sortOrder == "-"}
-                            on:click={() => setSortOrder()}
+                            onclick={() => setSortOrder()}
                             ><i class="fa fa-arrow-up"></i></button
                         >
                     </div>

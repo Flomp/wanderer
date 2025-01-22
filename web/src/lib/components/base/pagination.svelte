@@ -2,8 +2,12 @@
     import { range } from "$lib/util/array_util";
     import { createEventDispatcher } from "svelte";
 
-    export let page: number;
-    export let totalPages: number;
+    interface Props {
+        page: number;
+        totalPages: number;
+    }
+
+    let { page, totalPages }: Props = $props();
 
     const maxPagesToRender = 6;
     const dispatch = createEventDispatcher();
@@ -14,7 +18,7 @@
         }
     }
 
-    $: numberGenerator = () => {
+    let numberGenerator = $derived(() => {
         if (totalPages < 4) {
             return [];
         }
@@ -31,7 +35,7 @@
             return range(page + Math.max(1, maxPagesToRender - 5), page - 2);
         }
         return [];
-    };
+    });
 </script>
 
 <div class="flex gap-x-4 justify-center">
@@ -39,13 +43,13 @@
         <button
             class:text-gray-500={page == 1}
             disabled={page == 1}
-            on:click={() => update(page - 1)}
+            onclick={() => update(page - 1)}
             ><i class="fa fa-caret-left"></i></button
         >
         <button
             class="w-8 aspect-square rounded-lg transition-colors border-input-border hover:bg-menu-item-background-hover"
             class:border={page == 1}
-            on:click={() => update(1)}>1</button
+            onclick={() => update(1)}>1</button
         >
         {#if totalPages > maxPagesToRender && page >= maxPagesToRender - 2 && page > 2}
             <span>...</span>
@@ -53,14 +57,14 @@
             <button
                 class="w-8 aspect-square rounded-lg transition-colors border-input-border hover:bg-menu-item-background-hover"
                 class:border={page == 2}
-                on:click={() => update(2)}>2</button
+                onclick={() => update(2)}>2</button
             >
         {/if}
         {#each numberGenerator() as i}
             <button
                 class="w-8 aspect-square rounded-lg transition-colors border-input-border hover:bg-menu-item-background-hover"
                 class:border={page == i + 1}
-                on:click={() => update(i + 1)}>{i + 1}</button
+                onclick={() => update(i + 1)}>{i + 1}</button
             >
         {/each}
         {#if totalPages > maxPagesToRender && page < totalPages - 3}
@@ -69,18 +73,18 @@
             <button
                 class="w-8 aspect-square rounded-lg transition-colors border-input-border hover:bg-menu-item-background-hover"
                 class:border={page == totalPages - 1}
-                on:click={() => update(totalPages - 1)}>{totalPages - 1}</button
+                onclick={() => update(totalPages - 1)}>{totalPages - 1}</button
             >
         {/if}
         <button
             class="w-8 aspect-square rounded-lg transition-colors border-input-border hover:bg-menu-item-background-hover"
             class:border={page == totalPages}
-            on:click={() => update(totalPages)}>{totalPages}</button
+            onclick={() => update(totalPages)}>{totalPages}</button
         >
         <button
             class:text-gray-500={page == totalPages}
             disabled={page == totalPages}
-            on:click={() => update(page + 1)}
+            onclick={() => update(page + 1)}
             ><i class="fa fa-caret-right"></i></button
         >
     {/if}

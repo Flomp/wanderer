@@ -2,10 +2,19 @@
     import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
 
-    export let src: string;
-    export let isThumbnail: boolean = false;
-    export let showThumbnailControls: boolean = true;
-    export let showExifControls: boolean = false;
+    interface Props {
+        src: string;
+        isThumbnail?: boolean;
+        showThumbnailControls?: boolean;
+        showExifControls?: boolean;
+    }
+
+    let {
+        src,
+        isThumbnail = false,
+        showThumbnailControls = true,
+        showExifControls = false
+    }: Props = $props();
 
     const dispatch = createEventDispatcher();
 
@@ -39,7 +48,7 @@
                 type="button"
                 class="tooltip"
                 data-title={$_("make-thumbnail")}
-                on:click={handleThumbnailClick}
+                onclick={handleThumbnailClick}
                 ><i class="fa fa-file-image text-content"></i></button
             >
         {/if}
@@ -48,14 +57,14 @@
                 type="button"
                 class="tooltip"
                 data-title={$_("get-position-from-exif")}
-                on:click={handleExifClick}
+                onclick={handleExifClick}
                 ><i class="fa fa-magnifying-glass-location text-content"></i></button
             >
         {/if}
         <button
             class="tooltip"
             data-title={$_("delete")}
-            on:click={handleDeleteClick}
+            onclick={handleDeleteClick}
             type="button"><i class="fa fa-trash text-red-500"></i></button
         >
     </div>

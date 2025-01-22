@@ -1,6 +1,6 @@
 <script lang="ts">
     import { beforeNavigate, goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import { env } from "$env/dynamic/public";
     import Toast from "$lib/components/base/toast.svelte";
     import Footer from "$lib/components/footer.svelte";
@@ -8,12 +8,17 @@
     import { currentUser } from "$lib/stores/user_store";
     import { isRouteProtected } from "$lib/util/authorization_util";
     import "@fortawesome/fontawesome-free/css/all.min.css";
-    import { onMount } from "svelte";
+    import { onMount, type Snippet } from "svelte";
     import { slide } from "svelte/transition";
     import "../css/app.css";
     import "../css/components.css";
     import "../css/theme.css";
     import PageLoadingBar from "$lib/components/page_loading_bar.svelte";
+    interface Props {
+        children?: Snippet;
+    }
+
+    let { children }: Props = $props();
 
     beforeNavigate((n) => {
         if (!$currentUser && isRouteProtected(n.to?.url?.pathname ?? "")) {
@@ -23,13 +28,13 @@
     });
 
     onMount(() => {
-        if ($page.data.origin != location.origin) {
+        if (page.data.origin != location.origin) {
             showWarning = true;
         }
     });
 
-    let hideDemoHint = false;
-    let showWarning = false;
+    let hideDemoHint = $state(false);
+    let showWarning = $state(false);
 </script>
 
 {#if env.PUBLIC_IS_DEMO === "true" && !hideDemoHint}
@@ -42,7 +47,10 @@
             >This is a demo instance. Do not store any relevant data here. You
             can use the user 'demo' and password 'password' to login.
         </span>
-        <button class="btn-icon self-end" on:click={() => (hideDemoHint = true)}
+        <button
+            aria-label="Close"
+            class="btn-icon self-end"
+            onclick={() => (hideDemoHint = true)}
             ><i class="fa fa-close"></i></button
         >
     </div>
@@ -59,10 +67,12 @@
                 >{location.origin}</span
             >
             but your ORIGIN environment variable is set to
-            <span class="font-mono bg-gray-100">{$page.data.origin}</span>. This
+            <span class="font-mono bg-gray-100">{page.data.origin}</span>. This
             may cause errors.
         </p>
-        <button class="btn-icon self-end" on:click={() => (showWarning = false)}
+        <button
+        aria-label="Close"
+        class="btn-icon self-end" onclick={() => (showWarning = false)}
             ><i class="fa fa-close"></i></button
         >
     </div>
@@ -71,6 +81,6 @@
 <NavBar></NavBar>
 <PageLoadingBar class="text-content"></PageLoadingBar>
 <Toast></Toast>
-<slot />
+{@render children?.()}
 
 <Footer></Footer>

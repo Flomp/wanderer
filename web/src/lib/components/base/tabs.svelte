@@ -3,9 +3,13 @@
     import { cubicOut } from "svelte/easing";
     import { tweened } from "svelte/motion";
 
-    export let tabs: string[];
-    export let activeTab: number;
-    export let extraClasses: string = "";
+    interface Props {
+        tabs: string[];
+        activeTab: number;
+        extraClasses?: string;
+    }
+
+    let { tabs, activeTab = $bindable(), extraClasses = "" }: Props = $props();
 
     const indicatorPosition = tweened(0, {
         duration: 300,
@@ -43,7 +47,7 @@
         <button
             class="tab z-10"
             class:tab-active={activeTab == i}
-            on:click={() => switchTabs(i)}>{tab}</button
+            onclick={() => switchTabs(i)}>{tab}</button
         >
     {/each}
 </div>

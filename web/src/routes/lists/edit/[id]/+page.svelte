@@ -1,8 +1,10 @@
 <script lang="ts">
+    import { stopPropagation } from "svelte/legacy";
+
     import { type List } from "$lib/models/list";
     import { _ } from "svelte-i18n";
 
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import Button from "$lib/components/base/button.svelte";
@@ -38,21 +40,21 @@
     import { createForm } from "felte";
     import { z } from "zod";
 
-    export let data;
+    let { data } = $props();
 
-    let previewURL = data.previewUrl ?? "";
-    let searchDropdownItems: SearchItem[] = [];
+    let previewURL = $state(data.previewUrl ?? "");
+    let searchDropdownItems: SearchItem[] = $state([]);
 
-    let activeTrailIndex: number = -1;
+    let activeTrailIndex: number = $state(-1);
 
-    let map: MapWithElevationMaplibre;
+    let map: MapWithElevationMaplibre | undefined = $state();
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
     let newShares: TrailShare[] = [];
 
-    let openConfirmModal: () => void;
-    let openPublishConfirmModal: () => void;
+    let shareConfirmModal: ConfirmModal;
+    let publishConfirmModal: ConfirmModal;
 
     const ClientListCreateSchema = ListCreateSchema.extend({
         _photos: z.array(z.instanceof(File)).optional(),
@@ -74,7 +76,7 @@
             ...data.list,
             public: data.list.id
                 ? data.list.public
-                : $page.data.settings?.privacy?.lists === "public",
+                : page.data.settings?.privacy?.lists === "public",
         },
         extend: validator({
             schema: ClientListCreateSchema,
@@ -93,10 +95,10 @@
                 data.list?.expand?.trails?.length !==
                     $formData.expand?.trails?.length)
         ) {
-            openPublishConfirmModal();
+            publishConfirmModal.openModal();
             return false;
         } else if (await findNewTrailShares()) {
-            openConfirmModal();
+            shareConfirmModal.openModal();
             return false;
         }
 
@@ -273,7 +275,7 @@
         use:form
     >
         <h2 class="text-2xl font-semibold">
-            {$page.params.id === "new" ? $_("new-list") : $_("edit-list")}
+            {page.params.id === "new" ? $_("new-list") : $_("edit-list")}
         </h2>
         <label for="avatar" class="text-sm font-medium block">
             {$_("avatar")}
@@ -284,7 +286,7 @@
             id="avatar"
             accept="image/*"
             style="display: none;"
-            on:change={handleAvatarSelection}
+            onchange={handleAvatarSelection}
         />
         <div class="flex items-center gap-4">
             {#if previewURL.length > 0}
@@ -301,7 +303,7 @@
             <button
                 class="btn-secondary"
                 type="button"
-                on:click={openAvatarBrowser}>{$_("change")}...</button
+                onclick={openAvatarBrowser}>{$_("change")}...</button
             >
         </div>
 
@@ -329,9 +331,9 @@
                     class="flex gap-4 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors items-center"
                     class:bg-secondary-hover={i == activeTrailIndex}
                     role="presentation"
-                    on:mouseenter={() => map.highlightTrail(trail.id ?? "")}
-                    on:mouseleave={() => map.unHighlightTrail(trail.id ?? "")}
-                    on:click={() => map.selectTrail(trail.id ?? "")}
+                    onmouseenter={() => map?.highlightTrail(trail.id ?? "")}
+                    onmouseleave={() => map?.unHighlightTrail(trail.id ?? "")}
+                    onclick={() => map?.selectTrail(trail.id ?? "")}
                 >
                     <div class="shrink-0">
                         <img
@@ -384,8 +386,10 @@
                     <div class="basis-0">
                         {#if i > 0}
                             <button
-                                on:click|stopPropagation={() =>
-                                    moveTrail(trail, i, -1)}
+                                aria-label="Move up"
+                                onclick={stopPropagation(() =>
+                                    moveTrail(trail, i, -1),
+                                )}
                                 type="button"
                                 class="btn-icon"
                             >
@@ -394,8 +398,8 @@
                         {/if}
                         {#if i < $formData.expand?.trails?.length - 1}
                             <button
-                                on:click|stopPropagation={() =>
-                                    moveTrail(trail, i, 1)}
+                                aria-label="Move down"
+                                onclick={() => moveTrail(trail, i, 1)}
                                 type="button"
                                 class="btn-icon"
                             >
@@ -403,9 +407,10 @@
                             </button>
                         {/if}
                         <button
+                            aria-label="Remove trail"
                             type="button"
                             class="btn-icon text-red-500"
-                            on:click={() => deleteTrail(trail)}
+                            onclick={() => deleteTrail(trail)}
                             ><i class="fa fa-trash"></i></button
                         >
                     </div>
@@ -438,7 +443,7 @@
     text={$_("list-share-warning-update")}
     title={$_("confirm-share")}
     action="confirm"
-    bind:openModal={openConfirmModal}
+    bind:this={shareConfirmModal}
     on:confirm={async () => {
         await updateTrailShares();
         await saveList();
@@ -450,7 +455,7 @@
     text={$_("list-public-warning")}
     title={$_("confirm-publish")}
     action="confirm"
-    bind:openModal={openPublishConfirmModal}
+    bind:this={publishConfirmModal}
     on:confirm={async () => {
         await publishTrails();
         await saveList();

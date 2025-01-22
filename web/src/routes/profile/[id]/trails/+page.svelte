@@ -3,14 +3,14 @@
     import { trails_search_filter } from "$lib/stores/trail_store";
     import { _ } from "svelte-i18n";
 
-    export let data;
+    let { data = $bindable() } = $props();
 
-    let loading = true;
+    let loading = $state(true);
 
-    $: pagination = {
+    let pagination = $derived({
         page: data.trails.page,
         totalPages: data.trails.totalPages,
-    };
+    });
 
     async function handleFilterUpdate() {
         loading = true;

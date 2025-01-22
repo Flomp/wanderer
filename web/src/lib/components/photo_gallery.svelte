@@ -3,9 +3,15 @@
     import PhotoSwipeLightbox from "photoswipe/lightbox";
     import { onMount } from "svelte";
 
-    export let photos: string[];
-    export function open(idx: number = 0) {
-        lightbox.loadAndOpen(idx, lightboxDataSource)
+    interface Props {
+        photos: string[];
+        open?: (idx: number) => void;
+    }
+
+    let { photos }: Props = $props();
+
+    export function openGallery(idx: number = 0) {
+        lightbox.loadAndOpen(idx, lightboxDataSource);
     }
     let lightbox: PhotoSwipeLightbox;
     let lightboxDataSource: DataSource;

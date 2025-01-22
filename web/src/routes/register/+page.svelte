@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto, invalidateAll } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
@@ -16,7 +16,7 @@
     import { _ } from "svelte-i18n";
     import { INVALID, z } from "zod";
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
     const { form, errors } = createForm<User>({
         initialValues: {
             id: "",
@@ -77,7 +77,7 @@
                 )
                     ? (window.navigator.language as Language)
                     : Language.en;
-                await settings_update({ id: $page.data.settings.id, language });
+                await settings_update({ id: page.data.settings.id, language });
             } catch (e) {
                 console.error(e);
             } finally {

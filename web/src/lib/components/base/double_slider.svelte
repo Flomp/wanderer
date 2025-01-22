@@ -3,13 +3,22 @@
     import "nouislider/dist/nouislider.css";
     import { createEventDispatcher, onMount } from "svelte";
 
-    export let minValue = 0;
-    export let maxValue = 100;
 
-    export let currentMin = minValue;
-    export let currentMax = maxValue;
+    interface Props {
+        minValue?: number;
+        maxValue?: number;
+        currentMin?: any;
+        currentMax?: any;
+    }
 
-    let sliderContainer: any;
+    let {
+        minValue = 0,
+        maxValue = 100,
+        currentMin = $bindable(minValue),
+        currentMax = $bindable(maxValue)
+    }: Props = $props();
+
+    let sliderContainer: any = $state();
 
     const dispatch = createEventDispatcher();
 

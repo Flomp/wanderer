@@ -12,30 +12,34 @@
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
 
-    export let list: List;
-    export let active: boolean = false;
+    interface Props {
+        list: List;
+        active?: boolean;
+    }
 
-    $: cumulativeDistance = list.expand?.trails?.reduce(
+    let { list, active = false }: Props = $props();
+
+    let cumulativeDistance = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.distance!,
         0,
-    );
+    ));
 
-    $: cumulativeElevationGain = list.expand?.trails?.reduce(
+    let cumulativeElevationGain = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.elevation_gain!,
         0,
-    );
+    ));
 
-    $: cumulativeElevationLoss = list.expand?.trails?.reduce(
+    let cumulativeElevationLoss = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.elevation_loss!,
         0,
-    );
+    ));
 
-    $: cumulativeDuration = list.expand?.trails?.reduce(
+    let cumulativeDuration = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.duration!,
         0,
-    );
+    ));
 
-    $: listIsShared = (list.expand?.list_share_via_list?.length ?? 0) > 0;
+    let listIsShared = $derived((list.expand?.list_share_via_list?.length ?? 0) > 0);
 </script>
 
 <div

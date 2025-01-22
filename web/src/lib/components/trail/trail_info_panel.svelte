@@ -44,10 +44,14 @@
     import EmptyStateDescription from "../empty_states/empty_state_description.svelte";
     import { browser } from "$app/environment";
 
-    export let trail: Trail;
-    export let mode: "overview" | "map" | "list" = "map";
-    export let markers: M.Marker[] = [];
-    export let activeTab = 0;
+    interface Props {
+        trail: Trail;
+        mode?: "overview" | "map" | "list";
+        markers?: M.Marker[];
+        activeTab?: number;
+    }
+
+    let { trail, mode = "map", markers = [], activeTab = 0 }: Props = $props();
 
     const tabs = [
         $_("description"),
@@ -60,23 +64,18 @@
     const trailIsShared =
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 
-    $: thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
-        : $theme === "light"
-          ? emptyStateTrailLight
-          : emptyStateTrailDark;
+    let gallery: PhotoGallery;
 
-    let openGallery: (idx?: number) => void;
+    let newComment: Comment = $state({
+        text: "",
+        rating: 0,
+        author: "",
+        trail: trail.id ?? "",
+    });
 
-    let newComment: Comment = new Comment("", 0, "", trail.id ?? "");
-
-    let commentsLoading: boolean = activeTab == 4;
-    let commentCreateLoading: boolean = false;
+    let commentsLoading: boolean = $state(activeTab == 4);
+    let commentCreateLoading: boolean = $state(false);
     let commentDeleteLoading: boolean = false;
-
-    $: if (browser && activeTab == 4) {
-        fetchComments();
-    }
 
     onMount(async () => {});
 
@@ -144,6 +143,18 @@
         comments.set(newCommentList);
         commentDeleteLoading = false;
     }
+    let thumbnail = $derived(
+        trail.photos.length
+            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark,
+    );
+    // $effect(() => {
+    //     if (browser && activeTab == 4) {
+    //         fetchComments();
+    //     }
+    // });
 </script>
 
 <div
@@ -180,8 +191,7 @@
                         </span>
                     {/if}
                     {#if trailIsShared}
-                        <ShareInfo type="trail" subject={trail}
-                        ></ShareInfo>
+                        <ShareInfo type="trail" subject={trail}></ShareInfo>
                     {/if}
                 </div>
             {/if}
@@ -316,8 +326,8 @@
                     <ul>
                         {#each trail.expand?.waypoints ?? [] as waypoint, i}
                             <li
-                                on:mouseenter={() => openMarkerPopup(i)}
-                                on:mouseleave={() => closeMarkerPopup(i)}
+                                onmouseenter={() => openMarkerPopup(i)}
+                                onmouseleave={() => closeMarkerPopup(i)}
                             >
                                 <WaypointCard {waypoint}></WaypointCard>
                             </li>
@@ -339,14 +349,14 @@
                             photos={trail.photos.map((p) =>
                                 getFileURL(trail, p),
                             )}
-                            bind:open={openGallery}
+                            bind:this={gallery}
                         ></PhotoGallery>
                         {#each trail.photos ?? [] as photo, i}
-                            <!-- svelte-ignore a11y-click-events-have-key-events -->
-                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                            <!-- svelte-ignore a11y_click_events_have_key_events -->
+                            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                             <img
                                 class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                                on:click={() => openGallery(i)}
+                                onclick={() => gallery.openGallery(i)}
                                 src={getFileURL(trail, photo)}
                                 alt=""
                             />
@@ -389,7 +399,7 @@
                         </div>
                         <div class="flex justify-end mt-3">
                             <Button
-                                on:click={createComment}
+                                onclick={createComment}
                                 loading={commentCreateLoading}
                                 secondary={true}
                                 disabled={commentCreateLoading ||

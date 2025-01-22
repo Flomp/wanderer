@@ -1,15 +1,38 @@
 <script lang="ts">
-    export let type: "button" | "submit" | "reset" | null | undefined =
-        undefined;
-    export let icon: string = "";
-    export let extraClasses: string = "";
-    export let primary: boolean = false;
-    export let secondary: boolean = false;
-    export let large: boolean = false;
-    export let loading: boolean = false;
-    export let disabled: boolean = false;
-    export let tooltip: string | undefined = undefined;
-    export let id: string | undefined = undefined
+    import type { Snippet } from "svelte";
+    import type { MouseEventHandler } from "svelte/elements";
+    import { createBubbler } from "svelte/legacy";
+
+    const bubble = createBubbler();
+    interface Props {
+        type?: "button" | "submit" | "reset" | null | undefined;
+        icon?: string;
+        extraClasses?: string;
+        primary?: boolean;
+        secondary?: boolean;
+        large?: boolean;
+        loading?: boolean;
+        disabled?: boolean;
+        tooltip?: string | undefined;
+        id?: string | undefined;
+        children?: Snippet;
+        onclick?: MouseEventHandler<HTMLButtonElement>;
+    }
+
+    let {
+        type = undefined,
+        icon = "",
+        extraClasses = "",
+        primary = false,
+        secondary = false,
+        large = false,
+        loading = false,
+        disabled = false,
+        tooltip = undefined,
+        id = undefined,
+        children,
+        onclick = undefined,
+    }: Props = $props();
 </script>
 
 <button
@@ -21,7 +44,7 @@
     disabled={disabled || loading}
     class:tooltip={(tooltip?.length ?? 0) > 0}
     data-title={tooltip}
-    on:click
+    {onclick}
     {type}
     {id}
 >
@@ -29,7 +52,7 @@
         {#if icon}
             <i class="fa fa-{icon} mr-2"></i>
         {/if}
-        <slot />
+        {@render children?.()}
     </div>
     {#if loading}
         <div class="absolute aspect-square spinner"></div>

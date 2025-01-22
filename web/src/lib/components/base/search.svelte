@@ -1,3 +1,4 @@
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot making the component unusable -->
 <script context="module" lang="ts">
     export type SearchItem = {
         text: string;
@@ -91,9 +92,9 @@
             : "px-10"}
         {placeholder}
         bind:value
-        on:input={onSearchType}
-        on:focusin={() => (searching = true)}
-        on:focusout={() => (searching = false)}
+        oninput={onSearchType}
+        onfocusin={() => (searching = true)}
+        onfocusout={() => (searching = false)}
     ></TextField>
 
     {#if dropDownOpen}

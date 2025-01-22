@@ -25,10 +25,10 @@
         easing: linear,
     });
 
-    let openExportModal: () => void;
+    let exportModal: TrailExportModal;
 
-    let offerUpload: boolean = false;
-    let uploading: boolean = false;
+    let offerUpload: boolean = $state(false);
+    let uploading: boolean = $state(false);
 
     let jsConfetti: JSConfetti;
 
@@ -98,7 +98,7 @@
             uploading = false;
             jsConfetti.addConfetti({
                 confettiRadius: 4,
-                emojis: ['🍃', '🍁'],
+                emojis: ["🍃", "🍁"],
             });
         }, 500);
 
@@ -192,12 +192,17 @@
         class:bg-menu-item-background-hover={uploading}
         class:border-2={offerUpload && !uploading}
         style="--progress: {$uploadProgress}%"
-        on:click={openFileBrowser}
-        on:dragover={handleDragOver}
-        on:dragleave={handleDragLeave}
-        on:drop={handleDrop}
+        onclick={openFileBrowser}
+        ondragover={handleDragOver}
+        ondragleave={handleDragLeave}
+        ondrop={handleDrop}
     >
-        <canvas id="confetti-canvas" class="absolute" style="width: 100%; height: 200%"> </canvas>
+        <canvas
+            id="confetti-canvas"
+            class="absolute"
+            style="width: 100%; height: 200%"
+        >
+        </canvas>
         <div class="">
             <img
                 class="rounded-full aspect-square mx-auto"
@@ -216,17 +221,17 @@
         accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
         multiple={true}
         style="display: none;"
-        on:change={() => handleFileSelection()}
+        onchange={() => handleFileSelection()}
     />
     <h3 class="text-2xl font-semibold">{$_("export")}</h3>
     <hr class="mt-4 mb-6 border-input-border" />
-    <Button secondary={true} on:click={() => openExportModal()}
+    <Button secondary={true} onclick={() => exportModal.openModal()}
         >{$_("export-all-trails")}</Button
     >
 </div>
 
 <TrailExportModal
-    bind:openModal={openExportModal}
+    bind:this={exportModal}
     on:export={(e) => exportTrails(e.detail)}
 ></TrailExportModal>
 

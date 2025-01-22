@@ -11,25 +11,39 @@
     import { _ } from "svelte-i18n";
     import PhotoGallery from "../photo_gallery.svelte";
 
-    export let log: SummitLog;
-    export let showCategory: boolean = false;
-    export let showTrail: boolean = false;
-    export let showRoute: boolean = false;
-    export let showAuthor: boolean = false;
-    export let showDescription: boolean = false;
-    export let showPhotos: boolean = false;
-
-    let openGallery: (idx?: number) => void;
-
-    let imgSrc: string[] = [];
-    $: if (log.photos?.length) {
-        imgSrc = log.photos
-            .filter((_, i) => i < 3)
-            .reverse()
-            .map((p) => getFileURL(log, p));
-    } else {
-        imgSrc = [];
+    interface Props {
+        log: SummitLog;
+        showCategory?: boolean;
+        showTrail?: boolean;
+        showRoute?: boolean;
+        showAuthor?: boolean;
+        showDescription?: boolean;
+        showPhotos?: boolean;
     }
+
+    let {
+        log,
+        showCategory = false,
+        showTrail = false,
+        showRoute = false,
+        showAuthor = false,
+        showDescription = false,
+        showPhotos = false,
+    }: Props = $props();
+
+    let gallery: PhotoGallery;
+
+    let imgSrc: string[] = $state([]);
+    $effect(() => {
+        if (log.photos?.length) {
+            imgSrc = log.photos
+                .filter((_, i) => i < 3)
+                .reverse()
+                .map((p) => getFileURL(log, p));
+        } else {
+            imgSrc = [];
+        }
+    });
 
     const dispatch = createEventDispatcher();
 
@@ -58,12 +72,12 @@
             {#if imgSrc.length}
                 <PhotoGallery
                     photos={log.photos.map((p) => getFileURL(log, p))}
-                    bind:open={openGallery}
+                    bind:this={gallery}
                 ></PhotoGallery>
                 <button
                     class="relative w-16 aspect-square ml-2 mb-3 shrink-0"
                     type="button"
-                    on:click={() => openGallery()}
+                    onclick={() => gallery.openGallery()}
                 >
                     {#each imgSrc as img, i}
                         <img
@@ -110,6 +124,7 @@
     {#if showTrail}
         <td>
             <a
+                aria-label="Go to trail"
                 class="btn-icon aspect-square"
                 href="/trail/view/{log.expand?.trails_via_summit_logs?.at(0)
                     ?.id ?? ''}"
@@ -120,7 +135,7 @@
     {#if showDescription}
         <td>
             {#if log.text}
-                <button on:click={openText}
+                <button onclick={openText}
                     ><p
                         class="rounded-full bg-menu-item-background-hover hover:bg-menu-item-background-focus text-ellipsis max-w-28 whitespace-nowrap overflow-hidden px-3 py-1"
                     >
@@ -164,7 +179,11 @@
     {/if}
     {#if showRoute && log.expand?.gpx_data}
         <td>
-            <button on:click={openRoute} class="btn-icon">
+            <button
+                aria-label="Open route"
+                onclick={openRoute}
+                class="btn-icon"
+            >
                 <i class="fa fa-map-location-dot px-[3px] text-xl"></i></button
             >
         </td>

@@ -1,4 +1,4 @@
-import { page } from "$app/stores";
+import { page } from "$app/state";
 import { get } from "svelte/store";
 
 export function formatTimeHHMM(minutes?: number) {

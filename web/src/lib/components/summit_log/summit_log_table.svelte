@@ -10,24 +10,32 @@
     import { _ } from "svelte-i18n";
     import MapWithElevationMaplibre from "../trail/map_with_elevation_maplibre.svelte";
 
-    export let summitLogs: SummitLog[] = [];
-    export let showCategory: boolean = false;
-    export let showTrail: boolean = false;
-    export let showAuthor: boolean = false;
-    export let showRoute: boolean = false;
-    export let showPhotos: boolean = false;
+    interface Props {
+        summitLogs?: SummitLog[];
+        showCategory?: boolean;
+        showTrail?: boolean;
+        showAuthor?: boolean;
+        showRoute?: boolean;
+        showPhotos?: boolean;
+    }
 
-    let openMapModal: () => void;
-    let closeMapModal: () => void;
+    let {
+        summitLogs = [],
+        showCategory = false,
+        showTrail = false,
+        showAuthor = false,
+        showRoute = false,
+        showPhotos = false,
+    }: Props = $props();
 
-    let openTextModal: () => void;
-    let closeTextModal: () => void;
+    let mapModal: Modal;
+    let textModal: Modal;
 
-    let map: M.Map;
+    let map: M.Map | undefined = $state();
 
-    let trail: Trail | null = null;
+    let trail: Trail | null = $state(null);
 
-    let currentText: string = "";
+    let currentText: string = $state("");
 
     onMount(async () => {});
 
@@ -40,21 +48,21 @@
         trail.id = log.id;
         trail.expand!.gpx_data = log.expand.gpx_data;
 
-        openMapModal();
+        mapModal.openModal();
         await tick();
         return;
     }
 
     async function openText(log: SummitLog) {
         currentText = log.text ?? "";
-        openTextModal();
+        textModal.openModal();
     }
 </script>
 
 <table class="w-full">
     <thead class="text-left text-gray-500">
         <tr class="text-sm">
-            {#if showPhotos && summitLogs.some(l => l.photos.length)}
+            {#if showPhotos && summitLogs.some((l) => l.photos.length)}
                 <th class="w-24"></th>
             {/if}
             <th>{$_("date")}</th>
@@ -75,7 +83,7 @@
             {#if summitLogs.some((l) => l.text?.length)}
                 <th>{$_("description")}</th>
             {/if}
-            {#if showAuthor && summitLogs.some(l => l.expand?.author)}
+            {#if showAuthor && summitLogs.some((l) => l.expand?.author)}
                 <th>
                     {$_("author", { values: { n: 1 } })}
                 </th>
@@ -96,8 +104,9 @@
                 {showCategory}
                 {showTrail}
                 {showAuthor}
-                showPhotos={showPhotos && summitLogs.some(l => l.photos.length)}
-                showDescription={summitLogs.some(l => l.text?.length)}
+                showPhotos={showPhotos &&
+                    summitLogs.some((l) => l.photos.length)}
+                showDescription={summitLogs.some((l) => l.text?.length)}
                 showRoute={showRoute && summitLogs.some((l) => l.gpx)}
             ></SummitLogTableRow>
         {/each}
@@ -110,24 +119,29 @@
     id="summit-log-table-map-modal"
     size="max-w-4xl"
     title=""
-    bind:openModal={openMapModal}
-    bind:closeModal={closeMapModal}
+    bind:this={mapModal}
 >
-    <div slot="content" id="summit-log-table-map" class="h-[32rem]">
-        {#if trail}
-            <MapWithElevationMaplibre trails={[trail]} bind:map showTerrain
-            ></MapWithElevationMaplibre>
-        {/if}
-    </div>
+    {#snippet content()}
+        <div id="summit-log-table-map" class="h-[32rem]">
+            {#if trail}
+                <MapWithElevationMaplibre
+                    trails={[trail]}
+                    bind:map
+                    showTerrain
+                ></MapWithElevationMaplibre>
+            {/if}
+        </div>
+    {/snippet}
 </Modal>
 <Modal
     id="summit-log-table-text-modal"
     size="max-w-xl"
     title={$_("description")}
-    bind:openModal={openTextModal}
-    bind:closeModal={closeTextModal}
+    bind:this={textModal}
 >
-    <p slot="content" class="whitespace-pre-wrap">{currentText}</p>
+    {#snippet content()}
+        <p class="whitespace-pre-wrap">{currentText}</p>
+    {/snippet}
 </Modal>
 
 <style>

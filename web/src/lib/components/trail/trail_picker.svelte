@@ -2,22 +2,24 @@
     import * as M from "maplibre-gl";
 
     import { fromFile, toGeoJson } from "$lib/util/gpx_util";
-    import { createEventDispatcher, onMount } from "svelte";
-    export let trailFile: File | undefined | null;
-    export let trailData: string | undefined;
-    export let label: string = "";
+    import { createEventDispatcher, onMount, untrack } from "svelte";
+    interface Props {
+        trailFile: File | undefined | null;
+        trailData: string | undefined;
+        label?: string;
+    }
+
+    let {
+        trailFile = $bindable(),
+        trailData = $bindable(),
+        label = "",
+    }: Props = $props();
 
     let map: M.Map;
     let layer: M.LineLayerSpecification | undefined;
     let source: M.GeoJSONSource | undefined;
 
     const dispatch = createEventDispatcher();
-
-    $: if (trailData !== undefined) {
-        showTrailOnMap();
-    } else {
-        removeTrailFromMap();
-    }
 
     onMount(async () => {
         if (!map) {
@@ -112,10 +114,14 @@
             map?.removeSource(source.id);
             source = undefined;
         }
-
-        trailData = undefined;
-        trailFile = null;
     }
+    $effect(() => {        
+        if (trailData !== undefined) {
+            showTrailOnMap();
+        } else {
+            removeTrailFromMap();
+        }
+    });
 </script>
 
 <div>
@@ -131,11 +137,11 @@
             accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
             multiple={false}
             style="display: none;"
-            on:change={() => handleTrailSelection()}
+            onchange={() => handleTrailSelection()}
         />
         <button
             type="button"
-            on:click={openTrailBrowser}
+            onclick={openTrailBrowser}
             class="h-28 aspect-square rounded-xl !bg-background border border-input-border-focus hover:!bg-secondary-hover group"
             id="trail-picker-map"
         >

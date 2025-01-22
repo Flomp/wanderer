@@ -23,21 +23,28 @@
     import Select from "../base/select.svelte";
     import UserSearch from "../user_search.svelte";
 
-    let openModal: (() => void) | undefined = undefined;
-    export let closeModal: (() => void) | undefined = undefined;
-    export function openShareModal() {
-        shares.set([]);
-        fetchShares();
-        if (openModal) {
-            openModal();
-        }
+    interface Props {
+        list: List;
     }
 
-    export let list: List;
+    let {
+        list,
+    }: Props = $props();
+
+    let modal: Modal;
+
+    export function openModal() {
+        openShareModal();
+    }
+
+    async function openShareModal() {
+        await fetchShares();
+        modal.openModal();
+    }
 
     const dispatch = createEventDispatcher();
 
-    let copyButtonText = $_("copy-link");
+    let copyButtonText = $state($_("copy-link"));
 
     let sharesLoading: boolean = false;
 
@@ -57,7 +64,7 @@
 
     function close() {
         dispatch("save");
-        closeModal!();
+        modal.closeModal!();
     }
 
     async function shareTrails(userId: string) {
@@ -109,10 +116,10 @@
         const fetchedShares = await list_share_index(list.id!);
         list.expand = {
             trails: list.expand?.trails ?? [],
-            list_share_via_list: fetchedShares,
+            list_share_via_list: fetchedShares.items,
         };
-        sharesLoading = false;        
-        dispatch("update", list)
+        sharesLoading = false;
+        dispatch("update", list);
     }
 </script>
 
@@ -120,66 +127,73 @@
     id="share-modal"
     title={$_("share-this-list")}
     size="max-w-sm overflow-visible"
-    bind:openModal
-    bind:closeModal
+    bind:this={modal}
 >
-    <div slot="content">
-        <p class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500">
-            {$_("list-share-warning")}
-        </p>
-        <UserSearch includeSelf={false} on:click={(e) => shareList(e.detail)}></UserSearch>
-        <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
-
-        {#if $shares.length == 0}
-            <p class="text-gray-500 text-center mt-2 text-sm">
-                {$_("list-not-shared")}
+    {#snippet content()}
+        <div>
+            <p class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500">
+                {$_("list-share-warning")}
             </p>
-        {:else}
-            {#each $shares as share}
-                {#if share.expand}
-                    <div class="flex items-center gap-x-2 p-2">
-                        <img
-                            class="rounded-full w-8 aspect-square mr-2"
-                            src={getFileURL(
-                                share.expand.user,
-                                share.expand.user.avatar,
-                            ) ||
-                                `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.user.username}&backgroundType=gradientLinear`}
-                            alt="avatar"
-                        />
-                        <p>{share.expand.user.username}</p>
-                        <span
-                            class="basis-full text-sm text-center text-gray-500"
-                            >{$_("can")}</span
-                        >
-                        <div class="shrink-0">
-                            <Select
-                                bind:value={share.permission}
-                                items={permissionSelectItems}
-                                on:change={(e) =>
-                                    updateSharePermission(share, e.detail)}
-                            ></Select>
-                        </div>
+            <UserSearch
+                includeSelf={false}
+                on:click={(e) => shareList(e.detail)}
+            ></UserSearch>
+            <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
-                        <button
-                            class="btn-icon text-red-500"
-                            on:click={() => deleteShare(share)}
-                            ><i class="fa fa-trash"></i></button
-                        >
-                    </div>
-                {/if}
-            {/each}
-        {/if}
-    </div>
-    <div slot="footer" class="flex justify-between items-center gap-4">
-        <Button
-            secondary={true}
-            disabled={copyButtonText == $_("link-copied")}
-            on:click={copyURLToClipboard}
-        >
-            <i class="fa fa-link mr-2"></i>
-            {copyButtonText}
-        </Button>
-        <button class="btn-primary" on:click={close}>{$_("close")}</button>
-    </div></Modal
+            {#if $shares.length == 0}
+                <p class="text-gray-500 text-center mt-2 text-sm">
+                    {$_("list-not-shared")}
+                </p>
+            {:else}
+                {#each $shares as share}
+                    {#if share.expand}
+                        <div class="flex items-center gap-x-2 p-2">
+                            <img
+                                class="rounded-full w-8 aspect-square mr-2"
+                                src={getFileURL(
+                                    share.expand.user,
+                                    share.expand.user.avatar,
+                                ) ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.user.username}&backgroundType=gradientLinear`}
+                                alt="avatar"
+                            />
+                            <p>{share.expand.user.username}</p>
+                            <span
+                                class="basis-full text-sm text-center text-gray-500"
+                                >{$_("can")}</span
+                            >
+                            <div class="shrink-0">
+                                <Select
+                                    bind:value={share.permission}
+                                    items={permissionSelectItems}
+                                    on:change={(e) =>
+                                        updateSharePermission(share, e.detail)}
+                                ></Select>
+                            </div>
+
+                            <button
+                                aria-label="Delete share"
+                                class="btn-icon text-red-500"
+                                onclick={() => deleteShare(share)}
+                                ><i class="fa fa-trash"></i></button
+                            >
+                        </div>
+                    {/if}
+                {/each}
+            {/if}
+        </div>
+    {/snippet}
+    {#snippet footer()}
+        <div class="flex justify-between items-center gap-4">
+            <Button
+                secondary={true}
+                disabled={copyButtonText == $_("link-copied")}
+                onclick={copyURLToClipboard}
+            >
+                <i class="fa fa-link mr-2"></i>
+                {copyButtonText}
+            </Button>
+            <button class="btn-primary" onclick={close}>{$_("close")}</button>
+        </div>
+    {/snippet}</Modal
 >

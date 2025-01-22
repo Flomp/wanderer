@@ -15,9 +15,9 @@
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import { theme } from "$lib/stores/theme_store";
 
-    export let data;
+    let { data } = $props();
 
-    let searchDropdownItems: SearchItem[] = [];
+    let searchDropdownItems: SearchItem[] = $state([]);
 
     async function search(q: string) {
         const r = await fetch("/api/v1/search/multi", {

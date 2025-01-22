@@ -1,16 +1,40 @@
 <script lang="ts">
     import { _ } from "svelte-i18n";
+    import type { ChangeEventHandler, FocusEventHandler, FormEventHandler } from "svelte/elements";
 
-    export let name: string = "";
-    export let value: string | number = "";
-    export let placeholder: string = "";
-    export let disabled: boolean = false;
-    export let label: string = "";
-    export let error: string | string[] | null = "";
-    export let icon: string = "";
-    export let extraClasses: string = "";
-    export let type: "text" | "password" | "search" = "text";
-    export let autocomplete: "on" | "off" = "on";
+    interface Props {
+        name?: string;
+        value?: string | number;
+        placeholder?: string;
+        disabled?: boolean;
+        label?: string;
+        error?: string | string[] | null;
+        icon?: string;
+        extraClasses?: string;
+        type?: "text" | "password" | "search";
+        autocomplete?: "on" | "off";
+        onchange?: ChangeEventHandler<HTMLInputElement>;
+        oninput?: FormEventHandler<HTMLInputElement>;
+        onfocusin?: FocusEventHandler<HTMLInputElement>;
+        onfocusout?: FocusEventHandler<HTMLInputElement>;
+    }
+
+    let {
+        name = "",
+        value = $bindable(""),
+        placeholder = "",
+        disabled = false,
+        label = "",
+        error = "",
+        icon = "",
+        extraClasses = "",
+        type = "text",
+        autocomplete = "on",
+        onchange,
+        oninput,
+        onfocusin,
+        onfocusout
+    }: Props = $props();
     function typeAction(node: HTMLInputElement) {
         node.type = type;
     }
@@ -38,10 +62,10 @@
             {autocomplete}
             use:typeAction
             bind:value
-            on:change
-            on:input
-            on:focusin
-            on:focusout
+            {onchange}
+            {oninput}
+            {onfocusin}
+            {onfocusout}
             {placeholder}
         />
     </div>

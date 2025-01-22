@@ -1,6 +1,5 @@
 <script lang="ts">
     import { afterNavigate, goto } from "$app/navigation";
-    import { page } from "$app/stores";
     import LogoText from "$lib/components/logo/logo_text.svelte";
     import { pb } from "$lib/pocketbase";
     import { theme, toggleTheme } from "$lib/stores/theme_store";
@@ -14,6 +13,7 @@
     import LogoTextLight from "./logo/logo_text_light.svelte";
     import NotificationDropdown from "./notification/notification_dropdown.svelte";
     import { browser } from "$app/environment";
+    import { page } from "$app/state";
 
     let navBarItems = [
         { text: "Home", value: "/" },
@@ -42,7 +42,7 @@
         easing: backInOut,
     });
 
-    let drawerOpen: boolean = false;
+    let drawerOpen: boolean = $state(false);
 
     afterNavigate((e) => {
         const routeId = e.to?.route.id;
@@ -91,7 +91,7 @@
         }
     }
 
-    $: user = browser ? $currentUser : pb.authStore.model;
+    let user = $derived(browser ? $currentUser : pb.authStore.model);
 </script>
 
 <Drawer bind:open={drawerOpen}>
@@ -99,11 +99,11 @@
         <div class="basis-full"></div>
         <button
             class="btn-icon fa-regular fa-{$theme === 'light' ? 'sun' : 'moon'}"
-            on:click={() => toggleTheme()}
+            onclick={() => toggleTheme()}
         ></button>
         <button
             class="btn-icon block fa fa-close float-right"
-            on:click={() => (drawerOpen = false)}
+            onclick={() => (drawerOpen = false)}
         ></button>
     </div>
     <div class="flex flex-col px-12 gap-8">
@@ -140,7 +140,7 @@
                     </p>
                 </a>
                 <button
-                    on:click={() => {
+                    onclick={() => {
                         logout();
                         window.location.href = "/";
                     }}
@@ -182,36 +182,39 @@
     {#if user}
         <div class="hidden lg:flex gap-6 items-center">
             <button
+                aria-label="Toggle theme"
                 class="btn-icon fa-regular fa-{$theme === 'light'
                     ? 'sun'
                     : 'moon'}"
-                on:click={() => toggleTheme()}
+                onclick={() => toggleTheme()}
             ></button>
             <a class="btn-primary btn-large" href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
-            {#if $page.data.notifications}
+            {#if page.data.notifications}
                 <NotificationDropdown></NotificationDropdown>
             {/if}
             <Dropdown
                 items={dropdownItems}
                 on:change={(e) => handleDropdownClick(e.detail)}
-                let:toggleMenu={openDropdown}
+                
             >
-                <div class="flex items-center">
-                    <button
-                        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 aspect-square"
-                        on:click={openDropdown}
-                    >
-                        <img
-                            class="rounded-full w-full h-full"
-                            src={getFileURL(user, user.avatar) ||
-                                `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
-                            alt="avatar"
-                        />
-                    </button>
-                </div>
-            </Dropdown>
+                {#snippet children({ toggleMenu: openDropdown })}
+                                <div class="flex items-center">
+                        <button
+                            class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 aspect-square"
+                            onclick={openDropdown}
+                        >
+                            <img
+                                class="rounded-full w-full h-full"
+                                src={getFileURL(user, user.avatar) ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
+                                alt="avatar"
+                            />
+                        </button>
+                    </div>
+                                            {/snippet}
+                        </Dropdown>
         </div>
     {:else}
         <div class="hidden md:flex items-center gap-8">
@@ -219,13 +222,13 @@
                 class="btn-icon fa-regular fa-{$theme === 'light'
                     ? 'sun'
                     : 'moon'}"
-                on:click={() => toggleTheme()}
+                onclick={() => toggleTheme()}
             ></button>
             <a class="btn-primary btn-large" href="/login">{$_("login")}</a>
         </div>
     {/if}
     <button
         class="btn-icon fa fa-bars lg:hidden"
-        on:click={() => (drawerOpen = !drawerOpen)}
+        onclick={() => (drawerOpen = !drawerOpen)}
     ></button>
 </nav>

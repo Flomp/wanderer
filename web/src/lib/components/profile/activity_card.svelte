@@ -8,10 +8,14 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
-    export let activity: Activity;
-    export let user: UserAnonymous;
+    interface Props {
+        activity: Activity;
+        user: UserAnonymous;
+    }
 
-    let fullDescription: boolean = false;
+    let { activity, user }: Props = $props();
+
+    let fullDescription: boolean = $state(false);
 </script>
 
 <div class="activity-card p-6 space-y-6 rounded-xl border border-input-border">
@@ -92,7 +96,7 @@
                 : activity.description}
             {#if (activity.description?.length ?? 0) > 100 && !fullDescription}
                 <button
-                    on:click={(e) => {
+                    onclick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                         fullDescription = true;

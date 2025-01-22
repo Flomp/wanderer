@@ -1,5 +1,7 @@
+<!-- @migration-task Error while migrating Svelte code: `dimensions` has already been declared
+https://svelte.dev/e/declaration_duplicate -->
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import "$lib/assets/fonts/IBMPlexSans-Regular-normal";
     import "$lib/assets/fonts/IBMPlexSans-SemiBold-bold";
     import "$lib/assets/fonts/fa-solid-900-normal";
@@ -27,7 +29,7 @@
     let map: M.Map;
     let showGrid: boolean = true;
 
-    const settings: Settings = $page.data.settings;
+    const settings: Settings = page.data.settings;
 
     const paperSizes: { text: string; value: keyof typeof paperDimensions }[] =
         [
@@ -78,7 +80,7 @@
 
     onMount(() => {
         let qrcode = new QrCodeWithLogo({
-            content: $page.url.href.replace("/print", ""),
+            content: page.url.href.replace("/print", ""),
             image: document.getElementById("qrcode") as HTMLImageElement,
             logo: {
                 src: "/favicon.png",
@@ -110,7 +112,7 @@
 
         try {
             var img = document.createElement("img");
-            var dimensions = map.getCanvas().getBoundingClientRect();
+            let dimensions = map.getCanvas().getBoundingClientRect();
             img.width = dimensions.width;
             img.height = dimensions.height;
             let ratio = img.height / img.width;
@@ -289,7 +291,7 @@
             const elevationChartCanvas = document.getElementById(
                 "elevation-profile-chart",
             ) as HTMLCanvasElement;
-            var dimensions = elevationChartCanvas.getBoundingClientRect();
+            dimensions = elevationChartCanvas.getBoundingClientRect();
             img.width = dimensions.width;
             img.height = dimensions.height;
             ratio = img.height / img.width;
@@ -487,7 +489,7 @@
             <input
                 id="description-checkbox"
                 type="checkbox"
-                bind:value={includeDescription}
+                bind:checked={includeDescription}
                 class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
             />
             <label for="description-checkbox" class="ms-2 text-sm"
@@ -499,7 +501,7 @@
             loading={printLoading}
             extraClasses="mt-2"
             primary={true}
-            on:click={print}>{$_("print")}!</Button
+            onclick={print}>{$_("print")}!</Button
         >
     </div>
 

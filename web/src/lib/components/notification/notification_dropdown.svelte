@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import type { Notification } from "$lib/models/notification";
     import {
         notifications_index,
@@ -16,24 +16,24 @@
     import emptyStateNotificationLight from "$lib/assets/svgs/empty_states/empty_state_notification_light.svg";
     import { theme } from "$lib/stores/theme_store";
 
-    let notifications: Notification[] = [];
+    let notifications: Notification[] = $state([]);
 
     const pagination = {
-        page: $page.data.notifications.page,
-        totalPages: $page.data.notifications.totalPages,
+        page: page.data.notifications.page,
+        totalPages: page.data.notifications.totalPages,
     };
 
-    let loadingNextPage: boolean = false;
-    let isOpen = false;
+    let loadingNextPage: boolean = $state(false);
+    let isOpen = $state(false);
 
-    $: unreadCount = notifications.reduce(
+    let unreadCount = $derived(notifications.reduce(
         (value, n) => (value += n.seen ? 0 : 1),
         0,
-    );
+    ));
 
     onMount(() => {
-        if (!notifications.length && $page.data.notifications?.items?.length) {
-            notifications = $page.data.notifications.items;
+        if (!notifications.length && page.data.notifications?.items?.length) {
+            notifications = page.data.notifications.items;
         }
     });
 
@@ -99,7 +99,7 @@
     }
 </script>
 
-<svelte:window on:mouseup={handleWindowClick} />
+<svelte:window onmouseup={handleWindowClick} />
 
 <div class="dropdown relative">
     {#if unreadCount > 0}
@@ -110,7 +110,7 @@
         </div>
     {/if}
     <div class="dropdown-toggle">
-        <button on:click={toggleMenu} class="btn-icon">
+        <button onclick={toggleMenu} class="btn-icon">
             <i class="fa fa-bell"></i>
         </button>
     </div>
@@ -119,7 +119,7 @@
         <ul
             class="menu absolute bg-menu-background border border-input-border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-scroll mt-4 max-h-96 w-72"
             class:none={isOpen}
-            on:scroll={onListScroll}
+            onscroll={onListScroll}
             style="z-index: 1001"
             in:fly={{ y: -10, duration: 150 }}
             out:fly={{ y: -10, duration: 150 }}

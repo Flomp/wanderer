@@ -1,12 +1,12 @@
 <script>
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import errorDark from "$lib/assets/svgs/empty_states/error_dark.svg";
     import errorLight from "$lib/assets/svgs/empty_states/error_light.svg";
     import { theme } from "$lib/stores/theme_store";
 </script>
 
 <svelte:head>
-    <title>{$page.status} | wanderer</title>
+    <title>{page.status} | wanderer</title>
 </svelte:head>
 <div
     class="m-auto text-center max-w-md"
@@ -20,10 +20,10 @@
     />
     <div class="text-center mt-8">
         <h1 class="font-bold" style="line-height: 4rem;">
-            {$page.status}
+            {page.status}
         </h1>
         <p class="text-lg text-center mt-2">
-            {$page.error?.message}
+            {page.error?.message}
         </p>
     </div>
 </div>

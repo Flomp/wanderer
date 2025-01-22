@@ -1,16 +1,28 @@
 <script lang="ts">
+    import { stopPropagation } from 'svelte/legacy';
+
     import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import type { SelectItem } from "./select.svelte";
 
-    export let items: SelectItem[] = [];
-    export let value: SelectItem[] = [];
-    export let label: string = "";
-    export let name: string = "";
-    export let placeholder: string = "";
+    interface Props {
+        items?: SelectItem[];
+        value?: SelectItem[];
+        label?: string;
+        name?: string;
+        placeholder?: string;
+    }
 
-    let showDropdown = false;
-    let dropdownRef;
+    let {
+        items = [],
+        value = $bindable([]),
+        label = "",
+        name = "",
+        placeholder = ""
+    }: Props = $props();
+
+    let showDropdown = $state(false);
+    let dropdownRef = $state();
 
     const dispatch = createEventDispatcher();
 
@@ -30,7 +42,7 @@
     }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="relative max-w-full">
     {#if label.length}
         <label for={name} class="text-sm font-medium pb-1 block">
@@ -39,7 +51,7 @@
     {/if}
     <button
         class="min-w-44 w-full flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
-        on:click={() => (showDropdown = !showDropdown)}
+        onclick={() => (showDropdown = !showDropdown)}
     >
         {#if value.length === 0}
             <span class="text-gray-400">{placeholder}</span>
@@ -50,7 +62,7 @@
             >
                 <span class="text-sm">{$_(item.text)}</span>
                 <button
-                    on:click|stopPropagation={() => removeItem(item)}
+                    onclick={stopPropagation(() => removeItem(item))}
                     class="text-white hover:bg-primary-hover rounded-full w-4 h-4 flex items-center justify-center"
                 >
                     <i class="fa fa-close"></i>
@@ -67,7 +79,7 @@
         >
             {#each items as item}
                 <button
-                    on:click={() => toggleItem(item)}
+                    onclick={() => toggleItem(item)}
                     class="px-3 py-2 hover:bg-menu-item-background-hover cursor-pointer flex justify-between items-center w-full"
                 >
                     <span>{$_(item.text)}</span>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import RadioGroup, {
         type RadioItem,
     } from "$lib/components/base/radio_group.svelte";
@@ -7,7 +7,7 @@
     import { settings_update } from "$lib/stores/settings_store";
     import { _ } from "svelte-i18n";
 
-    $: settings = $page.data.settings as Settings;
+    let settings = $derived(page.data.settings as Settings);
 
     const accoutPrivacyItems: RadioItem[] = [
         {

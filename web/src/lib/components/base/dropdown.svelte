@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
     export type DropdownItem = {
         text: string;
         value: any;
@@ -7,15 +7,22 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
+    import { stopPropagation } from "svelte/legacy";
+
+    import { createEventDispatcher, type Snippet } from "svelte";
     import { fly } from "svelte/transition";
 
-    export let items: DropdownItem[] = [];
-    export let size: string = "regular";
+    interface Props {
+        items?: DropdownItem[];
+        size?: string;
+        children?: Snippet<[any]>;
+    }
+
+    let { items = [], size = "regular", children }: Props = $props();
 
     const dispatch = createEventDispatcher();
 
-    let isOpen = false;
+    let isOpen = $state(false);
 
     export function toggleMenu(e: MouseEvent) {
         e.stopPropagation();
@@ -33,7 +40,11 @@
     }
 
     function handleWindowClick(e: MouseEvent) {
-        if ((e.target as HTMLElement).parentElement?.classList.contains("dropdown-toggle")) {
+        if (
+            (e.target as HTMLElement).parentElement?.classList.contains(
+                "dropdown-toggle",
+            )
+        ) {
             return;
         }
 
@@ -41,19 +52,20 @@
     }
 </script>
 
-<svelte:window on:mouseup={handleWindowClick} />
+<svelte:window onmouseup={handleWindowClick} />
 
 <div class="dropdown relative">
     <div class="dropdown-toggle">
-        <slot {toggleMenu}>
+        {#if children}{@render children({ toggleMenu })}{:else}
             <button
+                aria-label="Toggle menu"
                 class="btn-icon flex items-center justify-center"
-                on:click={toggleMenu}
+                onclick={toggleMenu}
                 type="button"
             >
                 <i class="fa fa-ellipsis-vertical text-{size}"></i>
             </button>
-        </slot>
+        {/if}
     </div>
 
     {#if isOpen}
@@ -68,7 +80,7 @@
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     role="presentation"
-                    on:mousedown|stopPropagation={() => handleItemClick(item)}
+                    onmousedown={stopPropagation(() => handleItemClick(item))}
                 >
                     {#if item.icon}
                         <i class="fa fa-{item.icon} mr-3"></i>

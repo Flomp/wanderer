@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { run } from "svelte/legacy";
+
     import type { SummitLog } from "$lib/models/summit_log";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
@@ -13,31 +15,41 @@
     import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import { theme } from "$lib/stores/theme_store";
 
-    let thumbnail: string =
-        $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark;
+    let thumbnail: string = $state(
+        $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark,
+    );
 
-    $: Promise.all(
-        (log._photos ?? []).map(async (f) => {
-            return await readAsDataURLAsync(f);
-        }),
-    ).then((v) => {
-        if (log.photos.length) {
-            thumbnail = getFileURL(log, log.photos[0]);
-        } else if (v.length) {
-            thumbnail = v[0];
-        } else {
-            thumbnail =
-                $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark;
-        }
-    });
+    interface Props {
+        log: SummitLog;
+        mode?: "show" | "edit";
+    }
 
-    export let log: SummitLog;
-    export let mode: "show" | "edit" = "show";
+    let { log, mode = "show" }: Props = $props();
 
     const dropdownItems: DropdownItem[] = [
         { text: $_("edit"), value: "edit" },
         { text: $_("delete"), value: "delete" },
     ];
+    $effect(() => fetchPhotos(log._photos ?? []));
+
+    function fetchPhotos(photos: File[]) {
+        Promise.all(
+            photos.map(async (f) => {
+                return await readAsDataURLAsync(f);
+            }),
+        ).then((v) => {
+            if (log.photos.length) {
+                thumbnail = getFileURL(log, log.photos[0]);
+            } else if (v.length) {
+                thumbnail = v[0];
+            } else {
+                thumbnail =
+                    $theme === "light"
+                        ? emptyStateTrailLight
+                        : emptyStateTrailDark;
+            }
+        });
+    }
 </script>
 
 <div class="p-4 my-2 border border-input-border rounded-xl">

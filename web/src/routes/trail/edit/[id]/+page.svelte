@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     import { PUBLIC_VALHALLA_URL } from "$env/static/public";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
@@ -56,11 +55,12 @@
 
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import Search, {
+        type SearchItem,
+    } from "$lib/components/base/search.svelte";
     import { theme } from "$lib/stores/theme_store.js";
-    import {
-        createAnchorMarker,
-        createMarkerFromWaypoint,
-    } from "$lib/util/maplibre_util";
+    import { country_codes } from "$lib/util/country_code_util.js";
+    import { createAnchorMarker } from "$lib/util/maplibre_util";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
@@ -70,10 +70,7 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
-    import Search, {
-        type SearchItem,
-    } from "$lib/components/base/search.svelte";
-    import { country_codes } from "$lib/util/country_code_util.js";
+    import { page } from "$app/state";
 
     export let data;
 
@@ -84,9 +81,9 @@
         updateTrailOnMap();
     }
 
-    let openWaypointModal: () => void;
-    let openSummitLogModal: () => void;
-    let openListSelectModal: () => void;
+    let waypointModal: WaypointModal;
+    let summitLogModal: SummitLogModal;
+    let listSelectModal: ListSelectModal;
 
     let loading = false;
 
@@ -135,10 +132,10 @@
             ...data.trail,
             public: data.trail.id
                 ? data.trail.public
-                : $page.data.settings?.privacy?.trails === "public",
+                : page.data.settings?.privacy?.trails === "public",
             category:
                 data.trail.category ||
-                $page.data.settings?.category ||
+                page.data.settings?.category ||
                 $categories[0].id,
         },
         extend: validator({
@@ -158,33 +155,33 @@
                     (p) => !p.startsWith("data:image/svg+xml;base64"),
                 );
 
-                if ($formData.expand!.gpx_data && overwriteGPX) {
-                    gpxFile = new Blob([$formData.expand!.gpx_data], {
+                if (form.expand!.gpx_data && overwriteGPX) {
+                    gpxFile = new Blob([form.expand!.gpx_data], {
                         type: "text/xml",
                     });
                 }
 
                 if (
-                    (!$formData.lat || !$formData.lon) &&
+                    (!form.lat || !form.lon) &&
                     route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
                 ) {
-                    $formData.lat = route.trk
+                    form.lat = route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lat;
-                    $formData.lon = route.trk
+                    form.lon = route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lon;
                 }
 
-                if ($page.params.id === "new") {
+                if (page.params.id === "new") {
                     const createdTrail = await trails_create(
                         form as Trail,
                         photoFiles,
                         gpxFile,
                     );
-                    $formData.id = createdTrail.id;
+                    form.id = createdTrail.id;
                 } else {
                     await trails_update(
                         $trail,
@@ -269,11 +266,11 @@
             $formData.expand!.gpx_data = gpxData;
             setFields(
                 "category",
-                $page.data.settings.category || $categories[0].id,
+                page.data.settings.category || $categories[0].id,
             );
             setFields(
                 "public",
-                $page.data.settings?.privacy?.trails === "public",
+                page.data.settings?.privacy?.trails === "public",
             );
 
             const log = new SummitLog(parseResult.trail.date as string, {
@@ -386,7 +383,7 @@
     ) {
         if (e.detail.value === "edit") {
             waypoint.set(currentWaypoint);
-            openWaypointModal();
+            waypointModal.openModal();
         } else if (e.detail.value === "delete") {
             currentWaypoint.marker?.remove();
             deleteWaypoint(index);
@@ -396,7 +393,7 @@
     function beforeWaypointModalOpen() {
         const mapCenter = map.getCenter();
         waypoint.set(new Waypoint(mapCenter.lat, mapCenter.lng));
-        openWaypointModal();
+        waypointModal.openModal();
     }
 
     function deleteWaypoint(index: number) {
@@ -442,7 +439,7 @@
 
     function beforeSummitLogModalOpen() {
         summitLog.set(new SummitLog(new Date().toISOString().split("T")[0]));
-        openSummitLogModal();
+        summitLogModal.openModal();
     }
 
     function saveSummitLog(e: CustomEvent<SummitLog>) {
@@ -471,7 +468,7 @@
     ) {
         if (e.detail.value === "edit") {
             summitLog.set(currentSummitLog);
-            openSummitLogModal();
+            summitLogModal.openModal();
         } else if (e.detail.value === "delete") {
             $formData.expand!.summit_logs.splice(index, 1);
             $formData.summit_logs.splice(index, 1);
@@ -823,8 +820,9 @@
 
 <svelte:head>
     <title
-        >{$page.params.id !== "new" ? `${$formData.name} | ${$_("edit")}` : $_("new-trail")} |
-        wanderer</title
+        >{page.params.id !== "new"
+            ? `${$formData.name} | ${$_("edit")}`
+            : $_("new-trail")} | wanderer</title
     >
 </svelte:head>
 
@@ -846,7 +844,7 @@
             primary={true}
             type="button"
             disabled={drawingActive}
-            on:click={openFileBrowser}
+            onclick={openFileBrowser}
             >{$formData.expand?.gpx_data
                 ? $_("upload-new-file")
                 : $_("upload-file")}</Button
@@ -883,6 +881,7 @@
         <div class="flex gap-x-2">
             <h3 class="text-xl font-semibold">{$_("basic-info")}</h3>
             <button
+                aria-label="Edit basic info"
                 type="button"
                 class="btn-icon"
                 style="font-size: 0.9rem"
@@ -1075,7 +1074,7 @@
                 tooltip={$_("save-your-trail-first")}
                 disabled={!$formData.id}
                 type="button"
-                on:click={openListSelectModal}
+                onclick={() => listSelectModal.openModal()}
                 ><i class="fa fa-plus mr-2"></i>{$_("add-to-list")}</Button
             >
         {/if}
@@ -1119,15 +1118,13 @@
         </div>
     </div>
 </main>
-<WaypointModal
-    bind:openModal={openWaypointModal}
-    on:save={(e) => saveWaypoint(e.detail)}
+<WaypointModal bind:this={waypointModal} on:save={(e) => saveWaypoint(e.detail)}
 ></WaypointModal>
-<SummitLogModal bind:openModal={openSummitLogModal} on:save={saveSummitLog}
+<SummitLogModal bind:this={summitLogModal} on:save={saveSummitLog}
 ></SummitLogModal>
 <ListSelectModal
     lists={data.lists.items}
-    bind:openModal={openListSelectModal}
+    bind:this={listSelectModal}
     on:change={(e) => handleListSelection(e.detail)}
 ></ListSelectModal>
 

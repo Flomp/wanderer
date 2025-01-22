@@ -7,20 +7,24 @@
     import { formatTimeSince } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
 
-    export let comment: Comment;
-    export let mode: "show" | "edit" = "show";
+    interface Props {
+        comment: Comment;
+        mode?: "show" | "edit";
+    }
+
+    let { comment, mode = "show" }: Props = $props();
 
     const dispatch = createEventDispatcher();
 
-    let editing: boolean = false;
+    let editing: boolean = $state(false);
 
-    let editedComment = comment.text;
+    let editedComment = $state(comment.text);
 
-    $: avatarSrc = comment.expand?.author.avatar
+    let avatarSrc = $derived(comment.expand?.author.avatar
         ? getFileURL(comment.expand.author, comment.expand.author.avatar)
-        : `https://api.dicebear.com/7.x/initials/svg?seed=${comment.expand?.author.username ?? ""}&backgroundType=gradientLinear`;
+        : `https://api.dicebear.com/7.x/initials/svg?seed=${comment.expand?.author.username ?? ""}&backgroundType=gradientLinear`);
 
-    $: timeSince = formatTimeSince(new Date(comment.created ?? ""));
+    let timeSince = $derived(formatTimeSince(new Date(comment.created ?? "")));
 
     function deleteComment() {
         dispatch("delete", comment);
@@ -82,14 +86,14 @@
                     type="button"
                     class="btn-icon ml-2"
                     style="font-size: 0.75rem;"
-                    on:click={toggleEdit}
+                    onclick={toggleEdit}
                     ><i class="fa fa-{editing ? 'check' : 'pen'}"></i></button
                 >
                 <button
                     type="button"
                     class="btn-icon text-xs"
                     style="font-size: 0.75rem;"
-                    on:click={deleteComment}><i class="fa fa-trash"></i></button
+                    onclick={deleteComment}><i class="fa fa-trash"></i></button
                 >
             {/if}
         </div>

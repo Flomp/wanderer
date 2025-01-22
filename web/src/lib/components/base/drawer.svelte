@@ -1,20 +1,29 @@
 <script lang="ts">
+    
     import { browser } from "$app/environment";
     import { beforeNavigate } from "$app/navigation";
+    import type { Snippet } from 'svelte';
     import { backIn, backOut } from "svelte/easing";
     import { slide } from "svelte/transition";
 
-    export let open: boolean = false;
-
-    $: if (open && browser) {
-        document.body.style.position = "fixed";
-        document.body.style.top = `-${window.scrollY}px`;
-    } else if (browser) {
-        const scrollY = document.body.style.top;
-        document.body.style.position = "";
-        document.body.style.top = "";
-        window.scrollTo(0, parseInt(scrollY || "0") * -1);
+    interface Props {
+        open?: boolean;
+        children?: Snippet;
     }
+
+    let { open = $bindable(false), children }: Props = $props();
+
+    $effect(() => {
+        if (open && browser) {
+            document.body.style.position = "fixed";
+            document.body.style.top = `-${window.scrollY}px`;
+        } else if (browser) {
+            const scrollY = document.body.style.top;
+            document.body.style.position = "";
+            document.body.style.top = "";
+            window.scrollTo(0, parseInt(scrollY || "0") * -1);
+        }
+    });
 
     beforeNavigate(() => {
         open = false;
@@ -24,8 +33,8 @@
 {#if open}
     <div
         class="fixed drawer-overlay h-screen w-screen backdrop-blur-md z-50 bg-gray-500/50 cursor-pointer"
-        on:click={() => (open = false)}
-        on:keydown={(e) => {
+        onclick={() => (open = false)}
+        onkeydown={(e) => {
             if (e.key == "Escape") open = false;
         }}
         role="button"
@@ -36,6 +45,6 @@
         in:slide={{ axis: "x", easing: backOut }}
         out:slide={{ axis: "x", easing: backIn }}
     >
-        <slot />
+        {@render children?.()}
     </div>
 {/if}

@@ -12,9 +12,13 @@
     import { getFileURL } from "$lib/util/file_util";
     import ShareInfo from "../share_info.svelte";
 
-    export let tableHeader: SelectItem[];
-    export let trails: Trail[] | null = null;
-    export let filter: TrailFilter | null = null;
+    interface Props {
+        tableHeader: SelectItem[];
+        trails?: Trail[] | null;
+        filter?: TrailFilter | null;
+    }
+
+    let { tableHeader, trails = null, filter = null }: Props = $props();
 
     let dispatch = createEventDispatcher();
 
@@ -48,7 +52,7 @@
                         class="p-4 text-left text-sm font-medium {getColumnWidth(
                             column.value,
                         )}"
-                        on:click={() => dispatch("sort", column.value)}
+                        onclick={() => dispatch("sort", column.value)}
                     >
                         <div class="cursor-pointer">
                             {column.text}
@@ -69,7 +73,7 @@
                 {#each trails as trail}
                     <tr
                         class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
-                        on:click={() => goto(`/trail/view/${trail.id}`)}
+                        onclick={() => goto(`/trail/view/${trail.id}`)}
                     >
                         <td
                             class="flex justify-between items-center text-sm relative"

@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
     export type RadioItem = {
         text: string;
         value: string;
@@ -10,9 +10,13 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
 
-    export let items: RadioItem[];
-    export let name: string;
-    export let selected: number = 0;
+    interface Props {
+        items: RadioItem[];
+        name: string;
+        selected?: number;
+    }
+
+    let { items, name, selected = $bindable(0) }: Props = $props();
 
     const dispatch = createEventDispatcher();
 
@@ -31,7 +35,7 @@
             checked={i == selected}
             value={item.value}
             class="w-4 h-4 accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-            on:change={() => handleRadioChange(i)}
+            onchange={() => handleRadioChange(i)}
         />
         <div class="ms-2 text-sm">
             <label for="{name}-radio-{i}"

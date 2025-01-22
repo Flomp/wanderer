@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { run } from "svelte/legacy";
+
     import { theme } from "$lib/stores/theme_store";
     import { T, useTask, useThrelte } from "@threlte/core";
     import { onMount } from "svelte";
@@ -6,7 +8,7 @@
     import * as THREE from "three";
     import Mountain from "./mountain.svelte";
 
-    let rotation = 0;
+    let rotation = $state(0);
     useTask((delta) => {
         rotation += delta / 2;
     });
@@ -18,11 +20,13 @@
         duration: 500,
     });
 
-    $: ambientColor = $theme == "light" ? "#ffffff" : "#4c7fe6";
-    $: ambientIntensitiy.set($theme == "light" ? 3 : 0.1);
+    let ambientColor = $derived($theme == "light" ? "#ffffff" : "#4c7fe6");
+    $effect(() => {
+        ambientIntensitiy.set($theme == "light" ? 3 : 0.1);
+    });
 
-    let starsGeometry!: THREE.BufferGeometry;
-    let starsMaterial!: THREE.PointsMaterial;
+    let starsGeometry: THREE.BufferGeometry | undefined = $state();
+    let starsMaterial: THREE.PointsMaterial | undefined = $state();
     onMount(() => {
         const stars = new Array(0);
         for (var i = 0; i < 500; i++) {

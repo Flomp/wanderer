@@ -17,16 +17,26 @@
     import UserSearch from "../user_search.svelte";
     import { pb } from "$lib/pocketbase";
 
-    export let categories: Category[];
-    export let filterExpanded: boolean = true;
-    export let filter: TrailFilter;
-    export let showTrailSearch: boolean = true;
-    export let showCitySearch: boolean = true;
+    interface Props {
+        categories: Category[];
+        filterExpanded?: boolean;
+        filter: TrailFilter;
+        showTrailSearch?: boolean;
+        showCitySearch?: boolean;
+    }
 
-    $: categorySelectItems = categories.map((c) => ({
+    let {
+        categories,
+        filterExpanded = $bindable(true),
+        filter = $bindable(),
+        showTrailSearch = true,
+        showCitySearch = true
+    }: Props = $props();
+
+    let categorySelectItems = $derived(categories.map((c) => ({
         value: c.id,
         text: c.name,
-    }));
+    })));
 
     const dispatch = createEventDispatcher();
 
@@ -42,9 +52,9 @@
         { text: $_("difficult"), value: "difficult" },
     ];
 
-    let searchDropdownItems: SearchItem[] = [];
+    let searchDropdownItems: SearchItem[] = $state([]);
 
-    let citySearchQuery: string = "";
+    let citySearchQuery: string = $state("");
 
     async function update() {
         dispatch("update", filter);
@@ -139,8 +149,9 @@
                 ></Search>
             </div>
             <button
+                aria-label="Toggle filter"
                 class="btn-icon md:hidden"
-                on:click={() => (filterExpanded = !filterExpanded)}
+                onclick={() => (filterExpanded = !filterExpanded)}
                 ><i class="fa fa-sliders"></i></button
             >
         </div>
@@ -175,7 +186,7 @@
                         type="checkbox"
                         checked={filter.public}
                         class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-                        on:change={setPublicFilter}
+                        onchange={setPublicFilter}
                     />
                     <label for="public-checkbox" class="ms-2 text-sm"
                         >{$_("public")}</label
@@ -187,7 +198,7 @@
                         type="checkbox"
                         checked={filter.shared}
                         class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-                        on:change={setSharedFilter}
+                        onchange={setSharedFilter}
                     />
                     <label for="shared-checkbox" class="ms-2 text-sm"
                         >{$_("shared")}</label
@@ -287,13 +298,13 @@
                     name="startDate"
                     label={$_("after")}
                     bind:value={filter.startDate}
-                    on:change={update}
+                    onchange={update}
                 ></Datepicker>
                 <Datepicker
                     name="endDate"
                     label={$_("before")}
                     bind:value={filter.endDate}
-                    on:change={update}
+                    onchange={update}
                 ></Datepicker>
             </div>
 

@@ -12,7 +12,7 @@
     import { _ } from "svelte-i18n";
     import { z } from "zod";
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
     const { form, errors } = createForm({
         initialValues: {

@@ -7,12 +7,21 @@
     import Search, { type SearchItem } from "./base/search.svelte";
     import { _ } from "svelte-i18n";
 
-    export let label: string = "";
-    export let value: string = "";
-    export let includeSelf: boolean = true;
-    export let clearAfterSelect: boolean = true;
+    interface Props {
+        label?: string;
+        value?: string;
+        includeSelf?: boolean;
+        clearAfterSelect?: boolean;
+    }
 
-    let searchItems: SearchItem[] = [];
+    let {
+        label = "",
+        value = $bindable(""),
+        includeSelf = true,
+        clearAfterSelect = true
+    }: Props = $props();
+
+    let searchItems: SearchItem[] = $state([]);
 
     const dispatch = createEventDispatcher();
 
@@ -56,6 +65,7 @@
     {label}
     bind:value
 >
+    <!-- @migration-task: migrate this slot by hand, `item-header` is an invalid identifier -->
     <img
         slot="item-header"
         let:item

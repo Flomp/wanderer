@@ -1,10 +1,22 @@
 <script lang="ts">
     import { _ } from "svelte-i18n";
+    import type { ChangeEventHandler } from "svelte/elements";
     
-    export let name: string = "";
-    export let value: string | Date = "";
-    export let label: string = "";
-    export let error: string | string[] | null = "";
+    interface Props {
+        name?: string;
+        value?: string | Date;
+        label?: string;
+        error?: string | string[] | null;
+        onchange?: ChangeEventHandler<HTMLInputElement>;
+    }
+
+    let {
+        name = "",
+        value = $bindable(),
+        label = "",
+        error = "",
+        onchange
+    }: Props = $props();
 </script>
 
 <div>
@@ -21,7 +33,7 @@
             class:bg-input-background-error={(error?.length ?? 0) > 0}
             type="date"
             bind:value
-            on:change
+            {onchange}
         />
     </div>
 

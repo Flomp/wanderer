@@ -7,14 +7,14 @@
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import { theme } from "$lib/stores/theme_store.js";
 
-    export let data;
+    let { data = $bindable() } = $props();
 
     let loading: boolean = false;
 
-    $: pagination = {
+    let pagination = $derived({
         page: data.activities.page,
         totalPages: data.activities.totalPages,
-    };
+    });
 
     async function onListScroll(e: Event) {
         if (
@@ -35,7 +35,7 @@
     }
 </script>
 
-<svelte:window on:scroll={onListScroll} />
+<svelte:window onscroll={onListScroll} />
 
 <svelte:head>
     <title>{$_("profile")} | wanderer</title>

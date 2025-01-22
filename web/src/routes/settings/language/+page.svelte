@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import RadioGroup, {
         type RadioItem,
     } from "$lib/components/base/radio_group.svelte";
@@ -10,7 +10,7 @@
     import { settings_update } from "$lib/stores/settings_store";
     import { _, locale } from "svelte-i18n";
 
-    const settings = $page.data.settings;
+    const settings = page.data.settings;
 
     const languages: SelectItem[] = [
         { text: $_("chinese"), value: "zh" },
@@ -30,7 +30,7 @@
         { text: $_("imperial"), value: "imperial" },
     ];
 
-    let selectedLanguage = settings?.language ?? "en";
+    let selectedLanguage = $state(settings?.language ?? "en");
 
     async function handleLanguageSelection(
         value: Language,
