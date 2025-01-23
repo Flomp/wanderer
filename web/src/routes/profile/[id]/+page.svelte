@@ -48,7 +48,7 @@
             {$_("about")}
             {data.user.username}
             {#if data.isOwnProfile && data.settings.bio?.length}
-                <a class="ml-4" href="/settings/profile"
+                <a aria-label="Edit bio" class="ml-4" href="/settings/profile"
                     ><i class="fa fa-pen text-base"></i></a
                 >
             {/if}

@@ -41,6 +41,7 @@
 <div class="flex gap-x-4 justify-center">
     {#if totalPages > 1}
         <button
+            aria-label="Next page"
             class:text-gray-500={page == 1}
             disabled={page == 1}
             onclick={() => update(page - 1)}
@@ -82,6 +83,7 @@
             onclick={() => update(totalPages)}>{totalPages}</button
         >
         <button
+            aria-label="Previous page"
             class:text-gray-500={page == totalPages}
             disabled={page == totalPages}
             onclick={() => update(page + 1)}

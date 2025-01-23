@@ -110,7 +110,7 @@
         </div>
     {/if}
     <div class="dropdown-toggle">
-        <button onclick={toggleMenu} class="btn-icon">
+        <button aria-label="Toggle notification dropdown" onclick={toggleMenu} class="btn-icon">
             <i class="fa fa-bell"></i>
         </button>
     </div>

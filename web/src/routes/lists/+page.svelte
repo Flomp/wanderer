@@ -17,7 +17,7 @@
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import UserSearch from "$lib/components/user_search.svelte";
-    import { List } from "$lib/models/list";
+    import { List, type ListFilter } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import { lists_delete, lists_index } from "$lib/stores/list_store";
     import { fetchGPX } from "$lib/stores/trail_store";
@@ -28,7 +28,7 @@
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
 
-    let { data = $bindable() } = $props();
+    let { data } = $props();
 
     const sortOptions: SelectItem[] = [
         { text: $_("alphabetical"), value: "name" },
@@ -42,6 +42,8 @@
 
     let confirmModal: ConfirmModal;
     let listShareModal: ListShareModal;
+
+    let filter: ListFilter = $state(page.data.filter);
 
     let map: M.Map | undefined = $state();
     let mapWithElevation: MapWithElevationMaplibre | undefined = $state();
@@ -67,7 +69,9 @@
             : null,
     );
 
-    let selectedTrailWaypoints = $derived(selectedTrail?.expand?.waypoints);
+    let selectedTrailWaypoints = $derived(
+        (selectedTrail as Trail | null)?.expand?.waypoints,
+    );
 
     onMount(() => {
         if (page.url.searchParams.get("list") && selectedList) {
@@ -171,7 +175,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.lists = await lists_index(data.filter, pagination.page);
+        data.lists = await lists_index(filter, pagination.page);
     }
 
     async function updateFilter() {
@@ -188,41 +192,41 @@
         }
 
         pagination.page = 0;
-        data.lists = await lists_index(data.filter, pagination.page);
+        data.lists = await lists_index(filter, pagination.page);
         loading = false;
     }
 
     async function setSort(value: "name" | "created") {
-        data.filter.sort = value;
+        filter.sort = value;
         await updateFilter();
     }
 
     async function setSortOrder() {
-        if (data.filter.sortOrder === "+") {
-            data.filter.sortOrder = "-";
+        if (filter.sortOrder === "+") {
+            filter.sortOrder = "-";
         } else {
-            data.filter.sortOrder = "+";
+            filter.sortOrder = "+";
         }
         await updateFilter();
     }
 
     async function setPublicFilter(e: Event) {
-        data.filter.public = (e.target as HTMLInputElement).checked;
+        filter.public = (e.target as HTMLInputElement).checked;
         updateFilter();
     }
 
     async function setAuthorFilter(item: SearchItem) {
-        data.filter.author = item.value.id;
+        filter.author = item.value.id;
         await updateFilter();
     }
 
     async function clearAuthorFilter() {
-        data.filter.author = "";
+        filter.author = "";
         await updateFilter();
     }
 
     async function setSharedFilter(e: Event) {
-        data.filter.shared = (e.target as HTMLInputElement).checked;
+        filter.shared = (e.target as HTMLInputElement).checked;
         updateFilter();
     }
 </script>
@@ -244,7 +248,7 @@
                 disabled={!selectedList}
                 onclick={back}><i class="fa fa-arrow-left"></i></button
             >
-            <Search bind:value={data.filter.q} on:update={updateFilter}
+            <Search bind:value={filter.q} on:update={updateFilter}
             ></Search>
             <button
                 aria-label="Toggle filter"
@@ -268,7 +272,7 @@
                 <p class="text-sm font-medium pb-1">{$_("sort")}</p>
                 <div class="flex items-center gap-2">
                     <Select
-                        bind:value={data.filter.sort}
+                        bind:value={filter.sort}
                         items={sortOptions}
                         on:change={(e) => setSort(e.detail)}
                     ></Select>
@@ -276,7 +280,7 @@
                         aria-label="Set sort order"
                         id="sort-order-btn"
                         class="btn-icon"
-                        class:rotated={data.filter.sortOrder == "-"}
+                        class:rotated={filter.sortOrder == "-"}
                         onclick={() => setSortOrder()}
                         ><i class="fa fa-arrow-up"></i></button
                     >
@@ -295,7 +299,7 @@
                         <input
                             id="public-checkbox"
                             type="checkbox"
-                            checked={data.filter.public}
+                            checked={filter.public}
                             class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
                             onchange={setPublicFilter}
                         />
@@ -307,7 +311,7 @@
                         <input
                             id="shared-checkbox"
                             type="checkbox"
-                            checked={data.filter.shared}
+                            checked={filter.shared}
                             class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
                             onchange={setSharedFilter}
                         />

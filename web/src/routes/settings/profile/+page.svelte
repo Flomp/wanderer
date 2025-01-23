@@ -13,8 +13,9 @@
 
     let { data = $bindable() } = $props();
 
-    let selectedCategory =
-        $state(page.data.settings?.category || data.categories[0].id);
+    let selectedCategory = $state(
+        page.data.settings?.category || data.categories[0].id,
+    );
 
     let bio = $state(data.settings?.bio ?? "");
 
@@ -85,6 +86,7 @@
                     alt="avatar"
                 />
                 <button
+                    aria-label="Open file browser"
                     class="absolute top-0 w-24 aspect-square opacity-0 group-hover:opacity-100 flex justify-center items-center bg-black/50 focus:bg-black/60 text-white cursor-pointer transition-opacity"
                     onclick={openFileBrowser}
                 >

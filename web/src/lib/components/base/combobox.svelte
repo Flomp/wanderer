@@ -7,11 +7,9 @@
 </script>
 
 <script lang="ts">
-    import { stopPropagation } from 'svelte/legacy';
-
     import { createEventDispatcher, tick } from "svelte";
+    import type { ChangeEventHandler } from "svelte/elements";
     import TextField from "./text_field.svelte";
-    import type { ChangeEventHandler } from 'svelte/elements';
 
     interface Props {
         name?: string;
@@ -32,14 +30,16 @@
         items = [],
         placeholder = "",
         extraClasses = "",
-        onchange
+        onchange,
     }: Props = $props();
 
     const dispatch = createEventDispatcher();
 
     let searching: boolean = $state(false);
 
-    let dropDownOpen = $derived(value.length > 0 && items.length > 0 && searching);
+    let dropDownOpen = $derived(
+        value.length > 0 && items.length > 0 && searching,
+    );
 
     async function onSearchType() {
         await tick();
@@ -65,7 +65,8 @@
         dispatch("update", q);
     }
 
-    function handleItemClick(item: ComboboxItem) {        
+    function handleItemClick(e: Event, item: ComboboxItem) {
+        e.stopPropagation();
         value = item.value;
         dispatch("click", item);
     }
@@ -98,8 +99,8 @@
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     tabindex="0"
-                    onmousedown={stopPropagation(() => handleItemClick(item))}
-                    onkeydown={stopPropagation(() => handleItemClick(item))}
+                    onmousedown={(e) => handleItemClick(e, item)}
+                    onkeydown={(e) => handleItemClick(e, item)}
                 >
                     <i class="fa fa-{item.icon} mr-6"></i>
 

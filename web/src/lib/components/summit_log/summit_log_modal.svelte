@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { run } from "svelte/legacy";
-
-    import { createEventDispatcher, type Snippet } from "svelte";
+    
+    import { createEventDispatcher, untrack, type Snippet } from "svelte";
 
     import { SummitLogCreateSchema } from "$lib/models/api/summit_log_schema";
     import GPX from "$lib/models/gpx/gpx";
     import { summitLog } from "$lib/stores/summit_log_store";
-    import { createForm } from "felte";
+    import { cloneDeep } from "$lib/util/deep_util";
     import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
     import { _ } from "svelte-i18n";
     import { z } from "zod";
     import Datepicker from "../base/datepicker.svelte";
@@ -15,7 +15,6 @@
     import Textarea from "../base/textarea.svelte";
     import PhotoPicker from "../trail/photo_picker.svelte";
     import TrailPicker from "../trail/trail_picker.svelte";
-    import { cloneDeep } from "$lib/util/deep_util";
     interface Props {
         children?: Snippet<[any]>;
     }
@@ -69,11 +68,14 @@
             modal.closeModal!();
         },
     });
+
+    let trailData = $derived($data.expand?.gpx_data)
+
     $effect(() => {
         setFields(cloneDeep($summitLog));
     });
 
-    run(() => {
+    $effect(() => {        
         if ($summitLog._gpx) {
             $data._gpx = $summitLog._gpx;
         }
@@ -98,6 +100,7 @@
         $data.elevation_gain = totals.elevationGain;
         $data.elevation_loss = totals.elevationLoss;
         $data.distance = totals.distance;
+        $data.expand!.gpx_data = trailData;
     }
 
     const children_render = $derived(children);
@@ -136,7 +139,7 @@
                 {#if $data.expand}
                     <TrailPicker
                         bind:trailFile={$data._gpx}
-                        bind:trailData={$data.expand.gpx_data}
+                        {trailData}
                         label={$_("trail", { values: { n: 1 } })}
                         on:change={(e) => handleTrailSelection(e.detail)}
                     ></TrailPicker>

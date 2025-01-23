@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { stopPropagation } from "svelte/legacy";
-
     import { type List } from "$lib/models/list";
     import { _ } from "svelte-i18n";
 
@@ -387,9 +385,7 @@
                         {#if i > 0}
                             <button
                                 aria-label="Move up"
-                                onclick={stopPropagation(() =>
-                                    moveTrail(trail, i, -1),
-                                )}
+                                onclick={() => moveTrail(trail, i, -1)}
                                 type="button"
                                 class="btn-icon"
                             >

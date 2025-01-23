@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { run } from "svelte/legacy";
-
     import { createEventDispatcher, type Snippet } from "svelte";
 
     import { WaypointCreateSchema } from "$lib/models/api/waypoint_schema";
@@ -58,7 +56,7 @@
         },
     });
 
-    run(() => {
+    $effect(() => {
         setFields(cloneDeep($waypoint));
     });
 

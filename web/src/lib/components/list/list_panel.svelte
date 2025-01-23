@@ -24,33 +24,33 @@
 
     const dispatch = createEventDispatcher();
 
-    let cumulativeDistance = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.distance!,
-        0,
-    ));
+    let cumulativeDistance = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.distance!, 0),
+    );
 
-    let cumulativeElevationGain = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.elevation_gain!,
-        0,
-    ));
+    let cumulativeElevationGain = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.elevation_gain!, 0),
+    );
 
-    let cumulativeElevationLoss = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.elevation_loss!,
-        0,
-    ));
+    let cumulativeElevationLoss = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.elevation_loss!, 0),
+    );
 
-    let cumulativeDuration = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.duration!,
-        0,
-    ));
+    let cumulativeDuration = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.duration!, 0),
+    );
 
-    let allowEdit =
-        $derived(list.author == $currentUser?.id ||
-        list.expand?.list_share_via_list?.some((s) => s.permission == "edit"));
+    let allowEdit = $derived(
+        list.author == $currentUser?.id ||
+            list.expand?.list_share_via_list?.some(
+                (s) => s.permission == "edit",
+            ),
+    );
 
-    let allowShare =
-        $derived(list.author == $currentUser?.id &&
-        !list.expand?.trails?.some((t) => t.author !== $currentUser?.id));
+    let allowShare = $derived(
+        list.author == $currentUser?.id &&
+            !list.expand?.trails?.some((t) => t.author !== $currentUser?.id),
+    );
 
     let dropdownItems = $derived([
         ...(allowShare
@@ -64,7 +64,9 @@
             : []),
     ]);
 
-    let listIsShared = $derived((list.expand?.list_share_via_list?.length ?? 0) > 0);
+    let listIsShared = $derived(
+        (list.expand?.list_share_via_list?.length ?? 0) > 0,
+    );
 
     let fullDescription: boolean = $state(false);
 
@@ -104,19 +106,17 @@
     {/if}
     {#if dropdownItems.length}
         <div class="absolute bottom-8 right-8">
-            <Dropdown
-                items={dropdownItems}
-                on:change
-                
+            <Dropdown items={dropdownItems} on:change
                 >{#snippet children({ toggleMenu: openDropdown })}
-                                <button
+                    <button
+                        aria-label="Open dropdown"
                         class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
                         onclick={openDropdown}
                     >
                         <i class="fa fa-ellipsis-vertical"></i>
-                    </button>                            {/snippet}
-                        </Dropdown
-            >
+                    </button>
+                {/snippet}
+            </Dropdown>
         </div>
     {/if}
     <img

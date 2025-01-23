@@ -13,7 +13,7 @@
         src,
         isThumbnail = false,
         showThumbnailControls = true,
-        showExifControls = false
+        showExifControls = false,
     }: Props = $props();
 
     const dispatch = createEventDispatcher();
@@ -45,6 +45,7 @@
     >
         {#if showThumbnailControls}
             <button
+                aria-label="Make thumbnail"
                 type="button"
                 class="tooltip"
                 data-title={$_("make-thumbnail")}
@@ -54,14 +55,17 @@
         {/if}
         {#if showExifControls}
             <button
+                aria-label="Get EXIF coordinates"
                 type="button"
                 class="tooltip"
                 data-title={$_("get-position-from-exif")}
                 onclick={handleExifClick}
-                ><i class="fa fa-magnifying-glass-location text-content"></i></button
+                ><i class="fa fa-magnifying-glass-location text-content"
+                ></i></button
             >
         {/if}
         <button
+            aria-label="Delete photo"
             class="tooltip"
             data-title={$_("delete")}
             onclick={handleDeleteClick}

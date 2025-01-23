@@ -23,11 +23,11 @@
         filter = $bindable(null),
         trails,
         pagination = {
-        page: 1,
-        totalPages: 1,
-    },
+            page: 1,
+            totalPages: 1,
+        },
         loading = false,
-        fullWidthCards = false
+        fullWidthCards = false,
     }: Props = $props();
 
     const displayOptions: SelectItem[] = [
@@ -130,6 +130,7 @@
                             on:change={setSort}
                         ></Select>
                         <button
+                            aria-label="Change sort order"
                             id="sort-order-btn"
                             class="btn-icon"
                             class:rotated={filter.sortOrder == "-"}

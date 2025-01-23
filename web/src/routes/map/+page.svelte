@@ -114,7 +114,7 @@
     }
 
     async function handleFilterUpdate(filter: TrailFilter) {
-        if(!map) {
+        if (!map) {
             return;
         }
         const bounds = map.getBounds();
@@ -122,7 +122,7 @@
     }
 
     async function handleMapMove() {
-        if(!map) {
+        if (!map) {
             return;
         }
         const bounds = map.getBounds();
@@ -136,7 +136,7 @@
                 ((((bounds.getNorthEast().lng + 180) % 360) + 360) % 360) - 180,
                 bounds.getNorthEast().lat,
             ),
-        };        
+        };
 
         await searchTrails(
             normalizedBounds.northEast,
@@ -224,11 +224,13 @@
                     items={searchDropdownItems}
                 ></Search>
                 <button
+                    aria-label="Open filter"
                     class="btn-icon"
                     onclick={() => (showFilter = !showFilter)}
                     ><i class="fa fa-sliders"></i></button
                 >
                 <button
+                    aria-label="Toggle map"
                     class="btn-icon md:hidden"
                     onclick={() => (showMap = !showMap)}
                     ><i
@@ -261,9 +263,7 @@
                     <EmptyStateSearch></EmptyStateSearch>
                 {/if}
                 {#each trails as trail, i}
-                    <a
-                        href="map/trail/{trail.id}"
-                    >
+                    <a href="map/trail/{trail.id}">
                         <TrailCard
                             {trail}
                             onmouseenter={() =>

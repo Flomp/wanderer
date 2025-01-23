@@ -9,7 +9,9 @@ export async function GET(event: RequestEvent) {
             min_distance: 0,
             max_distance: 20000,
             min_elevation_gain: 0,
-            max_elevation_gain: 4000
+            max_elevation_gain: 4000,
+            min_elevation_loss: 0,
+            max_elevation_loss: 4000
         });
     }
     try {

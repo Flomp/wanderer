@@ -112,7 +112,7 @@
         }
     });
     $effect(() => {
-        untrack(() => adjustTrailFocus(data));
+        adjustTrailFocus(activeTrail);
     });
     $effect(() => {
         if ($theme == "dark") {
@@ -429,7 +429,7 @@
     }
 
     function addCaretLayer(id?: string) {
-        if (!map || !id) {
+        if (!map || !id || !map.getSource(id)) {
             return;
         }
         if (map.getLayer("direction-carets")) {
@@ -476,6 +476,9 @@
         id: string,
         showElevationMarker: boolean = false,
     ) {
+        if (!id || !map?.getLayer(id)) {
+            return;
+        }
         if (showElevationMarker) {
             elevationMarker.setOpacity("1");
         }
@@ -485,7 +488,7 @@
     }
 
     export function unHighlightTrail(id: string | undefined) {
-        if (!id || draggingSegment !== null) {
+        if (!id || draggingSegment !== null || map?.getLayer(id)) {
             return;
         }
         elevationMarker.setOpacity("0");
@@ -495,17 +498,17 @@
         // map?.setPaintProperty(id, "line-color", "#648ad5");
     }
 
-    function adjustTrailFocus(d: typeof data) {
+    function adjustTrailFocus(activeTrail: number | null) {
         if (activeTrail !== null && trails[activeTrail] !== undefined) {
             if (
                 !drawing &&
                 fitBounds !== "off" &&
-                d.some((d) => d.bbox !== undefined)
+                data.some((d) => d.bbox !== undefined)
             ) {
-                focusTrail(trails[activeTrail]);
+                untrack(() => focusTrail(trails[activeTrail]));
             }
         } else if (activeTrail === null && trails.length) {
-            unFocusTrail();
+            untrack(() => unFocusTrail());
         }
     }
 

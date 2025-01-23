@@ -98,10 +98,12 @@
     <div class="flex gap-4 items-center m-4">
         <div class="basis-full"></div>
         <button
+            aria-label="Toggle theme"
             class="btn-icon fa-regular fa-{$theme === 'light' ? 'sun' : 'moon'}"
             onclick={() => toggleTheme()}
         ></button>
         <button
+            aria-label="Toggle drawer"
             class="btn-icon block fa fa-close float-right"
             onclick={() => (drawerOpen = false)}
         ></button>
@@ -140,6 +142,7 @@
                     </p>
                 </a>
                 <button
+                    aria-label="Logout"
                     onclick={() => {
                         logout();
                         window.location.href = "/";
@@ -219,6 +222,7 @@
     {:else}
         <div class="hidden md:flex items-center gap-8">
             <button
+                aria-label="Toggle theme"
                 class="btn-icon fa-regular fa-{$theme === 'light'
                     ? 'sun'
                     : 'moon'}"
@@ -228,6 +232,7 @@
         </div>
     {/if}
     <button
+        aria-label="Toggle drawer"
         class="btn-icon fa fa-bars lg:hidden"
         onclick={() => (drawerOpen = !drawerOpen)}
     ></button>

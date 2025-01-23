@@ -115,7 +115,7 @@
             source = undefined;
         }
     }
-    $effect(() => {        
+    $effect(() => {
         if (trailData !== undefined) {
             showTrailOnMap();
         } else {

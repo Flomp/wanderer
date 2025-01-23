@@ -7,8 +7,7 @@
 </script>
 
 <script lang="ts">
-    import { stopPropagation } from "svelte/legacy";
-
+    
     import { createEventDispatcher, type Snippet } from "svelte";
     import { fly } from "svelte/transition";
 
@@ -34,7 +33,8 @@
         isOpen = false;
     }
 
-    function handleItemClick(item: { text: string; value: any }) {
+    function handleItemClick(e: Event, item: { text: string; value: any }) {
+        e.stopPropagation();
         dispatch("change", item);
         closeMenu();
     }
@@ -80,7 +80,7 @@
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     role="presentation"
-                    onmousedown={stopPropagation(() => handleItemClick(item))}
+                    onmousedown={(e) => handleItemClick(e, item)}
                 >
                     {#if item.icon}
                         <i class="fa fa-{item.icon} mr-3"></i>

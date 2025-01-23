@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { stopPropagation } from 'svelte/legacy';
-
     import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import type { SelectItem } from "./select.svelte";
@@ -18,7 +16,7 @@
         value = $bindable([]),
         label = "",
         name = "",
-        placeholder = ""
+        placeholder = "",
     }: Props = $props();
 
     let showDropdown = $state(false);
@@ -36,7 +34,8 @@
         dispatch("change", value);
     }
 
-    function removeItem(item: SelectItem) {
+    function removeItem(e: Event, item: SelectItem) {
+        e.stopPropagation();
         value = value.filter((i) => i !== item);
         dispatch("change", value);
     }
@@ -49,7 +48,8 @@
             {label}
         </label>
     {/if}
-    <button
+    <div
+        role="presentation"
         class="min-w-44 w-full flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
         onclick={() => (showDropdown = !showDropdown)}
     >
@@ -62,14 +62,15 @@
             >
                 <span class="text-sm">{$_(item.text)}</span>
                 <button
-                    onclick={stopPropagation(() => removeItem(item))}
+                    aria-label="Close"
+                    onclick={(e) => removeItem(e, item)}
                     class="text-white hover:bg-primary-hover rounded-full w-4 h-4 flex items-center justify-center"
                 >
                     <i class="fa fa-close"></i>
                 </button>
             </div>
         {/each}
-    </button>
+    </div>
 
     <!-- Dropdown menu -->
     {#if showDropdown}

@@ -1,19 +1,18 @@
 <script lang="ts">
-    import { run } from "svelte/legacy";
-
+    
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { SummitLog } from "$lib/models/summit_log";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
-    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
-    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
 
+    import { theme } from "$lib/stores/theme_store";
+    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
-    import { theme } from "$lib/stores/theme_store";
 
     let thumbnail: string = $state(
         $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark,

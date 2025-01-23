@@ -106,9 +106,10 @@
         });
     }
 
-    let terrainSaveEnabled =
-        $derived(terrainURL !== settings?.terrain?.terrain ||
-        hillshadingURL !== settings?.terrain?.hillshading);
+    let terrainSaveEnabled = $derived(
+        terrainURL !== settings?.terrain?.terrain ||
+            hillshadingURL !== settings?.terrain?.hillshading,
+    );
 </script>
 
 <svelte:head>
@@ -150,6 +151,7 @@
                         <p class="text-sm text-gray-500">{tileset.url}</p>
                     </div>
                     <button
+                        aria-label="Delete tileset"
                         class="btn-icon"
                         onclick={() => handleTilesetDelete(i)}
                         ><i class="fa fa-trash text-red-500"></i></button
@@ -170,7 +172,10 @@
                             placeholder="https://.../style.json"
                         ></TextField>
                     </div>
-                    <button class="btn-icon mt-6" onclick={handleTilesetAdd}
+                    <button
+                        aria-label="Add tileset"
+                        class="btn-icon mt-6"
+                        onclick={handleTilesetAdd}
                         ><i class="fa fa-plus"></i></button
                     >
                 </div>
@@ -195,6 +200,7 @@
                     ></TextField>
                 </div>
                 <button
+                    aria-label="Save terrain settings"
                     disabled={!terrainSaveEnabled}
                     class="btn-icon mt-6"
                     class:hover:!bg-background={!terrainSaveEnabled}
