@@ -7,19 +7,17 @@
 </script>
 
 <script lang="ts">
-    
-    import { createEventDispatcher, type Snippet } from "svelte";
+    import { type Snippet } from "svelte";
     import { fly } from "svelte/transition";
 
     interface Props {
         items?: DropdownItem[];
         size?: string;
         children?: Snippet<[any]>;
+        onchange?: (item: DropdownItem) => void;
     }
 
-    let { items = [], size = "regular", children }: Props = $props();
-
-    const dispatch = createEventDispatcher();
+    let { items = [], size = "regular", children, onchange }: Props = $props();
 
     let isOpen = $state(false);
 
@@ -35,7 +33,7 @@
 
     function handleItemClick(e: Event, item: { text: string; value: any }) {
         e.stopPropagation();
-        dispatch("change", item);
+        onchange?.(item);
         closeMenu();
     }
 

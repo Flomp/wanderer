@@ -2,16 +2,17 @@
     import type { Waypoint } from "$lib/models/waypoint";
     import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
-    import Dropdown from "../base/dropdown.svelte";
+    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import { browser } from "$app/environment";
     import PhotoGallery from "../photo_gallery.svelte";
 
     interface Props {
         waypoint: Waypoint;
         mode?: "show" | "edit";
+        onchange?: (item: DropdownItem) => void;
     }
 
-    let { waypoint, mode = "show" }: Props = $props();
+    let { waypoint, mode = "show", onchange }: Props = $props();
 
     let gallery: PhotoGallery;
 
@@ -75,7 +76,7 @@
                 <i class="fa fa-{waypoint.icon} mr-2"></i>{waypoint.name}
             </h5>
             {#if mode == "edit"}
-                <Dropdown items={dropdownItems} on:change></Dropdown>
+                <Dropdown items={dropdownItems} {onchange}></Dropdown>
             {/if}
         </div>
 

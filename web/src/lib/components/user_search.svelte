@@ -3,7 +3,6 @@
     import { show_toast } from "$lib/stores/toast_store";
     import { users_search } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
-    import { createEventDispatcher, tick } from "svelte";
     import Search, { type SearchItem } from "./base/search.svelte";
     import { _ } from "svelte-i18n";
 
@@ -12,6 +11,8 @@
         value?: string;
         includeSelf?: boolean;
         clearAfterSelect?: boolean;
+        onclear?: () => void
+        onclick?: (item: SearchItem) => void
     }
 
     let {
@@ -19,16 +20,16 @@
         value = $bindable(""),
         includeSelf = true,
         clearAfterSelect = true,
+        onclear,
+        onclick
     }: Props = $props();
 
     let searchItems: SearchItem[] = $state([]);
 
-    const dispatch = createEventDispatcher();
-
     async function updateUsers(q: string) {
         if (!q.length) {
             searchItems = [];
-            dispatch("clear");
+            onclear?.();
             return;
         }
         try {
@@ -48,17 +49,17 @@
         }
     }
 
-    function onClick(e: CustomEvent<SearchItem>) {
-        value = e.detail.value.username ?? value;
+    function onClick(item: SearchItem) {
+        value = item.value.username ?? value;
 
-        dispatch("click", e.detail);
+        onclick?.(item);
         searchItems = [];
     }
 </script>
 
 <Search
-    on:update={(e) => updateUsers(e.detail)}
-    on:click={(e) => onClick(e)}
+    onupdate={(q) => updateUsers(q)}
+    onclick={(item) => onClick(item)}
     placeholder={`${$_("username")}...`}
     items={searchItems}
     {clearAfterSelect}

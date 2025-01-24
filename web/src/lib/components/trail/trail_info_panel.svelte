@@ -425,9 +425,8 @@
                                         mode={comment.author == $currentUser?.id
                                             ? "edit"
                                             : "show"}
-                                        on:delete={(e) =>
-                                            deleteComment(e.detail)}
-                                        on:edit={(e) => editComment(e.detail)}
+                                        ondelete={deleteComment}
+                                        onedit={editComment}
                                     ></CommentCard>
                                 </li>
                             {/each}
@@ -445,7 +444,7 @@
                         showStyleSwitcher={false}
                         showFullscreen={true}
                         mapOptions={{ attributionControl: false }}
-                        on:fullscreen={toggleMapFullScreen}
+                        onfullscreen={toggleMapFullScreen}
                         bind:markers
                     ></MapWithElevationMaplibre>
                 </div>

@@ -93,7 +93,7 @@
     name="account"
     items={accoutPrivacyItems}
     selected={settings?.privacy?.account == "private" ? 1 : 0}
-    on:change={(e) => handleAccountSelection(e.detail)}
+    onchange={handleAccountSelection}
 ></RadioGroup>
 
 <h4 class="text-xl font-medium mt-12 mb-4">
@@ -103,7 +103,7 @@
     name="trails"
     items={trailPrivacyItems}
     selected={settings?.privacy?.trails == "public" ? 0 : 1}
-    on:change={(e) => handleTrailsSelection(e.detail)}
+    onchange={handleTrailsSelection}
 ></RadioGroup>
 
 <h4 class="text-xl font-medium mt-12 mb-4">
@@ -113,5 +113,5 @@
     name="lists"
     items={listPrivacyItems}
     selected={settings?.privacy?.lists == "public" ? 0 : 1}
-    on:change={(e) => handleListsSelection(e.detail)}
+    onchange={handleListsSelection}
 ></RadioGroup>

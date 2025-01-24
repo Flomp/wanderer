@@ -83,9 +83,7 @@
         }
     });
 
-    async function handleDropdownClick(e: CustomEvent<DropdownItem>) {
-        const item = e.detail;
-
+    async function handleDropdownClick(item: DropdownItem) {
         if (!selectedList) {
             return;
         }
@@ -248,8 +246,7 @@
                 disabled={!selectedList}
                 onclick={back}><i class="fa fa-arrow-left"></i></button
             >
-            <Search bind:value={filter.q} on:update={updateFilter}
-            ></Search>
+            <Search bind:value={filter.q} onupdate={updateFilter}></Search>
             <button
                 aria-label="Toggle filter"
                 class="btn-icon"
@@ -274,7 +271,7 @@
                     <Select
                         bind:value={filter.sort}
                         items={sortOptions}
-                        on:change={(e) => setSort(e.detail)}
+                        onchange={setSort}
                     ></Select>
                     <button
                         aria-label="Set sort order"
@@ -289,8 +286,8 @@
                     <hr class="my-4 border-separator" />
 
                     <UserSearch
-                        on:click={(e) => setAuthorFilter(e.detail)}
-                        on:clear={clearAuthorFilter}
+                        onclick={setAuthorFilter}
+                        onclear={clearAuthorFilter}
                         bind:value={userQuery}
                         clearAfterSelect={false}
                         label={$_("author")}
@@ -352,10 +349,10 @@
             {:else if selectedList && !selectedTrail}
                 <ListPanel
                     list={selectedList}
-                    on:mouseenter={(e) => highlightTrail(e.detail.trail)}
-                    on:mouseleave={(e) => unHighlightTrail(e.detail.trail)}
-                    on:change={(e) => handleDropdownClick(e)}
-                    on:click={(e) => selectTrail(e.detail.trail)}
+                    onmouseenter={(data) => highlightTrail(data.trail)}
+                    onmouseleave={(data) => unHighlightTrail(data.trail)}
+                    onchange={(item) => handleDropdownClick(item)}
+                    onclick={(data) => selectTrail(data.trail)}
                 ></ListPanel>
             {:else if selectedList && selectedTrail}
                 <TrailInfoPanel trail={selectedTrail} mode="list" {markers}
@@ -372,8 +369,8 @@
             bind:markers
             activeTrail={selectedTrailIndex}
             fitBounds="animate"
-            on:select={(e) => {
-                selectedTrail = e.detail;
+            onselect={(trail) => {
+                selectedTrail = trail;
             }}
             showInfoPopup={true}
             showTerrain={true}
@@ -386,13 +383,13 @@
     <ConfirmModal
         text={$_("delete-list-confirm")}
         bind:this={confirmModal}
-        on:confirm={deleteList}
+        onconfirm={deleteList}
     ></ConfirmModal>
     {#if selectedList}
         <ListShareModal
             bind:this={listShareModal}
             list={selectedList}
-            on:update={() => {
+            onupdate={() => {
                 data.lists.items = data.lists.items;
                 selectedList = selectedList;
             }}

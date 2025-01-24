@@ -5,16 +5,14 @@
     } from "$lib/models/notification";
     import { getFileURL } from "$lib/util/file_util";
     import { formatTimeSince } from "$lib/util/format_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
 
     interface Props {
         notification: Notification;
+        onclick?: (data: {notification: Notification, link: string | null}) => void
     }
 
-    let { notification }: Props = $props();
-
-    const dispatch = createEventDispatcher();
+    let { notification, onclick }: Props = $props();
 
     const avatarSrc = notification.expand?.author.avatar
         ? getFileURL(
@@ -93,7 +91,7 @@
     }
 
     function handleItemClick() {
-        dispatch("click", { notification, link });
+        onclick?.({ notification, link });
     }
     let title = $derived(getTitle(notification));
     let description = $derived(getDescription(notification));

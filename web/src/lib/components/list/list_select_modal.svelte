@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createEventDispatcher, type Snippet } from "svelte";
+    import { type Snippet } from "svelte";
 
     import type { List } from "$lib/models/list";
     import { trail } from "$lib/stores/trail_store";
@@ -13,9 +13,10 @@
     interface Props {
         lists: List[];
         children?: Snippet<[any]>;
+        onchange?: (list: List) => void
     }
 
-    let { lists, children }: Props = $props();
+    let { lists, children, onchange }: Props = $props();
 
     let modal: Modal;
 
@@ -23,10 +24,8 @@
         modal.openModal();
     }
 
-    const dispatch = createEventDispatcher();
-
     function handleSelect(list: List) {
-        dispatch("change", list);
+        onchange?.(list);
         modal.closeModal!();
     }
 

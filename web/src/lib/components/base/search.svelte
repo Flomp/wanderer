@@ -9,9 +9,9 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import { fade } from "svelte/transition";
     import TextField from "./text_field.svelte";
+    import type { Snippet } from "svelte";
 
     interface Props {
         maxSearchLength?: number;
@@ -22,7 +22,9 @@
         extraClasses?: string;
         label?: string;
         clearAfterSelect?: boolean;
-        prepend?: import('svelte').Snippet<[any]>;
+        prepend?: Snippet<[any]>;
+        onupdate?: (q: string) => void;
+        onclick?: (item: SearchItem) => void;
     }
 
     let {
@@ -34,10 +36,10 @@
         extraClasses = "",
         label = "",
         clearAfterSelect = true,
-        prepend
+        prepend,
+        onupdate,
+        onclick
     }: Props = $props();
-
-    const dispatch = createEventDispatcher();
 
     let lastSearch: string = "";
     let searching: boolean = $state(false);
@@ -58,13 +60,13 @@
 
     function update(q: string) {
         lastSearch = q;
-        dispatch("update", q);
+        onupdate?.(q);
     }
 
     function handleItemClick(e: Event, item: SearchItem) {
         e.stopPropagation();
         searching = false;
-        dispatch("click", item);
+        onclick?.(item);
         if (clearAfterSelect) {
             clear();
         }

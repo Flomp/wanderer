@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
 
     interface Props {
@@ -7,6 +6,9 @@
         isThumbnail?: boolean;
         showThumbnailControls?: boolean;
         showExifControls?: boolean;
+        onthumbnail?: (src: string) => void;
+        onexif?: (src: string) => void;
+        ondelete?: (src: string) => void;
     }
 
     let {
@@ -14,20 +16,21 @@
         isThumbnail = false,
         showThumbnailControls = true,
         showExifControls = false,
+        onthumbnail,
+        onexif,
+        ondelete,
     }: Props = $props();
 
-    const dispatch = createEventDispatcher();
-
     function handleThumbnailClick() {
-        dispatch("thumbnail", src);
+        onthumbnail?.(src);
     }
 
     function handleExifClick() {
-        dispatch("exif", src);
+        onexif?.(src);
     }
 
     function handleDeleteClick() {
-        dispatch("delete", src);
+        ondelete?.(src);
     }
 </script>
 

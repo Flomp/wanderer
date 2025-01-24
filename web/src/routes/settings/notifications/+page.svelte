@@ -85,13 +85,13 @@
         <p>{item.text}</p>
         <div>
             <Toggle
-                on:change={updateNotificationSettings}
+                onchange={updateNotificationSettings}
                 bind:value={notifications[item.key].web}
             ></Toggle>
         </div>
         <div>
             <Toggle
-                on:change={updateNotificationSettings}
+                onchange={updateNotificationSettings}
                 bind:value={notifications[item.key].email}
             ></Toggle>
         </div>

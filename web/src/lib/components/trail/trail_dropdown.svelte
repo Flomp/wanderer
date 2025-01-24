@@ -170,7 +170,7 @@
     }
 
     async function deleteTrail() {
-        trails_delete(trail).then(() => history.back());
+        trails_delete(trail).then(() => goto('/trails'));
     }
 
     async function handleListSelection(list: List) {
@@ -202,7 +202,7 @@
     }
 </script>
 
-<Dropdown items={dropdownItems} on:change={(e) => handleDropdownClick(e.detail)}
+<Dropdown items={dropdownItems} onchange={(item) => handleDropdownClick(item)}
     >{#snippet children({ toggleMenu: openDropdown })}
         <button
             aria-label="Open dropdown"
@@ -217,15 +217,15 @@
 <ConfirmModal
     text={$_("delete-trail-confirm")}
     bind:this={confirmModal}
-    on:confirm={deleteTrail}
+    onconfirm={deleteTrail}
 ></ConfirmModal>
 <ListSelectModal
     {lists}
     bind:this={listSelectModal}
-    on:change={(e) => handleListSelection(e.detail)}
+    onchange={(list) => handleListSelection(list)}
 ></ListSelectModal>
 <TrailExportModal
     bind:this={trailExportModal}
-    on:export={(e) => exportTrail(e.detail)}
+    onexport={(settings) => exportTrail(settings)}
 ></TrailExportModal>
 <TrailShareModal {trail} bind:this={trailShareModal}></TrailShareModal>

@@ -1,24 +1,24 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
 
     interface Props {
         name?: string;
         value?: boolean;
         label?: string;
         error?: string;
+        onchange?: (value: boolean) => void
     }
 
     let {
         name = "",
         value = $bindable(false),
         label = "",
-        error = ""
+        error = "",
+        onchange
     }: Props = $props();
 
-    const dispatch = createEventDispatcher();
 
     function handleToggleChange() {
-        dispatch("change", value);
+        onchange?.(value);
     }
 </script>
 

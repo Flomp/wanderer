@@ -10,7 +10,6 @@
         trail_share_update,
     } from "$lib/stores/trail_share_store";
     import { getFileURL } from "$lib/util/file_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import Button from "../base/button.svelte";
     import type { SelectItem } from "../base/select.svelte";
@@ -19,9 +18,10 @@
 
     interface Props {
         trail: Trail;
+        onsave?: () => void;
     }
 
-    let { trail }: Props = $props();
+    let { trail, onsave }: Props = $props();
 
     let modal: Modal;
 
@@ -32,8 +32,6 @@
         modal.openModal();
         await fetchShares();
     }
-
-    const dispatch = createEventDispatcher();
 
     let copyButtonText = $state($_("copy-link"));
 
@@ -52,7 +50,7 @@
     }
 
     function close() {
-        dispatch("save");
+        onsave?.();
         modal.closeModal!();
     }
 
@@ -90,9 +88,7 @@
 >
     {#snippet content()}
         <div>
-            <UserSearch
-                includeSelf={false}
-                on:click={(e) => shareTrail(e.detail)}
+            <UserSearch includeSelf={false} onclick={(item) => shareTrail(item)}
             ></UserSearch>
             <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
@@ -122,8 +118,8 @@
                                 <Select
                                     value={share.permission}
                                     items={permissionSelectItems}
-                                    on:change={(e) =>
-                                        updateSharePermission(share, e.detail)}
+                                    onchange={(value) =>
+                                        updateSharePermission(share, value)}
                                 ></Select>
                             </div>
 

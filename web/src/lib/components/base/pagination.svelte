@@ -1,20 +1,19 @@
 <script lang="ts">
     import { range } from "$lib/util/array_util";
-    import { createEventDispatcher } from "svelte";
 
     interface Props {
         page: number;
         totalPages: number;
+        onpagination?: (page: number) => void;
     }
 
-    let { page, totalPages }: Props = $props();
+    let { page, totalPages, onpagination }: Props = $props();
 
     const maxPagesToRender = 6;
-    const dispatch = createEventDispatcher();
 
     function update(clickedPage: number) {
         if (page !== clickedPage) {
-            dispatch("pagination", clickedPage);
+            onpagination?.(clickedPage);
         }
     }
 

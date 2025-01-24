@@ -2,24 +2,24 @@
     import * as M from "maplibre-gl";
 
     import { fromFile, toGeoJson } from "$lib/util/gpx_util";
-    import { createEventDispatcher, onMount, untrack } from "svelte";
+    import { onMount } from "svelte";
     interface Props {
         trailFile: File | undefined | null;
         trailData: string | undefined;
         label?: string;
+        onchange: (data: string | null) => void;
     }
 
     let {
         trailFile = $bindable(),
         trailData = $bindable(),
         label = "",
+        onchange
     }: Props = $props();
 
     let map: M.Map;
     let layer: M.LineLayerSpecification | undefined;
     let source: M.GeoJSONSource | undefined;
-
-    const dispatch = createEventDispatcher();
 
     onMount(async () => {
         if (!map) {
@@ -42,7 +42,7 @@
             trailFile = null;
             trailData = undefined;
 
-            dispatch("change", null);
+            onchange?.(null);
         } else {
             document.getElementById("trail-input")!.click();
         }
@@ -66,7 +66,7 @@
 
         trailData = parseResult.gpxData;
 
-        dispatch("change", trailData);
+        onchange?.(trailData);
     }
 
     async function showTrailOnMap() {

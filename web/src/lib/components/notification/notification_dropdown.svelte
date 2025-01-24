@@ -26,10 +26,9 @@
     let loadingNextPage: boolean = $state(false);
     let isOpen = $state(false);
 
-    let unreadCount = $derived(notifications.reduce(
-        (value, n) => (value += n.seen ? 0 : 1),
-        0,
-    ));
+    let unreadCount = $derived(
+        notifications.reduce((value, n) => (value += n.seen ? 0 : 1), 0),
+    );
 
     onMount(() => {
         if (!notifications.length && page.data.notifications?.items?.length) {
@@ -88,13 +87,16 @@
         loadingNextPage = false;
     }
 
-    async function handleNotificationClick(e: CustomEvent) {
-        await notifications_mark_as_seen(e.detail.notification);
-        e.detail.notification.seen = true;
+    async function handleNotificationClick(data: {
+        notification: Notification;
+        link: string | null;
+    }) {
+        await notifications_mark_as_seen(data.notification);
+        data.notification.seen = true;
         notifications = notifications;
 
-        if (e.detail.link) {
-            goto(e.detail.link);
+        if (data.link) {
+            goto(data.link);
         }
     }
 </script>
@@ -110,7 +112,11 @@
         </div>
     {/if}
     <div class="dropdown-toggle">
-        <button aria-label="Toggle notification dropdown" onclick={toggleMenu} class="btn-icon">
+        <button
+            aria-label="Toggle notification dropdown"
+            onclick={toggleMenu}
+            class="btn-icon"
+        >
             <i class="fa fa-bell"></i>
         </button>
     </div>
@@ -131,13 +137,14 @@
             {:else if notifications.length}
                 {#each notifications as notification}
                     <NotificationCard
-                        on:click={handleNotificationClick}
+                        onclick={(data) => handleNotificationClick(data)}
                         {notification}
                     ></NotificationCard>
                 {/each}
             {:else}
                 <div class="text-center p-8">
-                    <img class="mx-auto"
+                    <img
+                        class="mx-auto"
                         src={$theme === "light"
                             ? emptyStateNotificationLight
                             : emptyStateNotificationDark}

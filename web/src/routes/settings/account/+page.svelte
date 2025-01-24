@@ -105,16 +105,16 @@
     </div>
     <EmailModal
         email={$currentUser.email}
-        on:save={(e) => updateEmail(e.detail)}
+        onsave={updateEmail}
         bind:this={emailModal}
     ></EmailModal>
     <PasswordModal
-        on:save={(e) => updatePassword(e.detail)}
+        onsave={updatePassword}
         bind:this={passwordModal}
     ></PasswordModal>
 {/if}
 <ConfirmModal
     text={$_("account-delete-confirm")}
     bind:this={confirmModal}
-    on:confirm={deleteAccount}
+    onconfirm={deleteAccount}
 ></ConfirmModal>

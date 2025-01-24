@@ -1,14 +1,14 @@
 <script lang="ts">
     import Modal from "$lib/components/base/modal.svelte";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import Select from "../base/select.svelte";
 
     interface Props {
         title?: string;
+        onexport?: (settings: typeof exportSettings) => void;
     }
 
-    let { title = $_("export") }: Props = $props();
+    let { title = $_("export"), onexport }: Props = $props();
 
     let modal: Modal;
 
@@ -16,21 +16,23 @@
         modal.openModal();
     }
 
-    const dispatch = createEventDispatcher();
-
     const fileFormats = [
         { text: "GPX", value: "gpx" },
         { text: "GeoJSON", value: "json" },
     ];
 
-    const exportSettings = $state({
+    const exportSettings: {
+        fileFormat: "gpx" | "json";
+        photos: boolean;
+        summitLog: boolean;
+    } = $state({
         fileFormat: "gpx",
         photos: false,
         summitLog: false,
     });
 
     function exportTrail() {
-        dispatch("export", exportSettings);
+        onexport?.(exportSettings);
         modal.closeModal();
     }
 </script>

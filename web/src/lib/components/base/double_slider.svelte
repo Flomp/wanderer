@@ -1,26 +1,25 @@
 <script lang="ts">
     import * as noUiSlider from "nouislider";
     import "nouislider/dist/nouislider.css";
-    import { createEventDispatcher, onMount } from "svelte";
-
+    import { onMount } from "svelte";
 
     interface Props {
         minValue?: number;
         maxValue?: number;
         currentMin?: any;
         currentMax?: any;
+        onset?: (data: [number, number]) => void;
     }
 
     let {
         minValue = 0,
         maxValue = 100,
         currentMin = $bindable(minValue),
-        currentMax = $bindable(maxValue)
+        currentMax = $bindable(maxValue),
+        onset,
     }: Props = $props();
 
     let sliderContainer: any = $state();
-
-    const dispatch = createEventDispatcher();
 
     onMount(() => {
         const updateValues = (values: string[]) => {
@@ -40,7 +39,7 @@
         sliderContainer.noUiSlider.on("update", updateValues);
 
         sliderContainer.noUiSlider.on("set", () => {
-            dispatch("set", [currentMin, currentMax]);
+            onset?.([currentMin, currentMax]);
         });
     });
 </script>

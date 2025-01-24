@@ -1,6 +1,5 @@
 <script lang="ts">
     import Modal from "$lib/components/base/modal.svelte";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
 
     interface Props {
@@ -8,6 +7,7 @@
         text: string;
         action?: string;
         id?: string;
+        onconfirm?: () => void
     }
 
     let {
@@ -15,6 +15,7 @@
         text,
         action = "delete",
         id = "confirm-modal",
+        onconfirm
     }: Props = $props();
 
     let modal: Modal;
@@ -23,10 +24,8 @@
         modal.openModal();
     }
 
-    const dispatch = createEventDispatcher();
-
     function confirm() {
-        dispatch("confirm");
+        onconfirm?.()
         modal.closeModal!();
     }
 </script>

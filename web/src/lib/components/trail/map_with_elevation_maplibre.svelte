@@ -19,7 +19,7 @@
     import type { GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
-    import { createEventDispatcher, onDestroy, onMount, untrack } from "svelte";
+    import { onDestroy, onMount, untrack } from "svelte";
 
     interface Props {
         trails?: Trail[];
@@ -34,13 +34,24 @@
         showFullscreen?: boolean;
         showTerrain?: boolean;
         fitBounds?: "animate" | "instant" | "off";
-        onMarkerDragEnd?:
+        onmarkerdragend?:
             | ((marker: M.Marker, wpId?: string) => void)
             | undefined;
         elevationProfileContainer?: string | HTMLDivElement | undefined;
         mapOptions?: Partial<M.MapOptions> | undefined;
         activeTrail?: number | null;
         minZoom?: number;
+        onsegmentdragend?: (data: {
+            segment: number;
+            event: M.MapMouseEvent;
+        }) => void;
+        onselect?: (trail: Trail) => void;
+        onunselect?: (trail: Trail) => void;
+        onfullscreen?: () => void;
+        onmoveend?: (map: M.Map) => void;
+        onzoom?: (map: M.Map) => void;
+        onclick?: (event: M.MapMouseEvent & Object) => void;
+        oninit?: (map: M.Map) => void;
     }
 
     let {
@@ -56,11 +67,19 @@
         showFullscreen = false,
         showTerrain = false,
         fitBounds = "instant",
-        onMarkerDragEnd = undefined,
         elevationProfileContainer = undefined,
         mapOptions = undefined,
         activeTrail = $bindable(0),
         minZoom = 0,
+        onmarkerdragend,
+        onsegmentdragend,
+        onselect,
+        onunselect,
+        onfullscreen,
+        onmoveend,
+        onzoom,
+        onclick,
+        oninit,
     }: Props = $props();
 
     let mapContainer: HTMLDivElement;
@@ -89,8 +108,6 @@
     let draggingSegment: number | null = null;
 
     let hoveringTrail: boolean = false;
-
-    const dispatch = createEventDispatcher();
 
     const trailColors = [
         "#3549BB",
@@ -185,7 +202,7 @@
         trails.forEach((t) => {
             if (t.expand?.gpx_data) {
                 r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
-            } else if (t.lat && t.lon) {
+            } else if (t.lat !== null && t.lon !== null) {
                 r.push({
                     id: "",
                     type: "Feature",
@@ -342,7 +359,7 @@
 
         createEmptyLayer(id);
 
-        if (!layers[id].source) {
+        if (!layers[id].source || !map.getSource(id)) {
             try {
                 map.addSource(id, {
                     type: "geojson",
@@ -356,7 +373,7 @@
             layers[id].source.setData(geojson);
         }
 
-        if (!layers[id].layer) {
+        if (!layers[id].layer || !map.getLayer(id)) {
             map.addLayer({
                 id: id,
                 type: "line",
@@ -424,7 +441,7 @@
     function handleDragEnd(e: M.MapMouseEvent) {
         map?.off("mousemove", moveElevationMarkerToCursorPosition);
         epc?.hideCrosshair();
-        dispatch("segmentDragEnd", { segment: draggingSegment, event: e });
+        onsegmentdragend?.({ segment: draggingSegment!, event: e });
         draggingSegment = null;
     }
 
@@ -476,25 +493,29 @@
         id: string,
         showElevationMarker: boolean = false,
     ) {
-        if (!id || !map?.getLayer(id)) {
+        if (!id) {
             return;
         }
         if (showElevationMarker) {
             elevationMarker.setOpacity("1");
         }
         map?.setPaintProperty(id, "line-width", 7);
-        hoveringTrail = true;
+        if (map?.getLayer(id)) {
+            hoveringTrail = true;
+        }
         // map?.setPaintProperty(id, "line-color", "#2766e3");
     }
 
     export function unHighlightTrail(id: string | undefined) {
-        if (!id || draggingSegment !== null || map?.getLayer(id)) {
+        if (!id || draggingSegment !== null) {
             return;
         }
         elevationMarker.setOpacity("0");
         epc?.hideCrosshair();
         hoveringTrail = false;
-        map?.setPaintProperty(id, "line-width", 5);
+        if (map?.getLayer(id)) {
+            map?.setPaintProperty(id, "line-width", 5);
+        }
         // map?.setPaintProperty(id, "line-color", "#648ad5");
     }
 
@@ -518,7 +539,7 @@
             activeTrail = null;
             return;
         }
-        dispatch("select", trail);
+        onselect?.(trail);
 
         try {
             refreshElevationProfile();
@@ -535,7 +556,7 @@
 
     function unFocusTrail(trail?: Trail) {
         if (trail) {
-            dispatch("unselect", trail);
+            onunselect?.(trail);
             unHighlightTrail(trail.id!);
         }
 
@@ -654,7 +675,7 @@
             if (!markers.find((m) => m._element.id == waypoint.id)) {
                 const marker = createMarkerFromWaypoint(
                     waypoint,
-                    onMarkerDragEnd,
+                    onmarkerdragend,
                 );
                 marker.addTo(map);
                 markers.push(marker);
@@ -829,7 +850,7 @@
         if (showFullscreen) {
             map.addControl(
                 new FullscreenControl(() => {
-                    dispatch("fullscreen");
+                    onfullscreen?.();
                 }),
                 "bottom-right",
             );
@@ -874,7 +895,7 @@
         });
 
         map.on("moveend", (e) => {
-            dispatch("moveend", e.target);
+            onmoveend?.(e.target);
         });
 
         map.on("zoom", (e) => {
@@ -887,19 +908,19 @@
                 }
             });
 
-            dispatch("zoom", e.target);
+            onzoom?.(e.target);
         });
 
         map.on("click", (e) => {
             if (hoveringTrail && drawing) {
                 return;
             }
-            dispatch("click", e);
+            onclick?.(e);
         });
 
         map.on("load", () => {
             initMap(true);
-            dispatch("init", map);
+            oninit?.(map!);
         });
 
         showWaypoints();

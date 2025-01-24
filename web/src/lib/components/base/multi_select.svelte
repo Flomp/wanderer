@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import type { SelectItem } from "./select.svelte";
 
@@ -9,6 +8,7 @@
         label?: string;
         name?: string;
         placeholder?: string;
+        onchange?: (value: SelectItem[]) => void
     }
 
     let {
@@ -17,27 +17,28 @@
         label = "",
         name = "",
         placeholder = "",
+        onchange
     }: Props = $props();
 
     let showDropdown = $state(false);
     let dropdownRef = $state();
 
-    const dispatch = createEventDispatcher();
-
     function toggleItem(item: SelectItem) {
-        if (value.includes(item)) {
-            value = value.filter((i) => i !== item);
+        const itemIndex = value.findIndex((i) => i.value == item.value);
+
+        if (itemIndex >= 0) {
+            value.splice(itemIndex, 1);
         } else {
-            value = [...value, item];
+            value.push(item);
         }
 
-        dispatch("change", value);
+        onchange?.(value);
     }
 
     function removeItem(e: Event, item: SelectItem) {
         e.stopPropagation();
         value = value.filter((i) => i !== item);
-        dispatch("change", value);
+        onchange?.(value);
     }
 </script>
 
@@ -84,7 +85,7 @@
                     class="px-3 py-2 hover:bg-menu-item-background-hover cursor-pointer flex justify-between items-center w-full"
                 >
                     <span>{$_(item.text)}</span>
-                    {#if value.includes(item)}
+                    {#if value.findIndex((i) => i.value == item.value) >= 0}
                         <div class="ml-auto">
                             <i class="fa fa-check"></i>
                         </div>

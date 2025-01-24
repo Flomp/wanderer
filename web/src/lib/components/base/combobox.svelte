@@ -7,9 +7,9 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher, tick } from "svelte";
     import type { ChangeEventHandler } from "svelte/elements";
     import TextField from "./text_field.svelte";
+    import { tick } from "svelte";
 
     interface Props {
         name?: string;
@@ -20,6 +20,8 @@
         placeholder?: string;
         extraClasses?: string;
         onchange?: ChangeEventHandler<HTMLInputElement>;
+        onupdate?: (q: string) => void;
+        onclick?: (item: ComboboxItem) => void;
     }
 
     let {
@@ -31,9 +33,9 @@
         placeholder = "",
         extraClasses = "",
         onchange,
+        onupdate,
+        onclick,
     }: Props = $props();
-
-    const dispatch = createEventDispatcher();
 
     let searching: boolean = $state(false);
 
@@ -62,13 +64,13 @@
     }
 
     function update(q: string) {
-        dispatch("update", q);
+        onupdate?.(q);
     }
 
     function handleItemClick(e: Event, item: ComboboxItem) {
         e.stopPropagation();
         value = item.value;
-        dispatch("click", item);
+        onclick?.(item);
     }
 </script>
 

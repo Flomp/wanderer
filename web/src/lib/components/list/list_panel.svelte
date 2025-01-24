@@ -11,18 +11,20 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
-    import Dropdown from "../base/dropdown.svelte";
+    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import ShareInfo from "../share_info.svelte";
     import TrailListItem from "../trail/trail_list_item.svelte";
     interface Props {
         list: List;
+        onclick?: (data: { trail: Trail; index: number }) => void;
+        onmouseenter?: (data: { trail: Trail; index: number }) => void;
+        onmouseleave?: (data: { trail: Trail; index: number }) => void;
+        onchange?: (item: DropdownItem) => void;
     }
 
-    let { list }: Props = $props();
-
-    const dispatch = createEventDispatcher();
+    let { list, onclick, onmouseenter, onmouseleave, onchange }: Props =
+        $props();
 
     let cumulativeDistance = $derived(
         list.expand?.trails?.reduce((s, b) => s + b.distance!, 0),
@@ -71,15 +73,15 @@
     let fullDescription: boolean = $state(false);
 
     function handleTrailSelect(trail: Trail, index: number) {
-        dispatch("click", { trail, index });
+        onclick?.({ trail, index });
     }
 
     function handleTrailMouseEnter(trail: Trail, index: number) {
-        dispatch("mouseenter", { trail, index });
+        onmouseenter?.({ trail, index });
     }
 
     function handleTrailMouseLeave(trail: Trail, index: number) {
-        dispatch("mouseleave", { trail, index });
+        onmouseleave?.({ trail, index });
     }
 </script>
 
@@ -106,7 +108,7 @@
     {/if}
     {#if dropdownItems.length}
         <div class="absolute bottom-8 right-8">
-            <Dropdown items={dropdownItems} on:change
+            <Dropdown items={dropdownItems} {onchange}
                 >{#snippet children({ toggleMenu: openDropdown })}
                     <button
                         aria-label="Open dropdown"

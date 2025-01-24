@@ -99,8 +99,8 @@
         {#each summitLogs as log, i}
             <SummitLogTableRow
                 {log}
-                on:open={(e) => openMap(e.detail)}
-                on:text={(e) => openText(e.detail)}
+                onopen={(log) => openMap(log)}
+                ontext={(log) => openText(log)}
                 {showCategory}
                 {showTrail}
                 {showAuthor}

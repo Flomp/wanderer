@@ -232,7 +232,7 @@
 
 <TrailExportModal
     bind:this={exportModal}
-    on:export={(e) => exportTrails(e.detail)}
+    onexport={exportTrails}
 ></TrailExportModal>
 
 <style>

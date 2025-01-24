@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createEventDispatcher, type Snippet } from "svelte";
+    import { type Snippet } from "svelte";
 
     import { WaypointCreateSchema } from "$lib/models/api/waypoint_schema";
     import { convertDMSToDD } from "$lib/models/gpx/utils";
@@ -17,20 +17,20 @@
     import TextField from "../base/text_field.svelte";
     import Textarea from "../base/textarea.svelte";
     import PhotoPicker from "../trail/photo_picker.svelte";
+    import type { Waypoint } from "$lib/models/waypoint";
 
     interface Props {
         children?: Snippet<[any]>;
+        onsave?: (waypoint: Waypoint) => void
     }
 
-    let { children }: Props = $props();
+    let { children, onsave }: Props = $props();
 
     let modal: Modal;
 
     export function openModal() {
         modal.openModal();
     }
-
-    const dispatch = createEventDispatcher();
 
     const ClientWaypointCreateSchema = WaypointCreateSchema.extend({
         _photos: z.array(z.instanceof(File)).optional(),
@@ -42,7 +42,7 @@
         initialValues: $waypoint,
         extend: validator({ schema: ClientWaypointCreateSchema }),
         onSubmit: async (form) => {
-            dispatch("save", form);
+            onsave?.(form);
 
             modal.closeModal!();
         },
@@ -151,7 +151,7 @@
                 <PhotoPicker
                     id="waypoint-photo-input"
                     parent={$data}
-                    on:exif={(e) => getCoordinatesFromPhoto(e.detail)}
+                    onexif={(src) => getCoordinatesFromPhoto(src)}
                     bind:photos={$data.photos}
                     bind:photoFiles={$data._photos}
                     showThumbnailControls={false}

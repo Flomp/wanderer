@@ -1,26 +1,22 @@
 <script lang="ts">
 	import type { SummitLog } from "$lib/models/summit_log";
-	import { createEventDispatcher } from "svelte";
 	import { isSameDay, isToday } from "../../util/date_util";
 	import { _ } from "svelte-i18n";
 	interface Props {
 		logs?: SummitLog[];
 		colorMap?: Record<string, string>;
+		onforward?: (data: { start: Date; end: Date }) => void;
+		onbackward?: (data: { start: Date; end: Date }) => void;
+		onclick?: (date: Date) => void;
 	}
 
-	let { logs = [], colorMap = {} }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		forward: {
-			start: Date;
-			end: Date;
-		};
-		backward: {
-			start: Date;
-			end: Date;
-		};
-		click: Date;
-	}>();
+	let {
+		logs = [],
+		colorMap = {},
+		onforward,
+		onbackward,
+		onclick,
+	}: Props = $props();
 
 	const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 	const months = [
@@ -97,7 +93,7 @@
 		} else {
 			currentMonth++;
 		}
-		dispatch("forward", {
+		onforward?.({
 			start: new Date(currentYear, currentMonth, 1),
 			end: new Date(currentYear, currentMonth + 1, 0),
 		});
@@ -110,7 +106,7 @@
 		} else {
 			currentMonth--;
 		}
-		dispatch("backward", {
+		onbackward?.({
 			start: new Date(currentYear, currentMonth, 1),
 			end: new Date(currentYear, currentMonth + 1, 0),
 		});
@@ -127,7 +123,7 @@
 		if (!date) {
 			return;
 		}
-		dispatch("click", date);
+		onclick?.(date);
 	}
 </script>
 

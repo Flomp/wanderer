@@ -1,29 +1,35 @@
 <script lang="ts">
     import TrailList from "$lib/components/trail/trail_list.svelte";
+    import type { Trail, TrailFilter } from "$lib/models/trail.js";
     import { trails_search_filter } from "$lib/stores/trail_store";
     import { _ } from "svelte-i18n";
 
-    let { data = $bindable() } = $props();
+    let { data } = $props();
 
     let loading = $state(true);
 
-    let pagination = $derived({
+    let pagination = $state({
         page: data.trails.page,
         totalPages: data.trails.totalPages,
     });
 
+    let trails: typeof data.trails = $state(data.trails);
+
+    let filter: TrailFilter = $state(data.filter);
+
     async function handleFilterUpdate() {
         loading = true;
-        data.trails = await trails_search_filter(data.filter, pagination.page);
-        
+        trails = await trails_search_filter(filter, pagination.page);
+
         loading = false;
     }
 
     async function paginate(page: number) {
         pagination.page = page;
-        data.trails = await trails_search_filter(data.filter, page);
+        trails = await trails_search_filter(filter, page);
     }
 </script>
+
 <svelte:head>
     <title>{$_("profile")} | wanderer</title>
 </svelte:head>
@@ -31,8 +37,8 @@
     {pagination}
     {loading}
     fullWidthCards={true}
-    trails={data.trails.items}
-    filter={data.filter}
-    on:update={() => handleFilterUpdate()}
-    on:pagination={(e) => paginate(e.detail)}
+    trails={trails.items}
+    {filter}
+    onupdate={handleFilterUpdate}
+    onpagination={paginate}
 ></TrailList>

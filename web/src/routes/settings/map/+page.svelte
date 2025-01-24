@@ -124,7 +124,7 @@
             <Select
                 items={mapFocus}
                 bind:value={selectedMapFocus}
-                on:change={(e) => handleMapFocusSelection(e.detail)}
+                onchange={handleMapFocusSelection}
             ></Select>
             {#if selectedMapFocus == "location"}
                 <div class="mt-3">
@@ -133,8 +133,8 @@
                         placeholder="{$_('search-cities')}..."
                         clearAfterSelect={false}
                         bind:value={citySearchQuery}
-                        on:update={(e) => searchCities(e.detail)}
-                        on:click={(e) => handleSearchClick(e.detail)}
+                        onupdate={searchCities}
+                        onclick={handleSearchClick}
                     ></Search>
                 </div>
             {/if}

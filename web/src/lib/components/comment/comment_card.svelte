@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { Comment } from "$lib/models/comment";
     import { getFileURL } from "$lib/util/file_util";
-    import { createEventDispatcher } from "svelte";
     import TextField from "../base/text_field.svelte";
     import { fade } from "svelte/transition";
     import { formatTimeSince } from "$lib/util/format_util";
@@ -10,11 +9,11 @@
     interface Props {
         comment: Comment;
         mode?: "show" | "edit";
+        ondelete?: (comment: Comment) => void
+        onedit?: (data: {comment: Comment, text: string}) => void
     }
 
-    let { comment, mode = "show" }: Props = $props();
-
-    const dispatch = createEventDispatcher();
+    let { comment, mode = "show", ondelete, onedit }: Props = $props();
 
     let editing: boolean = $state(false);
 
@@ -33,12 +32,12 @@
     let timeSince = $derived(formatTimeSince(new Date(comment.created ?? "")));
 
     function deleteComment() {
-        dispatch("delete", comment);
+        ondelete?.(comment)
     }
 
     function toggleEdit() {
         if (editing) {
-            dispatch("edit", { comment: comment, text: editedComment });
+            onedit?.({ comment: comment, text: editedComment });
         }
         editing = !editing;
     }

@@ -6,14 +6,13 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
-
     interface Props {
         name?: string;
         items?: SelectItem[];
         value?: any;
         label?: string;
         disabled?: boolean;
+        onchange?: (value: any) => void
     }
 
     let {
@@ -21,13 +20,12 @@
         items = [],
         value = $bindable(items.at(0)?.value ?? ""),
         label = "",
-        disabled = false
+        disabled = false,
+        onchange
     }: Props = $props();
 
-    const dispatch = createEventDispatcher();
-
     function onChange(target: any) {
-        dispatch("change", target?.value);
+        onchange?.(target?.value);
     }
 </script>
 

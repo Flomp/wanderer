@@ -477,19 +477,19 @@
             bind:value={selectedPaperSize}
             items={paperSizes}
             label={$_("paper-size")}
-            on:change={updateMapSize}
+            onchange={updateMapSize}
         ></Select>
         <Select
             bind:value={selectedOrientation}
             items={orientations}
             label={$_("orientation")}
-            on:change={updateMapSize}
+            onchange={updateMapSize}
         ></Select>
         <Select
             bind:value={selectedGrid}
             items={gridOptions}
             label={$_("grid")}
-            on:change={toggleGrid}
+            onchange={toggleGrid}
         ></Select>
         <div>
             <input
@@ -526,7 +526,7 @@
                     trails={[$trail]}
                     waypoints={$trail.expand?.waypoints}
                     activeTrail={0}
-                    on:zoom={(e) => updateScale(e.detail)}
+                    onzoom={updateScale}
                     bind:map
                     {showGrid}
                     elevationProfileContainer="elevation-profile"

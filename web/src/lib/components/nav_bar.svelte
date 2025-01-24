@@ -199,7 +199,7 @@
             {/if}
             <Dropdown
                 items={dropdownItems}
-                on:change={(e) => handleDropdownClick(e.detail)}
+                onchange={(item) => handleDropdownClick(item)}
                 
             >
                 {#snippet children({ toggleMenu: openDropdown })}

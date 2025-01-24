@@ -8,13 +8,14 @@
   import { Group, Mesh } from "three";
 
   import { interactivity } from "@threlte/extras";
+    import type { Snippet } from "svelte";
   interactivity();
 
   export const ref = new Group();
   interface Props {
     rotation?: number;
-    fallback?: import('svelte').Snippet;
-    errorSlot?: import('svelte').Snippet<[any]>;
+    fallback?: Snippet;
+    errorSlot?: Snippet<[any]>;
     [key: string]: any
   }
 
@@ -229,7 +230,7 @@
       rotation={[-2.94, 0.25, Math.PI]}
       scale={1.5}
       bind:ref={dog}
-      on:click={() => bark.play()}
+      onclick={() => bark.play()}
     />
     <T.Mesh
       geometry={gltf.nodes.ground.geometry}

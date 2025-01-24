@@ -71,6 +71,7 @@
     import { scale } from "svelte/transition";
     import { z } from "zod";
     import { page } from "$app/state";
+    import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
 
     let { data = $bindable() } = $props();
 
@@ -375,12 +376,12 @@
     function handleWaypointMenuClick(
         currentWaypoint: Waypoint,
         index: number,
-        e: CustomEvent<{ text: string; value: string }>,
+        item: DropdownItem,
     ) {
-        if (e.detail.value === "edit") {
+        if (item.value === "edit") {
             waypoint.set(currentWaypoint);
             waypointModal.openModal();
-        } else if (e.detail.value === "delete") {
+        } else if (item.value === "delete") {
             currentWaypoint.marker?.remove();
             deleteWaypoint(index);
         }
@@ -441,21 +442,18 @@
         summitLogModal.openModal();
     }
 
-    function saveSummitLog(e: CustomEvent<SummitLog>) {
-        const savedSummitLog = e.detail;
-
+    function saveSummitLog(log: SummitLog) {
         let editedSummitLogIndex = $formData.expand!.summit_logs.findIndex(
-            (s) => s.id == savedSummitLog.id,
+            (s) => s.id == log.id,
         );
 
         if (editedSummitLogIndex >= 0) {
-            $formData.expand!.summit_logs[editedSummitLogIndex] =
-                savedSummitLog;
+            $formData.expand!.summit_logs[editedSummitLogIndex] = log;
         } else {
-            savedSummitLog.id = cryptoRandomString({ length: 15 });
+            log.id = cryptoRandomString({ length: 15 });
             $formData.expand!.summit_logs = [
                 ...$formData.expand!.summit_logs,
-                savedSummitLog,
+                log,
             ];
         }
     }
@@ -463,12 +461,12 @@
     function handleSummitLogMenuClick(
         currentSummitLog: SummitLog,
         index: number,
-        e: CustomEvent<{ text: string; value: string }>,
+        item: DropdownItem,
     ) {
-        if (e.detail.value === "edit") {
+        if (item.value === "edit") {
             summitLog.set(currentSummitLog);
             summitLogModal.openModal();
-        } else if (e.detail.value === "delete") {
+        } else if (item.value === "delete") {
             $formData.expand!.summit_logs.splice(index, 1);
             $formData.summit_logs.splice(index, 1);
             $formData.expand!.summit_logs = $formData.expand!.summit_logs;
@@ -819,7 +817,7 @@
         }));
     }
     let gpxData = $derived($formData.expand?.gpx_data);
-    $effect(() => {        
+    $effect(() => {
         if (gpxData) {
             untrack(() => updateTrailOnMap());
         }
@@ -841,8 +839,8 @@
         use:form
     >
         <Search
-            on:update={(e) => searchCities(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
+            onupdate={(q) => searchCities(q)}
+            onclick={(item) => handleSearchClick(item)}
             placeholder="{$_('search-cities')}..."
             items={searchDropdownItems}
         ></Search>
@@ -1011,8 +1009,8 @@
                     <WaypointCard
                         {waypoint}
                         mode="edit"
-                        on:change={(e) =>
-                            handleWaypointMenuClick(waypoint, i, e)}
+                        onchange={(item) =>
+                            handleWaypointMenuClick(waypoint, i, item)}
                     ></WaypointCard>
                 </li>
             {/each}
@@ -1040,7 +1038,8 @@
                     <SummitLogCard
                         {log}
                         mode="edit"
-                        on:change={(e) => handleSummitLogMenuClick(log, i, e)}
+                        onchange={(item) =>
+                            handleSummitLogMenuClick(log, i, item)}
                     ></SummitLogCard>
                 </li>
             {/each}
@@ -1117,23 +1116,22 @@
                 waypoints={$formData.expand?.waypoints}
                 drawing={drawingActive}
                 showTerrain={true}
-                onMarkerDragEnd={moveMarker}
+                onmarkerdragend={moveMarker}
                 activeTrail={0}
                 bind:map
-                on:click={(e) => handleMapClick(e.detail)}
-                on:segmentDragEnd={(e) => handleSegmentDragEnd(e.detail)}
+                onclick={(target) => handleMapClick(target)}
+                onsegmentdragend={(data) => handleSegmentDragEnd(data)}
             ></MapWithElevationMaplibre>
         </div>
     </div>
 </main>
-<WaypointModal bind:this={waypointModal} on:save={(e) => saveWaypoint(e.detail)}
-></WaypointModal>
-<SummitLogModal bind:this={summitLogModal} on:save={saveSummitLog}
+<WaypointModal bind:this={waypointModal} onsave={saveWaypoint}></WaypointModal>
+<SummitLogModal bind:this={summitLogModal} onsave={(log) => saveSummitLog(log)}
 ></SummitLogModal>
 <ListSelectModal
     lists={data.lists.items}
     bind:this={listSelectModal}
-    on:change={(e) => handleListSelection(e.detail)}
+    onchange={(e) => handleListSelection(e)}
 ></ListSelectModal>
 
 <style>

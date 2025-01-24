@@ -318,8 +318,8 @@
             {$_("trail", { values: { n: 2 } })}
         </h3>
         <Search
-            on:update={(e) => search(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
+            onupdate={search}
+            onclick={handleSearchClick}
             placeholder="{$_('search-trails')}..."
             items={searchDropdownItems}
         ></Search>
@@ -331,7 +331,7 @@
                     role="presentation"
                     onmouseenter={() => map?.highlightTrail(trail.id ?? "")}
                     onmouseleave={() => map?.unHighlightTrail(trail.id ?? "")}
-                    onclick={() => map?.selectTrail(trail.id ?? "")}
+                    onclick={() => (activeTrailIndex = i)}
                 >
                     <div class="shrink-0">
                         <img
@@ -440,7 +440,7 @@
     title={$_("confirm-share")}
     action="confirm"
     bind:this={shareConfirmModal}
-    on:confirm={async () => {
+    onconfirm={async () => {
         await updateTrailShares();
         await saveList();
     }}
@@ -452,7 +452,7 @@
     title={$_("confirm-publish")}
     action="confirm"
     bind:this={publishConfirmModal}
-    on:confirm={async () => {
+    onconfirm={async () => {
         await publishTrails();
         await saveList();
     }}

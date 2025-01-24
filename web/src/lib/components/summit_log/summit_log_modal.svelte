@@ -1,6 +1,5 @@
 <script lang="ts">
-    
-    import { createEventDispatcher, untrack, type Snippet } from "svelte";
+    import { type Snippet } from "svelte";
 
     import { SummitLogCreateSchema } from "$lib/models/api/summit_log_schema";
     import GPX from "$lib/models/gpx/gpx";
@@ -15,19 +14,19 @@
     import Textarea from "../base/textarea.svelte";
     import PhotoPicker from "../trail/photo_picker.svelte";
     import TrailPicker from "../trail/trail_picker.svelte";
+    import type { SummitLog } from "$lib/models/summit_log";
     interface Props {
         children?: Snippet<[any]>;
+        onsave?: (summitLog: SummitLog) => void;
     }
 
-    let { children }: Props = $props();
+    let { children, onsave }: Props = $props();
 
     let modal: Modal;
 
     export function openModal() {
         modal.openModal();
     }
-
-    const dispatch = createEventDispatcher();
 
     const ClientSummitLogCreateSchema = SummitLogCreateSchema.extend({
         _photos: z.array(z.instanceof(File)).optional(),
@@ -64,18 +63,18 @@
                 form._photos = [new File([blob], "route")];
             }
 
-            dispatch("save", form);
+            onsave?.(form);
             modal.closeModal!();
         },
     });
 
-    let trailData = $derived($data.expand?.gpx_data)
+    let trailData = $derived($data.expand?.gpx_data);
 
     $effect(() => {
         setFields(cloneDeep($summitLog));
     });
 
-    $effect(() => {        
+    $effect(() => {
         if ($summitLog._gpx) {
             $data._gpx = $summitLog._gpx;
         }
@@ -141,7 +140,7 @@
                         bind:trailFile={$data._gpx}
                         {trailData}
                         label={$_("trail", { values: { n: 1 } })}
-                        on:change={(e) => handleTrailSelection(e.detail)}
+                        onchange={(trail) => handleTrailSelection(trail)}
                     ></TrailPicker>
                 {/if}
                 <div class="basis-full">

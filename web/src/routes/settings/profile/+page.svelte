@@ -123,7 +123,7 @@
             <Select
                 items={categoryItems}
                 bind:value={selectedCategory}
-                on:change={(e) => handleCategorySelection(e.detail)}
+                onchange={handleCategorySelection}
             ></Select>
         </div>
     </div>

@@ -7,7 +7,6 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import PhotoGallery from "../photo_gallery.svelte";
 
@@ -19,6 +18,8 @@
         showAuthor?: boolean;
         showDescription?: boolean;
         showPhotos?: boolean;
+        ontext?: (summitLog: SummitLog) => void;
+        onopen?: (summitLog: SummitLog) => void;
     }
 
     let {
@@ -29,6 +30,8 @@
         showAuthor = false,
         showDescription = false,
         showPhotos = false,
+        onopen,
+        ontext
     }: Props = $props();
 
     let gallery: PhotoGallery;
@@ -45,14 +48,12 @@
         }
     });
 
-    const dispatch = createEventDispatcher();
-
     function openText() {
-        dispatch("text", log);
+        ontext?.(log);
     }
 
     function openRoute() {
-        dispatch("open", log);
+        onopen?.(log);
     }
 
     function colCount() {

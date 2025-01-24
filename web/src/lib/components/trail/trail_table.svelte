@@ -8,7 +8,6 @@
     import { _ } from "svelte-i18n";
     import type { SelectItem } from "../base/select.svelte";
     import { goto } from "$app/navigation";
-    import { createEventDispatcher } from "svelte";
     import { getFileURL } from "$lib/util/file_util";
     import ShareInfo from "../share_info.svelte";
 
@@ -16,11 +15,10 @@
         tableHeader: SelectItem[];
         trails?: Trail[] | null;
         filter?: TrailFilter | null;
+        onsort?: (value: any) => void
     }
 
-    let { tableHeader, trails = null, filter = null }: Props = $props();
-
-    let dispatch = createEventDispatcher();
+    let { tableHeader, trails = null, filter = null, onsort }: Props = $props();
 
     function getColumnWidth(columnValue: string): string {
         switch (columnValue) {
@@ -52,7 +50,7 @@
                         class="p-4 text-left text-sm font-medium {getColumnWidth(
                             column.value,
                         )}"
-                        onclick={() => dispatch("sort", column.value)}
+                        onclick={() => onsort?.(column.value)}
                     >
                         <div class="cursor-pointer">
                             {column.text}

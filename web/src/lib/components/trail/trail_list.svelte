@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { Trail, TrailFilter } from "$lib/models/trail";
-    import { createEventDispatcher, onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Pagination from "../base/pagination.svelte";
     import Select, { type SelectItem } from "../base/select.svelte";
@@ -10,6 +9,7 @@
     import TrailTable from "./trail_table.svelte";
     import SkeletonCard from "../base/skeleton_card.svelte";
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
+    import { onMount } from "svelte";
 
     interface Props {
         filter?: TrailFilter | null;
@@ -17,6 +17,8 @@
         pagination?: { page: number; totalPages: number };
         loading?: boolean;
         fullWidthCards?: boolean;
+        onupdate?: (filter: TrailFilter | null) => void;
+        onpagination?: (page: number) => void;
     }
 
     let {
@@ -28,6 +30,8 @@
         },
         loading = false,
         fullWidthCards = false,
+        onupdate,
+        onpagination,
     }: Props = $props();
 
     const displayOptions: SelectItem[] = [
@@ -37,8 +41,6 @@
     ];
 
     let selectedDisplayOption = $state(displayOptions[0].value);
-
-    let dispatch = createEventDispatcher();
 
     const sortOptions: SelectItem[] = [
         { text: $_("name"), value: "name" },
@@ -68,7 +70,7 @@
                 (storedSortOrder as typeof filter.sortOrder | null) ??
                 filter.sortOrder;
         }
-        dispatch("update", filter);
+        onupdate?.(filter);
     });
 
     function setDisplayOption() {
@@ -80,7 +82,7 @@
             return;
         }
         localStorage.setItem("sort", filter.sort);
-        dispatch("update", filter);
+        onupdate?.(filter);
     }
 
     function setSortOrder() {
@@ -93,7 +95,7 @@
             filter.sortOrder = "+";
         }
         localStorage.setItem("sort_order", filter.sortOrder);
-        dispatch("update", filter);
+        onupdate?.(filter);
     }
 
     function handleSortUpdate(sort: any) {
@@ -116,7 +118,7 @@
             <Pagination
                 page={pagination.page}
                 totalPages={pagination.totalPages}
-                on:pagination
+                {onpagination}
             ></Pagination>
         </div>
         {#if filter}
@@ -127,7 +129,7 @@
                         <Select
                             bind:value={filter.sort}
                             items={sortOptions}
-                            on:change={setSort}
+                            onchange={setSort}
                         ></Select>
                         <button
                             aria-label="Change sort order"
@@ -147,7 +149,7 @@
             <Select
                 bind:value={selectedDisplayOption}
                 items={displayOptions}
-                on:change={() => setDisplayOption()}
+                onchange={() => setDisplayOption()}
             ></Select>
         </div>
     </div>
@@ -181,7 +183,7 @@
                         (option) => option.value !== "elevation_loss",
                     )}
                     {filter}
-                    on:sort={(sort) => handleSortUpdate(sort)}
+                    onsort={handleSortUpdate}
                 ></TrailTable>
             {:else}
                 {#each trails as trail}
@@ -204,7 +206,7 @@
     <Pagination
         page={pagination.page}
         totalPages={pagination.totalPages}
-        on:pagination
+        {onpagination}
     ></Pagination>
 </div>
 

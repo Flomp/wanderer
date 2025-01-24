@@ -33,7 +33,7 @@
     let showFilter: boolean = $state(false);
     let showMap: boolean = $state(true);
 
-    const filter: TrailFilter = page.data.filter;
+    let filter: TrailFilter = $state(page.data.filter);
     const maxBoundingBox: TrailBoundingBox = page.data.boundingBox;
     const settings: Settings = page.data.settings;
 
@@ -218,8 +218,8 @@
             <div class="flex items-center gap-2 md:gap-4">
                 <Search
                     extraClasses="w-full"
-                    on:update={(e) => search(e.detail)}
-                    on:click={(e) => handleSearchClick(e.detail)}
+                    onupdate={search}
+                    onclick={handleSearchClick}
                     placeholder="{$_('search-for-trails-places')}..."
                     items={searchDropdownItems}
                 ></Search>
@@ -246,8 +246,8 @@
                         categories={$categories}
                         showTrailSearch={false}
                         showCitySearch={false}
-                        {filter}
-                        on:update={(e) => handleFilterUpdate(e.detail)}
+                        bind:filter
+                        onupdate={handleFilterUpdate}
                     ></TrailFilterPanel>
                 </div>
             {/if}
@@ -281,8 +281,8 @@
         class:hidden={!showMap && browser && window.innerWidth < 768}
     >
         <MapWithElevationMaplibre
-            on:moveend={handleMapMove}
-            on:init={handleMapInit}
+            onmoveend={handleMapMove}
+            oninit={handleMapInit}
             {trails}
             showElevation={false}
             showInfoPopup={true}

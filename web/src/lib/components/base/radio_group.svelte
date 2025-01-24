@@ -8,21 +8,19 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
-
     interface Props {
         items: RadioItem[];
         name: string;
         selected?: number;
+        onchange?: (item: RadioItem) => void
     }
 
-    let { items, name, selected = $bindable(0) }: Props = $props();
+    let { items, name, selected = $bindable(0), onchange }: Props = $props();
 
-    const dispatch = createEventDispatcher();
 
     function handleRadioChange(radioIndex: number) {
         selected = radioIndex;
-        dispatch("change", items[selected]);
+        onchange?.(items[selected]);
     }
 </script>
 

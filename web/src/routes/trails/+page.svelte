@@ -13,10 +13,10 @@
     let loading: boolean = $state(true);
 
     let filter: TrailFilter = $state(page.data.filter);
-    const pagination: { page: number; totalPages: number } = {
+    const pagination: { page: number; totalPages: number } = $state({
         page: 1,
         totalPages: 1,
-    };
+    });
     let trails: Trail[] = $state([]);
 
     onMount(() => {
@@ -54,14 +54,14 @@
         categories={page.data.categories}
         bind:filter
         {filterExpanded}
-        on:update={() => handleFilterUpdate()}
+        onupdate={handleFilterUpdate}
     ></TrailFilterPanel>
     <TrailList
         bind:filter
         {loading}
         {trails}
         {pagination}
-        on:update={() => handleFilterUpdate()}
-        on:pagination={(e) => paginate(e.detail)}
+        onupdate={handleFilterUpdate}
+        onpagination={paginate}
     ></TrailList>
 </main>

@@ -2,16 +2,16 @@
     import Modal from "$lib/components/base/modal.svelte";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import { z } from "zod";
     import TextField from "../base/text_field.svelte";
 
     interface Props {
         email?: string;
+        onsave?: (email: string) => void;
     }
 
-    let { email = "" }: Props = $props();
+    let { email = "", onsave }: Props = $props();
 
     let modal: Modal;
 
@@ -20,8 +20,6 @@
         setErrors("email", []);
         modal.openModal();
     }
-
-    const dispatch = createEventDispatcher();
 
     const { form, errors, setFields, setErrors } = createForm<{
         email: string;
@@ -36,7 +34,7 @@
             }),
         }),
         onSubmit: async (form) => {
-            dispatch("save", form.email);
+            onsave?.(form.email);
             modal.closeModal!();
         },
     });

@@ -92,8 +92,8 @@
             {$_("hero_section_0_text")}
         </h5>
         <Search
-            on:update={(e) => search(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
+            onupdate={search}
+            onclick={handleSearchClick}
             large={true}
             placeholder="{$_('search-for-trails-places')}..."
             items={searchDropdownItems}

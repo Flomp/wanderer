@@ -3,7 +3,6 @@
     import type { TrailFilter } from "$lib/models/trail";
     import { country_codes } from "$lib/util/country_code_util";
     import { formatDistance, formatElevation } from "$lib/util/format_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
     import Datepicker from "../base/datepicker.svelte";
@@ -23,6 +22,7 @@
         filter: TrailFilter;
         showTrailSearch?: boolean;
         showCitySearch?: boolean;
+        onupdate?: (filter: TrailFilter) => void;
     }
 
     let {
@@ -30,15 +30,16 @@
         filterExpanded = $bindable(true),
         filter = $bindable(),
         showTrailSearch = true,
-        showCitySearch = true
+        showCitySearch = true,
+        onupdate,
     }: Props = $props();
 
-    let categorySelectItems = $derived(categories.map((c) => ({
-        value: c.id,
-        text: c.name,
-    })));
-
-    const dispatch = createEventDispatcher();
+    let categorySelectItems = $derived(
+        categories.map((c) => ({
+            value: c.id,
+            text: c.name,
+        })),
+    );
 
     const radioGroupItems: RadioItem[] = [
         { text: $_("completed"), value: "completed" },
@@ -57,7 +58,7 @@
     let citySearchQuery: string = $state("");
 
     async function update() {
-        dispatch("update", filter);
+        onupdate?.(filter);
     }
 
     function setCategoryFilter(categories: SelectItem[]) {
@@ -144,7 +145,7 @@
             <div class="basis-full">
                 <Search
                     bind:value={filter.q}
-                    on:update={update}
+                    onupdate={update}
                     placeholder="{$_('search-trails')}..."
                 ></Search>
             </div>
@@ -163,8 +164,10 @@
                 <hr class="my-4 border-separator" />
             {/if}
             <MultiSelect
-                on:change={(e) => setCategoryFilter(e.detail)}
-                value={categorySelectItems.filter(i => filter.category.includes(i.value))}
+                onchange={(value) => setCategoryFilter(value)}
+                value={categorySelectItems.filter((i) =>
+                    filter.category.includes(i.value),
+                )}
                 label={$_("categories")}
                 items={categorySelectItems}
                 placeholder={`${$_("filter-categories")}...`}
@@ -172,8 +175,8 @@
             <hr class="my-4 border-separator" />
             {#if pb.authStore.model}
                 <UserSearch
-                    on:click={(e) => setAuthorFilter(e.detail)}
-                    on:clear={() => {
+                    onclick={(item) => setAuthorFilter(item)}
+                    onclear={() => {
                         filter.author = "";
                         update();
                     }}
@@ -207,7 +210,7 @@
                 <hr class="my-4 border-separator" />
             {/if}
             <MultiSelect
-                on:change={(e) => setDifficultyFilter(e.detail)}
+                onchange={(value) => setDifficultyFilter(value)}
                 label={$_("difficulty")}
                 items={difficultyItems}
                 placeholder={`${$_("filter-difficulty")}...`}
@@ -221,14 +224,14 @@
                         placeholder="{$_('search-cities')}..."
                         clearAfterSelect={false}
                         bind:value={citySearchQuery}
-                        on:update={(e) => searchCities(e.detail)}
-                        on:click={(e) => handleSearchClick(e.detail)}
+                        onupdate={(q) => searchCities(q)}
+                        onclick={(item) => handleSearchClick(item)}
                     ></Search>
                 </div>
                 <Slider
                     maxValue={10000}
                     bind:currentValue={filter.near.radius}
-                    on:set={() => update()}
+                    onset={() => update()}
                 ></Slider>
                 <p>
                     <span class="text-gray-500 text-sm">{$_("radius")}:</span>
@@ -242,7 +245,7 @@
                 maxValue={filter.distanceLimit}
                 bind:currentMin={filter.distanceMin}
                 bind:currentMax={filter.distanceMax}
-                on:set={() => update()}
+                onset={() => update()}
             ></DoubleSlider>
             <div class="flex justify-between">
                 <span>{formatDistance(filter.distanceMin)}</span>
@@ -260,7 +263,7 @@
                 maxValue={filter.elevationGainLimit}
                 bind:currentMin={filter.elevationGainMin}
                 bind:currentMax={filter.elevationGainMax}
-                on:set={() => update()}
+                onset={() => update()}
             ></DoubleSlider>
             <div class="flex justify-between">
                 <span>{formatElevation(filter.elevationGainMin)}</span>
@@ -279,7 +282,7 @@
                 maxValue={filter.elevationLossLimit}
                 bind:currentMin={filter.elevationLossMin}
                 bind:currentMax={filter.elevationLossMax}
-                on:set={() => update()}
+                onset={() => update()}
             ></DoubleSlider>
             <div class="flex justify-between">
                 <span>{formatElevation(filter.elevationLossMin)}</span>
@@ -314,7 +317,7 @@
                 name="completed"
                 items={radioGroupItems}
                 selected={2}
-                on:change={(e) => setCompletedFilter(e.detail)}
+                onchange={(item) => setCompletedFilter(item)}
             ></RadioGroup>
         </div>
     {/if}

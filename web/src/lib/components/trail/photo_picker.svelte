@@ -13,6 +13,7 @@
         showThumbnailControls?: boolean;
         showExifControls?: boolean;
         maxSizeBytes?: number;
+        onexif?: (src: string) => void;
     }
 
     let {
@@ -24,6 +25,7 @@
         showThumbnailControls = true,
         showExifControls = false,
         maxSizeBytes = 20971520,
+        onexif,
     }: Props = $props();
 
     let photoPreviews: string[] = $state([]);
@@ -159,10 +161,10 @@
             <div class="shrink-0 grow-0 basis-auto">
                 <PhotoCard
                     src={i >= photos.length ? photo : getFileURL(parent, photo)}
-                    on:delete={() => handlePhotoDelete(i)}
+                    ondelete={() => handlePhotoDelete(i)}
                     isThumbnail={thumbnail === i}
-                    on:thumbnail={() => makePhotoThumbnail(i)}
-                    on:exif
+                    onthumbnail={() => makePhotoThumbnail(i)}
+                    {onexif}
                     {showThumbnailControls}
                     {showExifControls}
                 ></PhotoCard>

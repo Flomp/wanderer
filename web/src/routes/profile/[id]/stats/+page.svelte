@@ -231,7 +231,7 @@
         class="flex flex-wrap lg:flex-nowrap col-start-1 lg:col-start-2 gap-x-4 justify-end"
     >
         <MultiSelect
-            on:change={(e) => updateFilterCategory(e.detail)}
+            onchange={updateFilterCategory}
             label={$_("categories")}
             items={categorySelectItems}
             placeholder={`${$_("filter-categories")}...`}
@@ -250,7 +250,7 @@
     <div class="space-y-4 grow-0 lg:mr-4">
         <div class="border border-input-border rounded-xl p-6">
             <Calendar
-                on:click={(e) => handleDateClick(e.detail)}
+                onclick={handleDateClick}
                 logs={$summitLogs}
                 colorMap={categoryColorMap}
             ></Calendar>

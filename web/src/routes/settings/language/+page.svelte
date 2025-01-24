@@ -59,12 +59,12 @@
 <Select
     items={languages}
     bind:value={selectedLanguage}
-    on:change={(e) => handleLanguageSelection(e.detail)}
+    onchange={handleLanguageSelection}
 ></Select>
 <h4 class="text-xl font-medium mt-6 mb-2">{$_("units")}</h4>
 <RadioGroup
     name="unit"
     items={units}
     selected={settings?.unit == "metric" ? 0 : 1}
-    on:change={(e) => handleUnitSelection(e.detail)}
+    onchange={handleUnitSelection}
 ></RadioGroup>

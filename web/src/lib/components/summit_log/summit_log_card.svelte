@@ -21,9 +21,10 @@
     interface Props {
         log: SummitLog;
         mode?: "show" | "edit";
+        onchange?: (item: DropdownItem) => void;
     }
 
-    let { log, mode = "show" }: Props = $props();
+    let { log, mode = "show", onchange }: Props = $props();
 
     const dropdownItems: DropdownItem[] = [
         { text: $_("edit"), value: "edit" },
@@ -76,7 +77,7 @@
                 </h5>
 
                 {#if mode == "edit"}
-                    <Dropdown items={dropdownItems} on:change></Dropdown>
+                    <Dropdown items={dropdownItems} {onchange}></Dropdown>
                 {/if}
             </div>
             {#if log.distance || log.elevation_gain || log.elevation_loss || log.duration}

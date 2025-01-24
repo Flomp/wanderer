@@ -1,11 +1,20 @@
 <script lang="ts">
     import Modal from "$lib/components/base/modal.svelte";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import TextField from "../base/text_field.svelte";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
     import { z } from "zod";
+
+    interface Props {
+        onsave?: (data: {
+            oldPassword: string;
+            password: string;
+            passwordConfirm: string;
+        }) => void;
+    }
+
+    let { onsave }: Props = $props();
 
     let modal: Modal;
     export function openModal() {
@@ -15,8 +24,6 @@
         setErrors("oldPassword", []);
         modal.openModal!();
     }
-
-    const dispatch = createEventDispatcher();
 
     const { form, errors, setFields, setErrors } = createForm<{
         oldPassword: string;
@@ -52,7 +59,7 @@
                 }),
         }),
         onSubmit: async (form) => {
-            dispatch("save", {
+            onsave?.({
                 oldPassword: form.oldPassword,
                 password: form.password,
                 passwordConfirm: form.password,
