@@ -6,7 +6,7 @@
     import "photoswipe/style.css";
     import { _ } from "svelte-i18n";
 
-    let markers: M.Marker[];
+    let markers: M.Marker[] = $state([]);
 </script>
 
 <svelte:head>

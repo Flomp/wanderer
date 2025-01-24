@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import "$lib/assets/fonts/IBMPlexSans-Regular-normal";
     import "$lib/assets/fonts/IBMPlexSans-SemiBold-bold";
     import "$lib/assets/fonts/fa-solid-900-normal";
@@ -15,8 +15,11 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { calculatePixelPerMeter, calculateScaleFactor } from "$lib/util/maplibre_util";
-   
+    import {
+        calculatePixelPerMeter,
+        calculateScaleFactor,
+    } from "$lib/util/maplibre_util";
+
     import { createRect, createText } from "$lib/util/svg_util";
     import QrCodeWithLogo from "$lib/vendor/qr-code-with-logos/index";
     import { jsPDF } from "jspdf";
@@ -24,10 +27,10 @@
     import { onMount, tick } from "svelte";
     import { _ } from "svelte-i18n";
 
-    let map: M.Map;
-    let showGrid: boolean = true;
+    let map: M.Map | undefined = $state();
+    let showGrid: boolean = $state(true);
 
-    const settings: Settings = $page.data.settings;
+    const settings: Settings = page.data.settings;
 
     const paperSizes: { text: string; value: keyof typeof paperDimensions }[] =
         [
@@ -56,29 +59,31 @@
             },
         },
     };
-    let selectedPaperSize = paperSizes[0].value;
+    let selectedPaperSize = $state(paperSizes[0].value);
 
     const orientations: { text: string; value: "portrait" | "landscape" }[] = [
         { text: "Portrait", value: "portrait" },
         { text: "Landscape", value: "landscape" },
     ];
-    let selectedOrientation: "portrait" | "landscape" = orientations[0].value;
+    let selectedOrientation: "portrait" | "landscape" = $state(
+        orientations[0].value,
+    );
 
     const gridOptions = [
         { text: $_("degrees"), value: "degree" },
         { text: $_("no-grid"), value: "off" },
     ];
-    let selectedGrid = gridOptions[0].value;
+    let selectedGrid = $state(gridOptions[0].value);
 
-    let scale: number = 1;
+    let scale: number = $state(1);
 
-    let printLoading: boolean = false;
+    let printLoading: boolean = $state(false);
 
-    let includeDescription: boolean = false;
+    let includeDescription: boolean = $state(false);
 
     onMount(() => {
         let qrcode = new QrCodeWithLogo({
-            content: $page.url.href.replace("/print", ""),
+            content: page.url.href.replace("/print", ""),
             image: document.getElementById("qrcode") as HTMLImageElement,
             logo: {
                 src: "/favicon.png",
@@ -87,6 +92,9 @@
     });
 
     async function print() {
+        if (!map) {
+            return;
+        }
         printLoading = true;
         const doc = new jsPDF(selectedOrientation, "mm", [
             paperDimensions[selectedPaperSize].pdf[
@@ -110,7 +118,7 @@
 
         try {
             var img = document.createElement("img");
-            var dimensions = map.getCanvas().getBoundingClientRect();
+            let dimensions = map.getCanvas().getBoundingClientRect();
             img.width = dimensions.width;
             img.height = dimensions.height;
             let ratio = img.height / img.width;
@@ -289,7 +297,7 @@
             const elevationChartCanvas = document.getElementById(
                 "elevation-profile-chart",
             ) as HTMLCanvasElement;
-            var dimensions = elevationChartCanvas.getBoundingClientRect();
+            dimensions = elevationChartCanvas.getBoundingClientRect();
             img.width = dimensions.width;
             img.height = dimensions.height;
             ratio = img.height / img.width;
@@ -469,25 +477,25 @@
             bind:value={selectedPaperSize}
             items={paperSizes}
             label={$_("paper-size")}
-            on:change={updateMapSize}
+            onchange={updateMapSize}
         ></Select>
         <Select
             bind:value={selectedOrientation}
             items={orientations}
             label={$_("orientation")}
-            on:change={updateMapSize}
+            onchange={updateMapSize}
         ></Select>
         <Select
             bind:value={selectedGrid}
             items={gridOptions}
             label={$_("grid")}
-            on:change={toggleGrid}
+            onchange={toggleGrid}
         ></Select>
         <div>
             <input
                 id="description-checkbox"
                 type="checkbox"
-                bind:value={includeDescription}
+                bind:checked={includeDescription}
                 class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
             />
             <label for="description-checkbox" class="ms-2 text-sm"
@@ -499,7 +507,7 @@
             loading={printLoading}
             extraClasses="mt-2"
             primary={true}
-            on:click={print}>{$_("print")}!</Button
+            onclick={print}>{$_("print")}!</Button
         >
     </div>
 
@@ -518,7 +526,7 @@
                     trails={[$trail]}
                     waypoints={$trail.expand?.waypoints}
                     activeTrail={0}
-                    on:zoom={(e) => updateScale(e.detail)}
+                    onzoom={updateScale}
                     bind:map
                     {showGrid}
                     elevationProfileContainer="elevation-profile"

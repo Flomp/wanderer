@@ -1,4 +1,5 @@
-<script context="module" lang="ts">
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot making the component unusable -->
+<script module lang="ts">
     export type SearchItem = {
         text: string;
         description?: string;
@@ -8,26 +9,43 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import { fade } from "svelte/transition";
     import TextField from "./text_field.svelte";
+    import type { Snippet } from "svelte";
 
-    export let maxSearchLength: number = 5;
-    export let value: string = "";
-    export let items: SearchItem[] = [];
-    export let placeholder: string = "Search...";
-    export let large: boolean = false;
-    export let extraClasses: string = "";
-    export let label: string = "";
-    export let clearAfterSelect: boolean = true;
+    interface Props {
+        maxSearchLength?: number;
+        value?: string;
+        items?: SearchItem[];
+        placeholder?: string;
+        large?: boolean;
+        extraClasses?: string;
+        label?: string;
+        clearAfterSelect?: boolean;
+        prepend?: Snippet<[any]>;
+        onupdate?: (q: string) => void;
+        onclick?: (item: SearchItem) => void;
+    }
 
-    const dispatch = createEventDispatcher();
+    let {
+        maxSearchLength = 5,
+        value = $bindable(""),
+        items = $bindable([]),
+        placeholder = "Search...",
+        large = false,
+        extraClasses = "",
+        label = "",
+        clearAfterSelect = true,
+        prepend,
+        onupdate,
+        onclick
+    }: Props = $props();
 
     let lastSearch: string = "";
-    let searching: boolean = false;
+    let searching: boolean = $state(false);
     let typingTimer!: any;
 
-    $: dropDownOpen = value.length > 0 && items.length > 0 && searching;
+    let dropDownOpen = $derived(value.length > 0 && items.length > 0 && searching);
 
     function onSearchType() {
         clearTimeout(typingTimer);
@@ -42,12 +60,13 @@
 
     function update(q: string) {
         lastSearch = q;
-        dispatch("update", q);
+        onupdate?.(q);
     }
 
-    function handleItemClick(item: SearchItem) {
+    function handleItemClick(e: Event, item: SearchItem) {
+        e.stopPropagation();
         searching = false;
-        dispatch("click", item);
+        onclick?.(item);
         if (clearAfterSelect) {
             clear();
         }
@@ -70,11 +89,12 @@
     </span>
     {#if value.length > 0}
         <button
+            aria-label="Clear"
             type="button"
             class="btn-icon absolute {large
                 ? 'bottom-[31px]'
                 : 'bottom-[25px]'} translate-y-1/2 right-0 mr-2"
-            on:click={clear}
+            onclick={clear}
             in:fade={{ duration: 150 }}
             out:fade={{ duration: 150 }}
         >
@@ -91,9 +111,9 @@
             : "px-10"}
         {placeholder}
         bind:value
-        on:input={onSearchType}
-        on:focusin={() => (searching = true)}
-        on:focusout={() => (searching = false)}
+        oninput={onSearchType}
+        onfocusin={() => (searching = true)}
+        onfocusout={() => (searching = false)}
     ></TextField>
 
     {#if dropDownOpen}
@@ -103,17 +123,17 @@
             style="z-index: 1001"
         >
             {#each items as item}
-                <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     tabindex="0"
-                    on:mousedown|stopPropagation={() => handleItemClick(item)}
-                    on:keydown|stopPropagation={() => handleItemClick(item)}
+                    onmousedown={(e) => handleItemClick(e, item)}
+                    onkeydown={(e) => handleItemClick(e, item)}
                 >
-                    <slot name="item-header" {item}>
+                    {#if prepend}{@render prepend({ item, })}{:else}
                         <i class="fa fa-{item.icon} mr-6"></i>
-                    </slot>
+                    {/if}
 
                     <div>
                         <p>{item.text}</p>

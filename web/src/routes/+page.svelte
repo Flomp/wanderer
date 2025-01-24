@@ -15,9 +15,9 @@
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import { theme } from "$lib/stores/theme_store";
 
-    export let data;
+    let { data } = $props();
 
-    let searchDropdownItems: SearchItem[] = [];
+    let searchDropdownItems: SearchItem[] = $state([]);
 
     async function search(q: string) {
         const r = await fetch("/api/v1/search/multi", {
@@ -92,15 +92,15 @@
             {$_("hero_section_0_text")}
         </h5>
         <Search
-            on:update={(e) => search(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
+            onupdate={search}
+            onclick={handleSearchClick}
             large={true}
             placeholder="{$_('search-for-trails-places')}..."
             items={searchDropdownItems}
         ></Search>
     </div>
     <div class="hidden md:block">
-        <Canvas>
+        <Canvas toneMapping={0}>
             <Scene></Scene>
         </Canvas>
     </div>

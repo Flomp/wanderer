@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
     export type ComboboxItem = {
         text: string;
         value: any;
@@ -7,22 +7,41 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher, tick } from "svelte";
+    import type { ChangeEventHandler } from "svelte/elements";
     import TextField from "./text_field.svelte";
+    import { tick } from "svelte";
 
-    export let name: string = "";
-    export let icon: string = "";
-    export let label: string = "";
-    export let value: string = "";
-    export let items: ComboboxItem[] = [];
-    export let placeholder: string = "";
-    export let extraClasses: string = "";
+    interface Props {
+        name?: string;
+        icon?: string;
+        label?: string;
+        value?: string;
+        items?: ComboboxItem[];
+        placeholder?: string;
+        extraClasses?: string;
+        onchange?: ChangeEventHandler<HTMLInputElement>;
+        onupdate?: (q: string) => void;
+        onclick?: (item: ComboboxItem) => void;
+    }
 
-    const dispatch = createEventDispatcher();
+    let {
+        name = "",
+        icon = "",
+        label = "",
+        value = $bindable(""),
+        items = [],
+        placeholder = "",
+        extraClasses = "",
+        onchange,
+        onupdate,
+        onclick,
+    }: Props = $props();
 
-    let searching: boolean = false;
+    let searching: boolean = $state(false);
 
-    $: dropDownOpen = value.length > 0 && items.length > 0 && searching;
+    let dropDownOpen = $derived(
+        value.length > 0 && items.length > 0 && searching,
+    );
 
     async function onSearchType() {
         await tick();
@@ -45,12 +64,13 @@
     }
 
     function update(q: string) {
-        dispatch("update", q);
+        onupdate?.(q);
     }
 
-    function handleItemClick(item: ComboboxItem) {        
+    function handleItemClick(e: Event, item: ComboboxItem) {
+        e.stopPropagation();
         value = item.value;
-        dispatch("click", item);
+        onclick?.(item);
     }
 </script>
 
@@ -63,10 +83,10 @@
         {label}
         {placeholder}
         bind:value
-        on:change
-        on:input={onSearchType}
-        on:focusin={() => (searching = true)}
-        on:focusout={() => (searching = false)}
+        {onchange}
+        oninput={onSearchType}
+        onfocusin={() => (searching = true)}
+        onfocusout={() => (searching = false)}
     ></TextField>
 
     {#if dropDownOpen}
@@ -76,13 +96,13 @@
             style="z-index: 1001"
         >
             {#each items as item}
-                <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     tabindex="0"
-                    on:mousedown|stopPropagation={() => handleItemClick(item)}
-                    on:keydown|stopPropagation={() => handleItemClick(item)}
+                    onmousedown={(e) => handleItemClick(e, item)}
+                    onkeydown={(e) => handleItemClick(e, item)}
                 >
                     <i class="fa fa-{item.icon} mr-6"></i>
 

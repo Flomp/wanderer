@@ -1,45 +1,58 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import type { SelectItem } from "./select.svelte";
 
-    export let items: SelectItem[] = [];
-    export let value: SelectItem[] = [];
-    export let label: string = "";
-    export let name: string = "";
-    export let placeholder: string = "";
-
-    let showDropdown = false;
-    let dropdownRef;
-
-    const dispatch = createEventDispatcher();
-
-    function toggleItem(item: SelectItem) {
-        if (value.includes(item)) {
-            value = value.filter((i) => i !== item);
-        } else {
-            value = [...value, item];
-        }
-
-        dispatch("change", value);
+    interface Props {
+        items?: SelectItem[];
+        value?: SelectItem[];
+        label?: string;
+        name?: string;
+        placeholder?: string;
+        onchange?: (value: SelectItem[]) => void
     }
 
-    function removeItem(item: SelectItem) {
+    let {
+        items = [],
+        value = $bindable([]),
+        label = "",
+        name = "",
+        placeholder = "",
+        onchange
+    }: Props = $props();
+
+    let showDropdown = $state(false);
+    let dropdownRef = $state();
+
+    function toggleItem(item: SelectItem) {
+        const itemIndex = value.findIndex((i) => i.value == item.value);
+
+        if (itemIndex >= 0) {
+            value.splice(itemIndex, 1);
+        } else {
+            value.push(item);
+        }
+
+        onchange?.(value);
+    }
+
+    function removeItem(e: Event, item: SelectItem) {
+        e.stopPropagation();
         value = value.filter((i) => i !== item);
-        dispatch("change", value);
+        onchange?.(value);
     }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="relative max-w-full">
     {#if label.length}
         <label for={name} class="text-sm font-medium pb-1 block">
             {label}
         </label>
     {/if}
-    <button
+    <div
+        role="presentation"
         class="min-w-44 w-full flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
-        on:click={() => (showDropdown = !showDropdown)}
+        onclick={() => (showDropdown = !showDropdown)}
     >
         {#if value.length === 0}
             <span class="text-gray-400">{placeholder}</span>
@@ -50,14 +63,15 @@
             >
                 <span class="text-sm">{$_(item.text)}</span>
                 <button
-                    on:click|stopPropagation={() => removeItem(item)}
+                    aria-label="Close"
+                    onclick={(e) => removeItem(e, item)}
                     class="text-white hover:bg-primary-hover rounded-full w-4 h-4 flex items-center justify-center"
                 >
                     <i class="fa fa-close"></i>
                 </button>
             </div>
         {/each}
-    </button>
+    </div>
 
     <!-- Dropdown menu -->
     {#if showDropdown}
@@ -67,11 +81,11 @@
         >
             {#each items as item}
                 <button
-                    on:click={() => toggleItem(item)}
+                    onclick={() => toggleItem(item)}
                     class="px-3 py-2 hover:bg-menu-item-background-hover cursor-pointer flex justify-between items-center w-full"
                 >
                     <span>{$_(item.text)}</span>
-                    {#if value.includes(item)}
+                    {#if value.findIndex((i) => i.value == item.value) >= 0}
                         <div class="ml-auto">
                             <i class="fa fa-check"></i>
                         </div>

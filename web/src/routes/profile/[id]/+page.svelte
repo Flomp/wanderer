@@ -1,20 +1,23 @@
 <script lang="ts">
-    import ActivityCard from "$lib/components/profile/activity_card.svelte";
-    import { activities_index } from "$lib/stores/activity_store.js";
-    import { getFileURL } from "$lib/util/file_util.js";
-    import { _ } from "svelte-i18n";
+    import { goto } from "$app/navigation";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import ActivityCard from "$lib/components/profile/activity_card.svelte";
+    import { activities_index } from "$lib/stores/activity_store.js";
     import { theme } from "$lib/stores/theme_store.js";
+    import { getFileURL } from "$lib/util/file_util.js";
+    import { _ } from "svelte-i18n";
 
-    export let data;
+    let { data } = $props();
+
+    let activities = $state(data.activities);
 
     let loading: boolean = false;
 
-    $: pagination = {
+    let pagination = $derived({
         page: data.activities.page,
         totalPages: data.activities.totalPages,
-    };
+    });
 
     async function onListScroll(e: Event) {
         if (
@@ -31,11 +34,11 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.activities = await activities_index(data.user.id, pagination.page);
+        activities = await activities_index(data.user.id, pagination.page);
     }
 </script>
 
-<svelte:window on:scroll={onListScroll} />
+<svelte:window onscroll={onListScroll} />
 
 <svelte:head>
     <title>{$_("profile")} | wanderer</title>
@@ -47,7 +50,7 @@
             {$_("about")}
             {data.user.username}
             {#if data.isOwnProfile && data.settings.bio?.length}
-                <a class="ml-4" href="/settings/profile"
+                <a aria-label="Edit bio" class="ml-4" href="/settings/profile"
                     ><i class="fa fa-pen text-base"></i></a
                 >
             {/if}
@@ -109,26 +112,31 @@
     </div>
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">Timeline</h4>
-        {#if !data.activities.items.length && data.isOwnProfile}
+        {#if !activities.items.length && data.isOwnProfile}
             <a class="btn-primary inline-block" href="/trails/edit/new"
                 >+ {$_("new-trail")}</a
             >
-        {:else if !data.activities.items.length}
+        {:else if !activities.items.length}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-activities", {
                     values: { username: data.user.username },
                 })}
             </p>
         {/if}
-        {#each data.activities.items as activity}
-            <a
-                class="block"
-                href={activity.type == "trail"
-                    ? `/trail/view/${activity.id}`
-                    : `/trail/view/${activity.trail_id}?t=3`}
+        {#each activities.items as activity}
+            <div
+                role="presentation"
+                class="cursor-pointer"
+                onclick={() => {
+                    goto(
+                        activity.type == "trail"
+                            ? `/trail/view/${activity.id}`
+                            : `/trail/view/${activity.trail_id}?t=3`,
+                    );
+                }}
             >
                 <ActivityCard {activity} user={data.user}></ActivityCard>
-            </a>
+            </div>
         {/each}
     </div>
 </div>

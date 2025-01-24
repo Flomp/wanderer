@@ -1,8 +1,14 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import type { SelectItem } from "$lib/components/base/select.svelte";
     import { _ } from "svelte-i18n";
+    import type { Snippet } from "svelte";
+    interface Props {
+        children?: Snippet;
+    }
+
+    let { children }: Props = $props();
 
     const settingsLinks: SelectItem[] = [
         { text: $_("profile"), value: "/settings/profile" },
@@ -22,11 +28,12 @@
         },
     ];
 
-    $: activeIndex = settingsLinks.findIndex(
-        (l) => l.value === $page.url.pathname,
+    let activeIndex = $derived(
+        settingsLinks.findIndex((l) => l.value === page.url.pathname),
     );
 
-    function handleItemClick(item: SelectItem) {
+    function handleItemClick(e: Event, item: SelectItem) {
+        e.stopPropagation();
         if (item.value != settingsLinks.at(-1)?.value) {
             goto(item.value);
         } else {
@@ -44,13 +51,13 @@
                 class="menu-item flex items-center px-4 py-3 my-1 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors rounded-md"
                 class:bg-menu-item-background-hover={i == activeIndex}
                 role="presentation"
-                on:mousedown|stopPropagation={() => handleItemClick(item)}
+                onmousedown={(e) => handleItemClick(e, item)}
             >
                 {item.text}
             </li>
         {/each}
     </menu>
     <div class="settings-content">
-        <slot></slot>
+        {@render children?.()}
     </div>
 </div>

@@ -1,9 +1,21 @@
 <script lang="ts">
-    export let label: string = "";
-    export let name: string = "";
-    export let accept: string = "*";
+    import { createBubbler } from 'svelte/legacy';
 
-    export let files: FileList | null = null;
+    const bubble = createBubbler();
+
+    interface Props {
+        label?: string;
+        name?: string;
+        accept?: string;
+        files?: FileList | null;
+    }
+
+    let {
+        label = "",
+        name = "",
+        accept = "*",
+        files = $bindable(null)
+    }: Props = $props();
 </script>
 
 <div>
@@ -18,6 +30,6 @@
         bind:files
         class="cursor-pointer bg-input-background border border-input-border rounded-md p-3 transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0 w-full file:rounded-lg file:px-4 file:py-2 file:border file:border-input-border-focus file:font-medium file:mr-4"
         type="file"
-        on:change
+        onchange={bubble('change')}
     />
 </div>

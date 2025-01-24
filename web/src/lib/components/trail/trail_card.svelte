@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { createBubbler } from "svelte/legacy";
+
+    const bubble = createBubbler();
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
@@ -12,25 +15,41 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
+    import type { MouseEventHandler } from "svelte/elements";
 
-    export let trail: Trail;
-    export let fullWidth: boolean = false;
+    interface Props {
+        trail: Trail;
+        fullWidth?: boolean;
+        onmouseenter?: MouseEventHandler<HTMLDivElement>;
+        onmouseleave?: MouseEventHandler<HTMLDivElement>;
+    }
 
-    $: thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
-        : $theme === "light"
-          ? emptyStateTrailLight
-          : emptyStateTrailDark;
+    let {
+        trail,
+        fullWidth = false,
+        onmouseenter,
+        onmouseleave,
+    }: Props = $props();
 
-    $: trailIsShared = (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
+    let thumbnail = $derived(
+        trail.photos.length
+            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark,
+    );
+
+    let trailIsShared = $derived(
+        (trail.expand?.trail_share_via_trail?.length ?? 0) > 0,
+    );
 </script>
 
 <div
     class="trail-card relative rounded-2xl border border-input-border min-w-72 {fullWidth
         ? ''
         : 'lg:w-72'} cursor-pointer"
-    on:mouseenter
-    on:mouseleave
+    {onmouseenter}
+    {onmouseleave}
     role="listitem"
 >
     <div

@@ -8,17 +8,21 @@
     import { _ } from "svelte-i18n";
     import { fly, slide } from "svelte/transition";
 
-    export let subject: Trail | List;
-    export let large: boolean = false;
-    export let type: "trail" | "list"
+    interface Props {
+        subject: Trail | List;
+        large?: boolean;
+        type: "trail" | "list";
+    }
+
+    let { subject, large = false, type }: Props = $props();
 
     const shareData = type == "trail" ? (subject as Trail).expand?.trail_share_via_trail : (subject as List).expand?.list_share_via_list
 
-    let showInfo: boolean = false;
-    let loading: boolean = false;
-    let infoLoaded: boolean = false;
+    let showInfo: boolean = $state(false);
+    let loading: boolean = $state(false);
+    let infoLoaded: boolean = $state(false);
     let subjectIsOwned: boolean = subject.author == pb.authStore.model?.id;
-    let author: UserAnonymous;
+    let author: UserAnonymous | undefined = $state();
 
     async function fetchInfo() {
         if (!infoLoaded) {
@@ -47,8 +51,8 @@
         class:text-xl={large}
         role="button"
         tabindex="0"
-        on:mouseenter={fetchInfo}
-        on:mouseleave={() => (showInfo = false)}
+        onmouseenter={fetchInfo}
+        onmouseleave={() => (showInfo = false)}
     ></i>
     {#if showInfo}
         <ul

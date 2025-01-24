@@ -1,18 +1,18 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import { oauth_login } from "$lib/stores/user_store";
     import type { AuthProviderInfo } from "pocketbase";
     import { onMount } from "svelte";
 
-    let error = $page.url.searchParams.get("error");
-    let errorDescription = $page.url.searchParams.get("error_description");
-    const errorURI = $page.url.searchParams.get("error_uri");
+    let error = $state(page.url.searchParams.get("error"));
+    let errorDescription = $state(page.url.searchParams.get("error_description"));
+    const errorURI = page.url.searchParams.get("error_uri");
 
-    const state = $page.url.searchParams.get("state");
-    const code = $page.url.searchParams.get("code");
+    const oauthState = page.url.searchParams.get("state");
+    const code = page.url.searchParams.get("code");
     onMount(async () => {
-        if (error || !state || !code) {
+        if (error || !oauthState || !code) {
             return;
         }
 
@@ -27,7 +27,7 @@
 
         const provider: AuthProviderInfo = JSON.parse(providerData);
 
-        if (provider.state !== state) {
+        if (provider.state !== oauthState) {
             error = "mismacthed_provider";
             errorDescription =
                 "OAuth provider does not match the one defined in local storage.";

@@ -29,6 +29,7 @@ export class FontawesomeMarker extends M.Marker {
 
 export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker: M.Marker, wpId?: string) => void): FontawesomeMarker {
     const marker = new FontawesomeMarker({
+        id: waypoint.id,
         icon: `fa fa-${waypoint.icon}`,
     }, {
         draggable: onDragEnd !== undefined,

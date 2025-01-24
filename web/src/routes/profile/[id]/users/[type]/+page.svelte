@@ -1,18 +1,24 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import { follows_index } from "$lib/stores/follow_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
-    export let data;
+    let { data } = $props();
+
+    let follows = $state(data.follows);
 
     let loading: boolean = false;
 
-    $: key = ($page.params.type == "following" ? "followee" : "follower") as "follower" | "followee";
+    let key = $derived(
+        (page.params.type == "following" ? "followee" : "follower") as
+            | "follower"
+            | "followee",
+    );
 
-    $: pagination = {
+    let pagination = $derived({
         page: data.follows.page,
         totalPages: data.follows.totalPages,
-    };
+    });
 
     async function onListScroll(e: Event) {
         if (
@@ -29,18 +35,18 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.follows = await follows_index(
-            { followee: $page.params.id },
+        follows = await follows_index(
+            { followee: page.params.id },
             pagination.page,
         );
     }
 </script>
 
-<svelte:window on:scroll={onListScroll} />
+<svelte:window onscroll={onListScroll} />
 <div>
-    <h1 class="text-3xl font-semibold mb-4">{$_($page.params.type)}</h1>
+    <h1 class="text-3xl font-semibold mb-4">{$_(page.params.type)}</h1>
     <ul class="space-y-4">
-        {#each data.follows.items as follow}
+        {#each follows.items as follow}
             {#if !follow.expand?.[key].private}
                 <a href="/profile/{follow.expand?.[key].id}">
                     <li

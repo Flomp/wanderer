@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import directionCaret from "$lib/assets/svgs/caret-right-solid.svg";
     import type { Settings } from "$lib/models/settings";
     import type { Trail } from "$lib/models/trail";
@@ -19,34 +19,72 @@
     import type { GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
-    import { createEventDispatcher, onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, untrack } from "svelte";
 
-    export let trails: Trail[] = [];
-    export let waypoints: Waypoint[] = [];
-    export let markers: M.Marker[] = [];
-    export let map: M.Map | null = null;
-    export let drawing: boolean = false;
-    export let showElevation: boolean = true;
-    export let showInfoPopup: boolean = false;
-    export let showGrid: boolean = false;
-    export let showStyleSwitcher: boolean = true;
-    export let showFullscreen: boolean = false;
-    export let showTerrain: boolean = false;
-    export let fitBounds: "animate" | "instant" | "off" = "instant";
-    export let onMarkerDragEnd:
-        | ((marker: M.Marker, wpId?: string) => void)
-        | undefined = undefined;
+    interface Props {
+        trails?: Trail[];
+        waypoints?: Waypoint[];
+        markers?: M.Marker[];
+        map?: M.Map | null;
+        drawing?: boolean;
+        showElevation?: boolean;
+        showInfoPopup?: boolean;
+        showGrid?: boolean;
+        showStyleSwitcher?: boolean;
+        showFullscreen?: boolean;
+        showTerrain?: boolean;
+        fitBounds?: "animate" | "instant" | "off";
+        onmarkerdragend?:
+            | ((marker: M.Marker, wpId?: string) => void)
+            | undefined;
+        elevationProfileContainer?: string | HTMLDivElement | undefined;
+        mapOptions?: Partial<M.MapOptions> | undefined;
+        activeTrail?: number | null;
+        minZoom?: number;
+        onsegmentdragend?: (data: {
+            segment: number;
+            event: M.MapMouseEvent;
+        }) => void;
+        onselect?: (trail: Trail) => void;
+        onunselect?: (trail: Trail) => void;
+        onfullscreen?: () => void;
+        onmoveend?: (map: M.Map) => void;
+        onzoom?: (map: M.Map) => void;
+        onclick?: (event: M.MapMouseEvent & Object) => void;
+        oninit?: (map: M.Map) => void;
+    }
 
-    export let elevationProfileContainer: string | HTMLDivElement | undefined =
-        undefined;
-    export let mapOptions: Partial<M.MapOptions> | undefined = undefined;
-
-    export let activeTrail: number | null = null;
-    export let minZoom: number = 0;
+    let {
+        trails = [],
+        waypoints = [],
+        markers = $bindable([]),
+        map = $bindable(),
+        drawing = false,
+        showElevation = true,
+        showInfoPopup = false,
+        showGrid = false,
+        showStyleSwitcher = true,
+        showFullscreen = false,
+        showTerrain = false,
+        fitBounds = "instant",
+        elevationProfileContainer = undefined,
+        mapOptions = undefined,
+        activeTrail = $bindable(0),
+        minZoom = 0,
+        onmarkerdragend,
+        onsegmentdragend,
+        onselect,
+        onunselect,
+        onfullscreen,
+        onmoveend,
+        onzoom,
+        onclick,
+        oninit,
+    }: Props = $props();
 
     let mapContainer: HTMLDivElement;
-    let epc: ElevationProfileControl | null = null;
-    let graticule: MaplibreGraticule | null = null;
+    let epc: ElevationProfileControl;
+    let graticule: MaplibreGraticule;
 
     let layers: Record<
         string,
@@ -71,8 +109,6 @@
 
     let hoveringTrail: boolean = false;
 
-    const dispatch = createEventDispatcher();
-
     const trailColors = [
         "#3549BB",
         "#592E9E",
@@ -86,78 +122,76 @@
         "#DE7DC5",
     ];
 
-    $: data = getData(trails);
-
-    $: if (data && map) {
-        initMap(map.loaded());
-    }
-
-    $: if (activeTrail !== null && trails[activeTrail] !== undefined) {
-        if (
-            !drawing &&
-            fitBounds !== "off" &&
-            data.some((d) => d.bbox !== undefined)
-        ) {
-            focusTrail(trails[activeTrail]);
+    let data = $derived(getData(trails));
+    $effect(() => {
+        if (data && map) {
+            untrack(() => initMap(map?.loaded() ?? false));
         }
-    } else if (activeTrail === null && trails.length) {
-        unFocusTrail();
-    }
-
-    $: if ($theme == "dark") {
-        epc?.toggleTheme({
-            profileBackgroundColor: "#191b24",
-            elevationGridColor: "#ddd2",
-            labelColor: "#ddd8",
-            crosshairColor: "#fff5",
-            tooltipBackgroundColor: "#242734",
-            tooltipTextColor: "#fff",
-        });
-    } else {
-        epc?.toggleTheme({
-            profileBackgroundColor: "#242734",
-            elevationGridColor: "#0002",
-            labelColor: "#0009",
-            crosshairColor: "#0005",
-            tooltipBackgroundColor: "#fff",
-            tooltipTextColor: "#000",
-        });
-    }
-
-    $: if (drawing && map) {
-        startDrawing();
-    } else if (!drawing && map) {
-        stopDrawing();
-    }
-
-    $: if (showGrid) {
-        if (!graticule) {
-            graticule = new MaplibreGraticule({
-                minZoom: 0,
-                maxZoom: 20,
-                showLabels: true,
-                labelType: "hdms",
-                labelSize: 10,
-                labelColor: "#858585",
-                longitudePosition: "top",
-                latitudePosition: "right",
-                paint: {
-                    "line-opacity": 0.8,
-                    "line-color": "rgba(0,0,0,0.2)",
-                },
+    });
+    $effect(() => {
+        adjustTrailFocus(activeTrail);
+    });
+    $effect(() => {
+        if ($theme == "dark") {
+            epc?.toggleTheme({
+                profileBackgroundColor: "#191b24",
+                elevationGridColor: "#ddd2",
+                labelColor: "#ddd8",
+                crosshairColor: "#fff5",
+                tooltipBackgroundColor: "#242734",
+                tooltipTextColor: "#fff",
+            });
+        } else {
+            epc?.toggleTheme({
+                profileBackgroundColor: "#242734",
+                elevationGridColor: "#0002",
+                labelColor: "#0009",
+                crosshairColor: "#0005",
+                tooltipBackgroundColor: "#fff",
+                tooltipTextColor: "#000",
             });
         }
-        map?.addControl(graticule);
-    } else {
-        if (graticule) {
-            map?.removeControl(graticule);
+    });
+    $effect(() => {
+        if (drawing && map) {
+            startDrawing();
+        } else if (!drawing && map) {
+            stopDrawing();
         }
-    }
-
-    $: if (waypoints) {
-        showWaypoints();
-        refreshElevationProfile();
-    }
+    });
+    $effect(() => {
+        if (showGrid) {
+            if (!graticule) {
+                graticule = new MaplibreGraticule({
+                    minZoom: 0,
+                    maxZoom: 20,
+                    showLabels: true,
+                    labelType: "hdms",
+                    labelSize: 10,
+                    labelColor: "#858585",
+                    longitudePosition: "top",
+                    latitudePosition: "right",
+                    paint: {
+                        "line-opacity": 0.8,
+                        "line-color": "rgba(0,0,0,0.2)",
+                    },
+                });
+            }
+            map?.addControl(graticule);
+        } else {
+            if (graticule) {
+                map?.removeControl(graticule);
+            }
+        }
+    });
+    $effect(() => {
+        if (waypoints) {
+            untrack(() => {
+                showWaypoints();
+                refreshElevationProfile();
+            });
+        }
+    });
 
     function getData(trails: Trail[]) {
         if (!trails.length) {
@@ -168,7 +202,7 @@
         trails.forEach((t) => {
             if (t.expand?.gpx_data) {
                 r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
-            } else if (t.lat && t.lon) {
+            } else if (t.lat !== null && t.lon !== null) {
                 r.push({
                     id: "",
                     type: "Feature",
@@ -212,7 +246,7 @@
             fitBounds !== "off" &&
             data.some((d) => d.bbox !== undefined)
         ) {
-            if (activeTrail !== null && mapLoaded) {
+            if (activeTrail !== null && trails[activeTrail] && mapLoaded) {
                 focusTrail(trails[activeTrail]);
             } else {
                 flyToBounds();
@@ -246,7 +280,7 @@
         return new M.LngLatBounds([minX, minY, maxX, maxY]);
     }
 
-    function flyToBounds() {
+    function flyToBounds() {        
         const bounds =
             activeTrail !== null && data[activeTrail]
                 ? (data[activeTrail].bbox as M.LngLatBoundsLike)
@@ -325,7 +359,7 @@
 
         createEmptyLayer(id);
 
-        if (!layers[id].source) {
+        if (!layers[id].source || !map.getSource(id)) {
             try {
                 map.addSource(id, {
                     type: "geojson",
@@ -339,7 +373,7 @@
             layers[id].source.setData(geojson);
         }
 
-        if (!layers[id].layer) {
+        if (!layers[id].layer || !map.getLayer(id)) {
             map.addLayer({
                 id: id,
                 type: "line",
@@ -407,12 +441,12 @@
     function handleDragEnd(e: M.MapMouseEvent) {
         map?.off("mousemove", moveElevationMarkerToCursorPosition);
         epc?.hideCrosshair();
-        dispatch("segmentDragEnd", { segment: draggingSegment, event: e });
+        onsegmentdragend?.({ segment: draggingSegment!, event: e });
         draggingSegment = null;
     }
 
     function addCaretLayer(id?: string) {
-        if (!map || !id) {
+        if (!map || !id || !map.getSource(id)) {
             return;
         }
         if (map.getLayer("direction-carets")) {
@@ -459,11 +493,16 @@
         id: string,
         showElevationMarker: boolean = false,
     ) {
+        if (!id) {
+            return;
+        }
         if (showElevationMarker) {
             elevationMarker.setOpacity("1");
         }
         map?.setPaintProperty(id, "line-width", 7);
-        hoveringTrail = true;
+        if (map?.getLayer(id)) {
+            hoveringTrail = true;
+        }
         // map?.setPaintProperty(id, "line-color", "#2766e3");
     }
 
@@ -474,8 +513,24 @@
         elevationMarker.setOpacity("0");
         epc?.hideCrosshair();
         hoveringTrail = false;
-        map?.setPaintProperty(id, "line-width", 5);
+        if (map?.getLayer(id)) {
+            map?.setPaintProperty(id, "line-width", 5);
+        }
         // map?.setPaintProperty(id, "line-color", "#648ad5");
+    }
+
+    function adjustTrailFocus(activeTrail: number | null) {
+        if (activeTrail !== null && trails[activeTrail] !== undefined) {
+            if (
+                !drawing &&
+                fitBounds !== "off" &&
+                data.some((d) => d.bbox !== undefined)
+            ) {
+                untrack(() => focusTrail(trails[activeTrail]));
+            }
+        } else if (activeTrail === null && trails.length) {
+            untrack(() => unFocusTrail());
+        }
     }
 
     function focusTrail(trail: Trail) {
@@ -484,7 +539,7 @@
             activeTrail = null;
             return;
         }
-        dispatch("select", trail);
+        onselect?.(trail);
 
         try {
             refreshElevationProfile();
@@ -501,7 +556,7 @@
 
     function unFocusTrail(trail?: Trail) {
         if (trail) {
-            dispatch("unselect", trail);
+            onunselect?.(trail);
             unHighlightTrail(trail.id!);
         }
 
@@ -617,9 +672,14 @@
 
         hideWaypoints();
         for (const waypoint of waypoints) {
-            const marker = createMarkerFromWaypoint(waypoint, onMarkerDragEnd);
-            marker.addTo(map);
-            markers.push(marker);
+            if (!markers.find((m) => m._element.id == waypoint.id)) {
+                const marker = createMarkerFromWaypoint(
+                    waypoint,
+                    onmarkerdragend,
+                );
+                marker.addTo(map);
+                markers.push(marker);
+            }
         }
     }
 
@@ -630,6 +690,7 @@
         for (const m of markers) {
             m.remove();
         }
+        markers = [];
     }
 
     onMount(async () => {
@@ -646,7 +707,7 @@
 
         const mapStyles: { text: string; value: string; thumbnail?: string }[] =
             [
-                ...(($page.data.settings as Settings)?.tilesets ?? []).map(
+                ...((page.data.settings as Settings)?.tilesets ?? []).map(
                     (t) => ({
                         text: t.name,
                         value: t.url,
@@ -681,6 +742,10 @@
 
         if (preferredMapStyleIndex == -1) {
             preferredMapStyleIndex = 0;
+        }
+
+        if (!mapContainer) {
+            return;
         }
 
         const finalMapOptions: M.MapOptions = {
@@ -730,7 +795,7 @@
         map.addControl(
             new M.ScaleControl({
                 maxWidth: 120,
-                unit: $page.data.settings?.unit ?? "metric",
+                unit: page.data.settings?.unit ?? "metric",
             }),
             "top-left",
         );
@@ -741,7 +806,7 @@
                     enableHighAccuracy: true,
                 },
                 fitBoundsOptions: {
-                    animate: fitBounds == "animate"
+                    animate: fitBounds == "animate",
                 },
                 trackUserLocation: true,
             }),
@@ -757,7 +822,7 @@
                 profileBackgroundColor:
                     $theme == "light" ? "#242734" : "#191b24",
                 backgroundColor: "bg-menu-background/90",
-                unit: $page.data.settings?.unit ?? "metric",
+                unit: page.data.settings?.unit ?? "metric",
                 profileLineWidth: 3,
                 displayDistanceGrid: true,
                 tooltipDisplayDPlus: false,
@@ -785,7 +850,7 @@
         if (showFullscreen) {
             map.addControl(
                 new FullscreenControl(() => {
-                    dispatch("fullscreen");
+                    onfullscreen?.();
                 }),
                 "bottom-right",
             );
@@ -803,21 +868,21 @@
             if (showTerrain) {
                 try {
                     if (
-                        $page.data.settings?.terrain?.terrain &&
+                        page.data.settings?.terrain?.terrain &&
                         !map?.getSource("terrain")
                     ) {
                         map!.addSource("terrain", {
                             type: "raster-dem",
-                            url: $page.data.settings?.terrain?.terrain,
+                            url: page.data.settings?.terrain?.terrain,
                         });
                     }
                     if (
-                        $page.data.settings?.terrain?.hillshading &&
+                        page.data.settings?.terrain?.hillshading &&
                         !map?.getSource("hillshading")
                     ) {
                         map!.addSource("hillshading", {
                             type: "raster-dem",
-                            url: $page.data.settings?.terrain?.hillshading,
+                            url: page.data.settings?.terrain?.hillshading,
                         });
                         map!.addLayer({
                             id: "hillshading",
@@ -830,7 +895,7 @@
         });
 
         map.on("moveend", (e) => {
-            dispatch("moveend", e.target);
+            onmoveend?.(e.target);
         });
 
         map.on("zoom", (e) => {
@@ -843,19 +908,19 @@
                 }
             });
 
-            dispatch("zoom", e.target);
+            onzoom?.(e.target);
         });
 
         map.on("click", (e) => {
             if (hoveringTrail && drawing) {
                 return;
             }
-            dispatch("click", e);
+            onclick?.(e);
         });
 
         map.on("load", () => {
             initMap(true);
-            dispatch("init", map);
+            oninit?.(map!);
         });
 
         showWaypoints();

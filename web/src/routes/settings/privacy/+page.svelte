@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import RadioGroup, {
         type RadioItem,
     } from "$lib/components/base/radio_group.svelte";
@@ -7,7 +7,7 @@
     import { settings_update } from "$lib/stores/settings_store";
     import { _ } from "svelte-i18n";
 
-    $: settings = $page.data.settings as Settings;
+    let settings = $derived(page.data.settings as Settings);
 
     const accoutPrivacyItems: RadioItem[] = [
         {
@@ -93,7 +93,7 @@
     name="account"
     items={accoutPrivacyItems}
     selected={settings?.privacy?.account == "private" ? 1 : 0}
-    on:change={(e) => handleAccountSelection(e.detail)}
+    onchange={handleAccountSelection}
 ></RadioGroup>
 
 <h4 class="text-xl font-medium mt-12 mb-4">
@@ -103,7 +103,7 @@
     name="trails"
     items={trailPrivacyItems}
     selected={settings?.privacy?.trails == "public" ? 0 : 1}
-    on:change={(e) => handleTrailsSelection(e.detail)}
+    onchange={handleTrailsSelection}
 ></RadioGroup>
 
 <h4 class="text-xl font-medium mt-12 mb-4">
@@ -113,5 +113,5 @@
     name="lists"
     items={listPrivacyItems}
     selected={settings?.privacy?.lists == "public" ? 0 : 1}
-    on:change={(e) => handleListsSelection(e.detail)}
+    onchange={handleListsSelection}
 ></RadioGroup>

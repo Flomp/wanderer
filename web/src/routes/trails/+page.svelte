@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import type { Trail, TrailFilter } from "$lib/models/trail";
@@ -8,16 +8,16 @@
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
 
-    let filterExpanded: boolean = true;
+    let filterExpanded: boolean = $state(true);
 
-    let loading: boolean = true;
+    let loading: boolean = $state(true);
 
-    const filter: TrailFilter = $page.data.filter;
-    const pagination: { page: number; totalPages: number } = {
+    let filter: TrailFilter = $state(page.data.filter);
+    const pagination: { page: number; totalPages: number } = $state({
         page: 1,
         totalPages: 1,
-    };
-    let trails: Trail[] = [];
+    });
+    let trails: Trail[] = $state([]);
 
     onMount(() => {
         if (window.innerWidth < 768) {
@@ -34,12 +34,12 @@
         loading = false;
     }
 
-    async function paginate(page: number) {
-        pagination.page = page;
-        const response = await trails_search_filter(filter, page);
+    async function paginate(newPage: number) {
+        pagination.page = newPage;
+        const response = await trails_search_filter(filter, newPage);
         trails = response.items;
-        $page.url.searchParams.set("page", page.toString());
-        goto(`?${$page.url.searchParams.toString()}`);
+        page.url.searchParams.set("page", newPage.toString());
+        goto(`?${page.url.searchParams.toString()}`);
     }
 </script>
 
@@ -51,17 +51,17 @@
     class="grid grid-cols-1 md:grid-cols-[300px_1fr] items-start gap-8 max-w-7xl mx-6 md:mx-auto"
 >
     <TrailFilterPanel
-        categories={$page.data.categories}
-        {filter}
+        categories={page.data.categories}
+        bind:filter
         {filterExpanded}
-        on:update={() => handleFilterUpdate()}
+        onupdate={handleFilterUpdate}
     ></TrailFilterPanel>
     <TrailList
-        {filter}
+        bind:filter
         {loading}
         {trails}
         {pagination}
-        on:update={() => handleFilterUpdate()}
-        on:pagination={(e) => paginate(e.detail)}
+        onupdate={handleFilterUpdate}
+        onpagination={paginate}
     ></TrailList>
 </main>

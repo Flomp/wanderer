@@ -13,22 +13,22 @@
     import JSZip from "jszip";
     import { _ } from "svelte-i18n";
     import { linear } from "svelte/easing";
-    import { tweened } from "svelte/motion";
+    import { Tween } from "svelte/motion";
     import emptyStateUploadDark from "$lib/assets/svgs/empty_states/empty_state_upload_dark.svg";
     import emptyStateUploadLight from "$lib/assets/svgs/empty_states/empty_state_upload_light.svg";
     import { theme } from "$lib/stores/theme_store";
     import { onMount } from "svelte";
     import JSConfetti from "js-confetti";
 
-    const uploadProgress = tweened(0, {
+    const uploadProgress = new Tween(0, {
         duration: 300,
         easing: linear,
     });
 
-    let openExportModal: () => void;
+    let exportModal: TrailExportModal;
 
-    let offerUpload: boolean = false;
-    let uploading: boolean = false;
+    let offerUpload: boolean = $state(false);
+    let uploading: boolean = $state(false);
 
     let jsConfetti: JSConfetti;
 
@@ -98,7 +98,7 @@
             uploading = false;
             jsConfetti.addConfetti({
                 confettiRadius: 4,
-                emojis: ['🍃', '🍁'],
+                emojis: ["🍃", "🍁"],
             });
         }, 500);
 
@@ -191,13 +191,18 @@
             : 'border border-content border-dashed'} rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
         class:bg-menu-item-background-hover={uploading}
         class:border-2={offerUpload && !uploading}
-        style="--progress: {$uploadProgress}%"
-        on:click={openFileBrowser}
-        on:dragover={handleDragOver}
-        on:dragleave={handleDragLeave}
-        on:drop={handleDrop}
+        style="--progress: {uploadProgress.current}%"
+        onclick={openFileBrowser}
+        ondragover={handleDragOver}
+        ondragleave={handleDragLeave}
+        ondrop={handleDrop}
     >
-        <canvas id="confetti-canvas" class="absolute" style="width: 100%; height: 200%"> </canvas>
+        <canvas
+            id="confetti-canvas"
+            class="absolute"
+            style="width: 100%; height: 200%"
+        >
+        </canvas>
         <div class="">
             <img
                 class="rounded-full aspect-square mx-auto"
@@ -216,18 +221,18 @@
         accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
         multiple={true}
         style="display: none;"
-        on:change={() => handleFileSelection()}
+        onchange={() => handleFileSelection()}
     />
     <h3 class="text-2xl font-semibold">{$_("export")}</h3>
     <hr class="mt-4 mb-6 border-input-border" />
-    <Button secondary={true} on:click={() => openExportModal()}
+    <Button secondary={true} onclick={() => exportModal.openModal()}
         >{$_("export-all-trails")}</Button
     >
 </div>
 
 <TrailExportModal
-    bind:openModal={openExportModal}
-    on:export={(e) => exportTrails(e.detail)}
+    bind:this={exportModal}
+    onexport={exportTrails}
 ></TrailExportModal>
 
 <style>

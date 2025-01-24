@@ -4,7 +4,11 @@
     import { theme } from "$lib/stores/theme_store";
 
     import { _ } from "svelte-i18n";
-    export let width: number = 192;
+    interface Props {
+        width?: number;
+    }
+
+    let { width = 192 }: Props = $props();
 </script>
 
 <div class="flex flex-col justify-center items-center gap-y-4">

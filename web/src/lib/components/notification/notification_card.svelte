@@ -5,12 +5,14 @@
     } from "$lib/models/notification";
     import { getFileURL } from "$lib/util/file_util";
     import { formatTimeSince } from "$lib/util/format_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
 
-    export let notification: Notification;
+    interface Props {
+        notification: Notification;
+        onclick?: (data: {notification: Notification, link: string | null}) => void
+    }
 
-    const dispatch = createEventDispatcher();
+    let { notification, onclick }: Props = $props();
 
     const avatarSrc = notification.expand?.author.avatar
         ? getFileURL(
@@ -21,9 +23,6 @@
 
     const timeSince = formatTimeSince(new Date(notification.created ?? ""));
 
-    $: title = getTitle(notification);
-    $: description = getDescription(notification);
-    $: link = getLink(notification);
 
     function getTitle(n: Notification) {
         switch (n.type) {
@@ -92,14 +91,17 @@
     }
 
     function handleItemClick() {
-        dispatch("click", { notification, link });
+        onclick?.({ notification, link });
     }
+    let title = $derived(getTitle(notification));
+    let description = $derived(getDescription(notification));
+    let link = $derived(getLink(notification));
 </script>
 
 <li
     class="flex items-center gap-x-3 px-3 py-2 hover:bg-menu-item-background-hover relative cursor-pointer"
     role="presentation"
-    on:click={handleItemClick}
+    onclick={handleItemClick}
 >
     <img class="rounded-full w-8 aspect-square" src={avatarSrc} alt="avatar" />
     <div>

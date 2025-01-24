@@ -13,15 +13,19 @@
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
     
-    export let trail: Trail;
 
-    export let showDescription: boolean = true;
+    interface Props {
+        trail: Trail;
+        showDescription?: boolean;
+    }
 
-    $: thumbnail = trail.photos.length
+    let { trail, showDescription = true }: Props = $props();
+
+    let thumbnail = $derived(trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
         : $theme === "light"
           ? emptyStateTrailLight
-          : emptyStateTrailDark;
+          : emptyStateTrailDark);
 </script>
 
 <li

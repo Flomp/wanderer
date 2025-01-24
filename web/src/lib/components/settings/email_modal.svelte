@@ -2,22 +2,24 @@
     import Modal from "$lib/components/base/modal.svelte";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import { z } from "zod";
     import TextField from "../base/text_field.svelte";
 
-    let _openModal: (() => void) | undefined = undefined;
-    export let closeModal: (() => void) | undefined = undefined;
+    interface Props {
+        email?: string;
+        onsave?: (email: string) => void;
+    }
+
+    let { email = "", onsave }: Props = $props();
+
+    let modal: Modal;
+
     export function openModal() {
         setFields("email", email);
         setErrors("email", []);
-        _openModal!();
+        modal.openModal();
     }
-
-    export let email = "";
-
-    const dispatch = createEventDispatcher();
 
     const { form, errors, setFields, setErrors } = createForm<{
         email: string;
@@ -32,8 +34,8 @@
             }),
         }),
         onSubmit: async (form) => {
-            dispatch("save", form.email);
-            closeModal!();
+            onsave?.(form.email);
+            modal.closeModal!();
         },
     });
 </script>
@@ -42,18 +44,24 @@
     id="email-modal"
     size="max-w-xl"
     title={$_("change-email")}
-    bind:openModal={_openModal}
-    bind:closeModal
+    bind:this={modal}
 >
-    <form id="email-form" slot="content" use:form>
-        <TextField name="email" error={$errors.email}></TextField>
-    </form>
-    <div slot="footer" class="flex items-center gap-4">
-        <button class="btn-secondary" on:click={closeModal}
-            >{$_("cancel")}</button
-        >
-        <button class="btn-primary" type="submit" form="email-form" name="save"
-            >{$_("save")}</button
-        >
-    </div></Modal
+    {#snippet content()}
+        <form id="email-form" use:form>
+            <TextField name="email" error={$errors.email}></TextField>
+        </form>
+    {/snippet}
+    {#snippet footer()}
+        <div class="flex items-center gap-4">
+            <button class="btn-secondary" onclick={() => modal.closeModal()}
+                >{$_("cancel")}</button
+            >
+            <button
+                class="btn-primary"
+                type="submit"
+                form="email-form"
+                name="save">{$_("save")}</button
+            >
+        </div>
+    {/snippet}</Modal
 >

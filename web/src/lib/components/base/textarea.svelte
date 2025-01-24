@@ -1,13 +1,28 @@
 <script lang="ts">
+    import { createBubbler } from 'svelte/legacy';
+
+    const bubble = createBubbler();
     import { _ } from "svelte-i18n";
 
-    export let name: string = "";
-    export let value: string | number = "";
-    export let placeholder: string = "";
-    export let rows: number = 3;
-    export let label: string = "";
-    export let error: string | string[] | null = "";
-    export let extraClasses: string = "";
+    interface Props {
+        name?: string;
+        value?: string | number;
+        placeholder?: string;
+        rows?: number;
+        label?: string;
+        error?: string | string[] | null;
+        extraClasses?: string;
+    }
+
+    let {
+        name = "",
+        value = $bindable(""),
+        placeholder = "",
+        rows = 3,
+        label = "",
+        error = "",
+        extraClasses = ""
+    }: Props = $props();
 </script>
 
 <div>
@@ -24,8 +39,8 @@
         class:border-red-400={(error?.length ?? 0) > 0}
         class:bg-input-background-error={(error?.length ?? 0) > 0}
         bind:value
-        on:change
-    />
+        onchange={bubble('change')}
+></textarea>
     {#if error}
         <span class="textfield-error text-xs text-red-400">
             {error instanceof Array ? $_(error[0]) : error}

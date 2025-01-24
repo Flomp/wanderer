@@ -11,44 +11,50 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
-    import Dropdown from "../base/dropdown.svelte";
+    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import ShareInfo from "../share_info.svelte";
     import TrailListItem from "../trail/trail_list_item.svelte";
-    export let list: List;
+    interface Props {
+        list: List;
+        onclick?: (data: { trail: Trail; index: number }) => void;
+        onmouseenter?: (data: { trail: Trail; index: number }) => void;
+        onmouseleave?: (data: { trail: Trail; index: number }) => void;
+        onchange?: (item: DropdownItem) => void;
+    }
 
-    const dispatch = createEventDispatcher();
+    let { list, onclick, onmouseenter, onmouseleave, onchange }: Props =
+        $props();
 
-    $: cumulativeDistance = list.expand?.trails?.reduce(
-        (s, b) => s + b.distance!,
-        0,
+    let cumulativeDistance = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.distance!, 0),
     );
 
-    $: cumulativeElevationGain = list.expand?.trails?.reduce(
-        (s, b) => s + b.elevation_gain!,
-        0,
+    let cumulativeElevationGain = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.elevation_gain!, 0),
     );
 
-    $: cumulativeElevationLoss = list.expand?.trails?.reduce(
-        (s, b) => s + b.elevation_loss!,
-        0,
+    let cumulativeElevationLoss = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.elevation_loss!, 0),
     );
 
-    $: cumulativeDuration = list.expand?.trails?.reduce(
-        (s, b) => s + b.duration!,
-        0,
+    let cumulativeDuration = $derived(
+        list.expand?.trails?.reduce((s, b) => s + b.duration!, 0),
     );
 
-    $: allowEdit =
+    let allowEdit = $derived(
         list.author == $currentUser?.id ||
-        list.expand?.list_share_via_list?.some((s) => s.permission == "edit");
+            list.expand?.list_share_via_list?.some(
+                (s) => s.permission == "edit",
+            ),
+    );
 
-    $: allowShare =
+    let allowShare = $derived(
         list.author == $currentUser?.id &&
-        !list.expand?.trails?.some((t) => t.author !== $currentUser?.id);
+            !list.expand?.trails?.some((t) => t.author !== $currentUser?.id),
+    );
 
-    $: dropdownItems = [
+    let dropdownItems = $derived([
         ...(allowShare
             ? [{ text: $_("share"), value: "share", icon: "share" }]
             : []),
@@ -58,22 +64,24 @@
         ...(list.author == $currentUser?.id
             ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
             : []),
-    ];
+    ]);
 
-    $: listIsShared = (list.expand?.list_share_via_list?.length ?? 0) > 0;
+    let listIsShared = $derived(
+        (list.expand?.list_share_via_list?.length ?? 0) > 0,
+    );
 
-    let fullDescription: boolean = false;
+    let fullDescription: boolean = $state(false);
 
     function handleTrailSelect(trail: Trail, index: number) {
-        dispatch("click", { trail, index });
+        onclick?.({ trail, index });
     }
 
     function handleTrailMouseEnter(trail: Trail, index: number) {
-        dispatch("mouseenter", { trail, index });
+        onmouseenter?.({ trail, index });
     }
 
     function handleTrailMouseLeave(trail: Trail, index: number) {
-        dispatch("mouseleave", { trail, index });
+        onmouseleave?.({ trail, index });
     }
 </script>
 
@@ -100,17 +108,17 @@
     {/if}
     {#if dropdownItems.length}
         <div class="absolute bottom-8 right-8">
-            <Dropdown
-                items={dropdownItems}
-                on:change
-                let:toggleMenu={openDropdown}
-                ><button
-                    class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
-                    on:click={openDropdown}
-                >
-                    <i class="fa fa-ellipsis-vertical"></i>
-                </button></Dropdown
-            >
+            <Dropdown items={dropdownItems} {onchange}
+                >{#snippet children({ toggleMenu: openDropdown })}
+                    <button
+                        aria-label="Open dropdown"
+                        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
+                        onclick={openDropdown}
+                    >
+                        <i class="fa fa-ellipsis-vertical"></i>
+                    </button>
+                {/snippet}
+            </Dropdown>
         </div>
     {/if}
     <img
@@ -182,7 +190,7 @@
             ? list.description?.substring(0, 100)
             : list.description}
         {#if (list.description?.length ?? 0) > 100 && !fullDescription}
-            <button on:click={() => (fullDescription = true)}>
+            <button onclick={() => (fullDescription = true)}>
                 ... <span class="underline">{$_("read-more")}</span></button
             >
         {/if}
@@ -195,9 +203,9 @@
         {#each list.expand?.trails ?? [] as trail, i}
             <div
                 role="presentation"
-                on:click={() => handleTrailSelect(trail, i)}
-                on:mouseenter={() => handleTrailMouseEnter(trail, i)}
-                on:mouseleave={() => handleTrailMouseLeave(trail, i)}
+                onclick={() => handleTrailSelect(trail, i)}
+                onmouseenter={() => handleTrailMouseEnter(trail, i)}
+                onmouseleave={() => handleTrailMouseLeave(trail, i)}
             >
                 <TrailListItem {trail} showDescription={false}></TrailListItem>
             </div>

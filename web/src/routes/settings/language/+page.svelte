@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import RadioGroup, {
         type RadioItem,
     } from "$lib/components/base/radio_group.svelte";
@@ -10,7 +10,7 @@
     import { settings_update } from "$lib/stores/settings_store";
     import { _, locale } from "svelte-i18n";
 
-    const settings = $page.data.settings;
+    const settings = page.data.settings;
 
     const languages: SelectItem[] = [
         { text: $_("chinese"), value: "zh" },
@@ -30,7 +30,7 @@
         { text: $_("imperial"), value: "imperial" },
     ];
 
-    let selectedLanguage = settings?.language ?? "en";
+    let selectedLanguage = $state(settings?.language ?? "en");
 
     async function handleLanguageSelection(
         value: Language,
@@ -59,12 +59,12 @@
 <Select
     items={languages}
     bind:value={selectedLanguage}
-    on:change={(e) => handleLanguageSelection(e.detail)}
+    onchange={handleLanguageSelection}
 ></Select>
 <h4 class="text-xl font-medium mt-6 mb-2">{$_("units")}</h4>
 <RadioGroup
     name="unit"
     items={units}
     selected={settings?.unit == "metric" ? 0 : 1}
-    on:change={(e) => handleUnitSelection(e.detail)}
+    onchange={handleUnitSelection}
 ></RadioGroup>

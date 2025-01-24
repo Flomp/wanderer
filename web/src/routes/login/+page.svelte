@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import { env } from "$env/dynamic/public";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
@@ -16,19 +16,19 @@
     import { _ } from "svelte-i18n";
     import { z } from "zod";
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
-    const authProviders = $page.data.authMethods.authProviders;
-    let loginLabel = "";
+    const authProviders = page.data.authMethods.authProviders;
+    let loginLabel = $state("");
 
     if (
-        $page.data.authMethods.usernamePassword &&
-        $page.data.authMethods.emailPassword
+        page.data.authMethods.usernamePassword &&
+        page.data.authMethods.emailPassword
     ) {
         loginLabel = `${$_("username")}/${$_("email")}`;
-    } else if ($page.data.authMethods.usernamePassword) {
+    } else if (page.data.authMethods.usernamePassword) {
         loginLabel = `${$_("username")}`;
-    } else if ($page.data.authMethods.emailPassword) {
+    } else if (page.data.authMethods.emailPassword) {
         loginLabel = `${$_("email")}`;
     }
 
@@ -49,7 +49,7 @@
 
             try {
                 await login(newUser);
-                window.location.href = $page.url.searchParams.get("r") ?? "/";
+                window.location.href = page.url.searchParams.get("r") ?? "/";
             } catch (e) {
                 if (
                     e instanceof APIError &&
@@ -92,7 +92,7 @@
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
         <h4 class="text-xl font-semibold">{$_("slogan")}</h4>
-        {#if $page.data.authMethods.usernamePassword || $page.data.authMethods.emailPassword}
+        {#if page.data.authMethods.usernamePassword || page.data.authMethods.emailPassword}
             <div class="space-y-6 w-80">
                 <TextField
                     name="username"
@@ -129,7 +129,7 @@
         {/if}
 
         {#if authProviders.length}
-            {#if $page.data.authMethods.usernamePassword || $page.data.authMethods.emailPassword}
+            {#if page.data.authMethods.usernamePassword || page.data.authMethods.emailPassword}
                 <div class="flex gap-4 items-center w-full">
                     <hr class="basis-full border-input-border" />
                     <span class="text-gray-500 uppercase">{$_("or")}</span>
@@ -141,7 +141,7 @@
                     <a
                         href={provider.url}
                         class="btn-secondary inline-flex min-w-full justify-center"
-                        on:click={() => setProvider(provider)}
+                        onclick={() => setProvider(provider)}
                     >
                         <img
                             class="w-5 aspect-square mr-4"

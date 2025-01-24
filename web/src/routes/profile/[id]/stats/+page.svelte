@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import Calendar from "$lib/components/base/calendar.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import MultiSelect from "$lib/components/base/multi_select.svelte";
@@ -18,6 +18,8 @@
         formatSpeed,
         formatTimeHHMM,
     } from "$lib/util/format_util";
+    import Bar from "$lib/vendor/svelte-chartjs/bar.svelte";
+    import Pie from "$lib/vendor/svelte-chartjs/pie.svelte";
     import {
         ArcElement,
         BarElement,
@@ -28,10 +30,9 @@
         Title,
         Tooltip,
     } from "chart.js";
-    import { Bar, Pie } from "svelte-chartjs";
     import { _ } from "svelte-i18n";
 
-    export let data;
+    let { data } = $props();
 
     ChartJS.register(
         Title,
@@ -43,7 +44,7 @@
         BarElement,
     );
 
-    const filter = data.filter;
+    const filter = $state(data.filter);
 
     const categorySelectItems: SelectItem[] = $categories.map((c) => ({
         value: c.id,
@@ -69,7 +70,7 @@
         },
     ];
 
-    let barChartSelectedValue = barChartSelectItems[0].value;
+    let barChartSelectedValue = $state(barChartSelectItems[0].value);
 
     const categoryColors = [
         "#fb8500",
@@ -86,7 +87,7 @@
         elevation_loss: 3.28084,
     };
 
-    $: logCategories = $summitLogs.reduce(
+    let logCategories = $derived($summitLogs.reduce(
         (acc, log) => {
             const cat =
                 log.expand?.trails_via_summit_logs?.at(0)?.expand?.category
@@ -95,18 +96,18 @@
             return acc;
         },
         {} as Record<string, number>,
-    );
+    ));
 
-    $: categoryLabels = Object.keys(logCategories).sort();
-    $: categoryValues = Object.values(logCategories);
-    $: categoryColorMap = Object.fromEntries(
+    let categoryLabels = $derived(Object.keys(logCategories).sort());
+    let categoryValues = $derived(Object.values(logCategories));
+    let categoryColorMap = $derived(Object.fromEntries(
         categoryLabels.map((label, index) => [
             label,
             categoryColors[index % categoryColors.length],
         ]),
-    );
+    ));
 
-    $: categoryChartData = {
+    let categoryChartData = $derived({
         labels: categoryLabels,
         datasets: [
             {
@@ -114,10 +115,10 @@
                 backgroundColor: categoryColors,
             },
         ],
-    };
+    });
 
     function barChartUnit() {
-        const unit = $page.data.settings?.unit ?? "metric";
+        const unit = page.data.settings?.unit ?? "metric";
 
         switch (barChartSelectedValue) {
             case "duration":
@@ -130,7 +131,7 @@
         }
     }
 
-    $: barChartDataByDate = $summitLogs.reduce(
+    let barChartDataByDate = $derived($summitLogs.reduce(
         (acc, log) => {
             const date = new Date(log.date).toLocaleDateString(undefined, {
                 month: "2-digit",
@@ -145,7 +146,7 @@
             } else if (barChartSelectedValue === "duration") {
                 acc[date] = acc[date] / 60 / 60;
             }
-            if ($page.data.settings?.unit !== "metric") {
+            if (page.data.settings?.unit !== "metric") {
                 acc[date] =
                     acc[date] *
                     (conversionFactors as any)[barChartSelectedValue];
@@ -153,12 +154,12 @@
             return acc;
         },
         {} as Record<string, number>,
-    );
+    ));
 
-    $: barChartLabels = Object.keys(barChartDataByDate); // Dates as labels
-    $: barChartValues = Object.values(barChartDataByDate);
+    let barChartLabels = $derived(Object.keys(barChartDataByDate)); // Dates as labels
+    let barChartValues = $derived(Object.values(barChartDataByDate));
 
-    $: barChartData = {
+    let barChartData = $derived({
         labels: barChartLabels,
         datasets: [
             {
@@ -170,36 +171,36 @@
                 borderRadius: 15,
             },
         ],
-    };
+    });
 
-    $: totalDistance = $summitLogs.reduce(
+    let totalDistance = $derived($summitLogs.reduce(
         (sum, log) => sum + (log.distance ?? 0),
         0,
-    );
+    ));
 
-    $: totalDuration = $summitLogs.reduce(
+    let totalDuration = $derived($summitLogs.reduce(
         (sum, log) => sum + (log.duration ?? 0),
         0,
-    );
+    ));
 
-    $: totalElevationGain = $summitLogs.reduce(
+    let totalElevationGain = $derived($summitLogs.reduce(
         (sum, log) => sum + (log.elevation_gain ?? 0),
         0,
-    );
+    ));
 
-    $: totalElevationLoss = $summitLogs.reduce(
+    let totalElevationLoss = $derived($summitLogs.reduce(
         (sum, log) => sum + (log.elevation_loss ?? 0),
         0,
-    );
+    ));
 
-    $: averageSpeed =
-        totalDuration > 0
+    let averageSpeed =
+        $derived(totalDuration > 0
             ? $summitLogs.reduce(
                   (sum, log) =>
                       sum + (log.distance && log.duration ? log.distance : 0),
                   0,
               ) / totalDuration
-            : undefined;
+            : undefined);
 
     function updateFilterCategory(categories: SelectItem[]) {
         filter.category = categories.map((c) => c.value);
@@ -216,7 +217,7 @@
     }
 
     async function loadSummitLogs() {
-        const logs = await summit_logs_index($page.params.id, filter);
+        const logs = await summit_logs_index(page.params.id, filter);
         summitLogs.set(logs.items);
     }
 </script>
@@ -230,18 +231,18 @@
         class="flex flex-wrap lg:flex-nowrap col-start-1 lg:col-start-2 gap-x-4 justify-end"
     >
         <MultiSelect
-            on:change={(e) => updateFilterCategory(e.detail)}
+            onchange={updateFilterCategory}
             label={$_("categories")}
             items={categorySelectItems}
             placeholder={`${$_("filter-categories")}...`}
         ></MultiSelect>
         <Datepicker
-            on:change={loadSummitLogs}
+            onchange={loadSummitLogs}
             bind:value={filter.startDate}
             label={$_("after")}
         ></Datepicker>
         <Datepicker
-            on:change={loadSummitLogs}
+            onchange={loadSummitLogs}
             bind:value={filter.endDate}
             label={$_("before")}
         ></Datepicker>
@@ -249,7 +250,7 @@
     <div class="space-y-4 grow-0 lg:mr-4">
         <div class="border border-input-border rounded-xl p-6">
             <Calendar
-                on:click={(e) => handleDateClick(e.detail)}
+                onclick={handleDateClick}
                 logs={$summitLogs}
                 colorMap={categoryColorMap}
             ></Calendar>

@@ -1,23 +1,29 @@
 <script lang="ts">
     import Modal from "$lib/components/base/modal.svelte";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import TextField from "../base/text_field.svelte";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
     import { z } from "zod";
 
-    let _openModal: (() => void) | undefined = undefined;
-    export let closeModal: (() => void) | undefined = undefined;
-    export function openModal() {
-        setFields("password", "")
-        setFields("oldPassword", "")
-        setErrors("password", [])
-        setErrors("oldPassword", [])
-        _openModal!();
+    interface Props {
+        onsave?: (data: {
+            oldPassword: string;
+            password: string;
+            passwordConfirm: string;
+        }) => void;
     }
 
-    const dispatch = createEventDispatcher();
+    let { onsave }: Props = $props();
+
+    let modal: Modal;
+    export function openModal() {
+        setFields("password", "");
+        setFields("oldPassword", "");
+        setErrors("password", []);
+        setErrors("oldPassword", []);
+        modal.openModal!();
+    }
 
     const { form, errors, setFields, setErrors } = createForm<{
         oldPassword: string;
@@ -53,12 +59,12 @@
                 }),
         }),
         onSubmit: async (form) => {
-            dispatch("save", {
+            onsave?.({
                 oldPassword: form.oldPassword,
                 password: form.password,
                 passwordConfirm: form.password,
             });
-            closeModal!();
+            modal.closeModal();
         },
     });
 </script>
@@ -67,38 +73,41 @@
     id="password-modal"
     size="max-w-sm"
     title={$_("change-password")}
-    bind:openModal={_openModal}
-    bind:closeModal
+    bind:this={modal}
 >
-    <form id="password-form" slot="content" use:form>
-        <TextField
-            name="oldPassword"
-            label={$_("current-password")}
-            type="password"
-            error={$errors.oldPassword}
-        ></TextField>
-        <TextField
-            name="password"
-            label={$_("new-password")}
-            type="password"
-            error={$errors.password}
-        ></TextField>
-        <TextField
-            name="passwordConfirm"
-            label={$_("password-confirm")}
-            type="password"
-            error={$errors.passwordConfirm}
-        ></TextField>
-    </form>
-    <div slot="footer" class="flex items-center gap-4">
-        <button class="btn-secondary" on:click={closeModal}
-            >{$_("cancel")}</button
-        >
-        <button
-            class="btn-primary"
-            type="submit"
-            form="password-form"
-            name="save">{$_("save")}</button
-        >
-    </div></Modal
+    {#snippet content()}
+        <form id="password-form" use:form>
+            <TextField
+                name="oldPassword"
+                label={$_("current-password")}
+                type="password"
+                error={$errors.oldPassword}
+            ></TextField>
+            <TextField
+                name="password"
+                label={$_("new-password")}
+                type="password"
+                error={$errors.password}
+            ></TextField>
+            <TextField
+                name="passwordConfirm"
+                label={$_("password-confirm")}
+                type="password"
+                error={$errors.passwordConfirm}
+            ></TextField>
+        </form>
+    {/snippet}
+    {#snippet footer()}
+        <div class="flex items-center gap-4">
+            <button class="btn-secondary" onclick={() => modal.closeModal()}
+                >{$_("cancel")}</button
+            >
+            <button
+                class="btn-primary"
+                type="submit"
+                form="password-form"
+                name="save">{$_("save")}</button
+            >
+        </div>
+    {/snippet}</Modal
 >

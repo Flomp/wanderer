@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
@@ -14,7 +14,7 @@
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
 
-    $: settings = $page.data.settings;
+    let settings = $derived(page.data.settings);
 
     const mapFocus: SelectItem[] = [
         { text: $_("trail", { values: { n: 2 } }), value: "trails" },
@@ -22,15 +22,15 @@
     ];
 
     let selectedLanguage = "en";
-    let selectedMapFocus = "trails";
+    let selectedMapFocus = $state("trails");
 
-    let searchDropdownItems: SearchItem[] = [];
-    let citySearchQuery: string = "";
+    let searchDropdownItems: SearchItem[] = $state([]);
+    let citySearchQuery: string = $state("");
 
-    let customTilesetName: string = "";
-    let customTilesetURL: string = "";
-    let terrainURL: string = "";
-    let hillshadingURL: string = "";
+    let customTilesetName: string = $state("");
+    let customTilesetURL: string = $state("");
+    let terrainURL: string = $state("");
+    let hillshadingURL: string = $state("");
 
     onMount(() => {
         citySearchQuery = settings?.location?.name ?? "";
@@ -106,9 +106,10 @@
         });
     }
 
-    $: terrainSaveEnabled =
+    let terrainSaveEnabled = $derived(
         terrainURL !== settings?.terrain?.terrain ||
-        hillshadingURL !== settings?.terrain?.hillshading;
+            hillshadingURL !== settings?.terrain?.hillshading,
+    );
 </script>
 
 <svelte:head>
@@ -123,7 +124,7 @@
             <Select
                 items={mapFocus}
                 bind:value={selectedMapFocus}
-                on:change={(e) => handleMapFocusSelection(e.detail)}
+                onchange={handleMapFocusSelection}
             ></Select>
             {#if selectedMapFocus == "location"}
                 <div class="mt-3">
@@ -132,8 +133,8 @@
                         placeholder="{$_('search-cities')}..."
                         clearAfterSelect={false}
                         bind:value={citySearchQuery}
-                        on:update={(e) => searchCities(e.detail)}
-                        on:click={(e) => handleSearchClick(e.detail)}
+                        onupdate={searchCities}
+                        onclick={handleSearchClick}
                     ></Search>
                 </div>
             {/if}
@@ -150,8 +151,9 @@
                         <p class="text-sm text-gray-500">{tileset.url}</p>
                     </div>
                     <button
+                        aria-label="Delete tileset"
                         class="btn-icon"
-                        on:click={() => handleTilesetDelete(i)}
+                        onclick={() => handleTilesetDelete(i)}
                         ><i class="fa fa-trash text-red-500"></i></button
                     >
                 </div>
@@ -170,7 +172,10 @@
                             placeholder="https://.../style.json"
                         ></TextField>
                     </div>
-                    <button class="btn-icon mt-6" on:click={handleTilesetAdd}
+                    <button
+                        aria-label="Add tileset"
+                        class="btn-icon mt-6"
+                        onclick={handleTilesetAdd}
                         ><i class="fa fa-plus"></i></button
                     >
                 </div>
@@ -195,10 +200,11 @@
                     ></TextField>
                 </div>
                 <button
+                    aria-label="Save terrain settings"
                     disabled={!terrainSaveEnabled}
                     class="btn-icon mt-6"
                     class:hover:!bg-background={!terrainSaveEnabled}
-                    on:click={handleTerrainAdd}
+                    onclick={handleTerrainAdd}
                     class:text-gray-500={!terrainSaveEnabled}
                     ><i class="fa fa-save"></i></button
                 >

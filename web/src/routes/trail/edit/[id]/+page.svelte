@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     import { PUBLIC_VALHALLA_URL } from "$env/static/public";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
@@ -56,51 +55,47 @@
 
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import Search, {
+        type SearchItem,
+    } from "$lib/components/base/search.svelte";
     import { theme } from "$lib/stores/theme_store.js";
-    import {
-        createAnchorMarker,
-        createMarkerFromWaypoint,
-    } from "$lib/util/maplibre_util";
+    import { country_codes } from "$lib/util/country_code_util.js";
+    import { createAnchorMarker } from "$lib/util/maplibre_util";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
     import * as M from "maplibre-gl";
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
-    import Search, {
-        type SearchItem,
-    } from "$lib/components/base/search.svelte";
-    import { country_codes } from "$lib/util/country_code_util.js";
+    import { page } from "$app/state";
+    import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
 
-    export let data;
+    let { data } = $props();
 
-    let map: M.Map;
-    let mapTrail: Trail[] = [];
-    $: gpxData = $formData.expand!?.gpx_data;
-    $: if (gpxData) {
-        updateTrailOnMap();
-    }
+    let map: M.Map | undefined = $state();
+    let mapTrail: Trail[] = $state([]);
+    let lists = $state(data.lists)
 
-    let openWaypointModal: () => void;
-    let openSummitLogModal: () => void;
-    let openListSelectModal: () => void;
+    let waypointModal: WaypointModal;
+    let summitLogModal: SummitLogModal;
+    let listSelectModal: ListSelectModal;
 
-    let loading = false;
+    let loading = $state(false);
 
-    let editingBasicInfo: boolean = false;
+    let editingBasicInfo: boolean = $state(false);
 
-    let photoFiles: File[] = [];
+    let photoFiles: File[] = $state([]);
 
     let gpxFile: File | Blob | null = null;
 
-    let drawingActive = false;
+    let drawingActive = $state(false);
     let overwriteGPX = false;
     let draggingMarker = false;
 
-    let searchDropdownItems: SearchItem[] = [];
+    let searchDropdownItems: SearchItem[] = $state([]);
 
     const ClientTrailCreateSchema = TrailCreateSchema.extend({
         expand: z
@@ -121,9 +116,11 @@
         { text: $_("cycling"), value: "bicycle" },
         { text: $_("driving"), value: "auto" },
     ];
-    let selectedModeOfTransport = modesOfTransport[0].value;
+    let selectedModeOfTransport = $state(modesOfTransport[0].value);
 
-    let autoRouting = true;
+    let autoRouting = $state(true);
+
+    let listAddEnabled = $state(false);
 
     const {
         form,
@@ -135,10 +132,10 @@
             ...data.trail,
             public: data.trail.id
                 ? data.trail.public
-                : $page.data.settings?.privacy?.trails === "public",
+                : page.data.settings?.privacy?.trails === "public",
             category:
                 data.trail.category ||
-                $page.data.settings?.category ||
+                page.data.settings?.category ||
                 $categories[0].id,
         },
         extend: validator({
@@ -158,33 +155,33 @@
                     (p) => !p.startsWith("data:image/svg+xml;base64"),
                 );
 
-                if ($formData.expand!.gpx_data && overwriteGPX) {
-                    gpxFile = new Blob([$formData.expand!.gpx_data], {
+                if (form.expand!.gpx_data && overwriteGPX) {
+                    gpxFile = new Blob([form.expand!.gpx_data], {
                         type: "text/xml",
                     });
                 }
 
                 if (
-                    (!$formData.lat || !$formData.lon) &&
+                    (!form.lat || !form.lon) &&
                     route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
                 ) {
-                    $formData.lat = route.trk
+                    form.lat = route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lat;
-                    $formData.lon = route.trk
+                    form.lon = route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lon;
                 }
 
-                if ($page.params.id === "new") {
+                if (page.params.id === "new") {
                     const createdTrail = await trails_create(
                         form as Trail,
                         photoFiles,
                         gpxFile,
                     );
-                    $formData.id = createdTrail.id;
+                    form.id = createdTrail.id;
                 } else {
                     await trails_update(
                         $trail,
@@ -194,6 +191,7 @@
                     );
                 }
 
+                listAddEnabled = true;
                 show_toast({
                     type: "success",
                     icon: "check",
@@ -269,11 +267,11 @@
             $formData.expand!.gpx_data = gpxData;
             setFields(
                 "category",
-                $page.data.settings.category || $categories[0].id,
+                page.data.settings.category || $categories[0].id,
             );
             setFields(
                 "public",
-                $page.data.settings?.privacy?.trails === "public",
+                page.data.settings?.privacy?.trails === "public",
             );
 
             const log = new SummitLog(parseResult.trail.date as string, {
@@ -382,21 +380,24 @@
     function handleWaypointMenuClick(
         currentWaypoint: Waypoint,
         index: number,
-        e: CustomEvent<{ text: string; value: string }>,
+        item: DropdownItem,
     ) {
-        if (e.detail.value === "edit") {
+        if (item.value === "edit") {
             waypoint.set(currentWaypoint);
-            openWaypointModal();
-        } else if (e.detail.value === "delete") {
+            waypointModal.openModal();
+        } else if (item.value === "delete") {
             currentWaypoint.marker?.remove();
             deleteWaypoint(index);
         }
     }
 
     function beforeWaypointModalOpen() {
+        if (!map) {
+            return;
+        }
         const mapCenter = map.getCenter();
         waypoint.set(new Waypoint(mapCenter.lat, mapCenter.lng));
-        openWaypointModal();
+        waypointModal.openModal();
     }
 
     function deleteWaypoint(index: number) {
@@ -442,24 +443,21 @@
 
     function beforeSummitLogModalOpen() {
         summitLog.set(new SummitLog(new Date().toISOString().split("T")[0]));
-        openSummitLogModal();
+        summitLogModal.openModal();
     }
 
-    function saveSummitLog(e: CustomEvent<SummitLog>) {
-        const savedSummitLog = e.detail;
-
+    function saveSummitLog(log: SummitLog) {
         let editedSummitLogIndex = $formData.expand!.summit_logs.findIndex(
-            (s) => s.id == savedSummitLog.id,
+            (s) => s.id == log.id,
         );
 
         if (editedSummitLogIndex >= 0) {
-            $formData.expand!.summit_logs[editedSummitLogIndex] =
-                savedSummitLog;
+            $formData.expand!.summit_logs[editedSummitLogIndex] = log;
         } else {
-            savedSummitLog.id = cryptoRandomString({ length: 15 });
+            log.id = cryptoRandomString({ length: 15 });
             $formData.expand!.summit_logs = [
                 ...$formData.expand!.summit_logs,
-                savedSummitLog,
+                log,
             ];
         }
     }
@@ -467,12 +465,12 @@
     function handleSummitLogMenuClick(
         currentSummitLog: SummitLog,
         index: number,
-        e: CustomEvent<{ text: string; value: string }>,
+        item: DropdownItem,
     ) {
-        if (e.detail.value === "edit") {
+        if (item.value === "edit") {
             summitLog.set(currentSummitLog);
-            openSummitLogModal();
-        } else if (e.detail.value === "delete") {
+            summitLogModal.openModal();
+        } else if (item.value === "delete") {
             $formData.expand!.summit_logs.splice(index, 1);
             $formData.summit_logs.splice(index, 1);
             $formData.expand!.summit_logs = $formData.expand!.summit_logs;
@@ -489,9 +487,9 @@
             } else {
                 list = await lists_add_trail(list, $formData as Trail);
             }
-            const index = data.lists.items.findIndex((l) => l.id == list.id);
+            const index = lists.items.findIndex((l) => l.id == list.id);
             if (index >= 0) {
-                data.lists.items[index] = list;
+                lists.items[index] = list;
             }
             // await lists_index({ q: "", author: $currentUser?.id ?? "" }, 1, -1);
         } catch (e) {
@@ -505,6 +503,9 @@
     }
 
     function startDrawing() {
+        if (!map) {
+            return;
+        }
         drawingActive = true;
         if (!route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.length) {
         }
@@ -601,7 +602,7 @@
                 draggingMarker = false;
             },
         );
-        if (addtoMap) {
+        if (addtoMap && map) {
             marker.addTo(map);
         }
         anchor.marker = marker;
@@ -797,7 +798,7 @@
     }
 
     function handleSearchClick(item: SearchItem) {
-        map.flyTo({
+        map?.flyTo({
             center: [item.value._geo.lng, item.value._geo.lat],
             zoom: 13,
             animate: false,
@@ -819,12 +820,19 @@
             icon: "city",
         }));
     }
+    let gpxData = $derived($formData.expand?.gpx_data);
+    $effect(() => {
+        if (gpxData) {
+            untrack(() => updateTrailOnMap());
+        }
+    });
 </script>
 
 <svelte:head>
     <title
-        >{$page.params.id !== "new" ? `${$formData.name} | ${$_("edit")}` : $_("new-trail")} |
-        wanderer</title
+        >{page.params.id !== "new"
+            ? `${$formData.name} | ${$_("edit")}`
+            : $_("new-trail")} | wanderer</title
     >
 </svelte:head>
 
@@ -835,8 +843,8 @@
         use:form
     >
         <Search
-            on:update={(e) => searchCities(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
+            onupdate={(q) => searchCities(q)}
+            onclick={(item) => handleSearchClick(item)}
             placeholder="{$_('search-cities')}..."
             items={searchDropdownItems}
         ></Search>
@@ -846,7 +854,7 @@
             primary={true}
             type="button"
             disabled={drawingActive}
-            on:click={openFileBrowser}
+            onclick={openFileBrowser}
             >{$formData.expand?.gpx_data
                 ? $_("upload-new-file")
                 : $_("upload-file")}</Button
@@ -860,7 +868,7 @@
             <button
                 class="btn-primary"
                 type="button"
-                on:click={drawingActive ? stopDrawing : startDrawing}
+                onclick={drawingActive ? stopDrawing : startDrawing}
             >
                 {$formData.expand?.gpx_data
                     ? drawingActive
@@ -877,16 +885,17 @@
             id="fileInput"
             accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
             style="display: none;"
-            on:change={handleFileSelection}
+            onchange={handleFileSelection}
         />
         <hr class="border-separator" />
         <div class="flex gap-x-2">
             <h3 class="text-xl font-semibold">{$_("basic-info")}</h3>
             <button
+                aria-label="Edit basic info"
                 type="button"
                 class="btn-icon"
                 style="font-size: 0.9rem"
-                on:click={() => (editingBasicInfo = !editingBasicInfo)}
+                onclick={() => (editingBasicInfo = !editingBasicInfo)}
                 ><i class="fa fa-{editingBasicInfo ? 'check' : 'pen'}"
                 ></i></button
             >
@@ -1000,12 +1009,12 @@
         </h3>
         <ul>
             {#each $formData.expand?.waypoints ?? [] as waypoint, i}
-                <li on:mouseenter={() => openMarkerPopup(waypoint)}>
+                <li onmouseenter={() => openMarkerPopup(waypoint)}>
                     <WaypointCard
                         {waypoint}
                         mode="edit"
-                        on:change={(e) =>
-                            handleWaypointMenuClick(waypoint, i, e)}
+                        onchange={(item) =>
+                            handleWaypointMenuClick(waypoint, i, item)}
                     ></WaypointCard>
                 </li>
             {/each}
@@ -1013,7 +1022,7 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={beforeWaypointModalOpen}
+            onclick={beforeWaypointModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-waypoint")}</button
         >
         <hr class="border-separator" />
@@ -1033,7 +1042,8 @@
                     <SummitLogCard
                         {log}
                         mode="edit"
-                        on:change={(e) => handleSummitLogMenuClick(log, i, e)}
+                        onchange={(item) =>
+                            handleSummitLogMenuClick(log, i, item)}
                     ></SummitLogCard>
                 </li>
             {/each}
@@ -1041,16 +1051,16 @@
         <button
             class="btn-secondary"
             type="button"
-            on:click={beforeSummitLogModalOpen}
+            onclick={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
-        {#if data.lists.items.length}
+        {#if lists.items.length}
             <hr class="border-separator" />
             <h3 class="text-xl font-semibold">
                 {$_("list", { values: { n: 2 } })}
             </h3>
             <div class="flex gap-4 flex-wrap">
-                {#each data.lists.items as list}
+                {#each lists.items as list}
                     {#if $formData.id && list.trails?.includes($formData.id)}
                         <div
                             class="flex gap-2 items-center border border-input-border rounded-xl p-2"
@@ -1073,9 +1083,9 @@
             <Button
                 secondary={true}
                 tooltip={$_("save-your-trail-first")}
-                disabled={!$formData.id}
+                disabled={page.params.id == "new" && !listAddEnabled}
                 type="button"
-                on:click={openListSelectModal}
+                onclick={() => listSelectModal.openModal()}
                 ><i class="fa fa-plus mr-2"></i>{$_("add-to-list")}</Button
             >
         {/if}
@@ -1110,25 +1120,22 @@
                 waypoints={$formData.expand?.waypoints}
                 drawing={drawingActive}
                 showTerrain={true}
-                onMarkerDragEnd={moveMarker}
+                onmarkerdragend={moveMarker}
                 activeTrail={0}
                 bind:map
-                on:click={(e) => handleMapClick(e.detail)}
-                on:segmentDragEnd={(e) => handleSegmentDragEnd(e.detail)}
+                onclick={(target) => handleMapClick(target)}
+                onsegmentdragend={(data) => handleSegmentDragEnd(data)}
             ></MapWithElevationMaplibre>
         </div>
     </div>
 </main>
-<WaypointModal
-    bind:openModal={openWaypointModal}
-    on:save={(e) => saveWaypoint(e.detail)}
-></WaypointModal>
-<SummitLogModal bind:openModal={openSummitLogModal} on:save={saveSummitLog}
+<WaypointModal bind:this={waypointModal} onsave={saveWaypoint}></WaypointModal>
+<SummitLogModal bind:this={summitLogModal} onsave={(log) => saveSummitLog(log)}
 ></SummitLogModal>
 <ListSelectModal
-    lists={data.lists.items}
-    bind:openModal={openListSelectModal}
-    on:change={(e) => handleListSelection(e.detail)}
+    lists={lists.items}
+    bind:this={listSelectModal}
+    onchange={(e) => handleListSelection(e)}
 ></ListSelectModal>
 
 <style>

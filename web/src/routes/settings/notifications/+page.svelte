@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import Toggle from "$lib/components/base/toggle.svelte";
     import { NotificationType } from "$lib/models/notification";
     import type { Settings } from "$lib/models/settings";
     import { settings_update } from "$lib/stores/settings_store";
     import { _ } from "svelte-i18n";
 
-    const notifications = ($page.data.settings as Settings)?.notifications ?? {
+    const notifications = $state((page.data.settings as Settings)?.notifications ?? {
         list_create: {
             web: true,
             email: true,
@@ -31,7 +31,7 @@
             web: true,
             email: true,
         },
-    };
+    });
 
     const notificationItems: { text: string; key: NotificationType }[] = [
         {
@@ -62,7 +62,7 @@
 
     async function updateNotificationSettings() {
         await settings_update({
-            id: $page.data.settings!.id,
+            id: page.data.settings!.id,
             notifications,
         });
     }
@@ -85,13 +85,13 @@
         <p>{item.text}</p>
         <div>
             <Toggle
-                on:change={updateNotificationSettings}
+                onchange={updateNotificationSettings}
                 bind:value={notifications[item.key].web}
             ></Toggle>
         </div>
         <div>
             <Toggle
-                on:change={updateNotificationSettings}
+                onchange={updateNotificationSettings}
                 bind:value={notifications[item.key].email}
             ></Toggle>
         </div>

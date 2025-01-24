@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
@@ -13,7 +13,7 @@
     import { _ } from "svelte-i18n";
     import { z } from "zod";
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
     const { form, errors } = createForm({
         initialValues: {
@@ -46,7 +46,7 @@
             try {
                 await users_confirm_reset({
                     ...form,
-                    token: $page.params.token,
+                    token: page.params.token,
                 });
                 goto("/login");
                 show_toast({
