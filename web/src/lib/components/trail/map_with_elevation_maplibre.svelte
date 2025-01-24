@@ -246,7 +246,7 @@
             fitBounds !== "off" &&
             data.some((d) => d.bbox !== undefined)
         ) {
-            if (activeTrail !== null && mapLoaded) {
+            if (activeTrail !== null && trails[activeTrail] && mapLoaded) {
                 focusTrail(trails[activeTrail]);
             } else {
                 flyToBounds();
@@ -280,7 +280,7 @@
         return new M.LngLatBounds([minX, minY, maxX, maxY]);
     }
 
-    function flyToBounds() {
+    function flyToBounds() {        
         const bounds =
             activeTrail !== null && data[activeTrail]
                 ? (data[activeTrail].bbox as M.LngLatBoundsLike)

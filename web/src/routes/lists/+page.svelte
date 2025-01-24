@@ -386,13 +386,7 @@
         onconfirm={deleteList}
     ></ConfirmModal>
     {#if selectedList}
-        <ListShareModal
-            bind:this={listShareModal}
-            list={selectedList}
-            onupdate={() => {
-                data.lists.items = data.lists.items;
-                selectedList = selectedList;
-            }}
+        <ListShareModal bind:this={listShareModal} list={selectedList}
         ></ListShareModal>
     {/if}
 </main>

@@ -331,7 +331,6 @@
                     role="presentation"
                     onmouseenter={() => map?.highlightTrail(trail.id ?? "")}
                     onmouseleave={() => map?.unHighlightTrail(trail.id ?? "")}
-                    onclick={() => (activeTrailIndex = i)}
                 >
                     <div class="shrink-0">
                         <img
@@ -427,6 +426,7 @@
     </form>
     <div id="trail-map" class="max-h-full">
         <MapWithElevationMaplibre
+            fitBounds="animate"
             trails={$formData.expand?.trails ?? []}
             bind:activeTrail={activeTrailIndex}
             bind:this={map}
