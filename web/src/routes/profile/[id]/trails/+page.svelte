@@ -13,7 +13,7 @@
         totalPages: data.trails.totalPages,
     });
 
-    let trails: typeof data.trails = $state(data.trails);
+    let trails = $state(data.trails);
 
     let filter: TrailFilter = $state(data.filter);
 

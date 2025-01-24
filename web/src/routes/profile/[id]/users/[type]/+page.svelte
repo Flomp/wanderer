@@ -3,11 +3,17 @@
     import { follows_index } from "$lib/stores/follow_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
-    let { data = $bindable() } = $props();
+    let { data } = $props();
+
+    let follows = $state(data.follows);
 
     let loading: boolean = false;
 
-    let key = $derived((page.params.type == "following" ? "followee" : "follower") as "follower" | "followee");
+    let key = $derived(
+        (page.params.type == "following" ? "followee" : "follower") as
+            | "follower"
+            | "followee",
+    );
 
     let pagination = $derived({
         page: data.follows.page,
@@ -29,7 +35,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.follows = await follows_index(
+        follows = await follows_index(
             { followee: page.params.id },
             pagination.page,
         );
@@ -40,7 +46,7 @@
 <div>
     <h1 class="text-3xl font-semibold mb-4">{$_(page.params.type)}</h1>
     <ul class="space-y-4">
-        {#each data.follows.items as follow}
+        {#each follows.items as follow}
             {#if !follow.expand?.[key].private}
                 <a href="/profile/{follow.expand?.[key].id}">
                     <li

@@ -40,6 +40,8 @@
         totalPages: data.lists.totalPages,
     };
 
+    let lists = $state(data.lists);
+
     let confirmModal: ConfirmModal;
     let listShareModal: ListShareModal;
 
@@ -51,7 +53,7 @@
     let showMap: boolean = true;
 
     let selectedList: List | null = $state(
-        page.url.searchParams.get("list") ? data.lists.items[0] : null,
+        page.url.searchParams.get("list") ? lists.items[0] : null,
     );
     let selectedTrail: Trail | null = $state(null);
 
@@ -173,7 +175,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.lists = await lists_index(filter, pagination.page);
+        lists = await lists_index(filter, pagination.page);
     }
 
     async function updateFilter() {
@@ -190,7 +192,7 @@
         }
 
         pagination.page = 0;
-        data.lists = await lists_index(filter, pagination.page);
+        lists = await lists_index(filter, pagination.page);
         loading = false;
     }
 
@@ -332,10 +334,10 @@
                         {#each { length: 3 } as _, index}
                             <SkeletonCard></SkeletonCard>
                         {/each}
-                    {:else if data.lists.items.length == 0}
+                    {:else if lists.items.length == 0}
                         <EmptyStateSearch width={356}></EmptyStateSearch>
                     {:else}
-                        {#each data.lists.items as item, i}
+                        {#each lists.items as item, i}
                             <div
                                 class="list-list-item"
                                 onclick={() => setCurrentList(item)}

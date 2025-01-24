@@ -11,10 +11,12 @@
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
 
-    let { data = $bindable() } = $props();
+    let { data } = $props();
+
+    let settings = $state(data.settings)
 
     let selectedCategory = $state(
-        page.data.settings?.category || data.categories[0].id,
+        data.settings?.category || data.categories[0].id,
     );
 
     let bio = $state(data.settings?.bio ?? "");
@@ -44,12 +46,12 @@
     }
 
     async function handleBioSave() {
-        if (!data.settings) {
+        if (!settings) {
             return;
         }
         try {
-            data.settings.bio = bio;
-            await settings_update(data.settings);
+            settings.bio = bio;
+            await settings_update(settings);
         } catch (e) {
             show_toast({
                 type: "error",
@@ -62,7 +64,7 @@
 
     async function handleCategorySelection(value: string) {
         await settings_update({
-            id: page.data.settings!.id,
+            id: settings.id,
             category: value,
         });
     }
@@ -113,7 +115,7 @@
                 <Button
                     onclick={() => handleBioSave()}
                     primary
-                    disabled={data.settings.bio === bio}>{$_("save")}</Button
+                    disabled={settings.bio === bio}>{$_("save")}</Button
                 >
             </div>
         </div>

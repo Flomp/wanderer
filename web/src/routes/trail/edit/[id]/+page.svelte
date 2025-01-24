@@ -73,10 +73,11 @@
     import { page } from "$app/state";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
 
-    let { data = $bindable() } = $props();
+    let { data } = $props();
 
     let map: M.Map | undefined = $state();
     let mapTrail: Trail[] = $state([]);
+    let lists = $state(data.lists)
 
     let waypointModal: WaypointModal;
     let summitLogModal: SummitLogModal;
@@ -118,6 +119,8 @@
     let selectedModeOfTransport = $state(modesOfTransport[0].value);
 
     let autoRouting = $state(true);
+
+    let listAddEnabled = $state(false);
 
     const {
         form,
@@ -188,6 +191,7 @@
                     );
                 }
 
+                listAddEnabled = true;
                 show_toast({
                     type: "success",
                     icon: "check",
@@ -483,9 +487,9 @@
             } else {
                 list = await lists_add_trail(list, $formData as Trail);
             }
-            const index = data.lists.items.findIndex((l) => l.id == list.id);
+            const index = lists.items.findIndex((l) => l.id == list.id);
             if (index >= 0) {
-                data.lists.items[index] = list;
+                lists.items[index] = list;
             }
             // await lists_index({ q: "", author: $currentUser?.id ?? "" }, 1, -1);
         } catch (e) {
@@ -1050,13 +1054,13 @@
             onclick={beforeSummitLogModalOpen}
             ><i class="fa fa-plus mr-2"></i>{$_("add-entry")}</button
         >
-        {#if data.lists.items.length}
+        {#if lists.items.length}
             <hr class="border-separator" />
             <h3 class="text-xl font-semibold">
                 {$_("list", { values: { n: 2 } })}
             </h3>
             <div class="flex gap-4 flex-wrap">
-                {#each data.lists.items as list}
+                {#each lists.items as list}
                     {#if $formData.id && list.trails?.includes($formData.id)}
                         <div
                             class="flex gap-2 items-center border border-input-border rounded-xl p-2"
@@ -1079,7 +1083,7 @@
             <Button
                 secondary={true}
                 tooltip={$_("save-your-trail-first")}
-                disabled={!$formData.id}
+                disabled={page.params.id == "new" && !listAddEnabled}
                 type="button"
                 onclick={() => listSelectModal.openModal()}
                 ><i class="fa fa-plus mr-2"></i>{$_("add-to-list")}</Button
@@ -1129,7 +1133,7 @@
 <SummitLogModal bind:this={summitLogModal} onsave={(log) => saveSummitLog(log)}
 ></SummitLogModal>
 <ListSelectModal
-    lists={data.lists.items}
+    lists={lists.items}
     bind:this={listSelectModal}
     onchange={(e) => handleListSelection(e)}
 ></ListSelectModal>

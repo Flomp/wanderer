@@ -1,14 +1,16 @@
 <script lang="ts">
-    import ActivityCard from "$lib/components/profile/activity_card.svelte";
-    import { activities_index } from "$lib/stores/activity_store.js";
-    import { getFileURL } from "$lib/util/file_util.js";
-    import { _ } from "svelte-i18n";
+    import { goto } from "$app/navigation";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import ActivityCard from "$lib/components/profile/activity_card.svelte";
+    import { activities_index } from "$lib/stores/activity_store.js";
     import { theme } from "$lib/stores/theme_store.js";
-    import { goto } from "$app/navigation";
+    import { getFileURL } from "$lib/util/file_util.js";
+    import { _ } from "svelte-i18n";
 
-    let { data = $bindable() } = $props();
+    let { data } = $props();
+
+    let activities = $state(data.activities);
 
     let loading: boolean = false;
 
@@ -32,7 +34,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.activities = await activities_index(data.user.id, pagination.page);
+        activities = await activities_index(data.user.id, pagination.page);
     }
 </script>
 
@@ -110,18 +112,18 @@
     </div>
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">Timeline</h4>
-        {#if !data.activities.items.length && data.isOwnProfile}
+        {#if !activities.items.length && data.isOwnProfile}
             <a class="btn-primary inline-block" href="/trails/edit/new"
                 >+ {$_("new-trail")}</a
             >
-        {:else if !data.activities.items.length}
+        {:else if !activities.items.length}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-activities", {
                     values: { username: data.user.username },
                 })}
             </p>
         {/if}
-        {#each data.activities.items as activity}
+        {#each activities.items as activity}
             <div
                 role="presentation"
                 class="cursor-pointer"
