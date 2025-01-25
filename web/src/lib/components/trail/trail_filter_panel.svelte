@@ -15,6 +15,8 @@
     import Slider from "../base/slider.svelte";
     import UserSearch from "../user_search.svelte";
     import { pb } from "$lib/pocketbase";
+    import { searchLocations } from "$lib/stores/search_store";
+    import { getIconForLocation } from "$lib/util/icon_util";
 
     interface Props {
         categories: Category[];
@@ -114,19 +116,13 @@
 
             return;
         }
-        const r = await fetch("/api/v1/search/cities500", {
-            method: "POST",
-            body: JSON.stringify({ q: q, options: { limit: 5 } }),
-        });
-        const result = await r.json();
+        const r = await searchLocations(q, 5);
 
-        searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
+        searchDropdownItems = r.map((h) => ({
             text: h.name,
-            description: `${h.division ? `${h.division} | ` : ""}${
-                country_codes[h["country code"] as keyof typeof country_codes]
-            }`,
+            description: h.description,
             value: h,
-            icon: "city",
+            icon: getIconForLocation(h),
         }));
     }
 
@@ -221,7 +217,7 @@
                     <Search
                         items={searchDropdownItems}
                         label={$_("near")}
-                        placeholder="{$_('search-cities')}..."
+                        placeholder="{$_('search-places')}..."
                         clearAfterSelect={false}
                         bind:value={citySearchQuery}
                         onupdate={(q) => searchCities(q)}

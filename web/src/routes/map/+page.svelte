@@ -17,8 +17,13 @@
         TrailFilter,
     } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
+    import {
+        searchMulti,
+        type LocationSearchResult,
+        type TrailSearchResult,
+    } from "$lib/stores/search_store";
     import { trails_search_bounding_box } from "$lib/stores/trail_store";
-    import { country_codes } from "$lib/util/country_code_util";
+    import { getIconForLocation } from "$lib/util/icon_util";
     import * as M from "maplibre-gl";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
@@ -44,52 +49,39 @@
     onMount(async () => {});
 
     async function search(q: string) {
-        const r = await fetch("/api/v1/search/multi", {
-            method: "POST",
-            body: JSON.stringify({
-                queries: [
-                    {
-                        indexUid: "trails",
-                        q: q,
-                        limit: 3,
-                    },
-                    {
-                        indexUid: "cities500",
-                        q: q,
-                        limit: 3,
-                    },
-                ],
-            }),
+        const r = await searchMulti({
+            queries: [
+                {
+                    indexUid: "trails",
+                    q: q,
+                    limit: 3,
+                },
+                {
+                    indexUid: "locations",
+                    q: q,
+                    limit: 3,
+                },
+            ],
         });
 
-        const response = await r.json();
-
-        const trailItems = response.results[0].hits.map(
-            (t: Record<string, any>) => ({
-                text: t.name,
-                description: `Trail | ${t.location}`,
-                value: t,
-                icon: "route",
-            }),
-        );
-        const cityItems = response.results[1].hits.map(
-            (c: Record<string, any>) => ({
-                text: c.name,
-                description: `City ${c.division ? `| ${c.division} ` : ""}| ${
-                    country_codes[
-                        c["country code"] as keyof typeof country_codes
-                    ]
-                }`,
-                value: c,
-                icon: "city",
-            }),
-        );
+        const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
+            text: t.name,
+            description: `Trail ${t.location.length ? ", " + t.location : ""}`,
+            value: t,
+            icon: "route",
+        }));
+        const cityItems = r[1].hits.map((c: LocationSearchResult) => ({
+            text: c.name,
+            description: c.description,
+            value: c,
+            icon: getIconForLocation(c),
+        }));
 
         searchDropdownItems = [...trailItems, ...cityItems];
     }
 
     function handleSearchClick(item: SearchItem) {
-        map?.setCenter([item.value._geo.lng, item.value._geo.lat]);
+        map?.setCenter([item.value.lon, item.value.lat]);
         map?.setZoom(14);
     }
 

@@ -72,12 +72,17 @@
     import { z } from "zod";
     import { page } from "$app/state";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import {
+        searchLocationReverse,
+        searchLocations,
+    } from "$lib/stores/search_store.js";
+    import { getIconForLocation } from "$lib/util/icon_util.js";
 
     let { data } = $props();
 
     let map: M.Map | undefined = $state();
     let mapTrail: Trail[] = $state([]);
-    let lists = $state(data.lists)
+    let lists = $state(data.lists);
 
     let waypointModal: WaypointModal;
     let summitLogModal: SummitLogModal;
@@ -315,22 +320,11 @@
             });
             return;
         }
-        const r = await fetch("/api/v1/search/cities500", {
-            method: "POST",
-            body: JSON.stringify({
-                q: "",
-                options: {
-                    filter: [
-                        `_geoRadius(${$formData.lat}, ${$formData.lon}, 10000)`,
-                    ],
-                    sort: [`_geoPoint(${$formData.lat}, ${$formData.lon}):asc`],
-                    limit: 1,
-                },
-            }),
-        });
-        const closestCity = (await r.json()).hits[0];
+        const r = await searchLocationReverse($formData.lat!, $formData.lon!);
 
-        setFields("location", closestCity.name);
+        if (r) {
+            setFields("location", r);
+        }
     }
 
     function clearWaypoints() {
@@ -514,10 +508,27 @@
         }
     }
 
-    function stopDrawing() {
+    async function stopDrawing() {
         drawingActive = false;
         for (const anchor of anchors) {
             anchor.marker?.remove();
+        }
+
+        if (route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
+            $formData.lat = route.trk
+                ?.at(0)
+                ?.trkseg?.at(0)
+                ?.trkpt?.at(0)?.$.lat;
+            $formData.lon = route.trk
+                ?.at(0)
+                ?.trkseg?.at(0)
+                ?.trkpt?.at(0)?.$.lon;
+        }
+
+        const r = await searchLocationReverse($formData.lat!, $formData.lon!);
+
+        if (r) {
+            setFields("location", r);
         }
     }
 
@@ -799,25 +810,19 @@
 
     function handleSearchClick(item: SearchItem) {
         map?.flyTo({
-            center: [item.value._geo.lng, item.value._geo.lat],
+            center: [item.value.lon, item.value.lat],
             zoom: 13,
             animate: false,
         });
     }
 
     async function searchCities(q: string) {
-        const r = await fetch("/api/v1/search/cities500", {
-            method: "POST",
-            body: JSON.stringify({ q: q, options: { limit: 5 } }),
-        });
-        const result = await r.json();
-        searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
+        const r = await searchLocations(q);
+        searchDropdownItems = r.map((h) => ({
             text: h.name,
-            description: `${h.division ? `${h.division} | ` : ""}${
-                country_codes[h["country code"] as keyof typeof country_codes]
-            }`,
+            description: h.description,
             value: h,
-            icon: "city",
+            icon: getIconForLocation(h),
         }));
     }
     let gpxData = $derived($formData.expand?.gpx_data);
@@ -845,7 +850,7 @@
         <Search
             onupdate={(q) => searchCities(q)}
             onclick={(item) => handleSearchClick(item)}
-            placeholder="{$_('search-cities')}..."
+            placeholder="{$_('search-places')}..."
             items={searchDropdownItems}
         ></Search>
         <hr class="border-input-border" />

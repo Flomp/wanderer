@@ -1,5 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
@@ -7,69 +9,58 @@
     import Scene from "$lib/components/scene.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import { categories } from "$lib/stores/category_store";
+    import {
+        searchMulti,
+        type LocationSearchResult,
+        type TrailSearchResult,
+    } from "$lib/stores/search_store.js";
+    import { theme } from "$lib/stores/theme_store";
     import { currentUser } from "$lib/stores/user_store";
-    import { country_codes } from "$lib/util/country_code_util";
+    import { getIconForLocation } from "$lib/util/icon_util.js";
     import { Canvas } from "@threlte/core";
     import { _ } from "svelte-i18n";
-    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
-    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
-    import { theme } from "$lib/stores/theme_store";
 
     let { data } = $props();
 
     let searchDropdownItems: SearchItem[] = $state([]);
 
     async function search(q: string) {
-        const r = await fetch("/api/v1/search/multi", {
-            method: "POST",
-            body: JSON.stringify({
-                queries: [
-                    {
-                        indexUid: "trails",
-                        q: q,
-                        limit: 3,
-                    },
-                    {
-                        indexUid: "cities500",
-                        q: q,
-                        limit: 3,
-                    },
-                ],
-            }),
+        const r = await searchMulti({
+            queries: [
+                {
+                    indexUid: "trails",
+                    q: q,
+                    limit: 3,
+                },
+                {
+                    indexUid: "locations",
+                    q: q,
+                    limit: 5,
+                },
+            ],
         });
 
-        const response = await r.json();
-
-        const trailItems = response.results[0].hits.map(
-            (t: Record<string, any>) => ({
-                text: t.name,
-                description: `Trail | ${t.location}`,
-                value: t.id,
-                icon: "route",
-            }),
-        );
-        const cityItems = response.results[1].hits.map(
-            (c: Record<string, any>) => ({
-                text: c.name,
-                description: `City ${c.division ? `| ${c.division} ` : ""}| ${
-                    country_codes[
-                        c["country code"] as keyof typeof country_codes
-                    ]
-                }`,
-                value: c,
-                icon: "city",
-            }),
-        );
+        const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
+            text: t.name,
+            description: `Trail ${t.location.length ? ", " + t.location : ""}`,
+            value: t.id,
+            icon: "route",
+        }));
+        const cityItems = r[1].hits.map((c: LocationSearchResult) => ({
+            text: c.name,
+            description: c.description,
+            value: c,
+            icon: getIconForLocation(c),
+        }));
 
         searchDropdownItems = [...trailItems, ...cityItems];
     }
 
     function handleSearchClick(item: SearchItem) {
-        if (item.icon == "city") {
-            goto(`/map/?lat=${item.value._geo.lat}&lon=${item.value._geo.lng}`);
-        }
         if (item.icon == "route") {
             goto(`/trail/view/${item.value}`);
+        } else {
+            goto(`/map/?lat=${item.value.lat}&lon=${item.value.lon}`);
         }
     }
 </script>

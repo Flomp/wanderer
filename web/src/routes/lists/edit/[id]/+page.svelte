@@ -37,6 +37,10 @@
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
     import { z } from "zod";
+    import {
+        searchTrails,
+        type TrailSearchResult,
+    } from "$lib/stores/search_store.js";
 
     let { data } = $props();
 
@@ -150,28 +154,26 @@
     }
 
     async function search(q: string) {
-        const r = await fetch("/api/v1/search/trails", {
-            method: "POST",
-            body: JSON.stringify({
-                q,
-                options: {
-                    filter: `author = ${$currentUser?.id} OR public = true`,
-                    sort: ["name:desc"],
-                    limit: 3,
-                },
-            }),
-        });
+        try {
+            const r = await searchTrails(q, {
+                filter: `author = ${$currentUser?.id} OR public = true`,
+                sort: ["name:desc"],
+                limit: 3,
+            });
 
-        const response = await r.json();
-
-        searchDropdownItems = response.hits
-            .filter((h: List) => !$formData.trails?.includes(h.id!))
-            .map((t: Record<string, any>) => ({
-                text: t.name,
-                description: `${t.location ?? "-"}`,
-                value: t.id,
-                icon: "route",
-            }));
+            searchDropdownItems = r
+                .filter(
+                    (h: TrailSearchResult) => !$formData.trails?.includes(h.id),
+                )
+                .map((t) => ({
+                    text: t.name,
+                    description: `${t.location ?? "-"}`,
+                    value: t.id,
+                    icon: "route",
+                }));
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     async function handleSearchClick(item: SearchItem) {

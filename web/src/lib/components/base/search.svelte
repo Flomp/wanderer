@@ -1,4 +1,3 @@
-<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot making the component unusable -->
 <script module lang="ts">
     export type SearchItem = {
         text: string;
@@ -38,14 +37,16 @@
         clearAfterSelect = true,
         prepend,
         onupdate,
-        onclick
+        onclick,
     }: Props = $props();
 
     let lastSearch: string = "";
     let searching: boolean = $state(false);
     let typingTimer!: any;
 
-    let dropDownOpen = $derived(value.length > 0 && items.length > 0 && searching);
+    let dropDownOpen = $derived(
+        value.length > 0 && items.length > 0 && searching,
+    );
 
     function onSearchType() {
         clearTimeout(typingTimer);
@@ -131,8 +132,8 @@
                     onmousedown={(e) => handleItemClick(e, item)}
                     onkeydown={(e) => handleItemClick(e, item)}
                 >
-                    {#if prepend}{@render prepend({ item, })}{:else}
-                        <i class="fa fa-{item.icon} mr-6"></i>
+                    {#if prepend}{@render prepend({ item })}{:else}
+                        <i class="fa fa-{item.icon} basis-8 shrink-0"></i>
                     {/if}
 
                     <div>

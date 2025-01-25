@@ -8,9 +8,14 @@
     } from "$lib/components/base/select.svelte";
 
     import TextField from "$lib/components/base/text_field.svelte";
+    import {
+        searchLocations,
+        type LocationSearchResult,
+    } from "$lib/stores/search_store";
     import { settings_update } from "$lib/stores/settings_store";
     import { currentUser } from "$lib/stores/user_store";
     import { country_codes } from "$lib/util/country_code_util";
+    import { getIconForLocation } from "$lib/util/icon_util";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
 
@@ -42,18 +47,13 @@
     });
 
     async function searchCities(q: string) {
-        const r = await fetch("/api/v1/search/cities500", {
-            method: "POST",
-            body: JSON.stringify({ q: q, options: { limit: 5 } }),
-        });
-        const result = await r.json();
-        searchDropdownItems = result.hits.map((h: Record<string, any>) => ({
+        const r = await searchLocations(q, 5);
+
+        searchDropdownItems = r.map((h: LocationSearchResult) => ({
             text: h.name,
-            description: `${h.division ? `${h.division} | ` : ""}${
-                country_codes[h["country code"] as keyof typeof country_codes]
-            }`,
+            description: h.description,
             value: h,
-            icon: "city",
+            icon: getIconForLocation(h),
         }));
     }
 
@@ -130,7 +130,7 @@
                 <div class="mt-3">
                     <Search
                         items={searchDropdownItems}
-                        placeholder="{$_('search-cities')}..."
+                        placeholder="{$_('search-for-trails-places')}..."
                         clearAfterSelect={false}
                         bind:value={citySearchQuery}
                         onupdate={searchCities}

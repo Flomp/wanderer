@@ -8,7 +8,7 @@
         label?: string;
         name?: string;
         placeholder?: string;
-        onchange?: (value: SelectItem[]) => void
+        onchange?: (value: SelectItem[]) => void;
     }
 
     let {
@@ -17,7 +17,7 @@
         label = "",
         name = "",
         placeholder = "",
-        onchange
+        onchange,
     }: Props = $props();
 
     let showDropdown = $state(false);
@@ -51,7 +51,7 @@
     {/if}
     <div
         role="presentation"
-        class="min-w-44 w-full flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0"
+        class="relative min-w-44 w-full flex flex-wrap items-center gap-2 border border-input-border bg-input-background min-h-[50px] p-3 rounded-md transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0 cursor-pointer pr-6"
         onclick={() => (showDropdown = !showDropdown)}
     >
         {#if value.length === 0}
@@ -71,13 +71,17 @@
                 </button>
             </div>
         {/each}
+        <i
+            class="fa fa-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 transition-transform"
+            class:rotate-180={showDropdown}
+        ></i>
     </div>
 
     <!-- Dropdown menu -->
     {#if showDropdown}
         <div
             bind:this={dropdownRef}
-            class="absolute z-10 mt-1 w-full bg-menu-background border border-input-border rounded-md max-h-40 overflow-y-auto"
+            class="absolute z-10 mt-1 w-full bg-menu-background border border-input-border rounded-md max-h-40 overflow-y-auto shadow-lg"
         >
             {#each items as item}
                 <button
