@@ -29,7 +29,7 @@ x-common-env: &cenv
 services:
   search:
     container_name: wanderer-search
-    image: flomp/wanderer-search
+    image: getmeili/meilisearch:v1.11.3
     environment:
       <<: *cenv
       MEILI_NO_ANALYTICS: true
@@ -124,12 +124,6 @@ While not recommended it is absolutely possible to install wanderer from source.
 
 ### meilisearch
 wanderer uses meilisearch without any further modifications. As a result, you can simply head over to [their website](https://www.meilisearch.com/docs/learn/getting_started/installation) and follow the instructions for your preferred platform. We assume that you put the binary in the `wanderer/search` directory. If you did not, adapt the launch script below accordingly.
-
-Furthermore, you will need to import the cities index manually. To do so launch meilisearch once with `--import-dump` parameter:
-```bash
-./meilisearch --import-dump migrations/migration.dump
-```
-Wait for the process to finish and terminate meilisearch afterwards.
 
 ### PocketBase
 wanderer uses a slightly modified version of the PocketBase backend framework. As a result, you will need to build the PocketBase binary first.

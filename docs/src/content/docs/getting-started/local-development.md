@@ -31,17 +31,6 @@ Sometimes it can be useful to edit data directly in the database. `PocketBase` o
 
 When you are done with development and would like to build wanderer for production there are some steps to follow.
 
-### meilisearch
-
-If you modified any attributes of one of the meilisearch indices (like filterable attributes), you will need to create a new dump that gets imported into wanderer on launch. To do so run
-
-```bash
-curl -X POST 'http://127.0.0.1:7700/dumps'
-```
-
-and overwrite the previous dump at `/search/migrations/migration.dump` with your updated one.
-
-
 ### PocketBase
 
 If you modified code in any of the `*.go` files make sure to build an updated binary with `go build`. In case you only edited tables via the `PocketBase` admin panel you don't need to do anything. The database will be migrated automatically.
@@ -56,9 +45,6 @@ For the frontend there are no further caveats. Simply run `npm run build`.
 To create local docker images of wanderer simply run the script below. These will work as drop-in replacements for the ones hosted on docker hub. This will only work if you have already completed the steps above.
 
 ```bash
-# search
-docker build search/ --no-cache -t flomp/wanderer-search:latest
-
 # db
 docker build db/ --no-cache -t flomp/wanderer-db:latest 
 
