@@ -2,6 +2,24 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.14.0
+:::note
+This release introduces significant updates, including the migration of the frontend to Svelte 5. While the migration has been rigorously tested, there is a possibility that some features may not function as expected. We encourage you to report any issues you encounter.
+
+Additionally, the location search functionality has been transitioned from a locally hosted meilisearch index to nominatim. This upgrade offers substantially improved location search capabilities within wanderer. As a result, the custom meilisearch docker image (`flomp/wanderer-search`) is now deprecated. You can safely replace it with the official meilisearch image (`getmeili/meilisearch:v1.11.3`) in your `docker-compose.yml`.
+:::
+### Maintenance
+- Migrates to Svelte 5 
+
+### Features
+- Switches location search to nominatim
+- Lists are now fuzzy searchable from the searchbar on the frontpage, in the map view and in the list view
+
+### Bug fixes
+- Fixes a bug that caused new users to not be able to save their settings
+- The default language is now set to the browser language after registering a new user
+- Moves the user biography out of the auth cookie to decrease cookie size
+
 ## v0.13.2
 
 ### Security
