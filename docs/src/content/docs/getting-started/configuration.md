@@ -30,6 +30,7 @@ Since we use an unmodified installation of meilisearch you can use all variables
 | PUBLIC_POCKETBASE_URL | IP or hostname (including the port) of your wanderer instance        | http://db:8090                     |
 | PUBLIC_DISABLE_SIGNUP | Disables signup option for new users                                 | false                              |
 | PUBLIC_VALHALLA_URL   | Public IP or hostname (including the port) of a valhalla instance    | https://valhalla1.openstreetmap.de |
+| PUBLIC_NOMINATIM_URL  | Public IP or hostname (including the port) of a nominatim instance   | https://nominatim.openstreetmap.org|
 | UPLOAD_FOLDER         | Folder from which wanderer auto-uploads trails                       | /app/uploads                       |
 | UPLOAD_USER           | Username for the account with which wanderer auto-uploads trails     |                                    |
 | UPLOAD_PASSWORD       | Password for the account with which wanderer auto-uploads trails     |                                    |

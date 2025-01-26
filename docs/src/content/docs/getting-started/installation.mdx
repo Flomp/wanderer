@@ -79,6 +79,7 @@ services:
       UPLOAD_USER:
       UPLOAD_PASSWORD:
       PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de
+      PUBLIC_NOMINATIM_URL: https://nominatim.openstreetmap.org
     volumes:
       - ./data/uploads:/app/uploads
     ports:
@@ -189,8 +190,4 @@ To update wanderer to the newest version simply run `git pull origin main` and r
 
 ## Verify the installation
 No matter which installation method you chose, you should now be able to access wanderer on localhost:3000.
-
-:::note
-On the first launch, wanderer will create a rather large city index with over 200,000 entries in meilisearch. This process happens automatically but can take up to 2 minutes to complete. During this time the search functionality might not yet work properly. 
-:::
 

@@ -119,7 +119,7 @@
 
     {#if dropDownOpen}
         <ul
-            class="menu absolute bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden w-full"
+            class="menu absolute bg-menu-background border border-input-border rounded-xl shadow-md overflow-x-hidden overflow-y-scroll max-h-72 w-full"
             class:none={!dropDownOpen}
             style="z-index: 1001"
         >

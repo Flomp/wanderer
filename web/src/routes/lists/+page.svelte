@@ -19,7 +19,11 @@
     import UserSearch from "$lib/components/user_search.svelte";
     import { List, type ListFilter } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
-    import { lists_delete, lists_index } from "$lib/stores/list_store";
+    import {
+        lists_delete,
+        lists_index,
+        lists_search_filter,
+    } from "$lib/stores/list_store";
     import { fetchGPX } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import * as M from "maplibre-gl";
@@ -53,7 +57,7 @@
     let showMap: boolean = true;
 
     let selectedList: List | null = $state(
-        page.url.searchParams.get("list") ? lists.items[0] : null,
+        page.url.searchParams.get("list") ? data.lists.items[0] : null,
     );
     let selectedTrail: Trail | null = $state(null);
 
@@ -191,8 +195,8 @@
             });
         }
 
-        pagination.page = 0;
-        lists = await lists_index(filter, pagination.page);
+        pagination.page = 1;
+        lists = await lists_search_filter(filter, pagination.page);
         loading = false;
     }
 

@@ -11,6 +11,7 @@
     import { categories } from "$lib/stores/category_store";
     import {
         searchMulti,
+        type ListSearchResult,
         type LocationSearchResult,
         type TrailSearchResult,
     } from "$lib/stores/search_store.js";
@@ -33,6 +34,11 @@
                     limit: 3,
                 },
                 {
+                    indexUid: "lists",
+                    q: q,
+                    limit: 3,
+                },
+                {
                     indexUid: "locations",
                     q: q,
                     limit: 5,
@@ -46,19 +52,27 @@
             value: t.id,
             icon: "route",
         }));
-        const cityItems = r[1].hits.map((c: LocationSearchResult) => ({
+        const listItems = r[1].hits.map((t: ListSearchResult) => ({
+            text: t.name,
+            description: `List, ${t.trails.length} ${$_("trail", { values: { n: t.trails.length } })}`,
+            value: t.id,
+            icon: "layer-group",
+        }));
+        const cityItems = r[2].hits.map((c: LocationSearchResult) => ({
             text: c.name,
             description: c.description,
             value: c,
             icon: getIconForLocation(c),
         }));
 
-        searchDropdownItems = [...trailItems, ...cityItems];
+        searchDropdownItems = [...trailItems, ...listItems, ...cityItems];
     }
 
     function handleSearchClick(item: SearchItem) {
         if (item.icon == "route") {
             goto(`/trail/view/${item.value}`);
+        } else if (item.icon == "layer-group") {
+            goto(`/lists?list=${item.value}`);
         } else {
             goto(`/map/?lat=${item.value.lat}&lon=${item.value.lon}`);
         }

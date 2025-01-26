@@ -19,6 +19,7 @@
         { text: "Home", value: "/" },
         { text: $_("trail", { values: { n: 2 } }), value: "/trails" },
         { text: $_("map"), value: "/map" },
+        { text: $_("list", { values: { n: 2 } }), value: "/lists" },
     ];
 
     const dropdownItems = [
@@ -112,11 +113,6 @@
         {#each navBarItems as item}
             <a class="font-semibold text-xl" href={item.value}>{item.text}</a>
         {/each}
-        {#if $currentUser}
-            <a class="font-semibold text-xl" href="/lists"
-                >{$_("list", { values: { n: 2 } })}</a
-            >
-        {/if}
     </div>
     <hr class="my-6 border-input-border" />
     <div class="flex flex-col basis-full">
@@ -176,11 +172,6 @@
         {#each navBarItems as item}
             <a class="font-semibold z-10" href={item.value}>{item.text}</a>
         {/each}
-        {#if user}
-            <a class="font-semibold z-10" href="/lists"
-                >{$_("list", { values: { n: 2 } })}</a
-            >
-        {/if}
     </menu>
     {#if user}
         <div class="hidden lg:flex gap-6 items-center">
@@ -200,10 +191,9 @@
             <Dropdown
                 items={dropdownItems}
                 onchange={(item) => handleDropdownClick(item)}
-                
             >
                 {#snippet children({ toggleMenu: openDropdown })}
-                                <div class="flex items-center">
+                    <div class="flex items-center">
                         <button
                             class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 aspect-square"
                             onclick={openDropdown}
@@ -216,8 +206,8 @@
                             />
                         </button>
                     </div>
-                                            {/snippet}
-                        </Dropdown>
+                {/snippet}
+            </Dropdown>
         </div>
     {:else}
         <div class="hidden md:flex items-center gap-8">

@@ -38,6 +38,24 @@ func documentFromTrailRecord(r *models.Record, includeShares bool) map[string]in
 	return document
 }
 
+func documentFromListRecord(r *models.Record, includeShares bool) map[string]interface{} {
+	document := map[string]interface{}{
+		"id":          r.Id,
+		"author":      r.GetString("author"),
+		"name":        r.GetString("name"),
+		"description": r.GetString("description"),
+		"public":      r.GetBool("public"),
+		"created":     r.GetDateTime("created").Time().Unix(),
+		"trails":      r.GetStringSlice("trails"),
+	}
+
+	if includeShares {
+		document["shares"] = []string{}
+	}
+
+	return document
+}
+
 func IndexTrail(r *models.Record, client meilisearch.ServiceManager) error {
 	documents := []map[string]interface{}{documentFromTrailRecord(r, true)}
 
@@ -66,6 +84,39 @@ func UpdateTrailShares(trailId string, shares []string, client meilisearch.Servi
 		},
 	}
 	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {
+		return err
+	}
+	return nil
+}
+
+func IndexList(r *models.Record, client meilisearch.ServiceManager) error {
+	documents := []map[string]interface{}{documentFromListRecord(r, true)}
+
+	if _, err := client.Index("lists").AddDocuments(documents); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateList(r *models.Record, client meilisearch.ServiceManager) error {
+	documents := documentFromListRecord(r, false)
+
+	if _, err := client.Index("lists").UpdateDocuments(documents); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateListShares(listId string, shares []string, client meilisearch.ServiceManager) error {
+	documents := []map[string]interface{}{
+		{
+			"id":     listId,
+			"shares": shares,
+		},
+	}
+	if _, err := client.Index("lists").UpdateDocuments(documents); err != nil {
 		return err
 	}
 	return nil

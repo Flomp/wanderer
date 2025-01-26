@@ -78,9 +78,6 @@ jobs:
         env:
           VERSION: ${{ needs.versioning.outputs.version }}
         run: |
-          # Build search image
-          docker buildx build search/ --no-cache -t flomp/wanderer-search:$VERSION -t flomp/wanderer-search:latest --platform=linux/amd64,linux/arm64 --push
-
           # Build db image
           cd db
           env GOOS=linux GOARCH=arm64 go build -o pocketbase_arm64

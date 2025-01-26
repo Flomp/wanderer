@@ -14,18 +14,18 @@ export enum Language {
 }
 
 class Settings {
-  id?: string;
+  id?: string | null;
   unit?: "metric" | "imperial";
   language?: Language;
-  bio?: string;
+  bio?: string | null;
   mapFocus?: "trails" | "location";
   location?: { name: string, lat: number, lon: number };
   category?: string;
-  tilesets?: { name: string, url: string }[]
-  terrain?: { terrain: string, hillshading: string };
+  tilesets?: ({ name: string, url: string }[]) | null
+  terrain?: { terrain: string, hillshading: string } | null;
   user?: string;
-  privacy?: { account: "public" | "private", trails: "public" | "private", lists: "public" | "private" }
-  notifications?: Record<NotificationType, { web: boolean, email: boolean }>
+  privacy?: { account: "public" | "private", trails: "public" | "private", lists: "public" | "private" } | null
+  notifications?: Record<NotificationType, { web: boolean, email: boolean }> | null
 
   constructor(
     unit: "metric" | "imperial",

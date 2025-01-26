@@ -5,6 +5,7 @@ import { type ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 import { fetchGPX } from "./trail_store";
 import { APIError } from "$lib/util/api_util";
+import type { Hits } from "meilisearch";
 
 let lists: List[] = []
 export const list: Writable<List | null> = writable(null)
@@ -19,6 +20,59 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
         page: page.toString(),
         filter: filterText,
         expand: "trails,trails.waypoints,trails.category,list_share_via_list"
+    }), {
+        method: 'GET',
+    })
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
+    const fetchedLists: ListResult<List> = await r.json();
+
+    const result = page > 1 ? [...lists, ...fetchedLists.items] : fetchedLists.items
+
+    lists = result;
+
+    return { ...fetchedLists, items: result };
+}
+
+
+export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<ListResult<List>> {
+
+    const filterText = buildSearchFilterText(filter)
+
+    let r = await f("/api/v1/search/lists", {
+        method: "POST",
+        body: JSON.stringify({
+            q: filter.q,
+            options: {
+                filter: filterText, sort: filter.sort && filter.sortOrder ? [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`] : [],
+                hitsPerPage: perPage,
+                page: page
+            }
+        }),
+    });
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
+    const searchResult: { page: number, totalPages: number, hits: Hits<Record<string, any>> } = await r.json();
+
+
+    const listIds = searchResult.hits.map((h: Record<string, any>) => h.id);
+
+    if (listIds.length == 0) {
+        return { items: [], page: searchResult.page, perPage, totalItems: 0, totalPages: searchResult.totalPages };
+    }
+
+    r = await f('/api/v1/list?' + new URLSearchParams({
+        expand: "trails,trails.waypoints,trails.category,list_share_via_list",
+        filter: `'${listIds.join(',')}'~id`,
+        sort: filter.sort && filter.sortOrder ? `${filter.sortOrder}${filter.sort}` : ''
     }), {
         method: 'GET',
     })
@@ -78,7 +132,7 @@ export async function lists_create(list: List, avatar?: File) {
         body: JSON.stringify(list),
     })
 
-   if (!r.ok) {
+    if (!r.ok) {
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
@@ -181,17 +235,12 @@ export async function lists_delete(list: List) {
     }
 }
 
+
 function buildFilterText(filter: ListFilter): string {
-
-
     let filterText = `(name~"${filter.q}"||description~"${filter.q}")`
-
-
-
     if (filter.author?.length) {
         filterText += `&&author="${filter.author}"`
     }
-
     if (pb.authStore.model) {
         if (filter.public === false && filter.shared === false) {
             filterText += `&&author="${pb.authStore.model.id}"`
@@ -200,6 +249,40 @@ function buildFilterText(filter: ListFilter): string {
         } else if (filter.public === false && filter.shared === true) {
             filterText += `&&(public=false||list_share_via_list.user="${pb.authStore.model.id}"||author="${pb.authStore.model.id}")`
         }
+    }
+    return filterText
+}
+
+function buildSearchFilterText(filter: ListFilter): string {
+    let filterText: string = "";
+
+    if (filter.author?.length) {
+        filterText += `author = ${filter.author}`
+    }
+
+    if (filter.public !== undefined || filter.shared !== undefined) {
+        if (filterText.length) {
+            filterText += " AND "
+        }
+        filterText += "("
+        if (filter.public !== undefined) {
+            filterText += `(public = ${filter.public}`
+
+            if (!filter.author?.length || filter.author == pb.authStore.model?.id) {
+                filterText += ` OR author = ${pb.authStore.model?.id}`
+            }
+            filterText += ")"
+        }
+
+        if (filter.shared !== undefined) {
+            if (filter.shared === true) {
+                filterText += ` OR shares = ${pb.authStore.model?.id}`
+            } else {
+                filterText += ` AND NOT shares = ${pb.authStore.model?.id}`
+
+            }
+        }
+        filterText += ")"
     }
 
     return filterText

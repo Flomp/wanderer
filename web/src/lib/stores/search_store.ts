@@ -17,7 +17,7 @@ export type TrailSearchResult = {
         lat: number,
         lon: number
     }
-    auhtor: string;
+    author: string;
     category: string;
     completed: boolean;
     created: number;
@@ -31,6 +31,16 @@ export type TrailSearchResult = {
     location: string;
     name: string;
     public: boolean;
+}
+
+export type ListSearchResult = {
+    id: string;
+    author: string;
+    created: number;
+    description: string;
+    name: string;
+    public: boolean;
+    trails: string[]
 }
 
 type NominatimResponse = {

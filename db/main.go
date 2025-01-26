@@ -61,9 +61,13 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterCreateRequest("trail_share").Add(createTrailShareHandler(app, client))
 	app.OnRecordAfterDeleteRequest("trail_share").Add(deleteTrailShareHandler(client))
 
-	app.OnRecordAfterCreateRequest("list_share").Add(createListShareHandler(app))
+	app.OnRecordAfterCreateRequest("lists").Add(createListHandler(app, client))
+	app.OnRecordAfterUpdateRequest("lists").Add(updateListHandler(client))
+	app.OnRecordAfterDeleteRequest("lists").Add(deleteListHandler(client))
 
-	app.OnRecordAfterCreateRequest("lists").Add(createListHandler(app))
+	app.OnRecordAfterCreateRequest("list_share").Add(createListShareHandler(app, client))
+	app.OnRecordAfterDeleteRequest("list_share").Add(deleteListShareHandler(client))
+
 	app.OnRecordAfterCreateRequest("follows").Add(createFollowHandler(app))
 	app.OnRecordAfterCreateRequest("comments").Add(createCommentHandler(app))
 
@@ -77,7 +81,9 @@ func createUserHandler(app *pocketbase.PocketBase, client meilisearch.ServiceMan
 		userId := record.GetId()
 
 		searchRules := map[string]interface{}{
-			"cities500": map[string]string{},
+			"lists": map[string]string{
+				"filter": "public = true OR author = " + userId + " OR shares = " + userId,
+			},
 			"trails": map[string]string{
 				"filter": "public = true OR author = " + userId + " OR shares = " + userId,
 			},
@@ -156,7 +162,11 @@ func createTrailShareHandler(app *pocketbase.PocketBase, client meilisearch.Serv
 		for i, r := range shares {
 			userIds[i] = r.GetString("user")
 		}
-		util.UpdateTrailShares(trailId, userIds, client)
+		err = util.UpdateTrailShares(trailId, userIds, client)
+
+		if err != nil {
+			return err
+		}
 
 		if errs := app.Dao().ExpandRecord(e.Record, []string{"trail", "trail.author"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
@@ -178,8 +188,66 @@ func createTrailShareHandler(app *pocketbase.PocketBase, client meilisearch.Serv
 	}
 }
 
-func createListShareHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
+func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
+	return func(e *core.RecordDeleteEvent) error {
+		trailId := e.Record.GetString("trail")
+		return util.UpdateTrailShares(trailId, []string{}, client)
+	}
+}
+
+func createListHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordCreateEvent) error {
 	return func(e *core.RecordCreateEvent) error {
+		if err := util.IndexList(e.Record, client); err != nil {
+			return err
+		}
+		if !e.Record.GetBool("public") {
+			return nil
+		}
+		notification := util.Notification{
+			Type: util.ListCreate,
+			Metadata: map[string]string{
+				"id":   e.Record.Id,
+				"list": e.Record.GetString("name"),
+			},
+			Seen:   false,
+			Author: e.Record.GetString("author"),
+		}
+		return util.SendNotificationToFollowers(app, notification)
+	}
+}
+
+func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordUpdateEvent) error {
+	return func(e *core.RecordUpdateEvent) error {
+		return util.UpdateList(e.Record, client)
+	}
+}
+
+func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
+	return func(e *core.RecordDeleteEvent) error {
+		_, err := client.Index("lists").DeleteDocument(e.Record.Id)
+		return err
+	}
+}
+
+func createListShareHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordCreateEvent) error {
+	return func(e *core.RecordCreateEvent) error {
+		listId := e.Record.GetString("list")
+		shares, err := app.Dao().FindRecordsByExpr("list_share",
+			dbx.NewExp("list = {:listId}", dbx.Params{"listId": listId}),
+		)
+		if err != nil {
+			return err
+		}
+		userIds := make([]string, len(shares))
+		for i, r := range shares {
+			userIds[i] = r.GetString("user")
+		}
+		err = util.UpdateListShares(listId, userIds, client)
+
+		if err != nil {
+			return err
+		}
+
 		if errs := app.Dao().ExpandRecord(e.Record, []string{"list", "list.author"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
 		}
@@ -200,28 +268,10 @@ func createListShareHandler(app *pocketbase.PocketBase) func(e *core.RecordCreat
 	}
 }
 
-func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
+func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
 	return func(e *core.RecordDeleteEvent) error {
-		trailId := e.Record.GetString("trail")
-		return util.UpdateTrailShares(trailId, []string{}, client)
-	}
-}
-
-func createListHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		if !e.Record.GetBool("public") {
-			return nil
-		}
-		notification := util.Notification{
-			Type: util.ListCreate,
-			Metadata: map[string]string{
-				"id":   e.Record.Id,
-				"list": e.Record.GetString("name"),
-			},
-			Seen:   false,
-			Author: e.Record.GetString("author"),
-		}
-		return util.SendNotificationToFollowers(app, notification)
+		listId := e.Record.GetString("list")
+		return util.UpdateListShares(listId, []string{}, client)
 	}
 }
 
@@ -293,7 +343,9 @@ func onBeforeServeHandler(app *pocketbase.PocketBase, client meilisearch.Service
 func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meilisearch.ServiceManager) {
 	e.Router.GET("/public/search/token", func(c echo.Context) error {
 		searchRules := map[string]interface{}{
-			"cities500": map[string]string{},
+			"lists": map[string]string{
+				"filter": "public = true",
+			},
 			"trails": map[string]string{
 				"filter": "public = true",
 			},
