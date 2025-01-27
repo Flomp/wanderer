@@ -27,6 +27,9 @@ export async function GET(event: RequestEvent) {
                 log.expand!.author = await pb.collection("users_anonymous").getOne(log.author);
             }
         }
+
+        // sort waypoints by distance
+        r.expand?.waypoints?.sort((a, b) => (a.distance_from_start ?? 0) - (b.distance_from_start ?? 0))
         return json(r)
     } catch (e: any) {
         throw handleError(e)

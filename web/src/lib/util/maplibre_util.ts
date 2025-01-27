@@ -38,10 +38,11 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
     })
 
     const content = document.createElement("div");
+    content.className = "p-2"
 
     const spanElement = document.createElement("span");
     const iconElement = document.createElement("i");
-    const iconName = icons.includes(waypoint.icon ?? "") ? waypoint.icon : "circle";
+    const iconName = waypoint.icon && icons.includes(waypoint.icon) ? waypoint.icon : "circle";
     iconElement.classList.add("fa", `fa-${iconName}`)
     spanElement.appendChild(iconElement);
 
@@ -91,6 +92,7 @@ export function createAnchorMarker(lat: number, lon: number, index: number,
     const popup = new M.Popup()
 
     const popupContent = document.createElement("div");
+    popupContent.className = "py-3 pl-3"
     const anchorH = document.createElement("h5")
     anchorH.classList.add("text-base", "font-medium");
     anchorH.textContent = get(_)("route-point") + " #" + index;
@@ -140,7 +142,7 @@ export function createPopupFromTrail(trail: Trail) {
         : get(theme) === "light"
             ? emptyStateTrailLight
             : emptyStateTrailDark;
-    const popup = new M.Popup({ maxWidth: "320px" });
+    const popup = new M.Popup({ maxWidth: "420px" });
     // Create a container element for the popup content
     const linkElement = document.createElement("a");
     linkElement.href = `/map/trail/${trail.id}`; // Set href safely
@@ -148,7 +150,7 @@ export function createPopupFromTrail(trail: Trail) {
 
     // Create a list item element
     const listItem = document.createElement("li");
-    listItem.className = "flex items-center gap-4 cursor-pointer text-content max-w-80";
+    listItem.className = "flex gap-4 cursor-pointer text-content max-w-80";
 
     // Create the image container
     const imageContainer = document.createElement("div");
@@ -156,13 +158,14 @@ export function createPopupFromTrail(trail: Trail) {
 
     // Create the image element
     const img = document.createElement("img");
-    img.className = "h-14 w-14 object-cover rounded-xl";
+    img.className = "h-full max-w-20 object-cover";
     img.src = thumbnail; // Set image source safely
     img.alt = ""; // Always include a safe alt attribute
     imageContainer.appendChild(img);
 
     // Create the text container
     const textContainer = document.createElement("div");
+    textContainer.className = "py-2"
 
     // Add trail name
     const trailName = document.createElement("h4");
@@ -193,7 +196,7 @@ export function createPopupFromTrail(trail: Trail) {
     // Create the grid container for additional stats
     const statsContainer = document.createElement("div");
     statsContainer.className =
-        "grid grid-cols-2 mt-2 gap-x-4 gap-y-2 text-sm text-gray-500 flex-wrap";
+        "grid grid-cols-2 mt-2 gap-x-4 text-gray-500 flex-wrap";
 
     const stats = [
         { icon: "fa-left-right", value: formatDistance(trail.distance) },

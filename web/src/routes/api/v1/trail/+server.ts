@@ -16,6 +16,7 @@ export async function GET(event: RequestEvent) {
                 t.expand = {} as any
             }
             t.expand!.author = await pb.collection("users_anonymous").getOne(t.author);
+            t.expand?.waypoints?.sort((a, b) => (a.distance_from_start ?? 0) - (b.distance_from_start ?? 0))
         }
         return json(r)
     } catch (e: any) {

@@ -1,3 +1,4 @@
+import type { icons } from "$lib/util/icon_util";
 import * as M from "maplibre-gl";
 
 class Waypoint {
@@ -6,14 +7,15 @@ class Waypoint {
     description?: string;
     lat: number;
     lon: number;
-    icon?: string;
+    distance_from_start?: number;
+    icon?: typeof icons[number];
     marker?: M.Marker;
     photos: string[];
     _photos?: File[];
     author: string;
 
     constructor(lat: number, lon: number, params?: {
-        id?: string, name?: string, description?: string, icon?: string, marker?: M.Marker, photos?: string[];
+        id?: string, name?: string, description?: string, icon?: typeof icons[number], marker?: M.Marker, photos?: string[];
     }) {
         this.id = params?.id;
         this.name = params?.name ?? "";

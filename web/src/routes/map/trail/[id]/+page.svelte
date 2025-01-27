@@ -13,10 +13,10 @@
     <title>{$trail.name} | {$_("map")} | wanderer</title>
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[458px_1fr] gap-x-1 gap-y-4">
-    <div class="hidden md:block">
+    <div id="panel" class="hidden md:block">
         <TrailInfoPanel trail={$trail} {markers}></TrailInfoPanel>
     </div>
-    <div id="trail-details" class="sticky top-[62px]">
+    <div id="trail-details">
         <MapWithElevationMaplibre
             trails={[$trail]}
             waypoints={$trail.expand?.waypoints}
@@ -28,11 +28,11 @@
 </main>
 
 <style>
-    #trail-details {
+    #trail-details, #panel {
         height: calc(100vh);
     }
     @media only screen and (min-width: 768px) {
-        #trail-details {
+        #trail-details, #panel {
             height: calc(100vh - 124px);
         }
     }

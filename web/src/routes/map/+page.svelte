@@ -73,7 +73,7 @@
         const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
             text: t.name,
             description: `Trail ${t.location.length ? ", " + t.location : ""}`,
-            value: t,
+            value: t.id,
             icon: "route",
         }));
         const listItems = r[1].hits.map((t: ListSearchResult) => ({
@@ -93,7 +93,9 @@
     }
 
     function handleSearchClick(item: SearchItem) {
-        if (item.icon === "layer-group") {
+        if (item.icon == "route") {
+            goto(`/trail/view/${item.value}`);
+        } else if (item.icon == "layer-group") {
             goto(`/lists?list=${item.value}`);
         } else {
             map?.setCenter([item.value.lon, item.value.lat]);
@@ -220,7 +222,7 @@
 <main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <div
         id="trail-list"
-        class="md:overflow-y-auto md:overflow-x-hidden flex flex-col items-stretch gap-4 px-3 md:px-8"
+        class="flex flex-col items-stretch gap-4 px-3 md:px-8"
     >
         <div class="sticky top-0 z-10 bg-background pb-4 space-y-4">
             <div class="flex items-center gap-2 md:gap-4">

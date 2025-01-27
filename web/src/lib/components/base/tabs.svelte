@@ -40,7 +40,7 @@
 
 <div id="tabs" class="flex gap-2 overflow-x-auto relative {extraClasses}">
     <div
-        class="absolute h-full bg-menu-item-background-hover rounded-t-lg top-0 z-0"
+        class="tab-indicator absolute h-full rounded-t-lg top-0 z-0 border-b-2 border-content"
         style="width: {indicatorWidth.current}px; left: {indicatorPosition.current}px;"
     ></div>
     {#each tabs as tab, i}

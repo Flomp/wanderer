@@ -258,7 +258,7 @@
 
     export function refreshElevationProfile() {
         if (activeTrail !== null && data[activeTrail]) {
-            epc?.setData(data[activeTrail]!, waypoints);
+            epc?.setData(data[activeTrail]!, waypoints);            
         }
     }
 
@@ -940,12 +940,12 @@
     }
 
     :global(.maplibregl-popup-content) {
-        @apply bg-background rounded-md shadow-xl pt-5;
+        @apply bg-background rounded-md shadow-xl p-0 overflow-hidden pr-5;
     }
 
     :global(.maplibregl-popup-close-button) {
         top: 4px;
-        right: 8px;
+        right: 4px;
         line-height: 0;
         padding-bottom: 2.5px;
         @apply bg-menu-item-background-focus w-3 aspect-square rounded-full;

@@ -1,8 +1,6 @@
 # v0.14.0
 > [!IMPORTANT]
-> This release introduces significant updates, including the migration of the frontend to [Svelte 5](https://svelte.dev/blog/svelte-5-is-alive). While the migration has been rigorously tested, there is a possibility that some features may not function as expected. We encourage you to report any issues you encounter.
-
-> Additionally, the location search functionality has been transitioned from a locally hosted meilisearch index to nominatim. This upgrade offers substantially improved location search capabilities within wanderer. As a result, the custom meilisearch docker image (`flomp/wanderer-search`) is now deprecated. You can safely replace it with the official meilisearch image (`getmeili/meilisearch:v1.11.3`) in your `docker-compose.yml`.
+> This release introduces significant updates, including the migration of the frontend to [Svelte 5](https://svelte.dev/blog/svelte-5-is-alive). While the migration has been rigorously tested, there is a possibility that some features may not function as expected. We encourage you to report any issues you encounter. Additionally, the location search functionality has been transitioned from a locally hosted meilisearch index to nominatim. This upgrade offers substantially improved location search capabilities within wanderer. As a result, the custom meilisearch docker image (`flomp/wanderer-search`) is now deprecated. You can safely replace it with the official meilisearch image (`getmeili/meilisearch:v1.11.3`) in your `docker-compose.yml`.
 
 ## Maintenance
 - Migrates to Svelte 5

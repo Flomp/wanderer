@@ -1,0 +1,101 @@
+<script lang="ts">
+    import type { Trail } from "$lib/models/trail";
+    import { getFileURL } from "$lib/util/file_util";
+    import { formatDistance } from "$lib/util/format_util";
+    import { _ } from "svelte-i18n";
+    import PhotoGallery from "../photo_gallery.svelte";
+
+    type Props = {
+        trail: Trail;
+        onmouseenter?: (index: number) => void;
+        onmouseleave?: (index: number) => void;
+    };
+
+    let gallery: PhotoGallery;
+
+    let { trail, onmouseenter, onmouseleave }: Props = $props();
+</script>
+
+<div
+    class="trail-timeline relative grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-6"
+>
+    <div class="bg-background">
+        <i class="fa fa-bullseye"></i>
+    </div>
+    <div class="">
+        <p class="font-semibold">{$_("start")}</p>
+    </div>
+    {#each trail.expand?.waypoints ?? [] as wp, i}
+        <div
+            class="bg-background cursor-pointer"
+            role="presentation"
+            onmouseenter={() => onmouseenter?.(i)}
+            onmouseleave={() => onmouseleave?.(i)}
+        >
+            <i class="fa fa-{wp.icon ?? 'circle'}"></i>
+            {#if wp.distance_from_start}
+                <p class="text-sm text-gray-500">
+                    {formatDistance(wp.distance_from_start)}
+                </p>
+            {/if}
+        </div>
+
+        <div class="border border-input-border rounded-xl overflow-hidden">
+            <PhotoGallery
+                photos={wp.photos.map((p) => getFileURL(wp, p))}
+                bind:this={gallery}
+            ></PhotoGallery>
+            {#if wp.photos.length}
+                <div
+                    class="grid {wp.photos.length > 1
+                        ? 'grid-cols-[8fr_5fr]'
+                        : 'grid-cols-1'} cursor-pointer"
+                    role="presentation"
+                    onclick={() => gallery.openGallery()}
+                >
+                    {#each wp.photos as photo, i}
+                        <img
+                            class="object-cover h-full max-h-80 w-full"
+                            class:row-span-2={i == 0 && wp.photos.length > 2}
+                            src={getFileURL(wp, photo)}
+                            alt=""
+                        />
+                    {/each}
+                </div>
+            {/if}
+            <div class="p-4">
+                <h5 class="text-xl font-semibold">{wp.name}</h5>
+                <span class="text-sm text-gray-500"
+                    >{wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span
+                >
+                <p class="whitespace-pre-line">
+                    {wp.description}
+                </p>
+            </div>
+        </div>
+    {/each}
+    <div class="bg-background">
+        <i class="fa fa-flag-checkered"></i>
+        {#if trail.distance}
+            <p class="text-sm text-gray-500">
+                {formatDistance(trail.distance)}
+            </p>
+        {/if}
+    </div>
+    <div class="">
+        <p class="font-semibold">{$_("finish")}</p>
+    </div>
+</div>
+
+<style>
+    .trail-timeline::before {
+        border-right: 2px dotted rgba(var(--input-border));
+        bottom: 0;
+        content: "";
+        left: 7.2px;
+        position: absolute;
+        top: 0;
+        width: 1px;
+        z-index: -1;
+    }
+</style>
