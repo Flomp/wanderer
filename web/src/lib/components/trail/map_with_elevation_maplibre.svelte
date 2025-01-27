@@ -132,25 +132,7 @@
         adjustTrailFocus(activeTrail);
     });
     $effect(() => {
-        if ($theme == "dark") {
-            epc?.toggleTheme({
-                profileBackgroundColor: "#191b24",
-                elevationGridColor: "#ddd2",
-                labelColor: "#ddd8",
-                crosshairColor: "#fff5",
-                tooltipBackgroundColor: "#242734",
-                tooltipTextColor: "#fff",
-            });
-        } else {
-            epc?.toggleTheme({
-                profileBackgroundColor: "#242734",
-                elevationGridColor: "#0002",
-                labelColor: "#0009",
-                crosshairColor: "#0005",
-                tooltipBackgroundColor: "#fff",
-                tooltipTextColor: "#000",
-            });
-        }
+        toggleEpcTheme();
     });
     $effect(() => {
         if (drawing && map) {
@@ -258,7 +240,7 @@
 
     export function refreshElevationProfile() {
         if (activeTrail !== null && data[activeTrail]) {
-            epc?.setData(data[activeTrail]!, waypoints);            
+            epc?.setData(data[activeTrail]!, waypoints);
         }
     }
 
@@ -280,7 +262,7 @@
         return new M.LngLatBounds([minX, minY, maxX, maxY]);
     }
 
-    function flyToBounds() {        
+    function flyToBounds() {
         const bounds =
             activeTrail !== null && data[activeTrail]
                 ? (data[activeTrail].bbox as M.LngLatBoundsLike)
@@ -693,6 +675,28 @@
         markers = [];
     }
 
+    function toggleEpcTheme() {
+        if ($theme == "dark") {
+            epc?.toggleTheme({
+                profileBackgroundColor: "#191b24",
+                elevationGridColor: "#ddd2",
+                labelColor: "#ddd8",
+                crosshairColor: "#fff5",
+                tooltipBackgroundColor: "#242734",
+                tooltipTextColor: "#fff",
+            });
+        } else {
+            epc?.toggleTheme({
+                profileBackgroundColor: "#242734",
+                elevationGridColor: "#0002",
+                labelColor: "#0009",
+                crosshairColor: "#0005",
+                tooltipBackgroundColor: "#fff",
+                tooltipTextColor: "#000",
+            });
+        }
+    }
+
     onMount(async () => {
         const initialState = {
             lng: 0,
@@ -844,6 +848,7 @@
                     }
                 },
             });
+            toggleEpcTheme();
             map.addControl(epc);
         }
 

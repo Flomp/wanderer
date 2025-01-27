@@ -80,7 +80,7 @@ export function createAnchorMarker(lat: number, lon: number, index: number,
     onDragStart: (event: Event) => void, onDragEnd: (event: Event) => void): FontawesomeMarker {
 
     const anchorElement = document.createElement("span")
-    anchorElement.className = "route-anchor cursor-pointer rounded-full w-6 h-6 border border-black text-center bg-background-inverse text-content-inverse"
+    anchorElement.className = "route-anchor cursor-pointer rounded-full w-6 h-6 border border-black text-center bg-primary text-white"
     anchorElement.textContent = "" + index
     const marker = new M.Marker(
         {

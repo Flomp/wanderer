@@ -123,7 +123,7 @@
             <div class="basis-full"></div>
             <hr class="border-input-border" />
             <div class="flex gap-4 items-center justify-between m-4">
-                <a href="/profile/{user.id}">
+                <a class="shrink-0" href="/profile/{user.id}">
                     <img
                         class="rounded-full w-10 aspect-square"
                         src={getFileURL(user, user.avatar) ||
@@ -131,9 +131,9 @@
                         alt="avatar"
                     />
                 </a>
-                <a href="/profile/{user.id}">
-                    <p class="text-sm">{user.username}</p>
-                    <p class="text-sm text-gray-500">
+                <a href="/profile/{user.id}" style="width: calc(100% - 104px)">
+                    <p class="text-sm overflow-hidden text-ellipsis">{user.username}</p>
+                    <p class="text-sm text-gray-500 overflow-hidden text-ellipsis">
                         {user.email}
                     </p>
                 </a>

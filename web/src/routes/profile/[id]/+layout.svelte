@@ -59,7 +59,7 @@
 </script>
 
 <div
-    class="grid grid-cols-1 md:grid-cols-[356px_minmax(0,_1fr)] gap-6 max-w-6xl mx-auto items-start"
+    class="grid grid-cols-1 md:grid-cols-[356px_minmax(0,_1fr)] gap-6 max-w-6xl mx-4 md:mx-auto items-start"
 >
     <div class="border border-input-border rounded-xl md:sticky top-8 md:ml-6">
         {#if data.user}

@@ -11,11 +11,9 @@
         onmouseleave?: (index: number) => void;
     };
 
-    let gallery: PhotoGallery;
+    let gallery: PhotoGallery[] = $state([]);
 
     let { trail, onmouseenter, onmouseleave }: Props = $props();
-
-    const photos = trail.expand?.waypoints.map(wp => wp.photos.map((p) => getFileURL(wp, p))).flat() ?? []
 </script>
 
 <div
@@ -27,10 +25,6 @@
     <div class="">
         <p class="font-semibold">{$_("start")}</p>
     </div>
-    <PhotoGallery
-        {photos}
-        bind:this={gallery}
-    ></PhotoGallery>
     {#each trail.expand?.waypoints ?? [] as wp, i}
         <div
             class="bg-background cursor-pointer"
@@ -48,20 +42,23 @@
 
         <div class="border border-input-border rounded-xl overflow-hidden">
             {#if wp.photos.length}
+                <PhotoGallery photos={wp.photos.map((p) => getFileURL(wp, p))} bind:this={gallery[i]}
+                ></PhotoGallery>
                 <div
                     class="grid {wp.photos.length > 1
                         ? 'grid-cols-[8fr_5fr]'
                         : 'grid-cols-1'} cursor-pointer"
-                    role="presentation"
-                    onclick={() => gallery.openGallery(i)}
                 >
-                    {#each wp.photos as photo, i}
-                        <img
-                            class="object-cover h-full max-h-80 w-full"
-                            class:row-span-2={i == 0 && wp.photos.length > 2}
-                            src={getFileURL(wp, photo)}
-                            alt=""
-                        />
+                    {#each wp.photos as photo, j}
+                        <button onclick={() => gallery[i].openGallery(j)}>
+                            <img
+                                class="object-cover h-full max-h-80 w-full"
+                                class:row-span-2={i == 0 &&
+                                    wp.photos.length > 2}
+                                src={getFileURL(wp, photo)}
+                                alt=""
+                            />
+                        </button>
                     {/each}
                 </div>
             {/if}

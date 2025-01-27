@@ -2,7 +2,6 @@
     import { goto } from "$app/navigation";
     import Tabs from "$lib/components/base/tabs.svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
-    import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import { Comment } from "$lib/models/comment";
     import type { Trail } from "$lib/models/trail";
 
@@ -21,6 +20,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
 
+    import { browser } from "$app/environment";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import { pb } from "$lib/pocketbase";
@@ -34,15 +34,13 @@
     import SkeletonNotificationCard from "../base/skeleton_notification_card.svelte";
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
+    import EmptyStateComment from "../empty_states/empty_state_comment.svelte";
+    import EmptyStateDescription from "../empty_states/empty_state_description.svelte";
+    import EmptyStatePhotos from "../empty_states/empty_state_photos.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
     import ShareInfo from "../share_info.svelte";
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
-    import EmptyStateComment from "../empty_states/empty_state_comment.svelte";
-    import EmptyStatePhotos from "../empty_states/empty_state_photos.svelte";
-    import EmptyStateWaypoint from "../empty_states/empty_state_waypoint.svelte";
-    import EmptyStateDescription from "../empty_states/empty_state_description.svelte";
-    import { browser } from "$app/environment";
     import TrailTimeline from "./trail_timeline.svelte";
 
     interface Props {
@@ -178,7 +176,7 @@
             ></div>
             {#if (trail.public || trailIsShared) && pb.authStore.model}
                 <div
-                    class="flex absolute top-8 left-8 {trail.public &&
+                    class="flex absolute top-6 right-6 {trail.public &&
                     trailIsShared
                         ? 'w-16'
                         : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
@@ -196,6 +194,15 @@
                         <ShareInfo type="trail" subject={trail}></ShareInfo>
                     {/if}
                 </div>
+            {/if}
+            {#if mode == "map"}
+                <button
+                    aria-label="Back"
+                    class="btn-icon hover:bg-white hover:text-black ring-input-ring text-white absolute top-6 left-6"
+                    onclick={() => history.back()}
+                >
+                    <i class="fa fa-arrow-left"></i>
+                </button>
             {/if}
             <div
                 class="flex absolute justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
@@ -262,7 +269,7 @@
             class="grid grid-cols-2 sm:grid-cols-5 gap-y-4 py-4 border-b border-input-border px-3"
         >
             <div class="flex flex-col items-center">
-                <span class="font-medium"
+                <span class="font-medium text-center"
                     >{#if mode == "overview"}
                         {$_("distance")}
                     {:else}
@@ -272,7 +279,7 @@
                 <span class="">{formatDistance(trail.distance)}</span>
             </div>
             <div class="flex flex-col items-center">
-                <span class="font-medium"
+                <span class="font-medium text-center"
                     >{#if mode == "overview"}
                         {$_("est-duration")}
                     {:else}
@@ -282,7 +289,7 @@
                 <span class="">{formatTimeHHMM(trail.duration)}</span>
             </div>
             <div class="flex flex-col items-center">
-                <span class="font-medium"
+                <span class="font-medium text-center"
                     >{#if mode == "overview"}
                         {$_("elevation-gain")}
                     {:else}
@@ -292,7 +299,7 @@
                 <span class="">{formatElevation(trail.elevation_gain)}</span>
             </div>
             <div class="flex flex-col items-center">
-                <span class="font-medium"
+                <span class="font-medium text-center"
                     >{#if mode == "overview"}
                         {$_("elevation-loss")}
                     {:else}
@@ -303,7 +310,7 @@
             </div>
             {#if trail.expand?.category}
                 <div class="flex flex-col items-center">
-                    <span class="font-medium"
+                    <span class="font-medium text-center"
                         >{#if mode == "overview"}
                             {$_("category")}
                         {:else}
@@ -327,14 +334,13 @@
     <section class="trail-info-panel-content px-8">
         <div
             class="grid grid-cols-1 my-4 gap-8"
-            class:md:grid-cols-[1fr_18rem]={mode == "overview"}
+            class:xl:grid-cols-[1fr_18rem]={mode == "overview"}
         >
-            <div>
+            <div class="order-1 xl:-order-1">
+                <h4 class="text-2xl font-semibold my-4">
+                    {$_("description")}
+                </h4>
                 {#if trail.description?.length}
-                    <h4 class="text-2xl font-semibold my-4">
-                        {$_("description")}
-                    </h4>
-
                     <article class="text-justify whitespace-pre-line text-sm">
                         {!fullDescription
                             ? trail.description?.substring(0, 300)
@@ -357,7 +363,12 @@
                     <EmptyStateDescription></EmptyStateDescription>
                 {/if}
                 <h4 class="text-2xl font-semibold mb-6 mt-12">{$_("route")}</h4>
-                <div class="relative border border-input-border rounded-xl p-2 mb-6 text-xs" id="epc-container"></div>
+                {#if mode === "overview"}
+                    <div
+                        class="relative border border-input-border rounded-xl p-2 mb-6 text-xs"
+                        id="epc-container"
+                    ></div>
+                {/if}
                 <TrailTimeline
                     {trail}
                     onmouseenter={openMarkerPopup}
@@ -469,7 +480,9 @@
             </div>
 
             {#if mode == "overview"}
-                <div class="sticky top-4 h-72 rounded-xl overflow-hidden">
+                <div
+                    class="block xl:sticky top-4 h-72 rounded-xl overflow-hidden"
+                >
                     <MapWithElevationMaplibre
                         trails={[trail]}
                         activeTrail={0}

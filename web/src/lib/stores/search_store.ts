@@ -61,8 +61,11 @@ type Address = {
     road: string
     neighbourhood: string
     suburb: string
-    city_district: string
-    city: string
+    city_district?: string
+    city?: string
+    town?: string
+    hamlet?: string
+    village?: string;
     state: string
     "ISO3166-2-lvl4": string
     postcode: string
@@ -147,6 +150,7 @@ export async function searchLocationReverse(lat: number, lon: number) {
 
 function getLocationDescription(address: Address) {
     let description = ""
+    console.log(address);
 
     if (address.country) {
         description += address.country;
@@ -156,6 +160,12 @@ function getLocationDescription(address: Address) {
     }
     if (address.city) {
         description = `${address.city}, ` + description
+    } else if (address.town) {
+        description = `${address.town}, ` + description
+    }else if (address.hamlet) {
+        description = `${address.hamlet}, ` + description
+    } else if (address.village) {
+        description = `${address.village}, ` + description
     }
     return description;
 }
