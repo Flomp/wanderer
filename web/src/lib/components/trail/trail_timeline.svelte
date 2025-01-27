@@ -14,6 +14,8 @@
     let gallery: PhotoGallery;
 
     let { trail, onmouseenter, onmouseleave }: Props = $props();
+
+    const photos = trail.expand?.waypoints.map(wp => wp.photos.map((p) => getFileURL(wp, p))).flat() ?? []
 </script>
 
 <div
@@ -25,6 +27,10 @@
     <div class="">
         <p class="font-semibold">{$_("start")}</p>
     </div>
+    <PhotoGallery
+        {photos}
+        bind:this={gallery}
+    ></PhotoGallery>
     {#each trail.expand?.waypoints ?? [] as wp, i}
         <div
             class="bg-background cursor-pointer"
@@ -41,17 +47,13 @@
         </div>
 
         <div class="border border-input-border rounded-xl overflow-hidden">
-            <PhotoGallery
-                photos={wp.photos.map((p) => getFileURL(wp, p))}
-                bind:this={gallery}
-            ></PhotoGallery>
             {#if wp.photos.length}
                 <div
                     class="grid {wp.photos.length > 1
                         ? 'grid-cols-[8fr_5fr]'
                         : 'grid-cols-1'} cursor-pointer"
                     role="presentation"
-                    onclick={() => gallery.openGallery()}
+                    onclick={() => gallery.openGallery(i)}
                 >
                     {#each wp.photos as photo, i}
                         <img

@@ -161,7 +161,8 @@
 <div
     class="trail-info-panel mx-auto {mode == 'list'
         ? ''
-        : 'border border-input-border rounded-3xl'} h-full overflow-y-scroll"
+        : 'border border-input-border rounded-3xl'} h-full"
+    class:overflow-y-scroll={mode !== "overview"}
     style="max-width: min(100%, 76rem);"
 >
     <div class="trail-info-panel-header">
@@ -268,9 +269,7 @@
                         <i class="fa fa-left-right"></i>
                     {/if}</span
                 >
-                <span class=""
-                    >{formatDistance(trail.distance)}</span
-                >
+                <span class="">{formatDistance(trail.distance)}</span>
             </div>
             <div class="flex flex-col items-center">
                 <span class="font-medium"
@@ -280,9 +279,7 @@
                         <i class="fa fa-clock"></i>
                     {/if}</span
                 >
-                <span class=""
-                    >{formatTimeHHMM(trail.duration)}</span
-                >
+                <span class="">{formatTimeHHMM(trail.duration)}</span>
             </div>
             <div class="flex flex-col items-center">
                 <span class="font-medium"
@@ -292,9 +289,7 @@
                         <i class="fa fa-arrow-trend-up"></i>
                     {/if}</span
                 >
-                <span class=""
-                    >{formatElevation(trail.elevation_gain)}</span
-                >
+                <span class="">{formatElevation(trail.elevation_gain)}</span>
             </div>
             <div class="flex flex-col items-center">
                 <span class="font-medium"
@@ -304,9 +299,7 @@
                         <i class="fa fa-arrow-trend-down"></i>
                     {/if}</span
                 >
-                <span class=""
-                    >{formatElevation(trail.elevation_loss)}</span
-                >
+                <span class="">{formatElevation(trail.elevation_loss)}</span>
             </div>
             {#if trail.expand?.category}
                 <div class="flex flex-col items-center">
@@ -317,9 +310,7 @@
                             <i class="fa fa-route"></i>
                         {/if}</span
                     >
-                    <span class=""
-                        >{$_(trail.expand.category.name)}</span
-                    >
+                    <span class="">{$_(trail.expand.category.name)}</span>
                 </div>
             {/if}
         </section>
@@ -365,13 +356,14 @@
                 {:else}
                     <EmptyStateDescription></EmptyStateDescription>
                 {/if}
-                <h4 class="text-2xl font-semibold mb-6 mt-12">{$_('route')}</h4>
+                <h4 class="text-2xl font-semibold mb-6 mt-12">{$_("route")}</h4>
+                <div class="relative border border-input-border rounded-xl p-2 mb-6 text-xs" id="epc-container"></div>
                 <TrailTimeline
                     {trail}
                     onmouseenter={openMarkerPopup}
                     onmouseleave={closeMarkerPopup}
                 ></TrailTimeline>
-                
+
                 <div class="mb-6 mt-12">
                     <Tabs {tabs} bind:activeTab></Tabs>
                 </div>
@@ -482,7 +474,8 @@
                         trails={[trail]}
                         activeTrail={0}
                         waypoints={trail.expand?.waypoints}
-                        showElevation={false}
+                        showElevation={true}
+                        elevationProfileContainer={"epc-container"}
                         showStyleSwitcher={false}
                         showFullscreen={true}
                         mapOptions={{ attributionControl: false }}
