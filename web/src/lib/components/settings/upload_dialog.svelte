@@ -96,7 +96,7 @@
                 </p>
             </div>
             <div class="space-x-2">
-                <button aria-label="Dismiss all" onclick={dismissAllCompleted}
+                <button title={$_('clear-all')} aria-label="Dismiss all" onclick={dismissAllCompleted}
                     ><i class="fa fa-ban"></i></button
                 >
                 <button
@@ -134,7 +134,7 @@
                                 ></i>
                             {/if}
                         </div>
-                        <p class="text-xs basis-full min-w-0 break-all">
+                        <p class="text-xs basis-full min-w-0 break-all mr-2">
                             {u.file.name}
                         </p>
                         {#if u.status == "error" || u.status == "cancelled"}

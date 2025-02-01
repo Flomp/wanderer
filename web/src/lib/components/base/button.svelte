@@ -1,9 +1,7 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
     import type { MouseEventHandler } from "svelte/elements";
-    import { createBubbler } from "svelte/legacy";
 
-    const bubble = createBubbler();
     interface Props {
         type?: "button" | "submit" | "reset" | null | undefined;
         icon?: string;
@@ -14,6 +12,7 @@
         loading?: boolean;
         disabled?: boolean;
         tooltip?: string | undefined;
+        form?: string;
         id?: string | undefined;
         children?: Snippet;
         onclick?: MouseEventHandler<HTMLButtonElement>;
@@ -30,6 +29,7 @@
         disabled = false,
         tooltip = undefined,
         id = undefined,
+        form,
         children,
         onclick = undefined,
     }: Props = $props();
@@ -44,6 +44,7 @@
     disabled={disabled || loading}
     class:tooltip={(tooltip?.length ?? 0) > 0}
     data-title={tooltip}
+    {form}
     {onclick}
     {type}
     {id}

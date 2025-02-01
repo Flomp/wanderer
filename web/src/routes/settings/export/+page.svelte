@@ -38,37 +38,6 @@
         handleFileSelection(e.dataTransfer?.files);
     }
 
-    function mockUpload(f: File, onProgess?: (progress: number) => void) {
-        return new Promise((resolve, reject) => {
-            console.log("here");
-            
-            setTimeout(() => {
-                onProgess?.(10);
-            }, 400);
-            setTimeout(() => {
-                onProgess?.(30);
-            }, 500);
-            setTimeout(() => {
-                onProgess?.(50);
-            }, 800);
-            setTimeout(() => {
-                onProgess?.(70);
-            }, 1200);
-            setTimeout(() => {
-                onProgess?.(99);
-            }, 1300);
-            setTimeout(() => {
-                onProgess?.(100);
-                const random = Math.random();
-                if (random < 0.5) {
-                    reject(false);
-                } else {
-                    resolve(true);
-                }
-            }, 10000);
-        });
-    }
-
     async function handleFileSelection(files?: FileList | null) {
         if (!files) {
             files = (document.getElementById("file-input") as HTMLInputElement)

@@ -14,6 +14,7 @@
     import { browser } from "$app/environment";
     import { page } from "$app/state";
     import { Tween } from "svelte/motion";
+    import UrlImportModal from "./settings/url_import_modal.svelte";
 
     let navBarItems = [
         { text: "Home", value: "/" },
@@ -26,6 +27,11 @@
         { text: $_("profile"), value: "profile", icon: "user" },
         { text: $_("settings"), value: "settings", icon: "cog" },
         { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
+    ];
+
+    const importDropdownItems = [
+        { text: $_("from-file"), value: "file", icon: "file-import" },
+        { text: $_("from-url"), value: "url", icon: "server" },
     ];
 
     const indicatorPosition = new Tween(0, {
@@ -44,6 +50,8 @@
     });
 
     let drawerOpen: boolean = $state(false);
+
+    let urlImportModal: UrlImportModal;
 
     afterNavigate((e) => {
         const routeId = e.to?.route.id;
@@ -92,6 +100,14 @@
         }
     }
 
+    function handleImportDropdownClick(item: { text: string; value: any }) {
+        if (item.value == "file") {
+            goto(`/settings/export`);
+        } else if (item.value == "url") {
+            urlImportModal.openModal();
+        }
+    }
+
     let user = $derived(browser ? $currentUser : pb.authStore.model);
 </script>
 
@@ -132,8 +148,12 @@
                     />
                 </a>
                 <a href="/profile/{user.id}" style="width: calc(100% - 104px)">
-                    <p class="text-sm overflow-hidden text-ellipsis">{user.username}</p>
-                    <p class="text-sm text-gray-500 overflow-hidden text-ellipsis">
+                    <p class="text-sm overflow-hidden text-ellipsis">
+                        {user.username}
+                    </p>
+                    <p
+                        class="text-sm text-gray-500 overflow-hidden text-ellipsis"
+                    >
                         {user.email}
                     </p>
                 </a>
@@ -182,9 +202,26 @@
                     : 'moon'}"
                 onclick={() => toggleTheme()}
             ></button>
-            <a class="btn-primary btn-large" href="/trail/edit/new"
-                ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
-            >
+            <div class="flex">
+                <a
+                    class="btn-primary btn-large !rounded-r-none focus:ring-0"
+                    href="/trail/edit/new"
+                    ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
+                >
+                <Dropdown
+                    items={importDropdownItems}
+                    onchange={(item) => handleImportDropdownClick(item)}
+                >
+                    {#snippet children({ toggleMenu: openDropdown })}
+                        <button
+                            onclick={openDropdown}
+                            class="bg-primary rounded-r-lg text-white min-h-12 hover:bg-primary-hover px-3"
+                            aria-label="Open trail create dropdown"
+                            ><i class="fa fa-caret-down"></i></button
+                        >
+                    {/snippet}
+                </Dropdown>
+            </div>
             {#if page.data.notifications}
                 <NotificationDropdown></NotificationDropdown>
             {/if}
@@ -227,3 +264,5 @@
         onclick={() => (drawerOpen = !drawerOpen)}
     ></button>
 </nav>
+
+<UrlImportModal bind:this={urlImportModal}></UrlImportModal>

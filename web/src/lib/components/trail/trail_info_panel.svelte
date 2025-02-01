@@ -157,7 +157,7 @@
 </script>
 
 <div
-    class="trail-info-panel mx-auto {mode == 'list'
+    class="trail-info-panel overflow-x-hidden mx-auto {mode == 'list'
         ? ''
         : 'border border-input-border rounded-3xl'} h-full"
     class:overflow-y-scroll={mode !== "overview"}
