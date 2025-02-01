@@ -5,6 +5,8 @@
     import Toast from "$lib/components/base/toast.svelte";
     import Footer from "$lib/components/footer.svelte";
     import NavBar from "$lib/components/nav_bar.svelte";
+    import PageLoadingBar from "$lib/components/page_loading_bar.svelte";
+    import UploadDialog from "$lib/components/settings/upload_dialog.svelte";
     import { currentUser } from "$lib/stores/user_store";
     import { isRouteProtected } from "$lib/util/authorization_util";
     import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -13,7 +15,6 @@
     import "../css/app.css";
     import "../css/components.css";
     import "../css/theme.css";
-    import PageLoadingBar from "$lib/components/page_loading_bar.svelte";
     interface Props {
         children?: Snippet;
     }
@@ -71,8 +72,9 @@
             may cause errors.
         </p>
         <button
-        aria-label="Close"
-        class="btn-icon self-end" onclick={() => (showWarning = false)}
+            aria-label="Close"
+            class="btn-icon self-end"
+            onclick={() => (showWarning = false)}
             ><i class="fa fa-close"></i></button
         >
     </div>
@@ -81,6 +83,7 @@
 <NavBar></NavBar>
 <PageLoadingBar class="text-content"></PageLoadingBar>
 <Toast></Toast>
+<UploadDialog></UploadDialog>
 {@render children?.()}
 
 <Footer></Footer>

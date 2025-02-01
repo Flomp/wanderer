@@ -80,7 +80,7 @@ export async function create<T>(event: RequestEvent, schema: ZodSchema, collecti
     const data = await event.request.json();
     const safeData = schema.parse(data);
 
-    const r = await pb.collection(Collection[collection]).create<T>(safeData, safeSearchParams)
+    const r = await pb.collection(Collection[collection]).create<T>(safeData, {...safeSearchParams, requestKey: null})
 
     return r
 }
@@ -124,7 +124,7 @@ export function handleError(e: any) {
     if (e instanceof ZodError) {
         return error(400, { message: "invalid_params", detail: e.issues } as any)
     } else if (e instanceof ClientResponseError && e.status > 0) {
-        return error(e.status as NumericRange<400, 599>, { message: e.message, detail: e.originalError.data } as any)
+        return error(e.status as NumericRange<400, 599>, {...e.response, message: e.message, detail: e.originalError.data } as any)
     } else if (e instanceof SyntaxError) {
         return error(400, "invalid_json")
     } else {

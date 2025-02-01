@@ -54,6 +54,7 @@
     "jszip": "^3.10.1",
     "maplibre-gl": "^4.7.1",
     "meilisearch": "^0.37.0",
+    "ngeohash": "^0.6.3",
     "nouislider": "^15.7.1",
     "pdfkit": "^0.15.0",
     "photoswipe": "^5.4.3",

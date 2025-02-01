@@ -93,7 +93,7 @@
             throw gpxObject;
         }
 
-        const totals = gpxObject.getTotals();
+        const totals = gpxObject.features;
 
         $data.duration = totals.duration / 1000;
         $data.elevation_gain = totals.elevationGain;

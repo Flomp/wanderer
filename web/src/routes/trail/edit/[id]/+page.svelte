@@ -792,7 +792,7 @@
 
     function updateTrailWithRouteData() {
         overwriteGPX = true;
-        const totals = route.getTotals();
+        const totals = route.features;
         $formData.distance = totals.distance;
         $formData.duration = totals.duration;
         $formData.elevation_gain = totals.elevationGain;

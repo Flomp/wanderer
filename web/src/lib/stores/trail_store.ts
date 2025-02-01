@@ -401,23 +401,40 @@ export async function trails_get_bounding_box(f: (url: RequestInfo | URL, config
 
 }
 
-export async function trails_upload(file: File, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<TrailFilterValues> {
-    const fd = new FormData()
+export async function trails_upload(file: File, ignoreDuplicates: boolean = false, onProgress?: (progress: number) => void) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const fd = new FormData();
+        fd.append("name", file.name);
+        fd.append("file", file);
+        fd.append("ignoreDuplicates", ignoreDuplicates ? "true" : "false")
 
-    fd.append("name", file.name),
-        fd.append("file", file)
+        xhr.open("PUT", "/api/v1/trail/upload", true);
 
-    const r = await f('/api/v1/trail/upload', {
-        method: 'PUT',
-        body: fd
-    })
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
+        xhr.upload.onprogress = function (event) {
+            if (event.lengthComputable) {
+                const percentComplete = (event.loaded / event.total) * 100;
+                onProgress?.(percentComplete)
+            }
+        };
 
-    return await r.json();
+        xhr.onload = async () => {
+            const responseText = xhr.responseText;
+            const response = responseText ? JSON.parse(responseText) : null;
 
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(response);
+            } else {
+                reject(new APIError(xhr.status, response?.message || "Upload failed", response));
+            }
+        };
+
+        xhr.onerror = () => {
+            reject(new APIError(xhr.status, xhr.statusText));
+        };
+
+        xhr.send(fd);
+    });
 }
 
 export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {

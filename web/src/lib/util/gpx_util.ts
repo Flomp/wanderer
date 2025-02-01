@@ -11,7 +11,7 @@ import Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import GPXWaypoint from "$lib/models/gpx/waypoint";
 import EasyFit from "$lib/vendor/easy-fit/easy-fit";
-import type { GeoJSON, Feature, FeatureCollection, GeoJsonProperties, Position } from 'geojson';
+import type { Feature, FeatureCollection, GeoJSON, GeoJsonProperties, Position } from 'geojson';
 import * as xmldom from 'xmldom';
 import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 
@@ -38,7 +38,7 @@ export async function gpx2trail(gpxString: string, fallbackName?: string) {
         trail.expand!.waypoints.push(wp);
     }
 
-    const totals = gpx.getTotals()
+    const totals = gpx.features
 
     const trackPoints = gpx.trk?.at(0)?.trkseg?.at(0)?.trkpt
     const routePoints = gpx.rte?.at(0)?.rtept;

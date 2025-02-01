@@ -70,7 +70,7 @@
         trail: trail.id ?? "",
     });
 
-    let commentsLoading: boolean = $state(activeTab == 4);
+    let commentsLoading: boolean = $state(activeTab == 2);
     let commentCreateLoading: boolean = $state(false);
     let commentDeleteLoading: boolean = false;
 
@@ -150,7 +150,7 @@
               : emptyStateTrailDark,
     );
     $effect(() => {
-        if (browser && activeTab == 4) {
+        if (browser && activeTab == 2) {
             fetchComments();
         }
     });

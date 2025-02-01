@@ -1,45 +1,23 @@
 <script lang="ts">
+    import emptyStateUploadDark from "$lib/assets/svgs/empty_states/empty_state_upload_dark.svg";
+    import emptyStateUploadLight from "$lib/assets/svgs/empty_states/empty_state_upload_light.svg";
     import Button from "$lib/components/base/button.svelte";
+    import { } from "$lib/components/settings/upload_dialog.svelte";
     import TrailExportModal from "$lib/components/trail/trail_export_modal.svelte";
+    import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
-    import {
-        fetchGPX,
-        trails_index,
-        trails_upload,
-    } from "$lib/stores/trail_store";
+    import { fetchGPX, trails_index, trails_upload } from "$lib/stores/trail_store";
+    import { processUploadQueue, uploadStore, type Upload } from "$lib/stores/upload_store.svelte";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
     import JSZip from "jszip";
-    import { _ } from "svelte-i18n";
-    import { linear } from "svelte/easing";
-    import { Tween } from "svelte/motion";
-    import emptyStateUploadDark from "$lib/assets/svgs/empty_states/empty_state_upload_dark.svg";
-    import emptyStateUploadLight from "$lib/assets/svgs/empty_states/empty_state_upload_light.svg";
-    import { theme } from "$lib/stores/theme_store";
     import { onMount } from "svelte";
-    import JSConfetti from "js-confetti";
-
-    const uploadProgress = new Tween(0, {
-        duration: 300,
-        easing: linear,
-    });
+    import { _ } from "svelte-i18n";
 
     let exportModal: TrailExportModal;
 
     let offerUpload: boolean = $state(false);
-    let uploading: boolean = $state(false);
-
-    let jsConfetti: JSConfetti;
-
-    onMount(() => {
-        jsConfetti = new JSConfetti({
-            canvas:
-                (document.getElementById(
-                    "confetti-canvas",
-                ) as HTMLCanvasElement | null) ?? undefined,
-        });
-    });
 
     function openFileBrowser() {
         document.getElementById("file-input")!.click();
@@ -56,11 +34,39 @@
 
     function handleDrop(e: DragEvent) {
         e.preventDefault();
-        if (uploading) {
-            return;
-        }
         offerUpload = false;
         handleFileSelection(e.dataTransfer?.files);
+    }
+
+    function mockUpload(f: File, onProgess?: (progress: number) => void) {
+        return new Promise((resolve, reject) => {
+            console.log("here");
+            
+            setTimeout(() => {
+                onProgess?.(10);
+            }, 400);
+            setTimeout(() => {
+                onProgess?.(30);
+            }, 500);
+            setTimeout(() => {
+                onProgess?.(50);
+            }, 800);
+            setTimeout(() => {
+                onProgess?.(70);
+            }, 1200);
+            setTimeout(() => {
+                onProgess?.(99);
+            }, 1300);
+            setTimeout(() => {
+                onProgess?.(100);
+                const random = Math.random();
+                if (random < 0.5) {
+                    reject(false);
+                } else {
+                    resolve(true);
+                }
+            }, 10000);
+        });
     }
 
     async function handleFileSelection(files?: FileList | null) {
@@ -73,42 +79,17 @@
             return;
         }
 
-        let errorsThrown = 0;
-        uploading = true;
-        let progress = 0;
         for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            try {
-                uploadProgress.set((progress += 100 / (files.length * 2)));
-                await trails_upload(file);
-            } catch (e) {
-                errorsThrown += 1;
-                show_toast({
-                    type: "error",
-                    icon: "close",
-                    text: `Error uploading file: ${file.name}`,
-                });
-            } finally {
-                uploadProgress.set((progress += 100 / (files.length * 2)));
-            }
+            const u: Upload = {
+                file: files[i],
+                progress: 0,
+                status: "enqueued",
+                function: trails_upload
+            };
+            uploadStore.enqueuedUploads.push(u);
         }
 
-        setTimeout(() => {
-            uploadProgress.set(0, { duration: 0 });
-            uploading = false;
-            jsConfetti.addConfetti({
-                confettiRadius: 4,
-                emojis: ["🍃", "🍁"],
-            });
-        }, 500);
-
-        if (errorsThrown == 0) {
-            show_toast({
-                type: "success",
-                icon: "check",
-                text: `${files.length} ${$_("trail", { values: { n: files.length } })} ${$_("uploaded")}`,
-            });
-        }
+        await processUploadQueue();
     }
 
     async function exportTrails(exportSettings: {
@@ -182,27 +163,18 @@
 <svelte:head>
     <title>{$_("settings")} | wanderer</title>
 </svelte:head>
+
 <div class="space-y-6">
     <h3 class="text-2xl font-semibold">{$_("import")}</h3>
     <hr class="mt-4 mb-6 border-input-border" />
     <button
-        class="drop-area relative h-64 w-full p-4 {uploading
-            ? ''
-            : 'border border-content border-dashed'} rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
-        class:bg-menu-item-background-hover={uploading}
-        class:border-2={offerUpload && !uploading}
-        style="--progress: {uploadProgress.current}%"
+        class="drop-area relative h-64 w-full p-4 border border-content border-dashed rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
+        class:border-2={offerUpload}
         onclick={openFileBrowser}
         ondragover={handleDragOver}
         ondragleave={handleDragLeave}
         ondrop={handleDrop}
     >
-        <canvas
-            id="confetti-canvas"
-            class="absolute"
-            style="width: 100%; height: 200%"
-        >
-        </canvas>
         <div class="">
             <img
                 class="rounded-full aspect-square mx-auto"
@@ -230,27 +202,5 @@
     >
 </div>
 
-<TrailExportModal
-    bind:this={exportModal}
-    onexport={exportTrails}
+<TrailExportModal bind:this={exportModal} onexport={exportTrails}
 ></TrailExportModal>
-
-<style>
-    .drop-area::after {
-        content: "";
-        display: block;
-        position: absolute;
-        left: -4px;
-        top: -4px;
-        right: -4px;
-        bottom: -4px;
-        background-color: transparent;
-        z-index: -100;
-        border-radius: 0.75rem;
-        background-image: conic-gradient(
-            rgba(var(--content)),
-            rgba(var(--content)) var(--progress),
-            transparent var(--progress)
-        );
-    }
-</style>
