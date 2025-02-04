@@ -407,7 +407,7 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 func registerCronJobs(app *pocketbase.PocketBase) {
 	scheduler := cron.New()
 
-	scheduler.MustAdd("integrations", "0 * * * *", func() {
+	scheduler.MustAdd("integrations", "*/5 * * * *", func() {
 		err := strava.SyncStrava(app)
 		if err != nil {
 			warning := fmt.Sprintf("Error syncing with strava: %v", err)

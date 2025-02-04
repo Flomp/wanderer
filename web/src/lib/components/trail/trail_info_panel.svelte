@@ -164,7 +164,7 @@
 </script>
 
 <div
-    class="trail-info-panel overflow-x-hidden mx-auto {mode == 'list'
+    class="trail-info-panel mx-auto {mode == 'list'
         ? ''
         : 'border border-input-border rounded-3xl'} h-full"
     class:overflow-y-scroll={mode !== "overview"}
@@ -190,7 +190,7 @@
                 >
                     {#if trail.public && pb.authStore.model}
                         <span
-                            class="tooltip"
+                            class:tooltip={mode != "map"}
                             class:mr-3={trail.public && trailIsShared}
                             data-title={$_("public")}
                         >

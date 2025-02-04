@@ -222,7 +222,7 @@
 <main class="grid grid-cols-1 md:grid-cols-[400px_1fr]">
     <div
         id="trail-list"
-        class="flex flex-col items-stretch gap-4 px-3 md:px-8"
+        class="flex flex-col items-stretch gap-4 px-3 md:px-8 overflow-y-scroll"
     >
         <div class="sticky top-0 z-10 bg-background pb-4 space-y-4">
             <div class="flex items-center gap-2 md:gap-4">
