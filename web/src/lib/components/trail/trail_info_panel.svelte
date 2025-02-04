@@ -362,7 +362,7 @@
                 {:else}
                     <EmptyStateDescription></EmptyStateDescription>
                 {/if}
-                <h4 class="text-2xl font-semibold mb-6 mt-12">{$_("route")}</h4>
+                <h4 class="text-2xl font-semibold mb-6 mt-12">{$_("route", { values: { n: 2 } })}</h4>
                 {#if mode === "overview"}
                     <div
                         class="relative border border-input-border rounded-xl p-2 mb-6 text-xs"

@@ -18,9 +18,11 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
+	pbCron "github.com/pocketbase/pocketbase/tools/cron"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/hook"
 
+	"pocketbase/cron"
 	_ "pocketbase/migrations"
 	"pocketbase/util"
 )
@@ -54,7 +56,9 @@ func registerMigrations(app *pocketbase.PocketBase) {
 func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceManager) {
 	app.OnModelAfterCreate("users").Add(createUserHandler(app, client))
 
-	app.OnRecordAfterCreateRequest("trails").Add(createTrailHandler(app, client))
+	app.OnModelAfterCreate("trails").Add(createTrailIndexHandler(client))
+
+	app.OnRecordAfterCreateRequest("trails").Add(createTrailHandler(app))
 	app.OnRecordAfterUpdateRequest("trails").Add(updateTrailHandler(client))
 	app.OnRecordAfterDeleteRequest("trails").Add(deleteTrailHandler(client))
 
@@ -115,11 +119,18 @@ func createDefaultUserSettings(app *pocketbase.PocketBase, userId string) error 
 	return app.Dao().SaveRecord(settings)
 }
 
-func createTrailHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		if err := util.IndexTrail(e.Record, client); err != nil {
+func createTrailIndexHandler(client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
+	return func(e *core.ModelEvent) error {
+		record := e.Model.(*models.Record)
+		if err := util.IndexTrail(record, client); err != nil {
 			return err
 		}
+		return nil
+	}
+}
+
+func createTrailHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
+	return func(e *core.RecordCreateEvent) error {
 		if e.Record.GetBool("public") {
 			notification := util.Notification{
 				Type: util.TrailCreate,
@@ -335,6 +346,7 @@ func changeUserEmailHandler(app *pocketbase.PocketBase) func(e *core.RecordReque
 func onBeforeServeHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
 		registerRoutes(e, app, client)
+		registerCronJobs(app)
 		return bootstrapData(app, client)
 	}
 
@@ -391,6 +403,19 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 	})
 }
 
+func registerCronJobs(app *pocketbase.PocketBase) {
+	scheduler := pbCron.New()
+
+	scheduler.MustAdd("strava", "*/15 * * * *", func() {
+		err := cron.SyncStrava(app)
+		if err != nil {
+			app.Logger().Warn(fmt.Sprintf("Error syncing with strava: %v", err))
+		}
+	})
+
+	scheduler.Start()
+}
+
 func bootstrapData(app *pocketbase.PocketBase, client meilisearch.ServiceManager) error {
 	bootstrapCategories(app)
 	bootstrapMeilisearchTrails(app, client)
@@ -431,8 +456,6 @@ func bootstrapMeilisearchTrails(app *pocketbase.PocketBase, client meilisearch.S
 	}
 
 	for _, trail := range trails {
-		log.Println(trail)
-
 		if err := util.UpdateTrail(trail, client); err != nil {
 			return err
 		}

@@ -23,6 +23,7 @@ export enum Collection {
     categories = "categories",
     comments = "comments",
     follows = "follows",
+    integrations = "integrations",
     list_share = "list_share",
     lists = "lists",
     notifications = "notifications",

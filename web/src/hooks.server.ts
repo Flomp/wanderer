@@ -67,7 +67,7 @@ const auth: Handle = async ({ event, resolve }) => {
   try {
     // get an up-to-date auth store state by verifying and refreshing the loaded auth model (if any)
     if (pb.authStore.isValid) {
-      await pb.collection('users').authRefresh({requestKey: null})
+      await pb.collection('users').authRefresh({ requestKey: null })
     }
   } catch (_) {
     // clear the auth store on failed refresh
@@ -78,7 +78,7 @@ const auth: Handle = async ({ event, resolve }) => {
   let settings: Settings | undefined;
   if (pb.authStore.model) {
     meiliApiKey = pb.authStore.model.token
-    settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.model.id}"`, {requestKey: null})
+    settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.model.id}"`, { requestKey: null })
   } else {
     const r = await event.fetch(pb.buildUrl("/public/search/token"));
     const response = await r.json();
@@ -105,7 +105,7 @@ const auth: Handle = async ({ event, resolve }) => {
   // send back the default 'pb_auth' cookie to the client with the latest store state
   response.headers.set(
     'set-cookie',
-    pb.authStore.exportToCookie({ httpOnly: false, secure: event.url.protocol === "https:" })
+    pb.authStore.exportToCookie({ httpOnly: false, secure: event.url.protocol === "https:" || event.url.hostname === "localhost", sameSite: "none" })
   )
 
   return response
