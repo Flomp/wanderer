@@ -1,4 +1,4 @@
-package cron
+package strava
 
 import "time"
 
@@ -11,17 +11,17 @@ type RefreshTokenRequest struct {
 type RefreshTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresAt    *int64 `json:"expires_at"`
+	ExpiresAt    int64  `json:"expires_at"`
 }
 type StravaIntegration struct {
-	Active       bool    `json:"active"`
-	Routes       bool    `json:"routes"`
-	Activities   bool    `json:"activities"`
-	ClientID     int32   `json:"clientId"`
-	ClientSecret string  `json:"clientSecret"`
-	AccessToken  *string `json:"accessToken,omitempty"`
-	RefreshToken *string `json:"refreshToken,omitempty"`
-	ExpiresAt    *int64  `json:"expiresAt,omitempty"`
+	Active       bool   `json:"active"`
+	Routes       bool   `json:"routes"`
+	Activities   bool   `json:"activities"`
+	ClientID     int32  `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
+	AccessToken  string `json:"accessToken,omitempty"`
+	RefreshToken string `json:"refreshToken,omitempty"`
+	ExpiresAt    int64  `json:"expiresAt,omitempty"`
 }
 type StravaRoute struct {
 	Athlete             Athlete     `json:"athlete"`

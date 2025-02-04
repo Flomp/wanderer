@@ -12,14 +12,22 @@ const StravaSchema = z.object({
     active: z.boolean()
 })
 
+const KomootSchema = z.object({
+    email: z.string().email(),
+    password: z.string(),
+    active: z.boolean()
+})
+
 const IntegrationCreateSchema = z.object({
     user: z.string().length(15),
-    strava: StravaSchema,
+    strava: StravaSchema.optional(),
+    komoot: KomootSchema.optional()
 
 }) satisfies ZodType<Integration>
 
 const IntegrationUpdateSchema = z.object({
-    strava: StravaSchema.optional(),
+    strava: StravaSchema.optional().nullable(),
+    komoot: KomootSchema.optional().nullable()
 }) satisfies ZodType<Partial<Integration>>
 
-export { StravaSchema, IntegrationCreateSchema, IntegrationUpdateSchema }
+    export { StravaSchema, IntegrationCreateSchema, IntegrationUpdateSchema, KomootSchema };

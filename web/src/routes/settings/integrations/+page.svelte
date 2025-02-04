@@ -1,18 +1,19 @@
 <script lang="ts">
     import { page } from "$app/state";
-    import Button from "$lib/components/base/button.svelte";
-    import Modal from "$lib/components/base/modal.svelte";
-    import TextField from "$lib/components/base/text_field.svelte";
-    import Toggle from "$lib/components/base/toggle.svelte";
-    import { StravaSchema } from "$lib/models/api/integration_schema.js";
-    import { Integration } from "$lib/models/integration.js";
+    import IntegrationCard from "$lib/components/settings/integrations/integration_card.svelte";
+    import KomootSettingsModal from "$lib/components/settings/integrations/komoot_settings_modal.svelte";
+    import StravaSettingsModal from "$lib/components/settings/integrations/strava_settings_modal.svelte";
+    import {
+        Integration,
+        type BaseIntegration,
+        type KomootIntegration,
+        type StravaIntegration,
+    } from "$lib/models/integration.js";
     import {
         integrations_create,
         integrations_update,
     } from "$lib/stores/integration_store.js";
     import { show_toast } from "$lib/stores/toast_store.js";
-    import { validator } from "@felte/validator-zod";
-    import { createForm } from "felte";
     import { _ } from "svelte-i18n";
 
     let { data } = $props();
@@ -22,54 +23,44 @@
     const scope = "read_all,activity:read_all";
     const redirectUri = page.url.href + "/callback/strava";
 
-    let stravaSettingsModal: Modal;
+    let stravaSettingsModal: StravaSettingsModal;
     let stravaToggleValue: boolean = $derived(
         integration?.strava?.active || false,
     );
 
-    const { form, errors, data: d } = createForm({
-        initialValues: {
-            clientId: data.integration?.strava?.clientId ?? "",
-            clientSecret: data.integration?.strava?.clientSecret ?? "",
-            routes: data.integration?.strava?.routes ?? true,
-            activities: data.integration?.strava?.activities ?? true,
-            active: data.integration?.strava?.active ?? false,
-        },
-        extend: validator({
-            schema: StravaSchema,
-        }),
-        onSubmit: async (form) => {
-            stravaSettingsModal.closeModal();
+    let komootSettingsModal: KomootSettingsModal;
+    let komootToggleValue: boolean = $state(data.integration?.komoot?.active ?? false);
 
-            try {
-                if (integration) {
-                    integration.strava = {
-                        clientId: form.clientId,
-                        clientSecret: form.clientSecret,
-                        routes: form.routes,
-                        activities: form.activities,
-                        active: integration.strava?.active ?? false,
-                    };
-                    integration = await integrations_update(integration);
-                } else {
-                    const newIntegration = new Integration("", {
-                        routes: form.routes,
-                        activities: form.activities,
-                        clientId: form.clientId,
-                        clientSecret: form.clientSecret,
-                        active: false,
-                    });
-                    integration = await integrations_create(newIntegration);
-                }
-            } catch (e) {
-                show_toast({
-                    text: $_("error-setting-up-strava-integration"),
-                    icon: "close",
-                    type: "error",
-                });
+    async function onSettingsSave(
+        form: StravaIntegration | KomootIntegration,
+        key: "strava" | "komoot",
+    ) {
+        try {
+            if (integration) {
+                integration[key] = form as any;
+                integration = await integrations_update(integration);
+            } else {
+                const newIntegration: Integration = {
+                    user: "",
+                    [key]: form,
+                };
+                integration = await integrations_create(newIntegration);
             }
-        },
-    });
+
+            show_toast({
+                text: $_("settings-saved"),
+                icon: "check",
+                type: "success",
+            });
+        } catch (e) {
+            show_toast({
+                text: $_("error-setting-up-strava-integration"),
+                icon: "close",
+                type: "error",
+            });
+        }
+    }
+
     async function onStravaToggle(value: boolean) {
         if (!integration?.strava) {
             return;
@@ -80,21 +71,13 @@
         } else {
             const deauthUrl = `https://www.strava.com/oauth/deauthorize`;
 
-            const r = await fetch(deauthUrl, {
+            await fetch(deauthUrl, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${integration.strava.accessToken}`,
                 },
             });
 
-            if (!r.ok) {
-                show_toast({
-                    text: $_("error-disabling-strava-integration"),
-                    icon: "close",
-                    type: "error",
-                });
-                return;
-            }
             integration.strava = {
                 clientId: integration.strava.clientId,
                 clientSecret: integration.strava.clientSecret,
@@ -116,6 +99,41 @@
             }
         }
     }
+
+    async function onKomootToggle(value: boolean) {
+        if (!integration?.komoot) {
+            return;
+        }
+        if (value) {
+            const authUrl = `https://api.komoot.de/v006/account/email/${integration.komoot.email}/`;
+            const r = await fetch(authUrl, {
+                method: "GET",
+                headers: {
+                    Authorization: `Basic ${btoa(integration.komoot.email + ":" + integration.komoot.password)}`,
+                },
+            });
+            if (!r.ok) {
+                komootToggleValue = false;
+                show_toast({
+                    text: $_("error-logging-in-to-komoot"),
+                    icon: "close",
+                    type: "error",
+                });
+            }
+            integration.komoot.active = true;
+        } else {
+            integration.komoot.active = false;
+        }
+        try {
+            integration = await integrations_update(integration);
+        } catch (e) {
+            show_toast({
+                text: $_("error-updating-strava-integration"),
+                icon: "close",
+                type: "error",
+            });
+        }
+    }
 </script>
 
 <svelte:head>
@@ -125,77 +143,35 @@
 <h3 class="text-2xl font-semibold">{$_("integrations")}</h3>
 <hr class="mt-4 mb-6 border-input-border" />
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-    <div class="border border-input-border rounded-lg p-4 space-y-4">
-        <img
-            src="https://upload.wikimedia.org/wikipedia/commons/c/cb/Strava_Logo.svg"
-            alt="strava logo"
-        />
-        <div>
-            <h5 class="text-xl font-semibold">strava</h5>
-            <p class="text-sm text-gray-500">
-                Syncs your strava routes with wanderer in regular intervals.
-            </p>
-        </div>
-        <div class="flex items-center justify-between">
-            <button
-                class="btn-secondary"
-                onclick={() => stravaSettingsModal.openModal()}
-                ><i class="fa fa-cogs mr-2"></i>{$_("settings")}</button
-            >
-            <Toggle
-                value={stravaToggleValue}
-                onchange={onStravaToggle}
-                disabled={!integration?.strava}
-            ></Toggle>
-        </div>
-    </div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <IntegrationCard
+        img="https://upload.wikimedia.org/wikipedia/commons/c/cb/Strava_Logo.svg"
+        title="strava"
+        description={$_("integration-description-strava")}
+        disabled={!integration?.strava}
+        active={stravaToggleValue}
+        onclick={() => stravaSettingsModal.openModal()}
+        ontoggle={onStravaToggle}
+    ></IntegrationCard>
+    <IntegrationCard
+        img="https://upload.wikimedia.org/wikipedia/commons/8/82/Komoot-logo-type.svg"
+        title="komoot"
+        description={$_("integration-description-komoot")}
+        disabled={!integration?.komoot}
+        bind:active={komootToggleValue}
+        onclick={() => komootSettingsModal.openModal()}
+        ontoggle={onKomootToggle}
+    ></IntegrationCard>
 </div>
 
-<Modal
-    id="strava-settings-modal"
-    size="max-w-lg"
-    title={"strava " + $_("settings")}
+<StravaSettingsModal
     bind:this={stravaSettingsModal}
->
-    {#snippet content()}
-        <form id="strava-settings-form" class="space-y-2" use:form>
-            <TextField
-                label="Client-ID"
-                placeholder="000000"
-                name="clientId"
-                error={$errors.clientId}
-            ></TextField>
-            <TextField
-                label="Client Secret"
-                placeholder="de8b3789bd7116d..."
-                name="clientSecret"
-                type="password"
-                error={$errors.clientSecret}
-            ></TextField>
-            <div class="flex gap-x-4">
-                <Toggle name="routes" label={$_("route", { values: { n: 2 } })}
-                ></Toggle>
-                <Toggle
-                    name="activities"
-                    label={$_("activity", { values: { n: 2 } })}
-                ></Toggle>
-            </div>
-        </form>
-    {/snippet}
-    {#snippet footer()}
-        <div class="flex items-center gap-4">
-            <button
-                class="btn-secondary"
-                onclick={() => stravaSettingsModal.closeModal()}
-                >{$_("cancel")}</button
-            >
-            <button
-                class="btn-primary"
-                form="strava-settings-form"
-                type="submit"
-                name="save">{$_("save")}</button
-            >
-        </div>
-    {/snippet}</Modal
->
+    {integration}
+    onsave={(form) => onSettingsSave(form, "strava")}
+></StravaSettingsModal>
+
+<KomootSettingsModal
+    bind:this={komootSettingsModal}
+    {integration}
+    onsave={(form) => onSettingsSave(form, "komoot")}
+></KomootSettingsModal>

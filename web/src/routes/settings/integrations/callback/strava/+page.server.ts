@@ -4,6 +4,10 @@ import { error, redirect, type RequestEvent, type ServerLoad } from "@sveltejs/k
 export const load: ServerLoad = async ({ url, fetch }) => {
     const oauthError = url.searchParams.get('error');
     if (oauthError) {
+        // user cancelled
+        if(oauthError == "access_denied") {
+            return redirect(302, '/settings/integrations')
+        }
         return error(400, {
             message: oauthError
         });

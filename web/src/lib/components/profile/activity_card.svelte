@@ -72,7 +72,7 @@
     </div>
     {#if activity.photos.length}
         <div
-            class="grid {activity.photos.length > 1
+            class="grid gap-[1px] {activity.photos.length > 1
                 ? 'grid-cols-[8fr_5fr]'
                 : 'grid-cols-1'}"
         >

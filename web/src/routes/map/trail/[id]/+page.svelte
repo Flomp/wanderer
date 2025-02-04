@@ -14,7 +14,7 @@
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[458px_1fr] gap-x-1 gap-y-4">
     <div id="panel" class="hidden md:block">
-        <TrailInfoPanel trail={$trail} {markers}></TrailInfoPanel>
+        <TrailInfoPanel initTrail={$trail} {markers}></TrailInfoPanel>
     </div>
     <div id="trail-details">
         <MapWithElevationMaplibre

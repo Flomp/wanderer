@@ -1,9 +1,9 @@
 
-interface BaseIntegration {
+export interface BaseIntegration {
     active: boolean
 }
 
-interface StravaIntegration extends BaseIntegration {
+export interface StravaIntegration extends BaseIntegration {
     clientId: string | number;
     clientSecret: string;
     routes: boolean;
@@ -13,13 +13,21 @@ interface StravaIntegration extends BaseIntegration {
     expiresAt?: number;
 }
 
+export interface KomootIntegration extends BaseIntegration {
+    email: string,
+    password: string,
+}
+
+
 export class Integration {
     id?: string;
     user: string;
-    strava?: StravaIntegration;
+    strava?: StravaIntegration | null;
+    komoot?: KomootIntegration | null
 
-    constructor(user: string, strava?: StravaIntegration) {
+    constructor(user: string, strava?: StravaIntegration, komoot?: KomootIntegration) {
         this.user = user;
         this.strava = strava;
+        this.komoot = komoot;
     }
 }

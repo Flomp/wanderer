@@ -45,7 +45,7 @@
 </script>
 
 <div
-    class="flex gap-4 p-4 outline outline-1 outline-input-border rounded-md my-2 hover:outline-2"
+    class="flex gap-4 p-4 outline outline-1 outline-input-border rounded-md my-2 hover:outline-2 items-start"
 >
     {#if imgSrc.length}
         {#if mode == "show"}
@@ -61,7 +61,7 @@
         >
             {#each imgSrc as img, i}
                 <img
-                    class="absolute h-full rounded-xl object-cover"
+                    class="absolute h-full rounded-xl object-cover aspect-square"
                     style="top: {6 * i}px; right: {6 *
                         i}px; transform: rotate(-{i * 5}deg)"
                     src={img}

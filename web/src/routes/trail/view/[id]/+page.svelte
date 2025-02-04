@@ -10,7 +10,7 @@
 {#if data.trail}
     <TrailInfoPanel
         activeTab={parseInt(page.url.searchParams.get("t") ?? "0")}
-        trail={data.trail}
+        initTrail={data.trail}
         mode="overview"
     ></TrailInfoPanel>
 {/if}

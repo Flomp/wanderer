@@ -55,7 +55,7 @@
     <div
         class="relative w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl"
     >
-        <img width="100%" id="header-img" src={thumbnail} alt="" />
+        <img class="min-h-40" id="header-img" src={thumbnail} alt="" />
     </div>
     {#if (trail.public || trailIsShared) && pb.authStore.model}
         <div

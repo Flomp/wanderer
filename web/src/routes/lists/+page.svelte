@@ -361,7 +361,7 @@
                     onclick={(data) => selectTrail(data.trail)}
                 ></ListPanel>
             {:else if selectedList && selectedTrail}
-                <TrailInfoPanel trail={selectedTrail} mode="list" {markers}
+                <TrailInfoPanel initTrail={selectedTrail} mode="list" {markers}
                 ></TrailInfoPanel>
             {/if}
         </div>

@@ -1,4 +1,4 @@
-package cron
+package strava
 
 import (
 	"bytes"
@@ -18,6 +18,10 @@ import (
 	"github.com/twpayne/go-polyline"
 )
 
+type StravaApi struct {
+	AceessToken string
+}
+
 func SyncStrava(app *pocketbase.PocketBase) error {
 	integrations, err := app.Dao().FindRecordsByExpr("integrations", dbx.NewExp("true"))
 	if err != nil {
@@ -30,17 +34,26 @@ func SyncStrava(app *pocketbase.PocketBase) error {
 		var stravaIntegration StravaIntegration
 		json.Unmarshal([]byte(stravaString), &stravaIntegration)
 
-		if !stravaIntegration.Active || stravaIntegration.RefreshToken == nil {
+		if !stravaIntegration.Active || stravaIntegration.RefreshToken == "" {
 			continue
 		}
 
-		r, err := refreshStravaToken(stravaIntegration.ClientID, stravaIntegration.ClientSecret, *stravaIntegration.RefreshToken)
+		r, err := refreshStravaToken(stravaIntegration.ClientID, stravaIntegration.ClientSecret, stravaIntegration.RefreshToken)
 		if err != nil {
-			return err
+			warning := fmt.Sprintf("error refreshing strava access token: %v\n", err)
+			fmt.Print(warning)
+			app.Logger().Warn(warning)
+			continue
 		}
-		stravaIntegration.AccessToken = &r.AccessToken
-		stravaIntegration.RefreshToken = &r.RefreshToken
-		stravaIntegration.ExpiresAt = r.ExpiresAt
+		if r.AccessToken != "" {
+			stravaIntegration.AccessToken = r.AccessToken
+		}
+		if r.RefreshToken != "" {
+			stravaIntegration.RefreshToken = r.RefreshToken
+		}
+		if r.AccessToken != "" {
+			stravaIntegration.ExpiresAt = r.ExpiresAt
+		}
 
 		b, err := json.Marshal(stravaIntegration)
 		if err != nil {
@@ -56,11 +69,17 @@ func SyncStrava(app *pocketbase.PocketBase) error {
 
 				routes, err := fetchStravaRoutes(r.AccessToken, page)
 				if err != nil {
-					return err
+					warning := fmt.Sprintf("error fetching routes from strava: %v\n", err)
+					fmt.Print(warning)
+					app.Logger().Warn(warning)
+					break
 				}
 				hasNewRoutes, err = syncTrailsWithRoutes(app, r.AccessToken, userId, routes)
 				if err != nil {
-					return err
+					warning := fmt.Sprintf("error syncing strava routes with trails: %v\n", err)
+					fmt.Print(warning)
+					app.Logger().Warn(warning)
+					break
 				}
 				page += 1
 			}
@@ -71,11 +90,17 @@ func SyncStrava(app *pocketbase.PocketBase) error {
 			for hasNewActivities {
 				activities, err := fetchStravaActivities(r.AccessToken, page)
 				if err != nil {
-					return err
+					warning := fmt.Sprintf("error fetching activities from strava: %v", err)
+					fmt.Print(warning)
+					app.Logger().Warn(warning)
+					break
 				}
 				hasNewActivities, err = syncTrailsWithActivities(app, r.AccessToken, userId, activities)
 				if err != nil {
-					return err
+					warning := fmt.Sprintf("error syncing strava activities with trails: %v", err)
+					fmt.Print(warning)
+					app.Logger().Warn(warning)
+					break
 				}
 				page += 1
 			}
@@ -263,7 +288,7 @@ func createTrailFromRoute(app *pocketbase.PocketBase, route StravaRoute, gpx *fi
 		lat = coords[0][0]
 		lon = coords[0][1]
 	} else {
-		fmt.Println("Warning: No coordinates available, setting lat/lon to 0")
+		app.Logger().Warn("Warning: No coordinates available, setting lat/lon to 0")
 		lat, lon = 0, 0
 	}
 
@@ -316,7 +341,7 @@ func createWaypointsFromRoute(app *pocketbase.PocketBase, route StravaRoute, use
 	for i, wp := range route.Waypoints {
 		record := models.NewRecord(collection)
 
-		record.Set("name", string(i))
+		record.Set("name", strconv.Itoa(i))
 		record.Set("description", wp.Description)
 		record.Set("lat", wp.Latlng[0])
 		record.Set("lon", wp.Latlng[1])

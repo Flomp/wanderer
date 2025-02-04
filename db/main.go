@@ -18,11 +18,12 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
-	pbCron "github.com/pocketbase/pocketbase/tools/cron"
+	"github.com/pocketbase/pocketbase/tools/cron"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/hook"
 
-	"pocketbase/cron"
+	"pocketbase/integrations/komoot"
+	"pocketbase/integrations/strava"
 	_ "pocketbase/migrations"
 	"pocketbase/util"
 )
@@ -404,12 +405,20 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 }
 
 func registerCronJobs(app *pocketbase.PocketBase) {
-	scheduler := pbCron.New()
+	scheduler := cron.New()
 
-	scheduler.MustAdd("strava", "*/15 * * * *", func() {
-		err := cron.SyncStrava(app)
+	scheduler.MustAdd("integrations", "0 * * * *", func() {
+		err := strava.SyncStrava(app)
 		if err != nil {
-			app.Logger().Warn(fmt.Sprintf("Error syncing with strava: %v", err))
+			warning := fmt.Sprintf("Error syncing with strava: %v", err)
+			fmt.Print(warning)
+			app.Logger().Error(warning)
+		}
+		err = komoot.SyncKomoot(app)
+		if err != nil {
+			warning := fmt.Sprintf("Error syncing with komoot: %v", err)
+			fmt.Print(warning)
+			app.Logger().Error(warning)
 		}
 	})
 
