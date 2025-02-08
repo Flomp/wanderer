@@ -9,6 +9,7 @@
         type KomootIntegration,
         type StravaIntegration,
     } from "$lib/models/integration.js";
+    import { pb } from "$lib/pocketbase.js";
     import {
         integrations_create,
         integrations_update,
@@ -29,7 +30,9 @@
     );
 
     let komootSettingsModal: KomootSettingsModal;
-    let komootToggleValue: boolean = $state(data.integration?.komoot?.active ?? false);
+    let komootToggleValue: boolean = $state(
+        data.integration?.komoot?.active ?? false,
+    );
 
     async function onSettingsSave(
         form: StravaIntegration | KomootIntegration,
@@ -97,6 +100,14 @@
                     type: "error",
                 });
             }
+
+            show_toast({
+                text:
+                    "strava " +
+                    $_("integration-disabled"),
+                icon: "check",
+                type: "success",
+            });
         }
     }
 
@@ -105,14 +116,11 @@
             return;
         }
         if (value) {
-            const authUrl = `https://api.komoot.de/v006/account/email/${integration.komoot.email}/`;
-            const r = await fetch(authUrl, {
-                method: "GET",
-                headers: {
-                    Authorization: `Basic ${btoa(integration.komoot.email + ":" + integration.komoot.password)}`,
-                },
-            });
-            if (!r.ok) {
+            try {
+                await pb.send("/integration/komoot/login", {
+                    method: "GET",
+                });
+            } catch (e) {
                 komootToggleValue = false;
                 show_toast({
                     text: $_("error-logging-in-to-komoot"),
@@ -133,6 +141,13 @@
                 type: "error",
             });
         }
+
+        show_toast({
+            text:
+                "komoot " + $_(`integration-${value ? "enabled" : "disabled"}`),
+            icon: "check",
+            type: "success",
+        });
     }
 </script>
 

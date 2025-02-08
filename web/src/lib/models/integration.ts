@@ -5,7 +5,7 @@ export interface BaseIntegration {
 
 export interface StravaIntegration extends BaseIntegration {
     clientId: string | number;
-    clientSecret: string;
+    clientSecret?: string;
     routes: boolean;
     activities: boolean;
     accessToken?: string;

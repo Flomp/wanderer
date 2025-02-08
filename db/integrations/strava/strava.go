@@ -3,9 +3,11 @@ package strava
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/twpayne/go-gpx"
 	"github.com/twpayne/go-polyline"
 )
@@ -29,16 +32,35 @@ func SyncStrava(app *pocketbase.PocketBase) error {
 	}
 
 	for _, i := range integrations {
+		encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+		if len(encryptionKey) == 0 {
+			return errors.New("POCKETBASE_ENCRYPTION_KEY not set")
+		}
+
 		userId := i.GetString("user")
 		stravaString := i.GetString("strava")
 		var stravaIntegration StravaIntegration
-		json.Unmarshal([]byte(stravaString), &stravaIntegration)
+		err := json.Unmarshal([]byte(stravaString), &stravaIntegration)
+		if err != nil {
+			return err
+		}
 
 		if !stravaIntegration.Active || stravaIntegration.RefreshToken == "" {
 			continue
 		}
 
-		r, err := refreshStravaToken(stravaIntegration.ClientID, stravaIntegration.ClientSecret, stravaIntegration.RefreshToken)
+		decryptedSecret, err := security.Decrypt(stravaIntegration.ClientSecret, encryptionKey)
+		if err != nil {
+			return err
+		}
+
+		request := RefreshTokenRequest{
+			ClientID:     stravaIntegration.ClientID,
+			ClientSecret: string(decryptedSecret),
+			RefreshToken: stravaIntegration.RefreshToken,
+			GrantType:    "refresh_token",
+		}
+		r, err := GetStravaToken(request)
 		if err != nil {
 			warning := fmt.Sprintf("error refreshing strava access token: %v\n", err)
 			fmt.Print(warning)
@@ -60,7 +82,10 @@ func SyncStrava(app *pocketbase.PocketBase) error {
 			return err
 		}
 		i.Set("strava", string(b))
-		app.Dao().SaveRecord(i)
+		err = app.Dao().SaveRecord(i)
+		if err != nil {
+			return err
+		}
 
 		if stravaIntegration.Routes {
 			page := 1
@@ -110,15 +135,10 @@ func SyncStrava(app *pocketbase.PocketBase) error {
 	return nil
 }
 
-func refreshStravaToken(clientID int32, clientSecret, refreshToken string) (*RefreshTokenResponse, error) {
+func GetStravaToken(request any) (*RefreshTokenResponse, error) {
 	const stravaTokenURL = "https://www.strava.com/oauth/token"
 
-	requestBody, err := json.Marshal(RefreshTokenRequest{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		RefreshToken: refreshToken,
-		GrantType:    "refresh_token",
-	})
+	requestBody, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +157,7 @@ func refreshStravaToken(clientID int32, clientSecret, refreshToken string) (*Ref
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to refresh token: received status %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to get token: received status %d", resp.StatusCode)
 	}
 
 	var tokenResponse RefreshTokenResponse

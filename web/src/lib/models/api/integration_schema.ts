@@ -3,12 +3,9 @@ import type { Integration } from "../integration";
 
 const StravaSchema = z.object({
     clientId: z.number({ coerce: true }).int().positive(),
-    clientSecret: z.string().length(40),
+    clientSecret: z.string().length(40).optional().or(z.literal('')),
     routes: z.boolean(),
     activities: z.boolean(),
-    accessToken: z.string().length(40).optional(),
-    refreshToken: z.string().length(40).optional(),
-    expiresAt: z.number().int().positive().optional(),
     active: z.boolean()
 })
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -21,6 +22,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/cron"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/hook"
+	"github.com/pocketbase/pocketbase/tools/security"
 
 	"pocketbase/integrations/komoot"
 	"pocketbase/integrations/strava"
@@ -75,6 +77,12 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 
 	app.OnRecordAfterCreateRequest("follows").Add(createFollowHandler(app))
 	app.OnRecordAfterCreateRequest("comments").Add(createCommentHandler(app))
+
+	app.OnRecordsListRequest("integrations").Add(listIntegrationHandler())
+	app.OnRecordAfterCreateRequest("integrations").Add(createIntegrationAfterHandler())
+	app.OnRecordAfterUpdateRequest("integrations").Add(updateIntegrationAfterHandler())
+	app.OnRecordBeforeCreateRequest("integrations").Add(createIntegrationBeforeHandler(app))
+	app.OnRecordBeforeUpdateRequest("integrations").Add(updateIntegrationBeforeHandler(app))
 
 	app.OnRecordBeforeRequestEmailChangeRequest("users").Add(changeUserEmailHandler(app))
 	app.OnBeforeServe().Add(onBeforeServeHandler(app, client))
@@ -330,6 +338,139 @@ func createCommentHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateE
 	}
 }
 
+func listIntegrationHandler() func(e *core.RecordsListEvent) error {
+	return func(e *core.RecordsListEvent) error {
+		info := apis.RequestInfo(e.HttpContext)
+		if info.Admin != nil {
+			return nil
+		}
+		for _, r := range e.Records {
+
+			err := censorIntegrationSecrets(r)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
+
+func createIntegrationBeforeHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
+	return func(e *core.RecordCreateEvent) error {
+		err := encryptIntegrationSecrets(app, e.Record)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func createIntegrationAfterHandler() func(e *core.RecordCreateEvent) error {
+	return func(e *core.RecordCreateEvent) error {
+		err := censorIntegrationSecrets(e.Record)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func updateIntegrationBeforeHandler(app *pocketbase.PocketBase) func(e *core.RecordUpdateEvent) error {
+	return func(e *core.RecordUpdateEvent) error {
+		err := encryptIntegrationSecrets(app, e.Record)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
+func updateIntegrationAfterHandler() func(e *core.RecordUpdateEvent) error {
+	return func(e *core.RecordUpdateEvent) error {
+		err := censorIntegrationSecrets(e.Record)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func censorIntegrationSecrets(r *models.Record) error {
+	secrets := map[string][]string{
+		"strava": {"clientSecret", "refreshToken", "accessToken", "expiresAt"},
+		"komoot": {"password"},
+	}
+	for key, secretKeys := range secrets {
+		if integrationString := r.GetString(key); integrationString != "" {
+			var integration map[string]interface{}
+			if err := json.Unmarshal([]byte(integrationString), &integration); err != nil {
+				return err
+			}
+			for _, secretKey := range secretKeys {
+				integration[secretKey] = ""
+			}
+			b, err := json.Marshal(integration)
+			if err != nil {
+				return err
+			}
+			r.Set(key, string(b))
+		}
+	}
+
+	return nil
+}
+
+func encryptIntegrationSecrets(app *pocketbase.PocketBase, r *models.Record) error {
+	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+	if len(encryptionKey) == 0 {
+		return apis.NewBadRequestError("POCKETBASE_ENCRYPTION_KEY not set", nil)
+	}
+
+	secrets := map[string][]string{
+		"strava": {"clientSecret", "refreshToken", "accessToken", "expiresAt"},
+		"komoot": {"password"},
+	}
+
+	original, _ := app.Dao().FindRecordById("integrations", r.Id)
+
+	for key, secretKeys := range secrets {
+		if integrationString := r.GetString(key); integrationString != "" {
+			var integration map[string]interface{}
+			if err := json.Unmarshal([]byte(integrationString), &integration); err != nil {
+				return err
+			}
+
+			for _, secretKey := range secretKeys {
+				if secret, ok := integration[secretKey].(string); ok && len(secret) > 0 {
+					encryptedSecret, err := security.Encrypt([]byte(secret), encryptionKey)
+					if err != nil {
+						return err
+					}
+					integration[secretKey] = encryptedSecret
+				} else if original != nil {
+
+					originalString := original.GetString(key)
+					var originalIntegration map[string]interface{}
+					if err := json.Unmarshal([]byte(originalString), &originalIntegration); err != nil {
+						return err
+					}
+					integration[secretKey] = originalIntegration[secretKey]
+				}
+			}
+
+			b, err := json.Marshal(integration)
+			if err != nil {
+				return err
+			}
+			r.Set(key, string(b))
+		}
+	}
+
+	return nil
+}
+
 func changeUserEmailHandler(app *pocketbase.PocketBase) func(e *core.RecordRequestEmailChangeEvent) error {
 	return func(e *core.RecordRequestEmailChangeEvent) error {
 		form := forms.NewRecordEmailChangeRequest(app, e.Record)
@@ -402,22 +543,144 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 		return c.JSON(http.StatusOK, randomTrails)
 
 	})
+
+	e.Router.POST("/integration/strava/token", func(c echo.Context) error {
+		encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+		if len(encryptionKey) == 0 {
+			return apis.NewBadRequestError("POCKETBASE_ENCRYPTION_KEY not set", nil)
+		}
+
+		var data strava.TokenRequest
+		if err := c.Bind(&data); err != nil {
+			return apis.NewBadRequestError("Failed to read request data", err)
+		}
+
+		user, success := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		userId := ""
+		if success {
+			userId = user.Id
+		}
+
+		integrations, err := app.Dao().FindRecordsByExpr("integrations", dbx.NewExp("user = {:id}", dbx.Params{"id": userId}))
+		if err != nil {
+			return err
+		}
+		if len(integrations) == 0 {
+			return apis.NewBadRequestError("user has no integration", nil)
+		}
+		integration := integrations[0]
+		stravaString := integration.GetString("strava")
+		if len(stravaString) == 0 {
+			return apis.NewBadRequestError("strava integration missing", nil)
+		}
+		var stravaIntegration strava.StravaIntegration
+		err = json.Unmarshal([]byte(stravaString), &stravaIntegration)
+		if err != nil {
+			return err
+		}
+		decryptedSecret, err := security.Decrypt(stravaIntegration.ClientSecret, encryptionKey)
+		if err != nil {
+			return err
+		}
+
+		request := strava.TokenRequest{
+			ClientID:     stravaIntegration.ClientID,
+			ClientSecret: string(decryptedSecret),
+			Code:         data.Code,
+			GrantType:    "authorization_code",
+		}
+		r, err := strava.GetStravaToken(request)
+		if err != nil {
+			return err
+		}
+		if r.AccessToken != "" {
+			stravaIntegration.AccessToken = r.AccessToken
+		}
+		if r.RefreshToken != "" {
+			stravaIntegration.RefreshToken = r.RefreshToken
+		}
+		if r.AccessToken != "" {
+			stravaIntegration.ExpiresAt = r.ExpiresAt
+		}
+
+		stravaIntegration.Active = true
+
+		b, err := json.Marshal(stravaIntegration)
+		if err != nil {
+			return err
+		}
+		integration.Set("strava", string(b))
+		err = app.Dao().SaveRecord(integration)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, nil)
+	})
+
+	e.Router.GET("/integration/komoot/login", func(c echo.Context) error {
+		encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+		if len(encryptionKey) == 0 {
+			return apis.NewBadRequestError("POCKETBASE_ENCRYPTION_KEY not set", nil)
+		}
+
+		user, success := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		userId := ""
+		if success {
+			userId = user.Id
+		}
+
+		integrations, err := app.Dao().FindRecordsByExpr("integrations", dbx.NewExp("user = {:id}", dbx.Params{"id": userId}))
+		if err != nil {
+			return err
+		}
+		if len(integrations) == 0 {
+			return apis.NewBadRequestError("user has no integration", nil)
+		}
+		integration := integrations[0]
+		komootString := integration.GetString("komoot")
+		if len(komootString) == 0 {
+			return apis.NewBadRequestError("komoot integration missing", nil)
+		}
+		var komootIntegration komoot.KomootIntegration
+		err = json.Unmarshal([]byte(komootString), &komootIntegration)
+		if err != nil {
+			return err
+		}
+		decryptedPassword, err := security.Decrypt(komootIntegration.Password, encryptionKey)
+		if err != nil {
+			return err
+		}
+
+		k := &komoot.KomootApi{}
+
+		err = k.Login(komootIntegration.Email, string(decryptedPassword))
+		if err != nil {
+			return apis.NewUnauthorizedError("invalid credentials", nil)
+		}
+
+		return c.JSON(http.StatusOK, nil)
+	})
 }
 
 func registerCronJobs(app *pocketbase.PocketBase) {
 	scheduler := cron.New()
 
-	scheduler.MustAdd("integrations", "*/5 * * * *", func() {
+	schedule := os.Getenv("POCKETBASE_CRON_SYNC_SCHEDULE")
+	if len(schedule) == 0 {
+		schedule = "0 2 * * *"
+	}
+
+	scheduler.MustAdd("integrations", schedule, func() {
 		err := strava.SyncStrava(app)
 		if err != nil {
 			warning := fmt.Sprintf("Error syncing with strava: %v", err)
-			fmt.Print(warning)
+			fmt.Println(warning)
 			app.Logger().Error(warning)
 		}
 		err = komoot.SyncKomoot(app)
 		if err != nil {
 			warning := fmt.Sprintf("Error syncing with komoot: %v", err)
-			fmt.Print(warning)
+			fmt.Println(warning)
 			app.Logger().Error(warning)
 		}
 	})

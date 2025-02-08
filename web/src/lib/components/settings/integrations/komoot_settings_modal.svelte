@@ -60,6 +60,7 @@
             ></TextField>
             <TextField
                 label={$_("password")}
+                placeholder={integration?.komoot ? `(${$_("unchanged")})` : ""}
                 name="password"
                 type="password"
                 error={$errors.password}

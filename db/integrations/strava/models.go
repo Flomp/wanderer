@@ -2,6 +2,13 @@ package strava
 
 import "time"
 
+type TokenRequest struct {
+	ClientID     int32  `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	Code         string `json:"code"`
+	GrantType    string `json:"grant_type"`
+}
+
 type RefreshTokenRequest struct {
 	ClientID     int32  `json:"client_id"`
 	ClientSecret string `json:"client_secret"`

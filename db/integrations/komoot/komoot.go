@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +18,7 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/twpayne/go-gpx"
 )
 
@@ -26,6 +29,11 @@ func SyncKomoot(app *pocketbase.PocketBase) error {
 	}
 
 	for _, i := range integrations {
+		encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+		if len(encryptionKey) == 0 {
+			return errors.New("POCKETBASE_ENCRYPTION_KEY not set")
+		}
+
 		userId := i.GetString("user")
 		komootString := i.GetString("komoot")
 		var komootIntegration KomootIntegration
@@ -35,7 +43,13 @@ func SyncKomoot(app *pocketbase.PocketBase) error {
 			continue
 		}
 		k := &KomootApi{}
-		err = k.login(komootIntegration.Email, komootIntegration.Password)
+
+		decryptedPassword, err := security.Decrypt(komootIntegration.Password, encryptionKey)
+		if err != nil {
+			return err
+		}
+
+		err = k.Login(komootIntegration.Email, string(decryptedPassword))
 		if err != nil {
 			warning := fmt.Sprintf("komoot login failed: %v\n", err)
 			fmt.Print(warning)
@@ -114,7 +128,7 @@ func sendRequest(url string, auth *BasicAuthToken) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func (k *KomootApi) login(email, password string) error {
+func (k *KomootApi) Login(email, password string) error {
 	url := fmt.Sprintf("https://api.komoot.de/v006/account/email/%s/", email)
 
 	body, err := sendRequest(url, &BasicAuthToken{email, password})
@@ -222,6 +236,11 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		return err
 	}
 
+	diffculty := detailedTour.Difficulty.Grade
+	if diffculty == "" {
+		diffculty = "easy"
+	}
+
 	form.LoadData(map[string]any{
 		"name":              detailedTour.Name,
 		"public":            detailedTour.Status == "public",
@@ -234,7 +253,7 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		"external_id":       strconv.Itoa(detailedTour.ID),
 		"lat":               detailedTour.StartPoint.Lat,
 		"lon":               detailedTour.StartPoint.Lng,
-		"difficulty":        detailedTour.Difficulty.Grade,
+		"difficulty":        diffculty,
 		"category":          categoryId,
 		"waypoints":         wpIds,
 		"author":            user,

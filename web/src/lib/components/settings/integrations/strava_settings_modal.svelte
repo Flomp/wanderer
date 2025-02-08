@@ -21,14 +21,11 @@
     let modal: Modal;
 
     export function openModal() {
-        errors.set({})
+        errors.set({});
         modal.openModal();
     }
 
-    const {
-        form,
-        errors,
-    } = createForm({
+    const { form, errors } = createForm({
         initialValues: {
             clientId: integration?.strava?.clientId ?? "",
             clientSecret: integration?.strava?.clientSecret ?? "",
@@ -62,7 +59,7 @@
             ></TextField>
             <TextField
                 label="Client Secret"
-                placeholder="de8b3789bd7116d..."
+                placeholder={integration?.strava ? `(${$_("unchanged")})` : "de8b3789bd7116d..."}
                 name="clientSecret"
                 type="password"
                 error={$errors.clientSecret}
