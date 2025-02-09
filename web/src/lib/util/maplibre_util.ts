@@ -150,7 +150,7 @@ export function createPopupFromTrail(trail: Trail) {
 
     // Create a list item element
     const listItem = document.createElement("li");
-    listItem.className = "flex gap-4 cursor-pointer text-content max-w-80";
+    listItem.className = "flex gap-4 cursor-pointer text-content max-w-72";
 
     // Create the image container
     const imageContainer = document.createElement("div");
@@ -158,7 +158,7 @@ export function createPopupFromTrail(trail: Trail) {
 
     // Create the image element
     const img = document.createElement("img");
-    img.className = "h-full max-w-20 object-cover";
+    img.className = "h-full w-28 object-cover";
     img.src = thumbnail; // Set image source safely
     img.alt = ""; // Always include a safe alt attribute
     imageContainer.appendChild(img);
@@ -169,7 +169,7 @@ export function createPopupFromTrail(trail: Trail) {
 
     // Add trail name
     const trailName = document.createElement("h4");
-    trailName.className = "font-semibold text-lg";
+    trailName.className = "font-semibold text-lg line-clamp-1";
     trailName.textContent = trail.name; // Set trail name safely
     textContainer.appendChild(trailName);
 

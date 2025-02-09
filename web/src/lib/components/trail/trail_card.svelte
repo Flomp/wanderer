@@ -45,17 +45,17 @@
 </script>
 
 <div
-    class="trail-card relative rounded-2xl border border-input-border min-w-72 {fullWidth
+    class="trail-card relative rounded-2xl border border-input-border min-w-72 h-[386px] {fullWidth
         ? ''
-        : 'lg:w-72'} cursor-pointer"
+        : 'lg:w-72'} cursor-pointer flex flex-col"
     {onmouseenter}
     {onmouseleave}
     role="listitem"
 >
     <div
-        class="relative w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl"
+        class="relative w-full basis-full max-h-48 overflow-hidden rounded-t-2xl"
     >
-        <img class="min-h-40 w-full" id="header-img" src={thumbnail} alt="" />
+        <img class="h-full w-full" id="header-img" src={thumbnail} alt="" />
     </div>
     {#if (trail.public || trailIsShared) && pb.authStore.model}
         <div
@@ -79,7 +79,7 @@
     {/if}
     <div class="p-4">
         <div>
-            <h4 class="font-semibold text-lg">{trail.name}</h4>
+            <h4 class="font-semibold text-lg line-clamp-2">{trail.name}</h4>
             {#if trail.date}
                 <p class="text-xs text-gray-500 mb-3">
                     {new Date(trail.date).toLocaleDateString(undefined, {
