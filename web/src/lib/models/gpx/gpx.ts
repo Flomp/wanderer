@@ -97,7 +97,7 @@ export default class GPX {
     let totalLat = 0
     let totalLon = 0
 
-    const filter = new GpxMetricsComputation(5, 10);
+    const metrics = new GpxMetricsComputation(5, 10);
 
     let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
 
@@ -119,7 +119,7 @@ export default class GPX {
         const pointLength = points.length
         for (let i = 1; i < pointLength; i++) {
           const point = points[i];
-          filter.addAndFilter(point)         
+          metrics.addAndFilter(point)         
 
           totalLat += point.$.lat ?? 0;
           totalLon += point.$.lon ?? 0;
@@ -132,9 +132,9 @@ export default class GPX {
       }
     }
 
-    totalElevationGain = filter.totalElevationGainSmoothed;
-    totalElevationLoss = filter.totalElevationLossSmoothed;
-    totalDistance = filter.totalDistance;
+    totalElevationGain = metrics.totalElevationGainSmoothed;
+    totalElevationLoss = metrics.totalElevationLossSmoothed;
+    totalDistance = metrics.totalDistance;
 
     const boundingBox = { minLat, maxLat, minLon, maxLon };
     const centroid = { lat: totalLat / allPoints.length, lon: totalLon / allPoints.length };
