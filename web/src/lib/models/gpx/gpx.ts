@@ -2,8 +2,9 @@ import * as xml2js from 'isomorphic-xml2js';
 import Metadata from './metadata';
 import Route from './route';
 import Track from './track';
-import { allDatesToISOString, removeEmpty } from './utils';
+import { allDatesToISOString, haversineDistance, removeEmpty } from './utils';
 import Waypoint from './waypoint';
+import GpxMetricsComputation from './gpx-metrics-computation';
 //@ts-ignore
 import geohash from "ngeohash"
 
@@ -96,6 +97,8 @@ export default class GPX {
     let totalLat = 0
     let totalLon = 0
 
+    const filter = new GpxMetricsComputation(5, 10);
+
     let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
 
     const allPoints: Waypoint[] = []
@@ -115,23 +118,8 @@ export default class GPX {
 
         const pointLength = points.length
         for (let i = 1; i < pointLength; i++) {
-          const prevPoint = points[i - 1];
           const point = points[i];
-          const elevation = point.ele ?? 0
-          const previousElevation = prevPoint.ele ?? 0
-          const elevationDiff = elevation - previousElevation;
-          if (elevationDiff > 0) {
-            totalElevationGain += elevationDiff;
-          } else {
-            totalElevationLoss += Math.abs(elevationDiff)
-          }
-
-          const distance = haversineDistance(
-            prevPoint.$.lat ?? 0,
-            prevPoint.$.lon ?? 0,
-            point.$.lat ?? 0,
-            point.$.lon ?? 0,
-          );
+          filter.addAndFilter(point)         
 
           totalLat += point.$.lat ?? 0;
           totalLon += point.$.lon ?? 0;
@@ -140,10 +128,13 @@ export default class GPX {
           maxLat = Math.max(maxLat, point.$.lat ?? -Infinity);
           minLon = Math.min(minLon, point.$.lon ?? Infinity);
           maxLon = Math.max(maxLon, point.$.lon ?? -Infinity);
-          totalDistance += distance;
         }
       }
     }
+
+    totalElevationGain = filter.totalElevationGainSmoothed;
+    totalElevationLoss = filter.totalElevationLossSmoothed;
+    totalDistance = filter.totalDistance;
 
     const boundingBox = { minLat, maxLat, minLon, maxLon };
     const centroid = { lat: totalLat / allPoints.length, lon: totalLon / allPoints.length };
