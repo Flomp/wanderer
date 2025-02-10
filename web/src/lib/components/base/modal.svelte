@@ -1,8 +1,24 @@
 <script lang="ts">
-    export let id: string;
-    export let title: string;
-    export let size: string = "max-w-2xl";
-    
+    import type { Snippet } from "svelte";
+
+    interface Props {
+        id: string;
+        title: string;
+        size?: string;
+        children?: Snippet<[any]>;
+        content?: Snippet;
+        footer?: Snippet<[any]>;
+    }
+
+    let {
+        id,
+        title,
+        size = "max-w-2xl",
+        children,
+        content,
+        footer,
+    }: Props = $props();
+
     export function openModal() {
         document.body.style.top = `-${window.scrollY}px`;
         document.body.style.position = "fixed";
@@ -21,7 +37,7 @@
     }
 </script>
 
-<slot {openModal} />
+{@render children?.({ openModal })}
 <dialog
     {id}
     tabindex="-1"
@@ -40,7 +56,7 @@
             <button
                 type="button"
                 class="rounded-full btn-icon"
-                on:click={closeModal}
+                onclick={closeModal}
             >
                 <i class="fa fa-close"></i>
                 <span class="sr-only">Close modal</span>
@@ -48,11 +64,11 @@
         </div>
         <!-- Modal body -->
         <div class="p-4 md:p-5 space-y-4">
-            <slot name="content" />
+            {@render content?.()}
         </div>
         <!-- Modal footer -->
         <div class="p-4 md:p-5 border-t border-separator rounded-b">
-            <slot name="footer" {closeModal} />
+            {@render footer?.({ closeModal })}
         </div>
     </div>
 </dialog>

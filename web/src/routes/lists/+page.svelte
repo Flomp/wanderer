@@ -1,63 +1,104 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import Search, {
+        type SearchItem,
+    } from "$lib/components/base/search.svelte";
+    import type { SelectItem } from "$lib/components/base/select.svelte";
+    import Select from "$lib/components/base/select.svelte";
+    import SkeletonCard from "$lib/components/base/skeleton_card.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
+    import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import ListCard from "$lib/components/list/list_card.svelte";
     import ListPanel from "$lib/components/list/list_panel.svelte";
     import ListShareModal from "$lib/components/list/list_share_modal.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
-    import { List } from "$lib/models/list";
+    import UserSearch from "$lib/components/user_search.svelte";
+    import { List, type ListFilter } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import {
-        lists,
         lists_delete,
-        lists_index
+        lists_index,
+        lists_search_filter,
     } from "$lib/stores/list_store";
     import { fetchGPX } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
     import * as M from "maplibre-gl";
 
-    import { onMount, tick } from "svelte";
+    import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import { slide } from "svelte/transition";
 
-    let openConfirmModal: () => void;
-    let openShareModal: () => void;
+    let { data } = $props();
 
-    let map: M.Map;
-    let mapWithElevation: MapWithElevationMaplibre;
-    let markers: M.Marker[];
+    const sortOptions: SelectItem[] = [
+        { text: $_("alphabetical"), value: "name" },
+        { text: $_("creation-date"), value: "created" },
+    ];
+
+    let pagination = {
+        page: data.lists.page,
+        totalPages: data.lists.totalPages,
+    };
+
+    let lists = $state(data.lists);
+
+    let confirmModal: ConfirmModal;
+    let listShareModal: ListShareModal;
+
+    let filter: ListFilter = $state(page.data.filter);
+
+    let map: M.Map | undefined = $state();
+    let mapWithElevation: MapWithElevationMaplibre | undefined = $state();
+    let markers: M.Marker[] = $state([]);
     let showMap: boolean = true;
 
-    let selectedList: List | null = null;
-    let selectedTrail: Trail | null = null;
+    let selectedList: List | null = $state(
+        page.url.searchParams.get("list") ? data.lists.items[0] : null,
+    );
+    let selectedTrail: Trail | null = $state(null);
 
-    let activeTrailIndex: number = -1;
+    let loading: boolean = $state(false);
+    let loadingNextPage: boolean = false;
+    let filterExpanded: boolean = $state(false);
+
+    let loadAllListsOnNextBack = false;
+
+    let userQuery = $state("");
+
+    let selectedTrailIndex = $derived(
+        selectedTrail
+            ? (selectedList?.expand?.trails?.indexOf(selectedTrail) ?? null)
+            : null,
+    );
+
+    let selectedTrailWaypoints = $derived(
+        (selectedTrail as Trail | null)?.expand?.waypoints,
+    );
 
     onMount(() => {
-        if ($page.url.searchParams.get("list")) {
-            const listToFocus = $lists.find(
-                (l) => l.id == $page.url.searchParams.get("list"),
-            );
-            if (listToFocus) {
-                setCurrentList(listToFocus);
-            }
+        if (page.url.searchParams.get("list") && selectedList) {
+            setCurrentList(selectedList);
+
+            // only the requested list has been loaded at this point
+            // load all lists the next time the user presses the back button
+            loadAllListsOnNextBack = true;
         }
     });
 
-    async function handleDropdownClick(e: CustomEvent<DropdownItem>) {
-        const item = e.detail;
-
+    async function handleDropdownClick(item: DropdownItem) {
         if (!selectedList) {
             return;
         }
         if (item.value == "share") {
-            openShareModal();
+            listShareModal.openModal();
         } else if (item.value == "edit") {
             goto("/lists/edit/" + selectedList.id);
         } else if (item.value == "delete") {
-            openConfirmModal();
+            confirmModal.openModal();
         }
     }
 
@@ -66,7 +107,7 @@
             return;
         }
         await lists_delete(selectedList);
-        await lists_index();
+        await updateFilter();
         selectedList = null;
     }
 
@@ -78,19 +119,26 @@
         ) {
             for (const trail of item.expand.trails) {
                 const gpxData: string = await fetchGPX(trail);
-                trail.expand.gpx_data = gpxData;
+                if (!trail.expand) {
+                    (trail as any).expand = {};
+                }
+                trail.expand!.gpx_data = gpxData;
             }
         }
         selectedList = item;
+        document.getElementById("list-container")?.scrollTo({ top: 0 });
     }
 
     async function back() {
+        if (loadAllListsOnNextBack) {
+            await updateFilter();
+            loadAllListsOnNextBack = false;
+        }
         if (selectedTrail) {
-            mapWithElevation.unFocusTrail(selectedTrail);
             selectedTrail = null;
         } else if (selectedList) {
             selectedList = null;
-            map.flyTo({
+            map?.flyTo({
                 animate: true,
                 zoom: 1,
                 center: [0, 0],
@@ -100,16 +148,90 @@
 
     function selectTrail(trail: Trail) {
         selectedTrail = trail;
-        mapWithElevation.focusTrail(trail);
+        mapWithElevation?.unHighlightTrail(trail.id!);
         window.scrollTo({ top: 0 });
     }
 
     function highlightTrail(trail: Trail) {
-        mapWithElevation.highlightTrail(trail.id!);
+        mapWithElevation?.highlightTrail(trail.id!);
     }
 
     function unHighlightTrail(trail: Trail) {
-        mapWithElevation.unHighlightTrail(trail.id!);
+        mapWithElevation?.unHighlightTrail(trail.id!);
+    }
+
+    async function onListScroll(e: Event) {
+        const container = e.target as HTMLDivElement;
+        const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+
+        if (
+            scrollTop + clientHeight >= scrollHeight * 0.8 &&
+            pagination.page !== pagination.totalPages &&
+            !loadingNextPage
+        ) {
+            loadingNextPage = true;
+            await loadNextPage();
+            loadingNextPage = false;
+        }
+    }
+
+    async function loadNextPage() {
+        pagination.page += 1;
+        lists = await lists_index(filter, pagination.page);
+    }
+
+    async function updateFilter() {
+        loading = true;
+
+        if (selectedList || selectedTrail) {
+            selectedList = null;
+            selectedTrail = null;
+            map?.flyTo({
+                animate: true,
+                zoom: 1,
+                center: [0, 0],
+            });
+        }
+
+        pagination.page = 1;
+        lists = await lists_search_filter(filter, pagination.page);
+        loading = false;
+    }
+
+    async function setSort(value: "name" | "created") {
+        filter.sort = value;
+        await updateFilter();
+    }
+
+    async function setSortOrder() {
+        if (filter.sortOrder === "+") {
+            filter.sortOrder = "-";
+        } else {
+            filter.sortOrder = "+";
+        }
+        await updateFilter();
+    }
+
+    async function setPublicFilter(e: Event) {
+        filter.public = (e.target as HTMLInputElement).checked;
+        updateFilter();
+    }
+
+    async function setAuthorFilter(item: SearchItem) {
+        filter.author = item.value.id;
+        await updateFilter();
+    }
+
+    async function clearAuthorFilter() {
+        filter.author = "";
+        await updateFilter();
+    }
+
+    async function setSharedFilter(e: Event) {
+        filter.shared = (e.target as HTMLInputElement).checked;
+        updateFilter();
     }
 </script>
 
@@ -118,66 +240,144 @@
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[430px_1fr] gap-4 lg:gap-4 md:mx-4">
     <div
-        class="list-list md:mx-auto rounded-xl border border-input-border max-h-full w-full order-1 md:order-none"
+        class="list-list relative md:mx-auto rounded-xl border border-input-border max-h-full w-full order-1 md:order-none"
     >
         <div
-            class="flex gap-x-4 items-center justify-between p-4 bg-background z-50 rounded-xl"
+            class="flex gap-x-3 items-center px-3 py-4 bg-background z-50 rounded-xl"
         >
             <button
+                aria-label="Back"
                 class="btn-icon"
                 class:btn-disabled={!selectedList}
                 disabled={!selectedList}
-                on:click={back}><i class="fa fa-arrow-left"></i></button
+                onclick={back}><i class="fa fa-arrow-left"></i></button
             >
-            <a class="btn-primary btn-large text-center" href="/lists/edit/new"
-                ><i class="fa fa-plus mr-2"></i>{$_("new-list")}</a
+            <Search bind:value={filter.q} onupdate={updateFilter}></Search>
+            <button
+                aria-label="Toggle filter"
+                class="btn-icon"
+                onclick={() => (filterExpanded = !filterExpanded)}
+                ><i class="fa fa-sliders"></i></button
             >
-            <!-- <button type="button" class="btn-icon" on:click={toggleMap}
-                ><i class="fa-regular fa-{showMap ? 'rectangle-list' : 'map'}"
-                ></i></button
-            > -->
+            <a
+                aria-label="New list"
+                class="btn-primary tooltip"
+                data-title={$_("new-list")}
+                href="/lists/edit/new"><i class="fa fa-plus"></i></a
+            >
         </div>
+        {#if filterExpanded}
+            <div
+                class="absolute bg-background z-10 shadow-lg rounded-b-xl w-full px-14"
+                in:slide
+                out:slide
+            >
+                <p class="text-sm font-medium pb-1">{$_("sort")}</p>
+                <div class="flex items-center gap-2">
+                    <Select
+                        bind:value={filter.sort}
+                        items={sortOptions}
+                        onchange={setSort}
+                    ></Select>
+                    <button
+                        aria-label="Set sort order"
+                        id="sort-order-btn"
+                        class="btn-icon"
+                        class:rotated={filter.sortOrder == "-"}
+                        onclick={() => setSortOrder()}
+                        ><i class="fa fa-arrow-up"></i></button
+                    >
+                </div>
+                {#if $currentUser}
+                    <hr class="my-4 border-separator" />
 
+                    <UserSearch
+                        onclick={setAuthorFilter}
+                        onclear={clearAuthorFilter}
+                        bind:value={userQuery}
+                        clearAfterSelect={false}
+                        label={$_("author")}
+                    ></UserSearch>
+                    <div class="flex items-center my-4">
+                        <input
+                            id="public-checkbox"
+                            type="checkbox"
+                            checked={filter.public}
+                            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                            onchange={setPublicFilter}
+                        />
+                        <label for="public-checkbox" class="ms-2 text-sm"
+                            >{$_("public")}</label
+                        >
+                    </div>
+                    <div class="flex items-center my-4">
+                        <input
+                            id="shared-checkbox"
+                            type="checkbox"
+                            checked={filter.shared}
+                            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                            onchange={setSharedFilter}
+                        />
+                        <label for="shared-checkbox" class="ms-2 text-sm"
+                            >{$_("shared")}</label
+                        >
+                    </div>
+                {/if}
+            </div>
+        {/if}
         <hr class="border-separator" />
 
-        <div>
+        <div
+            id="list-container"
+            class="overflow-y-scroll overflow-x-clip max-h-full"
+            onscroll={onListScroll}
+        >
             {#if !selectedList}
-                <div class="px-4 mt-2">
-                    {#each $lists as item, i}
-                        <div
-                            class="list-list-item my-1"
-                            on:click={() => setCurrentList(item)}
-                            role="presentation"
-                        >
-                            <ListCard list={item}></ListCard>
-                        </div>
-                    {/each}
+                <div class="px-4 mt-2" class:space-y-3={loading}>
+                    {#if loading}
+                        {#each { length: 3 } as _, index}
+                            <SkeletonCard></SkeletonCard>
+                        {/each}
+                    {:else if lists.items.length == 0}
+                        <EmptyStateSearch width={356}></EmptyStateSearch>
+                    {:else}
+                        {#each lists.items as item, i}
+                            <div
+                                class="list-list-item"
+                                onclick={() => setCurrentList(item)}
+                                role="presentation"
+                            >
+                                <ListCard list={item}></ListCard>
+                            </div>
+                        {/each}
+                    {/if}
                 </div>
             {:else if selectedList && !selectedTrail}
                 <ListPanel
                     list={selectedList}
-                    on:mouseenter={(e) => highlightTrail(e.detail.trail)}
-                    on:mouseleave={(e) => unHighlightTrail(e.detail.trail)}
-                    on:change={(e) => handleDropdownClick(e)}
-                    on:click={(e) => selectTrail(e.detail.trail)}
+                    onmouseenter={(data) => highlightTrail(data.trail)}
+                    onmouseleave={(data) => unHighlightTrail(data.trail)}
+                    onchange={(item) => handleDropdownClick(item)}
+                    onclick={(data) => selectTrail(data.trail)}
                 ></ListPanel>
             {:else if selectedList && selectedTrail}
-                <TrailInfoPanel trail={selectedTrail} mode="list" {markers}
+                <TrailInfoPanel initTrail={selectedTrail} mode="list" {markers}
                 ></TrailInfoPanel>
             {/if}
         </div>
     </div>
-    <div id="trail-map" class="md:sticky md:top-[62px]" class:hidden={!showMap}>
+    <div id="trail-map" class:hidden={!showMap}>
         <MapWithElevationMaplibre
             trails={selectedList?.expand?.trails ?? []}
+            waypoints={selectedTrailWaypoints}
             bind:map
             bind:this={mapWithElevation}
             bind:markers
+            activeTrail={selectedTrailIndex}
             fitBounds="animate"
-            on:select={(e) => {
-                selectedTrail = e.detail;
+            onselect={(trail) => {
+                selectedTrail = trail;
             }}
-            bind:activeTrail={activeTrailIndex}
             showInfoPopup={true}
             showTerrain={true}
         ></MapWithElevationMaplibre>
@@ -188,11 +388,11 @@
 
     <ConfirmModal
         text={$_("delete-list-confirm")}
-        bind:openModal={openConfirmModal}
-        on:confirm={deleteList}
+        bind:this={confirmModal}
+        onconfirm={deleteList}
     ></ConfirmModal>
     {#if selectedList}
-        <ListShareModal list={selectedList} bind:openShareModal
+        <ListShareModal bind:this={listShareModal} list={selectedList}
         ></ListShareModal>
     {/if}
 </main>
@@ -201,6 +401,10 @@
     @media only screen and (min-width: 768px) {
         #trail-map {
             height: calc(100vh - 124px);
+        }
+
+        #list-container {
+            height: calc(100vh - 204px);
         }
     }
 </style>

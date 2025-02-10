@@ -1,34 +1,61 @@
 <script lang="ts">
-    export let type: "button" | "submit" | "reset" | null | undefined =
-        undefined;
-    export let icon: string = "";
-    export let extraClasses: string = "";
-    export let primary: boolean = false;
-    export let secondary: boolean = false;
-    export let large: boolean = false;
-    export let loading: boolean = false;
-    export let disabled: boolean = false;
-    export let tooltip: string = "";
+    import type { Snippet } from "svelte";
+    import type { MouseEventHandler } from "svelte/elements";
+
+    interface Props {
+        type?: "button" | "submit" | "reset" | null | undefined;
+        icon?: string;
+        extraClasses?: string;
+        primary?: boolean;
+        secondary?: boolean;
+        large?: boolean;
+        loading?: boolean;
+        disabled?: boolean;
+        tooltip?: string | undefined;
+        form?: string;
+        id?: string | undefined;
+        children?: Snippet;
+        onclick?: MouseEventHandler<HTMLButtonElement>;
+    }
+
+    let {
+        type = undefined,
+        icon = "",
+        extraClasses = "",
+        primary = false,
+        secondary = false,
+        large = false,
+        loading = false,
+        disabled = false,
+        tooltip = undefined,
+        id = undefined,
+        form,
+        children,
+        onclick = undefined,
+    }: Props = $props();
 </script>
 
 <button
-    class="{extraClasses} flex items-center justify-center"
+    class="relative {extraClasses} flex items-center justify-center"
     class:btn-primary={primary}
     class:btn-secondary={secondary}
     class:btn-large={large}
     class:btn-disabled={disabled || loading}
     disabled={disabled || loading}
-    class:tooltip={tooltip.length > 0}
+    class:tooltip={(tooltip?.length ?? 0) > 0}
     data-title={tooltip}
-    on:click
+    {form}
+    {onclick}
     {type}
+    {id}
 >
-    {#if !loading}
+    <div class:invisible={loading}>
         {#if icon}
             <i class="fa fa-{icon} mr-2"></i>
         {/if}
-        <slot />
-    {:else}
-        <div class="spinner"></div>
+        {@render children?.()}
+    </div>
+    {#if loading}
+        <div class="absolute aspect-square spinner"></div>
     {/if}
 </button>

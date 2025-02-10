@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333333;
+        }
+
+        .email-container {
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 600px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color: #242734;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .header img {
+            max-width: 150px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .greeting,
+        .goodbye {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .content {
+            margin: 20px 0;
+            font-size: 16px;
+            line-height: 1.6;
+            background: #f1f1f1;
+            padding: 12px;
+            border-radius: 5px;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #242734;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .button:hover {
+            background-color: #333333;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #777777;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: #242734;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <!-- Header Section -->
+        <div class="header">
+            <img src="{{.AppUrl}}/imgs/logo_text_light.png" alt="wanderer" />
+        </div>
+        <!-- Greeting -->
+        <div class="greeting">
+            <p>Hello {{.RecipientName}},</p>
+            <p>You have a new notification:</p>
+        </div>
+        <!-- Dynamic Content -->
+        <div class="content">
+            {{.Content}}
+            <div class="">
+                <a class="button" href="{{.AppUrl}}">
+                    Check it out!
+                </a>
+            </div>
+        </div>
+
+        <div class="goodbye">
+            <p>Kind regards,</p>
+            <p>Your wanderer team</p>
+        </div>
+        <!-- Footer Section -->
+        <div class="footer">
+            <p>&copy; 2025 wanderer | <a href="{{.AppUrl}}/settings/notifications">Unsubscribe</a></p>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,6 +1,5 @@
-import type { Marker } from "maplibre-gl";
+import type { icons } from "$lib/util/icon_util";
 import * as M from "maplibre-gl";
-import { number, object, string } from "yup";
 
 class Waypoint {
     id?: string;
@@ -8,14 +7,15 @@ class Waypoint {
     description?: string;
     lat: number;
     lon: number;
-    icon?: string;
+    distance_from_start?: number;
+    icon?: typeof icons[number];
     marker?: M.Marker;
     photos: string[];
-    _photos: File[];
-    author?: string;
+    _photos?: File[];
+    author: string;
 
     constructor(lat: number, lon: number, params?: {
-        id?: string, name?: string, description?: string, icon?: string, marker?: M.Marker, photos?: string[];
+        id?: string, name?: string, description?: string, icon?: typeof icons[number], marker?: M.Marker, photos?: string[];
     }) {
         this.id = params?.id;
         this.name = params?.name ?? "";
@@ -26,16 +26,8 @@ class Waypoint {
         this.marker = params?.marker;
         this.photos = params?.photos ?? []
         this._photos = [];
+        this.author = "000000000000000"
     }
 }
 
-const waypointSchema = object<Waypoint>({
-    id: string().optional(),
-    name: string().optional(),
-    description: string().optional(),
-    lat: number().required('Required').typeError('Invalid latitude'),
-    lon: number().required('Required').typeError('Invalid longitude'),
-    icon: string().optional()
-});
-
-export { Waypoint, waypointSchema };
+export { Waypoint };

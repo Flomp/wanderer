@@ -358,7 +358,7 @@ const elevationProfileDefaultOptions: ElevationProfileOptions = {
 export class ElevationProfile {
     private canvas: HTMLCanvasElement;
     private settings: ElevationProfileOptions;
-    private chart: Chart<"line", Array<number>, number>;
+    public chart: Chart<"line", Array<number>, number>;
     private elevatedPositions: Position[] = [];
     private elevatedPositionsAdjustedUnit: Position[] = [];
     private cumulatedDistance: number[] = [];
@@ -483,7 +483,6 @@ export class ElevationProfile {
                 },
                 onHover: (_e, item) => {
                     if (typeof this.settings.onMove !== "function") return;
-
                     try {
                         const i = item[0].index;
 
@@ -620,7 +619,7 @@ export class ElevationProfile {
                                     tooltipInfo.push(
                                         `After: ${this.cumulatedDistanceAdjustedUnit[
                                             tooltipItem.dataIndex
-                                        ].toFixed(4)} ${distanceUnit} ${this.cumulatedTime.length ? '(' + formatTimeHHMM(this.cumulatedTime[tooltipItem.dataIndex]) + ')' : ''}`
+                                        ].toFixed(2)} ${distanceUnit} ${this.cumulatedTime.length ? '(' + formatTimeHHMM(this.cumulatedTime[tooltipItem.dataIndex]) + ')' : ''}`
                                     );
                                 }
 
@@ -696,7 +695,7 @@ export class ElevationProfile {
                             wpDiv.style.top = `8px`; // Position horizontally
 
                             // Add custom HTML content (e.g., icon + label)
-                            wpDiv.innerHTML = `<div class="tooltip" data-title="${this.waypoints[index].name ?? "?"}"><i class="fa fa-${this.waypoints.at(index)?.icon ?? 'circle'}"></i></div>`;
+                            wpDiv.innerHTML = `<div class="tooltip" data-title="${this.waypoints[index]?.name ?? "?"}"><i class="fa fa-${this.waypoints.at(index)?.icon ?? 'circle'}"></i></div>`;
 
                             waypointContainer.appendChild(wpDiv); // Add to container
                         });
@@ -751,6 +750,33 @@ export class ElevationProfile {
                 }
             });
         }
+    }
+
+    getChartCoordinatesFromPosition(lat: number, lon: number) {
+
+        let minDistance = Infinity
+        let bestCandiateIndex: number = -1
+        for (let i = 0; i < this.elevatedPositionsAdjustedUnit.length; i++) {
+            const p = this.elevatedPositionsAdjustedUnit[i];
+            const deltaLat = lat - p[1];
+            const deltaLon = lon - p[0];
+            const distance = deltaLat * deltaLat + deltaLon * deltaLon;
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestCandiateIndex = i
+            }
+        };
+
+        if (bestCandiateIndex < 0) {
+            return null;
+        }
+        const meta = this.chart.getDatasetMeta(0);
+        const element = meta.data[bestCandiateIndex];
+        if (element) {
+            return [element.x, element.y];
+        }
+        return null;
     }
 
     gradientFromElevation(chart: Chart, force: boolean = false) {
@@ -896,7 +922,7 @@ export class ElevationProfile {
         this.cumulatedDPlus = [];
         this.grade = [];
         this.waypoints = waypoints ?? [];
-        // this.waypointPositions = [];
+        this.waypointPositions = [];
 
         let cumulatedDPlus = 0;
         let cumulatedTime = 0;
@@ -917,6 +943,7 @@ export class ElevationProfile {
                 if (distance < minDistances[waypointIndex]) {
                     minDistances[waypointIndex] = distance;
                     this.waypointPositions[waypointIndex] = this.cumulatedDistanceAdjustedUnit[i];
+                    waypoint.distance_from_start = this.cumulatedDistanceAdjustedUnit[i] * 1000;
                 }
             });
 
@@ -954,14 +981,17 @@ export class ElevationProfile {
 
                         const timeStart = this.times[segmentStartIndex]
                         const timeEnd = this.times[i]
-                        const timeDelta = (timeEnd.getTime() - timeStart.getTime()) / 1000
+                        if (timeStart && timeEnd) {
+                            const timeDelta = (timeEnd.getTime() - timeStart.getTime()) / 1000
 
-                        speed = (distanceDelta / timeDelta)
-                        if (this.settings.unit === "imperial") {
-                            speed = speed * MILES_HOUR_PER_METER_SECOND
-                        } else {
-                            speed = speed * KILOMETERS_HOUR_PER_METER_SECOND;
+                            speed = (distanceDelta / timeDelta)
+                            if (this.settings.unit === "imperial") {
+                                speed = speed * MILES_HOUR_PER_METER_SECOND
+                            } else {
+                                speed = speed * KILOMETERS_HOUR_PER_METER_SECOND;
+                            }
                         }
+
                     }
 
 

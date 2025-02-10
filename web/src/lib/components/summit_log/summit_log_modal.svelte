@@ -1,41 +1,57 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
+    import { type Snippet } from "svelte";
 
-    import { type SummitLog } from "$lib/models/summit_log";
+    import { SummitLogCreateSchema } from "$lib/models/api/summit_log_schema";
+    import GPX from "$lib/models/gpx/gpx";
     import { summitLog } from "$lib/stores/summit_log_store";
-    import { createForm } from "$lib/vendor/svelte-form-lib/index";
-    import { util } from "$lib/vendor/svelte-form-lib/util";
+    import { cloneDeep } from "$lib/util/deep_util";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
     import { _ } from "svelte-i18n";
-    import { date, object, string } from "yup";
+    import { z } from "zod";
     import Datepicker from "../base/datepicker.svelte";
     import Modal from "../base/modal.svelte";
     import Textarea from "../base/textarea.svelte";
-    import TrailPicker from "../trail/trail_picker.svelte";
-    import GPX from "$lib/models/gpx/gpx";
     import PhotoPicker from "../trail/photo_picker.svelte";
-    export let openModal: (() => void) | undefined = undefined;
-    export let closeModal: (() => void) | undefined = undefined;
+    import TrailPicker from "../trail/trail_picker.svelte";
+    import type { SummitLog } from "$lib/models/summit_log";
+    interface Props {
+        children?: Snippet<[any]>;
+        onsave?: (summitLog: SummitLog) => void;
+    }
 
-    const dispatch = createEventDispatcher();
+    let { children, onsave }: Props = $props();
 
-    const summitLogSchema = object<SummitLog>({
-        id: string().optional(),
-        date: date().required("Required").typeError($_("invalid-date")),
-        text: string().optional(),
+    let modal: Modal;
+
+    export function openModal() {
+        modal.openModal();
+    }
+
+    const ClientSummitLogCreateSchema = SummitLogCreateSchema.extend({
+        _photos: z.array(z.instanceof(File)).optional(),
+        _gpx: z.instanceof(File).optional().nullable(),
+        expand: z
+            .object({
+                gpx_data: z.string().optional(),
+            })
+            .optional(),
     });
 
-    const { form, errors, handleChange, handleSubmit } = createForm<SummitLog>({
+    const { form, errors, data, setFields } = createForm<
+        z.infer<typeof ClientSummitLogCreateSchema>
+    >({
         initialValues: $summitLog,
-        validationSchema: summitLogSchema,
-        onSubmit: async (submittedValues) => {
-            if (!$form.expand.gpx_data) {
-                $form.gpx = "";
+        extend: validator({ schema: ClientSummitLogCreateSchema }),
+        onSubmit: async (form) => {
+            if (!form.expand?.gpx_data) {
+                form.gpx = "";
             }
 
             if (
-                !$form._photos?.length &&
-                !$form.photos?.length &&
-                $form.expand?.gpx_data
+                !form._photos?.length &&
+                !form.photos?.length &&
+                form.expand?.gpx_data
             ) {
                 const canvas = document.querySelector(
                     "#trail-picker-map .maplibregl-canvas",
@@ -44,25 +60,32 @@
                 const dataURL = canvas.toDataURL();
                 const response = await fetch(dataURL);
                 const blob = await response.blob();
-                $form._photos = [new File([blob], "route")];
+                form._photos = [new File([blob], "route")];
             }
 
-            dispatch("save", submittedValues);
-            closeModal!();
+            onsave?.(form);
+            modal.closeModal!();
         },
     });
-    $: form.set(util.cloneDeep($summitLog));
 
-    $: if ($summitLog._gpx) {
-        $form._gpx = $summitLog._gpx;
-    }
+    let trailData = $derived($data.expand?.gpx_data);
+
+    $effect(() => {
+        setFields(cloneDeep($summitLog));
+    });
+
+    $effect(() => {
+        if ($summitLog._gpx) {
+            $data._gpx = $summitLog._gpx;
+        }
+    });
 
     async function handleTrailSelection(trailData: string | null) {
         if (!trailData) {
-            $form.duration = undefined;
-            $form.elevation_gain = undefined;
-            $form.elevation_loss = undefined;
-            $form.distance = undefined;
+            $data.duration = undefined;
+            $data.elevation_gain = undefined;
+            $data.elevation_loss = undefined;
+            $data.distance = undefined;
             return;
         }
         const gpxObject = await GPX.parse(trailData);
@@ -70,75 +93,75 @@
             throw gpxObject;
         }
 
-        const totals = gpxObject.getTotals();
+        const totals = gpxObject.features;
 
-        $form.duration = totals.duration / 1000;
-        $form.elevation_gain = totals.elevationGain;
-        $form.elevation_loss = totals.elevationLoss;
-        $form.distance = totals.distance;
+        $data.duration = totals.duration / 1000;
+        $data.elevation_gain = totals.elevationGain;
+        $data.elevation_loss = totals.elevationLoss;
+        $data.distance = totals.distance;
+        $data.expand!.gpx_data = trailData;
     }
+
+    const children_render = $derived(children);
 </script>
 
 <Modal
     id="summit-log-modal"
-    title={$form.id ? $_("edit-entry") : $_("add-entry")}
-    let:openModal
-    bind:openModal
-    bind:closeModal
+    title={$data.id ? $_("edit-entry") : $_("add-entry")}
+    bind:this={modal}
 >
-    <slot {openModal} />
-    <form
-        id="summit-log-form"
-        slot="content"
-        class="modal-content space-y-4"
-        on:submit={handleSubmit}
-    >
-        <div class="flex">
-            <Datepicker
-                name="date"
-                label={$_("date")}
-                bind:value={$form.date}
-                error={$errors.date}
-                on:change={handleChange}
-            ></Datepicker>
-        </div>
-        <div>
-            <label for="summitlog-photo-input" class="text-sm font-medium pb-1">
-                {$_("photos")}
-            </label>
-            <PhotoPicker
-                id="summitlog-photo-input"
-                parent={$form}
-                bind:photos={$form.photos}
-                bind:photoFiles={$form._photos}
-                showThumbnailControls={false}
-            ></PhotoPicker>
-        </div>
-        <div class="flex gap-4">
-            <TrailPicker
-                bind:trailFile={$form._gpx}
-                bind:trailData={$form.expand.gpx_data}
-                label={$_("trail", { values: { n: 1 } })}
-                on:change={(e) => handleTrailSelection(e.detail)}
-            ></TrailPicker>
-            <div class="basis-full">
-                <Textarea
-                    name="text"
-                    extraClasses="h-28"
-                    label={$_("text")}
-                    bind:value={$form.text}
-                    error={$errors.text}
-                    on:change={handleChange}
-                ></Textarea>
+    {#snippet children({ openModal })}
+        {@render children_render?.({ openModal })}
+    {/snippet}
+    {#snippet content()}
+        <form id="summit-log-form" class="modal-content space-y-4" use:form>
+            <div class="flex">
+                <Datepicker name="date" label={$_("date")} error={$errors.date}
+                ></Datepicker>
             </div>
+            <div>
+                <label
+                    for="summitlog-photo-input"
+                    class="text-sm font-medium pb-1"
+                >
+                    {$_("photos")}
+                </label>
+                <PhotoPicker
+                    id="summitlog-photo-input"
+                    parent={$data}
+                    bind:photos={$data.photos}
+                    bind:photoFiles={$data._photos}
+                    showThumbnailControls={false}
+                ></PhotoPicker>
+            </div>
+            <div class="flex gap-4">
+                {#if $data.expand}
+                    <TrailPicker
+                        bind:trailFile={$data._gpx}
+                        {trailData}
+                        label={$_("trail", { values: { n: 1 } })}
+                        onchange={(trail) => handleTrailSelection(trail)}
+                    ></TrailPicker>
+                {/if}
+                <div class="basis-full">
+                    <Textarea
+                        name="text"
+                        extraClasses="h-28"
+                        label={$_("text")}
+                        error={$errors.text}
+                    ></Textarea>
+                </div>
+            </div>
+        </form>
+    {/snippet}
+    {#snippet footer()}
+        <div class="flex items-center gap-4">
+            <button class="btn-secondary" onclick={() => modal.closeModal()}
+                >{$_("cancel")}</button
+            >
+            <button class="btn-primary" type="submit" form="summit-log-form"
+                >{$_("save")}</button
+            >
         </div>
-    </form>
-    <div slot="footer" class="flex items-center gap-4">
-        <button class="btn-secondary" on:click={closeModal}
-            >{$_("cancel")}</button
-        >
-        <button class="btn-primary" type="submit" form="summit-log-form"
-            >{$_("save")}</button
-        >
-    </div>
+    {/snippet}
 </Modal>

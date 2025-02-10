@@ -1,22 +1,22 @@
 <script lang="ts">
 	import type { SummitLog } from "$lib/models/summit_log";
-	import { createEventDispatcher } from "svelte";
 	import { isSameDay, isToday } from "../../util/date_util";
 	import { _ } from "svelte-i18n";
-	export let logs: SummitLog[] = [];
-	export let colorMap: Record<string, string> = {};
+	interface Props {
+		logs?: SummitLog[];
+		colorMap?: Record<string, string>;
+		onforward?: (data: { start: Date; end: Date }) => void;
+		onbackward?: (data: { start: Date; end: Date }) => void;
+		onclick?: (date: Date) => void;
+	}
 
-	const dispatch = createEventDispatcher<{
-		forward: {
-			start: Date;
-			end: Date;
-		};
-		backward: {
-			start: Date;
-			end: Date;
-		};
-		click: Date;
-	}>();
+	let {
+		logs = [],
+		colorMap = {},
+		onforward,
+		onbackward,
+		onclick,
+	}: Props = $props();
 
 	const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 	const months = [
@@ -34,14 +34,13 @@
 		"Dezember",
 	];
 	const today = new Date();
-	let currentMonth = today.getMonth();
-	let currentYear = today.getFullYear();
+	let currentMonth = $state(today.getMonth());
+	let currentYear = $state(today.getFullYear());
 	let currentMonthArray: ({
 		date: Date | undefined;
 		today: boolean;
 		log?: SummitLog;
-	} | null)[];
-	$: currentMonthArray = generateMonthArray(currentYear, currentMonth, logs);
+	} | null)[] = $derived(generateMonthArray(currentYear, currentMonth, logs));
 
 	function calculateFirstDayOfMonthDayOfWeek(year: number, month: number) {
 		const date = new Date(year, month, 1);
@@ -94,7 +93,7 @@
 		} else {
 			currentMonth++;
 		}
-		dispatch("forward", {
+		onforward?.({
 			start: new Date(currentYear, currentMonth, 1),
 			end: new Date(currentYear, currentMonth + 1, 0),
 		});
@@ -107,7 +106,7 @@
 		} else {
 			currentMonth--;
 		}
-		dispatch("backward", {
+		onbackward?.({
 			start: new Date(currentYear, currentMonth, 1),
 			end: new Date(currentYear, currentMonth + 1, 0),
 		});
@@ -124,7 +123,7 @@
 		if (!date) {
 			return;
 		}
-		dispatch("click", date);
+		onclick?.(date);
 	}
 </script>
 
@@ -133,10 +132,12 @@
 		<span class="text-lg">{months[currentMonth]}</span>
 		<span>{currentYear}</span>
 	</div>
-	<button class="btn-icon mr-2" on:click={monthMinus}
-		><i class="fa fa-caret-left"></i></button
+	<button
+		aria-label="Previous month"
+		class="btn-icon mr-2"
+		onclick={monthMinus}><i class="fa fa-caret-left"></i></button
 	>
-	<button class="btn-icon" on:click={monthPlus}
+	<button aria-label="Next month" class="btn-icon" onclick={monthPlus}
 		><i class="fa fa-caret-right"></i></button
 	>
 </div>
@@ -157,7 +158,7 @@
 		{#each { length: 42 } as _, i}
 			<button
 				class="calendar-day flex items-center justify-center rounded-xl"
-				on:click={() => handleDateClick(currentMonthArray[i]?.date)}
+				onclick={() => handleDateClick(currentMonthArray[i]?.date)}
 				class:today={currentMonthArray[i]?.today}
 				style="background-color: {colorMap[
 					colorKey(currentMonthArray, i)

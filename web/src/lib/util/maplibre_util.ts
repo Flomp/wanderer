@@ -1,11 +1,15 @@
+import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+import { haversineDistance } from "$lib/models/gpx/utils";
 import type { Trail } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
+import { theme } from "$lib/stores/theme_store";
 import M from "maplibre-gl";
+import { _ } from "svelte-i18n";
+import { get } from "svelte/store";
 import { getFileURL } from "./file_util";
 import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
-import { get } from "svelte/store";
-import { _ } from "svelte-i18n";
-import { haversineDistance } from "$lib/models/gpx/utils";
+import { icons } from "./icon_util";
 
 export class FontawesomeMarker extends M.Marker {
     constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
@@ -23,37 +27,60 @@ export class FontawesomeMarker extends M.Marker {
     }
 }
 
-export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker: M.Marker) => void): FontawesomeMarker {
+export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker: M.Marker, wpId?: string) => void): FontawesomeMarker {
     const marker = new FontawesomeMarker({
+        id: waypoint.id,
         icon: `fa fa-${waypoint.icon}`,
     }, {
         draggable: onDragEnd !== undefined,
         color: "#6b7280"
 
     })
-    const popup = new M.Popup({ offset: 25, closeButton: false }).setHTML(
-        "<b>" +
-        waypoint.name +
-        "</b>" +
-        (waypoint.description && waypoint.description.length > 0
-            ? "<br>" + waypoint.description
-            : ""),
+
+    const content = document.createElement("div");
+    content.className = "p-2"
+
+    const spanElement = document.createElement("span");
+    const iconElement = document.createElement("i");
+    const iconName = waypoint.icon && icons.includes(waypoint.icon) ? waypoint.icon : "circle";
+    iconElement.classList.add("fa", `fa-${iconName}`)
+    spanElement.appendChild(iconElement);
+
+    const nameElement = document.createElement("b");
+    nameElement.textContent = waypoint.name ?? "-";
+    if (waypoint.name?.length) {
+        nameElement.classList.add("ml-2")
+    }
+    spanElement.appendChild(nameElement);
+    content.appendChild(spanElement);
+
+    if (waypoint.description && waypoint.description.length > 0) {
+        const descriptionElement = document.createElement("p");
+        descriptionElement.textContent = waypoint.description;
+        content.appendChild(descriptionElement);
+    }
+
+
+    const popup = new M.Popup({ offset: 25 }).setDOMContent(
+        content
     );
     marker
         .setLngLat([waypoint.lon, waypoint.lat])
         .setPopup(popup)
 
     if (onDragEnd) {
-        marker.on("dragend", () => onDragEnd(marker));
+        marker.on("dragend", () => onDragEnd(marker, waypoint.id,));
     }
 
     return marker;
 }
 
-export function createAnchorMarker(lat: number, lon: number, index: number, onDeleteClick: () => void, onDragEnd: (event: M.Marker) => void): FontawesomeMarker {
+export function createAnchorMarker(lat: number, lon: number, index: number,
+    onDeleteClick: () => void, onLoopClick: () => void,
+    onDragStart: (event: Event) => void, onDragEnd: (event: Event) => void): FontawesomeMarker {
 
     const anchorElement = document.createElement("span")
-    anchorElement.className = "cursor-pointer rounded-full w-6 h-6 border border-black text-center bg-background-inverse text-content-inverse"
+    anchorElement.className = "route-anchor cursor-pointer rounded-full w-6 h-6 border border-black text-center bg-primary text-white"
     anchorElement.textContent = "" + index
     const marker = new M.Marker(
         {
@@ -62,16 +89,46 @@ export function createAnchorMarker(lat: number, lon: number, index: number, onDe
         }
     );
     marker.setLngLat([lon, lat]);
+    const popup = new M.Popup()
+
+    const popupContent = document.createElement("div");
+    popupContent.className = "py-3 pl-3"
+    const anchorH = document.createElement("h5")
+    anchorH.classList.add("text-base", "font-medium");
+    anchorH.textContent = get(_)("route-point") + " #" + index;
 
     const deleteButton = document.createElement("button");
-    deleteButton.className = "fa fa-trash text-red-500 rounded-full aspect-square h-8 text-lg";
+    deleteButton.className = "btn-secondary w-full mt-2 text-sm";
+    const deleteButtonIcon = document.createElement("i")
+    deleteButtonIcon.classList.add("fa", "fa-trash", "mr-2")
+    deleteButton.appendChild(deleteButtonIcon)
+    const deleteButtonText = document.createElement("span")
+    deleteButtonText.textContent = get(_)("delete")
+    deleteButton.appendChild(deleteButtonIcon)
+    deleteButton.appendChild(deleteButtonText)
     deleteButton.addEventListener("click", onDeleteClick)
-    const popup = new M.Popup({})
-    popup.setDOMContent(deleteButton)
+
+    const loopButton = document.createElement("button");
+    loopButton.className = "btn-secondary w-full mt-2 text-sm block";
+    const loopButtonIcon = document.createElement("i")
+    loopButtonIcon.classList.add("fa", "fa-person-walking-arrow-loop-left", "mr-2")
+    loopButton.appendChild(loopButtonIcon)
+    const loopButtonText = document.createElement("span")
+    loopButtonText.textContent = get(_)("loop")
+    loopButton.appendChild(loopButtonIcon)
+    loopButton.appendChild(loopButtonText)
+    loopButton.addEventListener("click", onLoopClick)
+
+    popupContent.appendChild(anchorH)
+    popupContent.appendChild(deleteButton)
+    popupContent.appendChild(loopButton)
+    popup.setDOMContent(popupContent)
     marker.setPopup(popup);
 
+    marker.on("dragstart", onDragStart);
     marker.on("dragend", onDragEnd);
     marker.getElement().addEventListener("click", (e) => {
+        e.preventDefault()
         e.stopPropagation();
         marker.togglePopup();
     })
@@ -81,33 +138,92 @@ export function createAnchorMarker(lat: number, lon: number, index: number, onDe
 
 export function createPopupFromTrail(trail: Trail) {
     const thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
-        : "/imgs/default_thumbnail.webp";
-    const popup = new M.Popup({maxWidth: "320px"});
-    popup.setHTML(
-        `<a href="/map/trail/${trail.id}" data-sveltekit-preload-data="off">
-    <li class="flex items-center gap-4 cursor-pointer text-black max-w-80">
-        <div class="shrink-0"><img class="h-14 w-14 object-cover rounded-xl" src="${thumbnail}" alt="">
-        </div>
-        <div>
-            <h4 class="font-semibold text-lg">${trail.name}</h4>
-            <div class="flex gap-x-4">
-            ${trail.location ? `<h5><i class="fa fa-location-dot mr-2"></i>${trail.location}</h5>` : ""}
-            <h5><i class="fa fa-gauge mr-2"></i>${get(_)(trail.difficulty as string)}</h5>
-            </div>
-            <div class="grid grid-cols-2 mt-2 gap-x-4 gap-y-2 text-sm text-gray-500 flex-wrap"><span class="shrink-0"><i
-                        class="fa fa-left-right mr-2"></i>${formatDistance(
-            trail.distance,
-        )}</span><span class="shrink-0"><i class="fa fa-clock mr-2"></i>${formatTimeHHMM(
-            trail.duration,
-        )}</span><span class="shrink-0"><i class="fa fa-arrow-trend-up mr-2"></i>${formatElevation(
-            trail.elevation_gain,
-        )}</span></span> <span class="shrink-0"><i class="fa fa-arrow-trend-down mr-2"></i>${formatElevation(
-            trail.elevation_loss,
-        )}</span></div>
-        </div>
-    </li>
-</a>`)
+        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+        : get(theme) === "light"
+            ? emptyStateTrailLight
+            : emptyStateTrailDark;
+    const popup = new M.Popup({ maxWidth: "420px" });
+    // Create a container element for the popup content
+    const linkElement = document.createElement("a");
+    linkElement.href = `/map/trail/${trail.id}`; // Set href safely
+    linkElement.setAttribute("data-sveltekit-preload-data", "off");
+
+    // Create a list item element
+    const listItem = document.createElement("li");
+    listItem.className = "flex gap-4 cursor-pointer text-content max-w-72";
+
+    // Create the image container
+    const imageContainer = document.createElement("div");
+    imageContainer.className = "shrink-0";
+
+    // Create the image element
+    const img = document.createElement("img");
+    img.className = "h-full w-20 object-cover";
+    img.src = thumbnail; // Set image source safely
+    img.alt = ""; // Always include a safe alt attribute
+    imageContainer.appendChild(img);
+
+    // Create the text container
+    const textContainer = document.createElement("div");
+    textContainer.className = "py-2"
+
+    // Add trail name
+    const trailName = document.createElement("h4");
+    trailName.className = "font-semibold text-lg line-clamp-1";
+    trailName.textContent = trail.name; // Set trail name safely
+    textContainer.appendChild(trailName);
+
+    // Add location and difficulty, if available
+    if (trail.location || trail.difficulty) {
+        const detailsContainer = document.createElement("div");
+        detailsContainer.className = "flex gap-x-4";
+
+        if (trail.location) {
+            const locationElement = document.createElement("h5");
+            locationElement.innerHTML = `<i class="fa fa-location-dot mr-2"></i>`; // Safe static icon
+            locationElement.appendChild(document.createTextNode(trail.location)); // Safely append location text
+            detailsContainer.appendChild(locationElement);
+        }
+
+        const difficultyElement = document.createElement("h5");
+        difficultyElement.innerHTML = `<i class="fa fa-gauge mr-2"></i>`; // Safe static icon
+        difficultyElement.appendChild(document.createTextNode(get(_)(trail.difficulty as string))); // Safely append difficulty
+        detailsContainer.appendChild(difficultyElement);
+
+        textContainer.appendChild(detailsContainer);
+    }
+
+    // Create the grid container for additional stats
+    const statsContainer = document.createElement("div");
+    statsContainer.className =
+        "grid grid-cols-2 mt-2 gap-x-4 text-gray-500 flex-wrap";
+
+    const stats = [
+        { icon: "fa-left-right", value: formatDistance(trail.distance) },
+        { icon: "fa-clock", value: formatTimeHHMM(trail.duration) },
+        { icon: "fa-arrow-trend-up", value: formatElevation(trail.elevation_gain) },
+        { icon: "fa-arrow-trend-down", value: formatElevation(trail.elevation_loss) },
+    ];
+
+    // Loop through stats and add them
+    stats.forEach(({ icon, value }) => {
+        const statElement = document.createElement("span");
+        statElement.className = "shrink-0";
+        statElement.innerHTML = `<i class="fa ${icon} mr-2"></i>`; // Safe static icon
+        statElement.appendChild(document.createTextNode(value)); // Safely append stat value
+        statsContainer.appendChild(statElement);
+    });
+
+    textContainer.appendChild(statsContainer);
+
+    // Assemble the popup
+    listItem.appendChild(imageContainer);
+    listItem.appendChild(textContainer);
+    linkElement.appendChild(listItem);
+
+    // Safely set the content using setDOMContent
+    popup.setDOMContent(linkElement);
+
     return popup;
 }
 

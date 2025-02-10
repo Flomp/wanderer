@@ -7,38 +7,53 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
     import PhotoGallery from "../photo_gallery.svelte";
 
-    export let log: SummitLog;
-    export let showCategory: boolean = false;
-    export let showTrail: boolean = false;
-    export let showRoute: boolean = false;
-    export let showAuthor: boolean = false;
-    export let showDescription: boolean = false;
-    export let showPhotos: boolean = false;
-
-    let openGallery: (idx?: number) => void;
-
-    let imgSrc: string[] = [];
-    $: if (log.photos?.length) {
-        imgSrc = log.photos
-            .filter((_, i) => i < 3)
-            .reverse()
-            .map((p) => getFileURL(log, p));
-    } else {
-        imgSrc = [];
+    interface Props {
+        log: SummitLog;
+        showCategory?: boolean;
+        showTrail?: boolean;
+        showRoute?: boolean;
+        showAuthor?: boolean;
+        showDescription?: boolean;
+        showPhotos?: boolean;
+        ontext?: (summitLog: SummitLog) => void;
+        onopen?: (summitLog: SummitLog) => void;
     }
 
-    const dispatch = createEventDispatcher();
+    let {
+        log,
+        showCategory = false,
+        showTrail = false,
+        showRoute = false,
+        showAuthor = false,
+        showDescription = false,
+        showPhotos = false,
+        onopen,
+        ontext
+    }: Props = $props();
+
+    let gallery: PhotoGallery;
+
+    let imgSrc: string[] = $state([]);
+    $effect(() => {
+        if (log.photos?.length) {
+            imgSrc = log.photos
+                .filter((_, i) => i < 3)
+                .reverse()
+                .map((p) => getFileURL(log, p));
+        } else {
+            imgSrc = [];
+        }
+    });
 
     function openText() {
-        dispatch("text", log);
+        ontext?.(log);
     }
 
     function openRoute() {
-        dispatch("open", log);
+        onopen?.(log);
     }
 
     function colCount() {
@@ -58,12 +73,12 @@
             {#if imgSrc.length}
                 <PhotoGallery
                     photos={log.photos.map((p) => getFileURL(log, p))}
-                    bind:open={openGallery}
+                    bind:this={gallery}
                 ></PhotoGallery>
                 <button
                     class="relative w-16 aspect-square ml-2 mb-3 shrink-0"
                     type="button"
-                    on:click={() => openGallery()}
+                    onclick={() => gallery.openGallery()}
                 >
                     {#each imgSrc as img, i}
                         <img
@@ -110,6 +125,7 @@
     {#if showTrail}
         <td>
             <a
+                aria-label="Go to trail"
                 class="btn-icon aspect-square"
                 href="/trail/view/{log.expand?.trails_via_summit_logs?.at(0)
                     ?.id ?? ''}"
@@ -120,7 +136,7 @@
     {#if showDescription}
         <td>
             {#if log.text}
-                <button on:click={openText}
+                <button onclick={openText}
                     ><p
                         class="rounded-full bg-menu-item-background-hover hover:bg-menu-item-background-focus text-ellipsis max-w-28 whitespace-nowrap overflow-hidden px-3 py-1"
                     >
@@ -130,13 +146,25 @@
             {/if}
         </td>
     {/if}
-    {#if showAuthor && log.expand.author}
+    {#if showAuthor && log.expand?.author}
         <td>
             <p
                 class="tooltip flex justify-center"
                 data-title={log.expand.author.username}
             >
-                <a href="/profile/{log.expand.author.id}">
+                {#if !log.expand.author.private}
+                    <a href="/profile/{log.expand.author.id}">
+                        <img
+                            class="rounded-full w-7 aspect-square"
+                            src={getFileURL(
+                                log.expand?.author,
+                                log.expand?.author.avatar,
+                            ) ||
+                                `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand?.author.username}&backgroundType=gradientLinear`}
+                            alt="avatar"
+                        />
+                    </a>
+                {:else}
                     <img
                         class="rounded-full w-7 aspect-square"
                         src={getFileURL(
@@ -146,13 +174,17 @@
                             `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand?.author.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                </a>
+                {/if}
             </p>
         </td>
     {/if}
-    {#if showRoute && log.expand.gpx_data}
+    {#if showRoute && log.expand?.gpx_data}
         <td>
-            <button on:click={openRoute} class="btn-icon">
+            <button
+                aria-label="Open route"
+                onclick={openRoute}
+                class="btn-icon"
+            >
                 <i class="fa fa-map-location-dot px-[3px] text-xl"></i></button
             >
         </td>

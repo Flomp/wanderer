@@ -18,25 +18,25 @@ class Trail {
     difficulty?: "easy" | "moderate" | "difficult"
     lat?: number;
     lon?: number;
-    thumbnail: number;
+    thumbnail?: number;
     photos: string[];
     gpx?: string;
     created?: string;
     category?: string;
     waypoints: string[];
     summit_logs: string[];
-    expand: {
+    expand?: {
         category?: Category;
-        waypoints: Waypoint[]
-        summit_logs: SummitLog[]
+        waypoints?: Waypoint[]
+        summit_logs?: SummitLog[]
         author?: UserAnonymous
-        comments_via_trail: Comment[]
+        comments_via_trail?: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]
     }
     tags?: string[];
     description?: string;
-    author?: string;
+    author: string;
 
     constructor(name: string,
         params?: {
@@ -70,10 +70,10 @@ class Trail {
         this.location = params?.location;
         this.date = params?.date ?? new Date().toISOString().split('T')[0];
         this.public = params?.public ?? false
-        this.distance = params?.distance;
-        this.elevation_gain = params?.elevation_gain;
-        this.elevation_loss = params?.elevation_loss;
-        this.duration = params?.duration;
+        this.distance = params?.distance ?? 0;
+        this.elevation_gain = params?.elevation_gain ?? 0;
+        this.elevation_loss = params?.elevation_loss ?? 0;
+        this.duration = params?.duration ?? 0;
         this.difficulty = params?.difficulty ?? "easy";
         this.lat = params?.lat;
         this.lon = params?.lon;
@@ -92,6 +92,7 @@ class Trail {
         this.tags = params?.tags ?? []
         this.description = params?.description ?? "";
         this.created = params?.created;
+        this.author = "000000000000000"
     }
 }
 
@@ -141,6 +142,35 @@ interface TrailBoundingBox {
     min_lon: number,
 }
 
+
+interface TrailSearchResult {
+    id: string;
+    author: string;
+    author_name: string;
+    author_avatar: string;
+    name: string;
+    description: string;
+    location: string;
+    distance: number;
+    elevation_gain: number;
+    elevation_loss: number;
+    duration: number;
+    difficulty: "easy" | "moderate" | "difficult";
+    category: string;
+    completed: boolean;
+    date: number;
+    created: number;
+    public: boolean;
+    thumbnail: string;
+    shares?: string[];
+    gpx: string;
+    _geo: {
+        lat: number,
+        lng: number
+    };
+}
+
+
 export { Trail };
 
-    export type { TrailBoundingBox, TrailFilter, TrailFilterValues };
+export type { TrailBoundingBox, TrailFilter, TrailFilterValues, TrailSearchResult };

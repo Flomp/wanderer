@@ -3,8 +3,8 @@ import type Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import Waypoint from "$lib/models/gpx/waypoint";
 import { type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
+import { APIError } from "$lib/util/api_util";
 import { decodePolyline, encodePolyline } from "$lib/util/polyline_util";
-import { ClientResponseError } from "pocketbase";
 
 
 const emtpyTrack: Track = { trkseg: [] }
@@ -44,8 +44,10 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
         let r = await fetch("/api/v1/valhalla/route", { method: "POST", body: JSON.stringify(requestBody) })
 
         if (!r.ok) {
-            throw new ClientResponseError(await r.json())
+            const response = await r.json();
+            throw new APIError(r.status, response.message, response.detail)
         }
+
         const routeResponse: ValhallaRouteResponse = await r.json();
         shape = routeResponse.trip.legs[0].shape
     } else {
@@ -55,8 +57,10 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
     const r2 = await fetch("/api/v1/valhalla/height", { method: "POST", body: JSON.stringify({ encoded_polyline: shape }) })
 
     if (!r2.ok) {
-        throw new ClientResponseError(await r2.json())
+        const response = await r2.json();
+        throw new APIError(r2.status, response.message, response.detail)
     }
+
     const heightResponse: ValhallaHeightResponse = await r2.json()
     const points = decodePolyline(shape);
     const waypoints = points.map((p, i) => new Waypoint({ $: { lat: p[0], lon: p[1] }, ele: heightResponse.height[i] }))
@@ -64,13 +68,14 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
     return waypoints
 }
 
-export async function appendToRoute(waypoints: Waypoint[]) {
-    const segment = new TrackSegment({ trkpt: [] })
+export async function insertIntoRoute(waypoints: Waypoint[], index?: number) {
+    const segment = new TrackSegment({ trkpt: waypoints })
 
-    for (const wpt of waypoints) {
-        segment.trkpt!.push(wpt)
+    if (index) {
+        route.trk?.at(0)?.trkseg?.splice(index, 0, segment);
+    } else {
+        route.trk?.at(0)?.trkseg?.push(segment);
     }
-    route.trk?.at(0)?.trkseg?.push(segment);
 }
 
 export async function editRoute(index: number, waypoints: Waypoint[]) {

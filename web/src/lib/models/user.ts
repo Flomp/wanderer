@@ -6,7 +6,7 @@ export type User = {
     email?: string,
     password: string,
     avatar?: string;
-    language?: string;
+    bio?: string;
     created?: string;
 }
 
@@ -15,4 +15,5 @@ export type UserAnonymous = {
     username?: string,
     avatar?: string;
     created?: string;
+    private: boolean;
 }

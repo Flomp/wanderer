@@ -1,6 +1,5 @@
 const privateRoutes = [
   "/settings",
-  "/lists",
   "/trail/edit/new",
   "/profile"
 ]

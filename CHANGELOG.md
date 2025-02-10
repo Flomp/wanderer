@@ -1,3 +1,110 @@
+# v0.14.0
+> [!IMPORTANT]
+> This release introduces significant updates, including the migration of the frontend to [Svelte 5](https://svelte.dev/blog/svelte-5-is-alive). While the migration has been rigorously tested, there is a possibility that some features may not function as expected. We encourage you to report any issues you encounter. Additionally, the location search functionality has been transitioned from a locally hosted meilisearch index to nominatim. This upgrade offers substantially improved location search capabilities within wanderer. As a result, the custom meilisearch docker image (`flomp/wanderer-search`) is now deprecated. You can safely replace it with the official meilisearch image (`getmeili/meilisearch:v1.11.3`) in your `docker-compose.yml`.
+
+## Maintenance
+- Migrates to Svelte 5
+- Removes the cities500 index from meilisearch
+
+## Features
+- Switches location search to nominatim
+- Lists are now fuzzy searchable from the searchbar on the frontpage, in the map view and in the list view
+
+## Bug fixes
+- Fixes a bug that caused new users to not be able to save their settings
+- The default language is now set to the browser language after registering a new user
+- Moves the user biography out of the auth cookie to decrease cookie size
+
+# v0.13.2
+
+## Security
+- Fixes potential XSS attack vector in waypoint and summit log map popups
+
+## Features
+-  Adds page loading bar
+-  Improves route editor interface
+-  Adds location search to trail create and edit form
+-  You can now focus the map on your geolocation
+-  Updates max. photo size for waypoints, summit logs and trails to 20MB
+
+## Bug fixes
+- Fixes bug that caused new users to not be redirected after registering
+- Fixes bug that caused map coordinates to not wrap properly
+- Fixes bug that caused new users to not be able to create lists
+- Clicking on an icon in the waypoint icon picker now picks the correct icon
+- Fixes bulk auto-upload
+- Deleting an account now properly cascade deltes all associated objects from the database
+
+## Translations
+- New translation: Spanish (thanks to @xccose)
+- Updated translations (thanks to all contributors)
+
+# v0.13.1
+
+## Features
+- Improves loading speed of the home page
+- Improves server side rendering of certain components
+
+## Translations
+- Various additions across multiple languages (thanks to all contributors)
+
+## Bug fixes
+- Fixes a bug that hid the map on some sites on mobile devices
+- Fixes responsive layouts on mobile devices
+
+# v0.13.0
+## Features
+- Adds a profile page with timeline, trails and stats of the respective user
+- Adds notifications (on the website and via email) for various events (e.g. a new comment on your trail). Notifications can be toggled in the settings.
+- You can now follow other users
+- Settings page overhaul:
+  - Clearer setting sections
+  - Option to add a personal biography
+  - New privacy settings page
+  - New notification settings page
+- Lists can now be public
+- Lists can now be filtered and sorted
+- Trails can now be displayed as a table (thanks @tofublock)
+- Minor quality of life improvements:
+  - more descriptive error messages
+  - uniform empty states
+
+## Bug fixes
+- Fixes bug that caused trails to not be displayed for new users
+- Fixes various bugs related to improper API data validation
+
+## Docs
+- Improves and updates API reference
+- Improves clarity of "From source installation" guide
+
+# v0.12.0
+> [!CAUTION]
+This release contains breaking changes. Most migrations will happen automatically, but you will need to take action in two places that will be clearly marked ⚠️ further down.
+
+## Maintenance
+- Updates to meilisearch version 0.11.3. 
+- ⚠️ meilisearch indices are not compatible across minor versions. This means you will need to rename or delete your [`data.ms`](https://github.com/Flomp/wanderer/blob/8635de78b9f1510e2316b08e605b175a2615f4db/docker-compose.yml#L19) folder on your host system to force meilisearch to rebuild the index on the next start (note that this can take a little while). 
+
+## Features
+- Adds password reset email function for users (see [docs](https://wanderer.to/guides/authentication/#forgot-your-password) for more info)
+- You can now add photos to your summit logs
+- Complete rewrite of the map logic switching from raster to vector tiles
+
+⚠️ Custom raster tilesets added via `Settings -> Display -> Tilesets` will no longer work. You will have to delete them for the map to show correctly. Tileset URLs must now point to a valid `style.json` describing a vector tileset (see [docs](https://wanderer.to/guides/customize-map/#custom-map-styles) for more info).
+- 3D Terrain and Hillshading are now available (see [docs](https://wanderer.to/guides/customize-map/#terrain--hillshading) fore more info)
+- Adds two more default map styles: CARTO Light & Dark
+- Adds loading animations for trail lists
+
+## Bug fixes
+
+- Fixes bug that caused a new trail to be created instead of updated when uploading a new GPS data source to an existing trail
+- Fixes bug that caused trails to throw a 404 error when they had summit logs created before v0.11.0
+- Waypoint markers can now also be dragged after a trail was saved
+- Fixes issue with GPX export when using Google Chrome (thanks [@tofublock](https://github.com/tofublock))
+
+## Miscellaneous
+As the number of contributors to this project continues to grow (which I’m very happy about), I’ve set up a [Discord channel](https://discord.gg/MdpybUHc) for more direct communication. If you’re interested in helping with Wanderer, feel free to join!
+
 # v0.11.0
 ## Features
 - Other user's profiles can now be viewed

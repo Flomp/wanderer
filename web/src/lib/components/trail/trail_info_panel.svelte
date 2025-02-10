@@ -2,7 +2,6 @@
     import { goto } from "$app/navigation";
     import Tabs from "$lib/components/base/tabs.svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
-    import WaypointCard from "$lib/components/waypoint/waypoint_card.svelte";
     import { Comment } from "$lib/models/comment";
     import type { Trail } from "$lib/models/trail";
 
@@ -21,57 +20,82 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
 
+    import { browser } from "$app/environment";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import { pb } from "$lib/pocketbase";
+    import { theme } from "$lib/stores/theme_store";
+    import { show_toast } from "$lib/stores/toast_store";
+    import * as M from "maplibre-gl";
     import "photoswipe/style.css";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Button from "../base/button.svelte";
+    import SkeletonNotificationCard from "../base/skeleton_notification_card.svelte";
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
+    import EmptyStateComment from "../empty_states/empty_state_comment.svelte";
+    import EmptyStateDescription from "../empty_states/empty_state_description.svelte";
+    import EmptyStatePhotos from "../empty_states/empty_state_photos.svelte";
     import PhotoGallery from "../photo_gallery.svelte";
     import ShareInfo from "../share_info.svelte";
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
-    import { pb } from "$lib/pocketbase";
-    import * as M from "maplibre-gl";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
+    import TrailTimeline from "./trail_timeline.svelte";
 
-    export let trail: Trail;
-    export let mode: "overview" | "map" | "list" = "map";
-    export let markers: M.Marker[] = [];
+    interface Props {
+        initTrail: Trail;
+        mode?: "overview" | "map" | "list";
+        markers?: M.Marker[];
+        activeTab?: number;
+    }
+
+    let {
+        initTrail,
+        mode = "map",
+        markers = [],
+        activeTab = 0,
+    }: Props = $props();
+
+    let trail = $state(initTrail);
 
     const tabs = [
-        $_("description"),
-        $_("waypoints", { values: { n: 2 } }),
-        $_("photos"),
         $_("summit-book"),
-        ...($currentUser ? [$_("comment", { values: { n: 2 } })] : []),
+        $_("photos"),
+        ...(pb.authStore.model ? [$_("comment", { values: { n: 2 } })] : []),
     ];
 
     const trailIsShared =
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
 
-    let activeTab = 0;
+    let gallery: PhotoGallery;
 
-    let thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
-        : "/imgs/default_thumbnail.webp";
+    let newComment: Comment = $state({
+        text: "",
+        rating: 0,
+        author: "",
+        trail: trail.id ?? "",
+    });
 
-    let openGallery: (idx?: number) => void;
-
-    let newComment: Comment = new Comment("", 0, "", trail.id ?? "");
-    let commentCreateLoading: boolean = false;
+    let commentsLoading: boolean = $state(activeTab == 2);
+    let commentCreateLoading: boolean = $state(false);
     let commentDeleteLoading: boolean = false;
 
-    $: if (activeTab == 4) {
-        fetchComments();
-    }
+    let fullDescription: boolean = $state(false);
 
     onMount(async () => {});
 
     function openMarkerPopup(i: number) {
+        if ((markers[i] as M.Marker).getPopup().isOpen()) {
+            return;
+        }
         (markers[i] as M.Marker).togglePopup();
     }
 
     function closeMarkerPopup(i: number) {
+        if (!(markers[i] as M.Marker).getPopup().isOpen()) {
+            return;
+        }
         (markers[i] as M.Marker).togglePopup();
     }
 
@@ -80,7 +104,9 @@
     }
 
     async function fetchComments() {
+        commentsLoading = true;
         await comments_index(trail);
+        commentsLoading = false;
     }
 
     async function createComment() {
@@ -91,17 +117,24 @@
         newComment.author = $currentUser.id;
         newComment.trail = trail.id;
 
-        comments_create(newComment).then((c) => {
+        try {
+            const c = await comments_create(newComment);
             newComment.text = "";
             c.expand = {
-                author: $currentUser!,
+                author: { ...$currentUser!, private: false },
             };
 
             const newCommentList = [c, ...$comments];
             comments.set(newCommentList);
-        });
-
-        commentCreateLoading = false;
+        } catch (e) {
+            show_toast({
+                icon: "close",
+                type: "error",
+                text: $_("error-posting-comment"),
+            });
+        } finally {
+            commentCreateLoading = false;
+        }
     }
 
     async function editComment(data: { comment: Comment; text: string }) {
@@ -116,12 +149,25 @@
         comments.set(newCommentList);
         commentDeleteLoading = false;
     }
+    let thumbnail = $derived(
+        trail.photos.length
+            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark,
+    );
+    $effect(() => {
+        if (browser && activeTab == 2) {
+            fetchComments();
+        }
+    });
 </script>
 
 <div
     class="trail-info-panel mx-auto {mode == 'list'
         ? ''
         : 'border border-input-border rounded-3xl'} h-full"
+    class:overflow-y-scroll={mode !== "overview"}
     style="max-width: min(100%, 76rem);"
 >
     <div class="trail-info-panel-header">
@@ -133,18 +179,18 @@
                 alt=""
             />
             <div
-                class="absolute bottom-0 w-full h-2/3 bg-gradient-to-b from-transparent to-black opacity-50"
+                class="absolute bottom-0 w-full h-full bg-gradient-to-b from-transparent to-black opacity-60"
             ></div>
             {#if (trail.public || trailIsShared) && pb.authStore.model}
                 <div
-                    class="flex absolute top-8 right-6 {trail.public &&
+                    class="flex absolute top-6 right-6 {trail.public &&
                     trailIsShared
                         ? 'w-16'
                         : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
                 >
                     {#if trail.public && pb.authStore.model}
                         <span
-                            class="tooltip text-2xl"
+                            class:tooltip={mode != "map"}
                             class:mr-3={trail.public && trailIsShared}
                             data-title={$_("public")}
                         >
@@ -152,16 +198,24 @@
                         </span>
                     {/if}
                     {#if trailIsShared}
-                        <ShareInfo type="trail" subject={trail} large={true}
-                        ></ShareInfo>
+                        <ShareInfo type="trail" subject={trail}></ShareInfo>
                     {/if}
                 </div>
+            {/if}
+            {#if mode == "map"}
+                <button
+                    aria-label="Back"
+                    class="btn-icon hover:bg-white hover:text-black ring-input-ring text-white absolute top-6 left-6"
+                    onclick={() => history.back()}
+                >
+                    <i class="fa fa-arrow-left"></i>
+                </button>
             {/if}
             <div
                 class="flex absolute justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
             >
-                <div class="text-white">
-                    <h4 class="text-4xl font-bold">
+                <div class="text-white overflow-hidden">
+                    <h4 title={trail.name} class="text-4xl font-bold line-clamp-3">
                         {trail.name}
                     </h4>
                     {#if trail.date}
@@ -177,7 +231,7 @@
                             )}
                         </h5>
                     {/if}
-                    {#if trail.expand.author}
+                    {#if trail.expand?.author}
                         <p class="my-3">
                             {$_("by")}
                             <img
@@ -189,11 +243,15 @@
                                     `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <a
-                                class="underline"
-                                href="/profile/{trail.expand.author.id}"
-                                >{trail.expand.author.username}</a
-                            >
+                            {#if !trail.expand.author.private}
+                                <a
+                                    class="underline"
+                                    href="/profile/{trail.expand.author.id}"
+                                    >{trail.expand.author.username}</a
+                                >
+                            {:else}
+                                <span>{trail.expand.author.username}</span>
+                            {/if}
                         </p>
                     {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
@@ -209,49 +267,67 @@
                         </h3>
                     </div>
                 </div>
-                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand.trail_share_via_trail?.length || trail.public}
+                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
                     <TrailDropdown {trail} {mode}></TrailDropdown>
                 {/if}
             </div>
         </section>
-        {#if mode == "overview"}
-            <section
-                class="grid grid-cols-2 sm:grid-cols-5 gap-y-4 justify-around py-8 border-b border-input-border"
-            >
+        <section
+            class="grid grid-cols-2 sm:grid-cols-5 gap-y-4 py-4 border-b border-input-border px-3"
+        >
+            <div class="flex flex-col items-center">
+                <span class="font-medium text-center"
+                    >{#if mode == "overview"}
+                        {$_("distance")}
+                    {:else}
+                        <i class="fa fa-left-right"></i>
+                    {/if}</span
+                >
+                <span class="">{formatDistance(trail.distance)}</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="font-medium text-center"
+                    >{#if mode == "overview"}
+                        {$_("est-duration")}
+                    {:else}
+                        <i class="fa fa-clock"></i>
+                    {/if}</span
+                >
+                <span class="">{formatTimeHHMM(trail.duration)}</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="font-medium text-center"
+                    >{#if mode == "overview"}
+                        {$_("elevation-gain")}
+                    {:else}
+                        <i class="fa fa-arrow-trend-up"></i>
+                    {/if}</span
+                >
+                <span class="">{formatElevation(trail.elevation_gain)}</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="font-medium text-center"
+                    >{#if mode == "overview"}
+                        {$_("elevation-loss")}
+                    {:else}
+                        <i class="fa fa-arrow-trend-down"></i>
+                    {/if}</span
+                >
+                <span class="">{formatElevation(trail.elevation_loss)}</span>
+            </div>
+            {#if trail.expand?.category}
                 <div class="flex flex-col items-center">
-                    <span>{$_("distance")}</span>
-                    <span class="font-semibold text-lg"
-                        >{formatDistance(trail.distance)}</span
+                    <span class="font-medium text-center"
+                        >{#if mode == "overview"}
+                            {$_("category")}
+                        {:else}
+                            <i class="fa fa-route"></i>
+                        {/if}</span
                     >
+                    <span class="">{$_(trail.expand.category.name)}</span>
                 </div>
-                <div class="flex flex-col items-center">
-                    <span>{$_("est-duration")}</span>
-                    <span class="font-semibold text-lg"
-                        >{formatTimeHHMM(trail.duration)}</span
-                    >
-                </div>
-                <div class="flex flex-col items-center">
-                    <span>{$_("elevation-gain")}</span>
-                    <span class="font-semibold text-lg"
-                        >{formatElevation(trail.elevation_gain)}</span
-                    >
-                </div>
-                <div class="flex flex-col items-center">
-                    <span>{$_("elevation-loss")}</span>
-                    <span class="font-semibold text-lg"
-                        >{formatElevation(trail.elevation_loss)}</span
-                    >
-                </div>
-                {#if trail.expand.category}
-                    <div class="flex flex-col items-center">
-                        <span>{$_("category")}</span>
-                        <span class="font-semibold text-lg"
-                            >{$_(trail.expand.category.name)}</span
-                        >
-                    </div>
-                {/if}
-            </section>
-        {/if}
+            {/if}
+        </section>
         {#if trail.tags && trail.tags.length > 0}
             <hr class="border-separator" />
             <section class="flex p-8 gap-4 text-gray-600">
@@ -262,120 +338,170 @@
             <hr class="border-separator" />
         {/if}
     </div>
-    <section class="trail-info-panel-tabs px-4 py-2 bg-background sticky top-0">
-        <Tabs {tabs} bind:activeTab></Tabs>
-    </section>
     <section class="trail-info-panel-content px-8">
         <div
             class="grid grid-cols-1 my-4 gap-8"
-            class:md:grid-cols-[1fr_18rem]={mode == "overview"}
+            class:xl:grid-cols-[1fr_18rem]={mode == "overview"}
         >
-            {#if activeTab == 0}
-                <article class="text-justify whitespace-pre-line text-sm">
-                    {trail.description}
-                </article>
-            {/if}
-            {#if activeTab == 1}
-                <ul>
-                    {#each trail.expand.waypoints ?? [] as waypoint, i}
-                        <li
-                            on:mouseenter={() => openMarkerPopup(i)}
-                            on:mouseleave={() => closeMarkerPopup(i)}
-                        >
-                            <WaypointCard {waypoint}></WaypointCard>
-                        </li>
-                    {/each}
-                </ul>
-            {/if}
-            {#if activeTab == 2}
-                <div
-                    id="photo-gallery"
-                    class="grid grid-cols-1 {mode == 'overview'
-                        ? 'sm:grid-cols-2 md:grid-cols-3'
-                        : ''} gap-4"
-                >
-                    <PhotoGallery
-                        photos={trail.photos.map((p) => getFileURL(trail, p))}
-                        bind:open={openGallery}
-                    ></PhotoGallery>
-                    {#each trail.photos ?? [] as photo, i}
-                        <!-- svelte-ignore a11y-click-events-have-key-events -->
-                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                        <img
-                            class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                            on:click={() => openGallery(i)}
-                            src={getFileURL(trail, photo)}
-                            alt=""
-                        />
-                    {/each}
-                </div>
-            {/if}
-            {#if activeTab == 3}
-                <div class="overflow-x-auto">
-                    <SummitLogTable
-                        summitLogs={trail.expand.summit_logs}
-                        showAuthor
-                        showRoute
-                        showPhotos
-                    ></SummitLogTable>
-                </div>
-            {/if}
-            {#if activeTab == 4}
-                <div>
-                    {#if $currentUser}
-                        <div class="flex items-center gap-4">
-                            <img
-                                class="rounded-full w-10 aspect-square"
-                                src={getFileURL(
-                                    $currentUser,
-                                    $currentUser.avatar,
-                                ) ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
-                                alt="avatar"
-                            />
-                            <div class="basis-full">
-                                <Textarea
-                                    bind:value={newComment.text}
-                                    rows={2}
-                                    placeholder="Add comment..."
-                                ></Textarea>
-                            </div>
-                        </div>
-                        <div class="flex justify-end mt-3">
-                            <Button
-                                on:click={createComment}
-                                loading={commentCreateLoading}
-                                secondary={true}
-                                disabled={newComment.text.length == 0}
-                                >Comment</Button
+            <div class="order-1 xl:-order-1">
+                <h4 class="text-2xl font-semibold my-4">
+                    {$_("description")}
+                </h4>
+                {#if trail.description?.length}
+                    <article class="text-justify whitespace-pre-line text-sm">
+                        {!fullDescription
+                            ? trail.description?.substring(0, 300)
+                            : trail.description}
+                        {#if (trail.description?.length ?? 0) > 300 && !fullDescription}
+                            <button
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    fullDescription = true;
+                                }}
                             >
-                        </div>
-                    {/if}
-                    <ul class="space-y-4">
-                        {#each $comments ?? [] as comment}
-                            <li>
-                                <CommentCard
-                                    {comment}
-                                    mode={comment.author == $currentUser?.id
-                                        ? "edit"
-                                        : "show"}
-                                    on:delete={(e) => deleteComment(e.detail)}
-                                    on:edit={(e) => editComment(e.detail)}
-                                ></CommentCard>
-                            </li>
-                        {/each}
-                    </ul>
+                                ... <span class="underline"
+                                    >{$_("read-more")}</span
+                                ></button
+                            >
+                        {/if}
+                    </article>
+                {:else}
+                    <EmptyStateDescription></EmptyStateDescription>
+                {/if}
+                <h4 class="text-2xl font-semibold mb-6 mt-12">
+                    {$_("route", { values: { n: 1 } })}
+                </h4>
+                {#if mode === "overview"}
+                    <div
+                        class="relative border border-input-border rounded-xl p-2 mb-6 text-xs"
+                        id="epc-container"
+                    ></div>
+                {/if}
+                <TrailTimeline
+                    {trail}
+                    onmouseenter={openMarkerPopup}
+                    onmouseleave={closeMarkerPopup}
+                ></TrailTimeline>
+
+                <div class="mb-6 mt-12">
+                    <Tabs {tabs} bind:activeTab></Tabs>
                 </div>
-            {/if}
+                {#if activeTab == 0}
+                    <div class="overflow-x-auto">
+                        <SummitLogTable
+                            summitLogs={trail.expand?.summit_logs}
+                            showAuthor
+                            showRoute
+                            showPhotos
+                        ></SummitLogTable>
+                    </div>
+                {/if}
+                {#if activeTab == 1}
+                    {#if trail.photos.length}
+                        <div
+                            id="photo-gallery"
+                            class="grid grid-cols-1 {mode == 'overview'
+                                ? 'sm:grid-cols-2 md:grid-cols-3'
+                                : ''} gap-4"
+                        >
+                            <PhotoGallery
+                                photos={trail.photos.map((p) =>
+                                    getFileURL(trail, p),
+                                )}
+                                bind:this={gallery}
+                            ></PhotoGallery>
+                            {#each trail.photos ?? [] as photo, i}
+                                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                                <img
+                                    class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                                    onclick={() => gallery.openGallery(i)}
+                                    src={getFileURL(trail, photo)}
+                                    alt=""
+                                />
+                            {/each}
+                        </div>
+                    {:else}
+                        <EmptyStatePhotos></EmptyStatePhotos>
+                    {/if}
+                {/if}
+                {#if activeTab == 2}
+                    <div>
+                        {#if $currentUser}
+                            <div class="flex items-center gap-4">
+                                <img
+                                    class="rounded-full w-10 aspect-square"
+                                    src={getFileURL(
+                                        $currentUser,
+                                        $currentUser.avatar,
+                                    ) ||
+                                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                                    alt="avatar"
+                                />
+                                <div class="basis-full">
+                                    <Textarea
+                                        bind:value={newComment.text}
+                                        rows={2}
+                                        placeholder="Add comment..."
+                                    ></Textarea>
+                                </div>
+                            </div>
+                            <div class="flex justify-end mt-3">
+                                <Button
+                                    onclick={createComment}
+                                    loading={commentCreateLoading}
+                                    secondary={true}
+                                    disabled={commentCreateLoading ||
+                                        newComment.text.length == 0}
+                                    >Comment</Button
+                                >
+                            </div>
+                        {/if}
+                        {#if commentsLoading}
+                            {#each { length: 3 } as _, index}
+                                <SkeletonNotificationCard
+                                ></SkeletonNotificationCard>
+                            {/each}
+                        {:else if $comments.length == 0}
+                            <div class="my-4">
+                                <EmptyStateComment></EmptyStateComment>
+                            </div>
+                        {:else}
+                            <ul class="space-y-4">
+                                {#each $comments ?? [] as comment}
+                                    <li>
+                                        <CommentCard
+                                            {comment}
+                                            mode={comment.author ==
+                                            $currentUser?.id
+                                                ? "edit"
+                                                : "show"}
+                                            ondelete={deleteComment}
+                                            onedit={editComment}
+                                        ></CommentCard>
+                                    </li>
+                                {/each}
+                            </ul>
+                        {/if}
+                    </div>
+                {/if}
+            </div>
+
             {#if mode == "overview"}
-                <div class="relative h-72 rounded-xl overflow-hidden">
+                <div
+                    class="block xl:sticky top-4 h-72 rounded-xl overflow-hidden"
+                >
                     <MapWithElevationMaplibre
                         trails={[trail]}
-                        showElevation={false}
+                        activeTrail={0}
+                        waypoints={trail.expand?.waypoints}
+                        showElevation={true}
+                        elevationProfileContainer={"epc-container"}
                         showStyleSwitcher={false}
                         showFullscreen={true}
                         mapOptions={{ attributionControl: false }}
-                        on:fullscreen={toggleMapFullScreen}
+                        onfullscreen={toggleMapFullScreen}
                         bind:markers
                     ></MapWithElevationMaplibre>
                 </div>

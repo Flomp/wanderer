@@ -1,28 +1,28 @@
 <script lang="ts">
+    
     import { theme } from "$lib/stores/theme_store";
-    import { T, useTask, useThrelte } from "@threlte/core";
+    import { T, useTask } from "@threlte/core";
     import { onMount } from "svelte";
-    import { tweened } from "svelte/motion";
+    import { Tween } from "svelte/motion";
     import * as THREE from "three";
     import Mountain from "./mountain.svelte";
 
-    let rotation = 0;
+    let rotation = $state(0);
     useTask((delta) => {
         rotation += delta / 2;
     });
 
-    const { toneMapping } = useThrelte();
-    toneMapping.set(THREE.NoToneMapping);
-
-    const ambientIntensitiy = tweened($theme == "light" ? 3 : 0, {
+    const ambientIntensity = new Tween($theme == "light" ? 3 : 0, {
         duration: 500,
     });
 
-    $: ambientColor = $theme == "light" ? "#ffffff" : "#4c7fe6";
-    $: ambientIntensitiy.set($theme == "light" ? 3 : 0.1);
+    let ambientColor = $derived($theme == "light" ? "#ffffff" : "#4c7fe6");
+    $effect(() => {
+        ambientIntensity.set($theme == "light" ? 3 : 0.1);
+    });
 
-    let starsGeometry!: THREE.BufferGeometry;
-    let starsMaterial!: THREE.PointsMaterial;
+    let starsGeometry: THREE.BufferGeometry | undefined = $state();
+    let starsMaterial: THREE.PointsMaterial | undefined = $state();
     onMount(() => {
         const stars = new Array(0);
         for (var i = 0; i < 500; i++) {
@@ -43,8 +43,8 @@
 <T.PerspectiveCamera
     makeDefault
     position={[35.5, 32, 35.5]}
-    on:create={({ ref }) => {
-        ref.lookAt(0, 0, 0);
+    oncreate={(c) => {
+        c.lookAt(0, 0, 0);
     }}
 />
 
@@ -58,5 +58,5 @@
 <T.HemisphereLight
     skyColor={ambientColor}
     groundColor="#242734"
-    intensity={$ambientIntensitiy}
+    intensity={ambientIntensity.current}
 />

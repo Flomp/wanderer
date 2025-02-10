@@ -1,3 +1,5 @@
+import type { LocationSearchResult } from "$lib/stores/search_store";
+
 export const icons = ["0",
     "1",
     "2",
@@ -1388,4 +1390,153 @@ export const icons = ["0",
     "yen-sign",
     "yin-yang",
     "z",
-]
+] as const
+
+export function getIconForLocation(l: LocationSearchResult): typeof icons[number] {
+    if (l.category === "aerialway") {
+        return "cable-car"
+    } else if (l.category === "amenity") {
+        switch (l.type) {
+            // Sustenance
+            case "bar":
+                return "martini-glass"
+            case "pub":
+            case "biergarten":
+                return "beer-mug-empty"
+            case "cafe":
+                return "mug-saucer"
+            case "ice_cream":
+                return "ice-cream"
+            case "fast_food":
+                return "burger"
+            case "restaurant":
+            case "food_court":
+                return "utensils"
+
+            // Transportation
+            case "ferry_terminal":
+                return "ferry"
+            case "bus_station":
+                return "bus"
+            case "parking":
+                return "square-parking"
+            // Others
+            case "place_of_worship":
+                return "place-of-worship"
+        }
+    } else if (l.category === "building") {
+        switch (l.type) {
+            // Accommodation
+            case "hotel":
+                return "hotel"
+
+            // Religious
+            case "cathedral":
+            case "church":
+            case "chapel":
+                return "church"
+            case "mosque":
+                return "mosque"
+            case "synagogue":
+                return "synagogue"
+            case "temple":
+                return "gopuram"
+
+            // Civic
+            case "train_station":
+                return "train"
+        }
+    } else if (l.category === "natural") {
+        switch (l.type) {
+            case "peak":
+                return "mountain"
+            case "wood":
+                return "tree"
+            case "beach":
+                return "umbrella-beach"
+            case "water":
+                return "water"
+        }
+    } else if (l.category === "leisure") {
+        switch (l.type) {
+            case "garden":
+                return "leaf"
+            case "park":
+                return "tree"
+            case "swimming_area":
+            case "swimming_pool":
+            case "water_park ":
+                return "person-swimming"
+        }
+    } else if (l.category === "aeroway") {
+        return "plane-departure"
+    } else if (l.category === "railway") {
+        switch (l.type) {
+            case "station":
+            case "halt":
+                return "train"
+            case "subway_entrance":
+                return "train-subway"
+            case "tram_stop":
+                return "train-tram"
+        }
+    } else if (l.category === "tourism") {
+        switch (l.type) {
+            case "hotel":
+                return "hotel"
+            case "alpine_hut":
+            case "apartment":
+            case "chalet":
+                return "house-chimney"
+            case "guest_house":
+            case "motel":
+            case "hostel":
+                return "bed"
+            case "caravan_site":
+                return "caravan"
+            case "camp_site":
+            case "camp_pitch":
+                return "campground"
+            case "aqaurium":
+                return "fish-fins"
+            case "artwork":
+                return "palette"
+            case "viewpoint":
+            case "attraction":
+                return "eye"
+            case "zoo":
+                return "hippo"
+        }
+    } else if (l.category === "tourism") {
+        switch (l.type) {
+            case "national_park":
+                return "tree"
+        }
+    } else if (l.category === "place") {
+        switch (l.type) {
+            case "city":
+                return "city"
+            case "town":
+            case "village":
+            case "hamlet":
+                return "building"
+        }
+    } else if (l.category === "boundary") {
+        switch (l.type) {
+            case "city":
+                return "city"
+            case "town":
+            case "village":
+            case "hamlet":
+                return "building"
+        }
+    } else if(l.category === "historic") {
+        return "eye"
+    }
+    switch (l.category) {
+
+
+    }
+
+    return "location-dot"
+}

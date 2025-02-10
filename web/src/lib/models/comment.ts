@@ -1,14 +1,15 @@
-import type { User } from "$lib/stores/user_store";
+import type { UserAnonymous } from "./user";
 
 export class Comment {
     id?: string;
     text: string;
-    rating: number;
+    rating?: number;
     author: string;
     trail: string;
     created?: string;
+    updated?: string;
     expand?: {
-        author: User
+        author: UserAnonymous
     }
 
     constructor(text: string, rating: number, author: string, trail: string) {

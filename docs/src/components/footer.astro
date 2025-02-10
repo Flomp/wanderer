@@ -1,4 +1,6 @@
 ---
+import { version } from '../../package.json';
+
 const isNotHomepage = Astro.props.slug !== "";
 ---
 
@@ -111,7 +113,7 @@ const isNotHomepage = Astro.props.slug !== "";
                         class="fill-primary dark:fill-white"
                         font-size="0.75rem"
                     >
-                        v0.11.0
+                        v{version}
                     </text>
                 </svg>
             </div>
@@ -124,7 +126,7 @@ const isNotHomepage = Astro.props.slug !== "";
                         </a>
                     </li>
                     <li>
-                        <a href="/api-reference/auth">API Reference</a>
+                        <a href="/api-reference">API Reference</a>
                     </li>
                     <li>
                         <a href="https://pocketbase.io/">PocketBase</a>

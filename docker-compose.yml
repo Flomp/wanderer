@@ -7,7 +7,7 @@ x-common-env: &cenv
 services:
   search:
     container_name: wanderer-search
-    image: flomp/wanderer-search
+    image: getmeili/meilisearch:v1.11.3
     environment:
       <<: *cenv
       MEILI_NO_ANALYTICS: true
@@ -57,6 +57,7 @@ services:
       UPLOAD_USER:
       UPLOAD_PASSWORD:
       PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de
+      PUBLIC_NOMINATIM_URL: https://nominatim.openstreetmap.org
     volumes:
       - ./data/uploads:/app/uploads
     ports:

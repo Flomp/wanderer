@@ -2,7 +2,9 @@ package migrations
 
 import (
 	"encoding/json"
+	"os"
 
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/daos"
 	m "github.com/pocketbase/pocketbase/migrations"
@@ -10,7 +12,17 @@ import (
 )
 
 func init() {
+	client := meilisearch.New(os.Getenv("MEILI_URL"), meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")))
+
 	m.Register(func(db dbx.Builder) error {
+		_, err := client.CreateIndex(&meilisearch.IndexConfig{
+			Uid:        "trails",
+			PrimaryKey: "id",
+		})
+		if err != nil {
+			return err
+		}
+
 		jsonData := `[
 			{
 				"id": "_pb_users_auth_",

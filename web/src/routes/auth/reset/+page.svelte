@@ -4,22 +4,27 @@
     import TextField from "$lib/components/base/text_field.svelte";
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
-    import type { User } from "$lib/models/user";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { users_reset_password } from "$lib/stores/user_store";
-    import { createForm } from "$lib/vendor/svelte-form-lib";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
     import { _ } from "svelte-i18n";
-    import { object, string } from "yup";
+    import { z } from "zod";
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
-    const { form, errors, handleChange, handleSubmit } = createForm({
+    const { form, errors } = createForm({
         initialValues: {
             email: "",
         },
-        validationSchema: object<User>({
-            email: string().required($_("required")),
+        extend: validator({
+            schema: z.object({
+                email: z
+                    .string()
+                    .min(1, "required")
+                    .email("not-a-valid-email-address"),
+            }),
         }),
         onSubmit: async (email) => {
             loading = true;
@@ -50,7 +55,7 @@
 <main class="flex justify-center">
     <form
         class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-4 w-[28rem] mt-8"
-        on:submit={handleSubmit}
+        use:form
     >
         {#if $theme == "light"}
             <LogoTextTwoLineDark></LogoTextTwoLineDark>
@@ -58,13 +63,11 @@
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
         <h4 class="text-xl font-semibold">{$_("forgot-your-password")}</h4>
-        <p class="text-gray-500">{$_('password-reset-text')}</p>
+        <p class="text-gray-500 w-80">{$_('password-reset-text')}</p>
         <div class="space-y-6 w-80">
             <TextField
                 name="email"
                 label={$_("email")}
-                bind:value={$form.email}
-                on:change={handleChange}
                 error={$errors.email}
             ></TextField>
             <div class="grid grid-cols-2 gap-x-4">

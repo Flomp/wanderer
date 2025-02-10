@@ -1,39 +1,39 @@
+import { SummitLogUpdateSchema } from "$lib/models/api/summit_log_schema";
 import type { SummitLog } from "$lib/models/summit_log";
 import { pb } from "$lib/pocketbase";
+import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
 
 
 export async function GET(event: RequestEvent) {
     try {
-        const r = await pb.collection('summit_logs')
-            .getOne<SummitLog>(event.params.id as string)
+        const r = await show<SummitLog>(event, Collection.summit_logs)
 
         if (!r.expand) {
             r.expand = {} as any
         }
-        r.expand.author = await pb.collection("users_anonymous").getOne(r.author!);
+        r.expand!.author = await pb.collection("users_anonymous").getOne(r.author!);
 
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e);
     }
 }
 
 export async function POST(event: RequestEvent) {
-    const data = await event.request.json()
     try {
-        const r = await await pb.collection("summit_logs").update<SummitLog>(event.params.id as string, data);
+        const r = await update<SummitLog>(event, SummitLogUpdateSchema, Collection.summit_logs)
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }
 
 export async function DELETE(event: RequestEvent) {
     try {
-        const r = await pb.collection('summit_logs').delete(event.params.id as string)
-        return json({ 'acknowledged': r });
+        const r = await remove(event, Collection.summit_logs)
+        return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e);
     }
 }

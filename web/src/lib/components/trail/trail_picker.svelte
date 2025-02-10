@@ -2,22 +2,24 @@
     import * as M from "maplibre-gl";
 
     import { fromFile, toGeoJson } from "$lib/util/gpx_util";
-    import { createEventDispatcher, onMount } from "svelte";
-    export let trailFile: File | null;
-    export let trailData: string | undefined;
-    export let label: string = "";
+    import { onMount } from "svelte";
+    interface Props {
+        trailFile: File | undefined | null;
+        trailData: string | undefined;
+        label?: string;
+        onchange: (data: string | null) => void;
+    }
+
+    let {
+        trailFile = $bindable(),
+        trailData = $bindable(),
+        label = "",
+        onchange
+    }: Props = $props();
 
     let map: M.Map;
     let layer: M.LineLayerSpecification | undefined;
     let source: M.GeoJSONSource | undefined;
-
-    const dispatch = createEventDispatcher();
-
-    $: if (trailData !== undefined) {
-        showTrailOnMap();
-    } else {
-        removeTrailFromMap();
-    }
 
     onMount(async () => {
         if (!map) {
@@ -31,7 +33,7 @@
             attributionControl: false,
             dragPan: false,
             scrollZoom: false,
-            preserveDrawingBuffer: true
+            preserveDrawingBuffer: true,
         });
     }
 
@@ -40,7 +42,7 @@
             trailFile = null;
             trailData = undefined;
 
-            dispatch("change", null);
+            onchange?.(null);
         } else {
             document.getElementById("trail-input")!.click();
         }
@@ -64,7 +66,7 @@
 
         trailData = parseResult.gpxData;
 
-        dispatch("change", trailData);
+        onchange?.(trailData);
     }
 
     async function showTrailOnMap() {
@@ -95,9 +97,12 @@
             },
         });
         layer = map.getLayer(layerId) as M.LineLayerSpecification;
-        source = map.getSource(sourceId) as M.GeoJSONSource;        
-        map.resize()
-        map.fitBounds(geojson.bbox as M.LngLatBoundsLike, {animate: false, padding: 8});
+        source = map.getSource(sourceId) as M.GeoJSONSource;
+        map.resize();
+        map.fitBounds(geojson.bbox as M.LngLatBoundsLike, {
+            animate: false,
+            padding: 8,
+        });
     }
 
     function removeTrailFromMap() {
@@ -109,10 +114,14 @@
             map?.removeSource(source.id);
             source = undefined;
         }
-
-        trailData = undefined;
-        trailFile = null;
     }
+    $effect(() => {
+        if (trailData !== undefined) {
+            showTrailOnMap();
+        } else {
+            removeTrailFromMap();
+        }
+    });
 </script>
 
 <div>
@@ -128,11 +137,11 @@
             accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
             multiple={false}
             style="display: none;"
-            on:change={() => handleTrailSelection()}
+            onchange={() => handleTrailSelection()}
         />
         <button
             type="button"
-            on:click={openTrailBrowser}
+            onclick={openTrailBrowser}
             class="h-28 aspect-square rounded-xl !bg-background border border-input-border-focus hover:!bg-secondary-hover group"
             id="trail-picker-map"
         >

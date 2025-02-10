@@ -11,9 +11,9 @@ import Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import GPXWaypoint from "$lib/models/gpx/waypoint";
 import EasyFit from "$lib/vendor/easy-fit/easy-fit";
-import type { GeoJSON, Feature, FeatureCollection, GeoJsonProperties, Position } from 'geojson';
+import type { Feature, FeatureCollection, GeoJSON, GeoJsonProperties, Position } from 'geojson';
 import * as xmldom from 'xmldom';
-import { bbox } from "./geojson_util";
+import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string) {
@@ -35,10 +35,10 @@ export async function gpx2trail(gpxString: string, fallbackName?: string) {
         wp.id = cryptoRandomString({ length: 15 });
         wp.name = wpt.name ?? ""
         wp.description = wpt.desc;
-        trail.expand.waypoints.push(wp);
+        trail.expand!.waypoints.push(wp);
     }
 
-    const totals = gpx.getTotals()
+    const totals = gpx.features
 
     const trackPoints = gpx.trk?.at(0)?.trkseg?.at(0)?.trkpt
     const routePoints = gpx.rte?.at(0)?.rtept;
@@ -130,7 +130,7 @@ export async function fromFile(file: File | Blob) {
         });
     }
 
-    return {gpxData, gpxFile};
+    return { gpxData, gpxFile };
 }
 
 export function fromKML(kmlData: string) {
@@ -317,9 +317,10 @@ export function isFITFile(buffer: ArrayBuffer) {
 
 export function toGeoJson(gpxData: string) {
     const parser = browser ? new DOMParser() : new xmldom.DOMParser();
-    const geojson = gpx(
+    let geojson = gpx(
         parser.parseFromString(gpxData, "text/xml"),
     ) as GeoJSON;
+    geojson = splitMultiLineStringToLineStrings(geojson);
     geojson.bbox = bbox(geojson)
     return geojson
 }

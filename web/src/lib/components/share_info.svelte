@@ -8,17 +8,21 @@
     import { _ } from "svelte-i18n";
     import { fly, slide } from "svelte/transition";
 
-    export let subject: Trail | List;
-    export let large: boolean = false;
-    export let type: "trail" | "list"
+    interface Props {
+        subject: Trail | List;
+        large?: boolean;
+        type: "trail" | "list";
+    }
 
-    const shareData = type == "trail" ? (subject as Trail).expand.trail_share_via_trail : (subject as List).expand?.list_share_via_list
+    let { subject, large = false, type }: Props = $props();
 
-    let showInfo: boolean = false;
-    let loading: boolean = false;
-    let infoLoaded: boolean = false;
+    const shareData = type == "trail" ? (subject as Trail).expand?.trail_share_via_trail : (subject as List).expand?.list_share_via_list
+
+    let showInfo: boolean = $state(false);
+    let loading: boolean = $state(false);
+    let infoLoaded: boolean = $state(false);
     let subjectIsOwned: boolean = subject.author == pb.authStore.model?.id;
-    let author: UserAnonymous;
+    let author: UserAnonymous | undefined = $state();
 
     async function fetchInfo() {
         if (!infoLoaded) {
@@ -47,12 +51,12 @@
         class:text-xl={large}
         role="button"
         tabindex="0"
-        on:mouseenter={fetchInfo}
-        on:mouseleave={() => (showInfo = false)}
+        onmouseenter={fetchInfo}
+        onmouseleave={() => (showInfo = false)}
     ></i>
     {#if showInfo}
         <ul
-            class="menu absolute z-10 top-7 bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden p-3 space-y-3 text-content"
+            class="menu absolute z-10 top-8 bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden p-3 space-y-3 text-content -translate-x-3/4"
             in:fly={{y: -10, duration: 150}} out:fly={{y: -10, duration: 150}}
             >
             {#if loading}

@@ -1,26 +1,29 @@
 <script>
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
+    import errorDark from "$lib/assets/svgs/empty_states/error_dark.svg";
+    import errorLight from "$lib/assets/svgs/empty_states/error_light.svg";
+    import { theme } from "$lib/stores/theme_store";
 </script>
 
+<svelte:head>
+    <title>{page.status} | wanderer</title>
+</svelte:head>
 <div
-    class="flex flex-col gap-y-4 items-center justify-center relative"
+    class="m-auto text-center max-w-md"
     style="height: calc(100dvh - 120px); font-size: 4rem"
 >
     <img
-        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 aspect-square rounded-xl object-cover"
-        width="500"
-        src="/imgs/error.webp"
+        class="aspect-square rounded-xl mx-auto"
+        width="300"
+        src={$theme === "light" ? errorLight : errorDark}
         alt="Default error img"
     />
-    <div
-        class="z-10 rounded-full p-8 bg-background flex flex-col gap-y-4 items-center"
-        style="max-width: 400px"
-    >
+    <div class="text-center mt-8">
         <h1 class="font-bold" style="line-height: 4rem;">
-            {$page.status}
+            {page.status}
         </h1>
-        <p class="text-lg text-center">
-            {$page.error?.message}
+        <p class="text-lg text-center mt-2">
+            {page.error?.message}
         </p>
     </div>
 </div>

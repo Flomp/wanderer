@@ -1,30 +1,48 @@
 <script lang="ts">
-    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
-    import { onMount } from "svelte";
-    import PhotoCard from "../photo_card.svelte";
     import { show_toast } from "$lib/stores/toast_store";
+    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
+    import PhotoCard from "../photo_card.svelte";
 
-    export let id: string;
-    export let photos: string[];
-    export let photoFiles: File[] | undefined;
-    export let parent: { [key: string]: any };
-    export let thumbnail: number = 0;
-    export let showThumbnailControls: boolean = true;
-    export let showExifControls: boolean = false;
-    export let maxSizeBytes = 5242880;
+    interface Props {
+        id: string;
+        photos: string[];
+        photoFiles: File[] | undefined;
+        parent: { [key: string]: any };
+        thumbnail?: number;
+        showThumbnailControls?: boolean;
+        showExifControls?: boolean;
+        maxSizeBytes?: number;
+        onexif?: (src: string) => void;
+    }
 
-    let photoPreviews: string[] = [];
+    let {
+        id,
+        photos = $bindable(),
+        photoFiles = $bindable(),
+        parent,
+        thumbnail = $bindable(0),
+        showThumbnailControls = true,
+        showExifControls = false,
+        maxSizeBytes = 20971520,
+        onexif,
+    }: Props = $props();
 
-    $: Promise.all(
-        (photoFiles ?? []).map(async (f) => {
-            return await readAsDataURLAsync(f);
-        }),
-    ).then((v) => {
-        photoPreviews = v;
-    });
+    let photoPreviews: string[] = $state([]);
 
-    let offerUpload: boolean = false;
+    $effect(() => fetchPhotos(photoFiles ?? []));
+
+    function fetchPhotos(photos: File[]) {
+        Promise.all(
+            photos.map(async (f) => {
+                return await readAsDataURLAsync(f);
+            }),
+        ).then((v) => {
+            photoPreviews = v;
+        });
+    }
+
+    let offerUpload: boolean = $state(false);
 
     function handlePhotoDragOver(e: DragEvent) {
         e.preventDefault();
@@ -62,7 +80,7 @@
                 show_toast({
                     type: "error",
                     text: $_("file-too-big", {
-                        values: { file: file.name, size: "5 MB" },
+                        values: { file: file.name, size: "20 MB" },
                     }),
                     icon: "close",
                 });
@@ -120,14 +138,15 @@
         ? 'outline-dashed outline-input-border'
         : ''}"
     role="dialog"
-    on:dragover={handlePhotoDragOver}
-    on:dragleave={handlePhotoDragLeave}
-    on:drop={handlePhotoDrop}
+    ondragover={handlePhotoDragOver}
+    ondragleave={handlePhotoDragLeave}
+    ondrop={handlePhotoDrop}
 >
     <button
+        aria-label="Open photo browser"
         class="btn-secondary h-32 w-32 shrink-0 grow-0 basis-auto"
         type="button"
-        on:click={openPhotoBrowser}><i class="fa fa-plus"></i></button
+        onclick={openPhotoBrowser}><i class="fa fa-plus"></i></button
     >
     <input
         type="file"
@@ -135,17 +154,17 @@
         accept="image/*"
         multiple={true}
         style="display: none;"
-        on:change={() => handlePhotoSelection()}
+        onchange={() => handlePhotoSelection()}
     />
-    <div class="flex overflow-x-auto gap-x-3">
+    <div class="flex overflow-x-auto gap-x-3 w-full">
         {#each (photos ?? []).concat(photoPreviews) as photo, i}
             <div class="shrink-0 grow-0 basis-auto">
                 <PhotoCard
                     src={i >= photos.length ? photo : getFileURL(parent, photo)}
-                    on:delete={() => handlePhotoDelete(i)}
+                    ondelete={() => handlePhotoDelete(i)}
                     isThumbnail={thumbnail === i}
-                    on:thumbnail={() => makePhotoThumbnail(i)}
-                    on:exif
+                    onthumbnail={() => makePhotoThumbnail(i)}
+                    {onexif}
                     {showThumbnailControls}
                     {showExifControls}
                 ></PhotoCard>

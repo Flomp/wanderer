@@ -18,7 +18,7 @@
                 >
             </li>
             <li>
-                <a href="https://wanderer.to/api-reference/auth"
+                <a href="https://wanderer.to/api-reference"
                     >{$_("api-documentation")}</a
                 >
             </li>

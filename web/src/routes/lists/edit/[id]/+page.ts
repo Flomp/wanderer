@@ -1,8 +1,8 @@
 import { List } from "$lib/models/list";
 import { lists_show } from "$lib/stores/list_store";
+import { APIError } from "$lib/util/api_util";
 import { getFileURL } from "$lib/util/file_util";
-import { error, type Load } from "@sveltejs/kit";
-import { ClientResponseError } from "pocketbase";
+import { error, type Load, type NumericRange } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch, data }) => {
     if (!params.id) {
@@ -20,10 +20,11 @@ export const load: Load = async ({ params, fetch, data }) => {
 
             return { list: list, previewUrl: previewURL }
 
-        } catch (e) {           
-            if (e instanceof ClientResponseError) {
-                return error(e.status as any, e.message)
+        } catch (e) {
+            if (e instanceof APIError) {
+                throw error(e.status as NumericRange<400, 599>, e.message)
             }
+            throw e
         }
     }
 

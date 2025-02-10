@@ -4,13 +4,14 @@ import tailwind from '@astrojs/tailwind';
 
 import node from "@astrojs/node";
 
+import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi'
 // https://astro.build/config
 export default defineConfig({
   integrations: [starlight({
     title: 'wanderer Documentation',
     logo: {
-      light: '/src/assets/logo_dark_text.svg',
-      dark: '/src/assets/logo_light_text.svg',
+      light: '/src/assets/logo_text_dark.svg',
+      dark: '/src/assets/logo_text_light.svg',
       replacesTitle: true
     },
     social: {
@@ -19,6 +20,15 @@ export default defineConfig({
     components: {
       Footer: './src/components/footer.astro'
     },
+    plugins: [
+      starlightOpenAPI([
+        {
+          base: 'api-reference',
+          label: 'API Reference',
+          schema: 'wanderer.openapi.yaml',
+        },
+      ]),
+    ],
     sidebar: [{
       label: 'Getting Started',
       items: [{
@@ -56,19 +66,20 @@ export default defineConfig({
       {
         label: 'Custom categories',
         link: '/guides/custom-categories/'
-      }, {
+      },
+      {
+        label: 'Customize the map',
+        link: '/guides/customize-map/'
+      },
+      {
         label: 'Import/Export',
         link: '/guides/import-export/'
       }, {
         label: 'API',
         link: '/guides/api/'
       }]
-    }, {
-      label: 'API Reference',
-      autogenerate: {
-        directory: 'api-reference'
-      }
-    }],
+    },
+    ...openAPISidebarGroups,],
     customCss: ['./src/custom.css', './src/tailwind.css', '@fontsource/ibm-plex-sans/400.css', '@fontsource/ibm-plex-sans/600.css', '@fontsource/ibm-plex-mono/400.css', '@fontsource/ibm-plex-mono/600.css']
   }), tailwind({
     applyBaseStyles: false

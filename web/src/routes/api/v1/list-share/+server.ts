@@ -1,18 +1,15 @@
+import { ListShareCreateSchema } from '$lib/models/api/list_share_schema';
 import type { ListShare } from '$lib/models/list_share';
 import type { User } from '$lib/models/user';
 import { pb } from '$lib/pocketbase';
+import { Collection, create, handleError, list } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
-    const sort = event.url.searchParams.get('sort') ?? ""
-    const filter = event.url.searchParams.get("filter") ?? "";
-
     try {
-        const r: ListShare[] = await pb.collection('list_share').getFullList<ListShare>({
-            sort: sort,
-            filter: filter
-        })
-        for (const share of r) {
+        const r = await list<ListShare>(event, Collection.list_share);
+
+        for (const share of r.items) {
             const anonymous_user = await pb.collection('users_anonymous').getOne<User>(share.user)
             share.expand = {
                 user: anonymous_user
@@ -20,17 +17,15 @@ export async function GET(event: RequestEvent) {
         }
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e);
     }
 }
 
 export async function PUT(event: RequestEvent) {
-    const data = await event.request.json();
-
     try {
-        const r = await pb.collection('list_share').create<ListShare>(data)
+        const r = await create<ListShare>(event, ListShareCreateSchema, Collection.list_share)
         return json(r);
-    } catch (e: any) {
-        throw error(e.status, e)
+    } catch (e) {
+        throw handleError(e)
     }
 }

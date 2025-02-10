@@ -1,5 +1,12 @@
 <script lang="ts">
+    import { createBubbler } from "svelte/legacy";
+
+    const bubble = createBubbler();
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
+    import { pb } from "$lib/pocketbase";
+    import { theme } from "$lib/stores/theme_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -8,27 +15,47 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
-    import { pb } from "$lib/pocketbase";
+    import type { MouseEventHandler } from "svelte/elements";
 
-    export let trail: Trail;
+    interface Props {
+        trail: Trail;
+        fullWidth?: boolean;
+        onmouseenter?: MouseEventHandler<HTMLDivElement>;
+        onmouseleave?: MouseEventHandler<HTMLDivElement>;
+    }
 
-    $: thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
-        : "/imgs/default_thumbnail.webp";
+    let {
+        trail,
+        fullWidth = false,
+        onmouseenter,
+        onmouseleave,
+    }: Props = $props();
 
-    $: trailIsShared = (trail.expand?.trail_share_via_trail?.length ?? 0) > 0;
+    let thumbnail = $derived(
+        trail.photos.length
+            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark,
+    );
+
+    let trailIsShared = $derived(
+        (trail.expand?.trail_share_via_trail?.length ?? 0) > 0,
+    );
 </script>
 
 <div
-    class="trail-card relative rounded-2xl border border-input-border sm:w-72 cursor-pointer"
-    on:mouseenter
-    on:mouseleave
+    class="trail-card relative rounded-2xl border border-input-border min-w-72 h-[386px] {fullWidth
+        ? ''
+        : 'lg:w-72'} cursor-pointer flex flex-col"
+    {onmouseenter}
+    {onmouseleave}
     role="listitem"
 >
     <div
-        class="relative w-full min-h-40 max-h-48 overflow-hidden rounded-t-2xl"
+        class="relative w-full basis-full max-h-48 overflow-hidden rounded-t-2xl"
     >
-        <img id="header-img" src={thumbnail} alt="" />
+        <img loading="lazy" class="w-full h-full" id="header-img" src={thumbnail} alt="" />
     </div>
     {#if (trail.public || trailIsShared) && pb.authStore.model}
         <div
@@ -46,13 +73,15 @@
                 </span>
             {/if}
             {#if trail.expand?.trail_share_via_trail?.length}
-                <ShareInfo type="trail" subject={trail}></ShareInfo>
+                <span class="tooltip" data-title={$_("shared")}>
+                    <i class="fa fa-share-nodes"></i>
+                </span>
             {/if}
         </div>
     {/if}
     <div class="p-4">
         <div>
-            <h4 class="font-semibold text-lg">{trail.name}</h4>
+            <h4 class="font-semibold text-lg line-clamp-2">{trail.name}</h4>
             {#if trail.date}
                 <p class="text-xs text-gray-500 mb-3">
                     {new Date(trail.date).toLocaleDateString(undefined, {
@@ -63,9 +92,10 @@
                     })}
                 </p>
             {/if}
-            {#if trail.expand.author}
+            {#if trail.expand?.author}
                 <p class="text-xs text-gray-500 mb-3">
-                    {$_("by")} <img
+                    {$_("by")}
+                    <img
                         class="rounded-full w-5 aspect-square mx-1 inline"
                         src={getFileURL(
                             trail.expand.author,

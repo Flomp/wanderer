@@ -1,24 +1,36 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
 
-    export let src: string;
-    export let isThumbnail: boolean = false;
-    export let showThumbnailControls: boolean = true;
-    export let showExifControls: boolean = false;
+    interface Props {
+        src: string;
+        isThumbnail?: boolean;
+        showThumbnailControls?: boolean;
+        showExifControls?: boolean;
+        onthumbnail?: (src: string) => void;
+        onexif?: (src: string) => void;
+        ondelete?: (src: string) => void;
+    }
 
-    const dispatch = createEventDispatcher();
+    let {
+        src,
+        isThumbnail = false,
+        showThumbnailControls = true,
+        showExifControls = false,
+        onthumbnail,
+        onexif,
+        ondelete,
+    }: Props = $props();
 
     function handleThumbnailClick() {
-        dispatch("thumbnail", src);
+        onthumbnail?.(src);
     }
 
     function handleExifClick() {
-        dispatch("exif", src);
+        onexif?.(src);
     }
 
     function handleDeleteClick() {
-        dispatch("delete", src);
+        ondelete?.(src);
     }
 </script>
 
@@ -36,26 +48,30 @@
     >
         {#if showThumbnailControls}
             <button
+                aria-label="Make thumbnail"
                 type="button"
                 class="tooltip"
                 data-title={$_("make-thumbnail")}
-                on:click={handleThumbnailClick}
-                ><i class="fa fa-file-image text-primary"></i></button
+                onclick={handleThumbnailClick}
+                ><i class="fa fa-file-image text-content"></i></button
             >
         {/if}
         {#if showExifControls}
             <button
+                aria-label="Get EXIF coordinates"
                 type="button"
                 class="tooltip"
                 data-title={$_("get-position-from-exif")}
-                on:click={handleExifClick}
-                ><i class="fa fa-magnifying-glass-location text-primary"></i></button
+                onclick={handleExifClick}
+                ><i class="fa fa-magnifying-glass-location text-content"
+                ></i></button
             >
         {/if}
         <button
+            aria-label="Delete photo"
             class="tooltip"
             data-title={$_("delete")}
-            on:click={handleDeleteClick}
+            onclick={handleDeleteClick}
             type="button"><i class="fa fa-trash text-red-500"></i></button
         >
     </div>

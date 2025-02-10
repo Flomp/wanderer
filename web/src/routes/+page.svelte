@@ -1,5 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
@@ -7,67 +9,72 @@
     import Scene from "$lib/components/scene.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import { categories } from "$lib/stores/category_store";
-    import { trails } from "$lib/stores/trail_store";
+    import {
+        searchMulti,
+        type ListSearchResult,
+        type LocationSearchResult,
+        type TrailSearchResult,
+    } from "$lib/stores/search_store.js";
+    import { theme } from "$lib/stores/theme_store";
     import { currentUser } from "$lib/stores/user_store";
-    import { country_codes } from "$lib/util/country_code_util";
+    import { getIconForLocation } from "$lib/util/icon_util.js";
     import { Canvas } from "@threlte/core";
     import { _ } from "svelte-i18n";
 
-    export let data;
+    let { data } = $props();
 
-    let searchDropdownItems: SearchItem[] = [];
+    let searchDropdownItems: SearchItem[] = $state([]);
 
     async function search(q: string) {
-        const r = await fetch("/api/v1/search/multi", {
-            method: "POST",
-            body: JSON.stringify({
-                queries: [
-                    {
-                        indexUid: "trails",
-                        q: q,
-                        limit: 3,
-                    },
-                    {
-                        indexUid: "cities500",
-                        q: q,
-                        limit: 3,
-                    },
-                ],
-            }),
+        const r = await searchMulti({
+            queries: [
+                {
+                    indexUid: "trails",
+                    q: q,
+                    limit: 3,
+                },
+                {
+                    indexUid: "lists",
+                    q: q,
+                    limit: 3,
+                },
+                {
+                    indexUid: "locations",
+                    q: q,
+                    limit: 5,
+                },
+            ],
         });
 
-        const response = await r.json();
+        const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
+            text: t.name,
+            description: `Trail ${t.location.length ? ", " + t.location : ""}`,
+            value: t.id,
+            icon: "route",
+        }));
+        const listItems = r[1].hits.map((t: ListSearchResult) => ({
+            text: t.name,
+            description: `List, ${t.trails.length} ${$_("trail", { values: { n: t.trails.length } })}`,
+            value: t.id,
+            icon: "layer-group",
+        }));
+        const cityItems = r[2].hits.map((c: LocationSearchResult) => ({
+            text: c.name,
+            description: c.description,
+            value: c,
+            icon: getIconForLocation(c),
+        }));
 
-        const trailItems = response.results[0].hits.map(
-            (t: Record<string, any>) => ({
-                text: t.name,
-                description: `Trail | ${t.location}`,
-                value: t.id,
-                icon: "route",
-            }),
-        );
-        const cityItems = response.results[1].hits.map(
-            (c: Record<string, any>) => ({
-                text: c.name,
-                description: `City ${c.division ? `| ${c.division} ` : ""}| ${
-                    country_codes[
-                        c["country code"] as keyof typeof country_codes
-                    ]
-                }`,
-                value: c,
-                icon: "city",
-            }),
-        );
-
-        searchDropdownItems = [...trailItems, ...cityItems];
+        searchDropdownItems = [...trailItems, ...listItems, ...cityItems];
     }
 
     function handleSearchClick(item: SearchItem) {
-        if (item.icon == "city") {
-            goto(`/map/?lat=${item.value._geo.lat}&lon=${item.value._geo.lng}`);
-        }
         if (item.icon == "route") {
             goto(`/trail/view/${item.value}`);
+        } else if (item.icon == "layer-group") {
+            goto(`/lists?list=${item.value}`);
+        } else {
+            goto(`/map/?lat=${item.value.lat}&lon=${item.value.lon}`);
         }
     }
 </script>
@@ -90,15 +97,15 @@
             {$_("hero_section_0_text")}
         </h5>
         <Search
-            on:update={(e) => search(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
+            onupdate={search}
+            onclick={handleSearchClick}
             large={true}
             placeholder="{$_('search-for-trails-places')}..."
             items={searchDropdownItems}
         ></Search>
     </div>
     <div class="hidden md:block">
-        <Canvas>
+        <Canvas toneMapping={0}>
             <Scene></Scene>
         </Canvas>
     </div>
@@ -111,20 +118,21 @@
         class="flex flex-wrap justify-items-center gap-8 py-8 order-1 md:order-none"
     >
         {#if data.trails.length == 0}
-            <div>
-                <img
-                    style="max-width: min(450px, 100%)"
-                    class="rounded-full aspect-square"
-                    src="/imgs/default_thumbnail.webp"
-                    alt="Empty State showing a wanderer going into the distance"
-                />
-            </div>
+            <img
+                style="width: min(450px, 100%)"
+                class="rounded-md"
+                src={$theme === "light"
+                    ? emptyStateTrailLight
+                    : emptyStateTrailDark}
+                alt="Empty state"
+            />
+        {:else}
+            {#each data.trails as trail}
+                <a class="w-full md:max-w-72" href="/trail/view/{trail.id}">
+                    <TrailCard {trail} fullWidth></TrailCard></a
+                >
+            {/each}
         {/if}
-        {#each { length: Math.min(data.trails.length, 4) } as _, i}
-            <a href="/trail/view/{data.trails[i].id}">
-                <TrailCard trail={data.trails[i]}></TrailCard></a
-            >
-        {/each}
     </div>
     <div class="max-w-md md:mx-auto space-y-8">
         {#if data.trails.length == 0}
@@ -135,7 +143,6 @@
             <a
                 class="inline-block btn-primary btn-large"
                 href="/trail/edit/new"
-                data-sveltekit-preload-data="off"
                 role="button">{$_("new-trail")}</a
             >
         {:else}
@@ -150,7 +157,6 @@
             <a
                 class="inline-block btn-primary btn-large"
                 href="/trails"
-                data-sveltekit-preload-data="off"
                 role="button">{$_("explore")}</a
             >
         {/if}
@@ -170,10 +176,7 @@
         class="grid grid-cols-1 lg:grid-cols-2 justify-items-center gap-8 py-8"
     >
         {#each $categories as category}
-            <a
-                href="/trails?category={category.id}"
-                data-sveltekit-preload-data="off"
-            >
+            <a href="/trails?category={category.id}">
                 <CategoryCard {category}></CategoryCard>
             </a>
         {/each}

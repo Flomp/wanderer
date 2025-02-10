@@ -2,7 +2,11 @@
     import type { Category } from "$lib/models/category";
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
-    export let category: Category;
+    interface Props {
+        category: Category;
+    }
+
+    let { category }: Props = $props();
 </script>
 
 <div

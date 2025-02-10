@@ -3,7 +3,7 @@
 @import 'tailwindcss/components';
 
 .btn-primary {
-    @apply h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-ring
+    @apply min-h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-ring
 }
 
 .btn-large {
@@ -27,15 +27,19 @@
 }
 
 .tab {
-    @apply p-4 rounded-t-lg border border-transparent
+    @apply mr-4 py-2 border-b-2 border-transparent rounded-t-lg
 }
 
 .tab:hover {
-    @apply border-menu-item-background-hover
+    @apply border-menu-item-background-focus;
+}
+
+.tab-active {
+    @apply font-semibold
 }
 
 .tab-active:hover {
-    @apply bg-transparent
+    @apply border-transparent;
 }
 
 .tooltip {
@@ -76,7 +80,6 @@
     display: inline-block;
     width: 32px;
     height: 32px;
-    margin-top: 6px;
 }
 
 .spinner:after {
@@ -85,14 +88,33 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 6px solid #fff;
-    border-color: #fff transparent #fff transparent;
+    border: 6px solid rgba(var(--content));
+    border-color: rgba(var(--content)) transparent rgba(var(--content)) transparent;
     animation: spinner 1.2s linear infinite;
 }
 
 .spinner-dark:after {
     border: 6px solid rgba(var(--primary));
     border-color: rgba(var(--primary)) transparent rgba(var(--primary)) transparent;
+}
+
+.spinner-light:after {
+    border: 6px solid #fff;
+    border-color: #fff transparent #fff transparent;
+}
+
+.spinner-small {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    align-content: center;
+    justify-content: center;
+}
+
+.spinner-small:after {
+    border-width: 2px;
+    width: 16px;
+    height: 16px;
 }
 
 @keyframes spinner {

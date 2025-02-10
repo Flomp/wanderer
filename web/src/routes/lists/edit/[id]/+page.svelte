@@ -1,86 +1,142 @@
 <script lang="ts">
-    import { listSchema, type List } from "$lib/models/list";
-    import { createForm } from "$lib/vendor/svelte-form-lib/index";
+    import { type List } from "$lib/models/list";
     import { _ } from "svelte-i18n";
 
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import Button from "$lib/components/base/button.svelte";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
+    import Toggle from "$lib/components/base/toggle.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
+    import { ListCreateSchema } from "$lib/models/api/list_schema.js";
+    import { ListShareCreateSchema } from "$lib/models/api/list_share_schema.js";
+    import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
     import type { Trail } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
+    import { theme } from "$lib/stores/theme_store.js";
     import { show_toast } from "$lib/stores/toast_store.js";
     import {
         trail_share_create,
         trail_share_index,
     } from "$lib/stores/trail_share_store.js";
-    import { trails_show } from "$lib/stores/trail_store";
+    import { trails_show, trails_update } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
+    import { z } from "zod";
+    import {
+        searchTrails,
+        type TrailSearchResult,
+    } from "$lib/stores/search_store.js";
 
-    export let data;
+    let { data } = $props();
 
-    let previewURL = data.previewUrl ?? "";
-    let searchDropdownItems: SearchItem[] = [];
+    let previewURL = $state(data.previewUrl ?? "");
+    let searchDropdownItems: SearchItem[] = $state([]);
 
-    let activeTrailIndex: number = -1;
+    let activeTrailIndex: number = $state(-1);
 
-    let map: MapWithElevationMaplibre;
+    let map: MapWithElevationMaplibre | undefined = $state();
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
     let newShares: TrailShare[] = [];
 
-    let openConfirmModal: () => void;
+    let shareConfirmModal: ConfirmModal;
+    let publishConfirmModal: ConfirmModal;
 
-    const { form, errors, handleChange, handleSubmit } = createForm<List>({
-        initialValues: data.list!,
-        validationSchema: listSchema,
-        onSubmit: async (submittedList) => {
-            const avatarFile = (
-                document.getElementById("avatar") as HTMLInputElement
-            ).files![0];
-            loading = true;
-            try {
-                if ($form.id) {
-                    await lists_update($form, avatarFile);
-                    await findNewTrailShares();
-                    if (!newShares.length) {
-                        show_toast({
-                            type: "success",
-                            icon: "check",
-                            text: $_("list-saved-successfully"),
-                        });
-                    }
-                } else {
-                    await lists_create($form, avatarFile);
-                    show_toast({
-                        type: "success",
-                        icon: "check",
-                        text: $_("list-saved-successfully"),
-                    });
-                }
-            } catch (e) {
-                show_toast({
-                    type: "error",
-                    icon: "close",
-                    text: $_("error-saving-list"),
-                });
-            } finally {
-                loading = false;
+    const ClientListCreateSchema = ListCreateSchema.extend({
+        _photos: z.array(z.instanceof(File)).optional(),
+        avatar: z.string().or(z.instanceof(File)).optional(),
+        expand: z
+            .object({
+                trails: z.array(TrailCreateSchema).optional(),
+                list_share_via_list: z.array(ListShareCreateSchema).optional(),
+            })
+            .optional(),
+    });
+
+    const {
+        form,
+        errors,
+        data: formData,
+    } = createForm<z.infer<typeof ClientListCreateSchema>>({
+        initialValues: {
+            ...data.list,
+            public: data.list.id
+                ? data.list.public
+                : page.data.settings?.privacy?.lists === "public",
+        },
+        extend: validator({
+            schema: ClientListCreateSchema,
+        }),
+        onSubmit: async (form) => {
+            if (await checkPrerequisites()) {
+                await saveList();
             }
         },
     });
+
+    async function checkPrerequisites() {
+        if (
+            (data.list?.public === false && $formData.public === true) ||
+            ($formData.public === true &&
+                data.list?.expand?.trails?.length !==
+                    $formData.expand?.trails?.length)
+        ) {
+            publishConfirmModal.openModal();
+            return false;
+        } else if (await findNewTrailShares()) {
+            shareConfirmModal.openModal();
+            return false;
+        }
+
+        return true;
+    }
+
+    async function saveList() {
+        const avatarFile = (
+            document.getElementById("avatar") as HTMLInputElement
+        ).files![0];
+        loading = true;
+        try {
+            if ($formData.id) {
+                await lists_update($formData as List, avatarFile);
+            } else {
+                const createdList = await lists_create(
+                    $formData as List,
+                    avatarFile,
+                );
+                $formData.id = createdList.id;
+            }
+            show_toast({
+                type: "success",
+                icon: "check",
+                text: $_("list-saved-successfully"),
+            });
+        } catch (e) {
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: $_("error-saving-list"),
+            });
+        } finally {
+            loading = false;
+        }
+    }
 
     function openAvatarBrowser() {
         document.getElementById("avatar")!.click();
@@ -98,58 +154,58 @@
     }
 
     async function search(q: string) {
-        const r = await fetch("/api/v1/search/multi", {
-            method: "POST",
-            body: JSON.stringify({
-                queries: [
-                    {
-                        indexUid: "trails",
-                        q: q,
-                        limit: 3,
-                    },
-                ],
-            }),
-        });
+        try {
+            const r = await searchTrails(q, {
+                filter: `author = ${$currentUser?.id} OR public = true`,
+                sort: ["name:desc"],
+                limit: 3,
+            });
 
-        const response = await r.json();
-
-        searchDropdownItems = response.results[0].hits
-            .filter((h: List) => !$form.trails?.includes(h.id!))
-            .map((t: Record<string, any>) => ({
-                text: t.name,
-                description: `${t.location ?? "-"}`,
-                value: t.id,
-                icon: "route",
-            }));
+            searchDropdownItems = r
+                .filter(
+                    (h: TrailSearchResult) => !$formData.trails?.includes(h.id),
+                )
+                .map((t) => ({
+                    text: t.name,
+                    description: `${t.location ?? "-"}`,
+                    value: t.id,
+                    icon: "route",
+                }));
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     async function handleSearchClick(item: SearchItem) {
         const trail = await trails_show(item.value, true);
-        $form.trails?.push(trail.id!);
-        $form.expand = {
-            trails: [...($form.expand?.trails ?? []), trail],
-            list_share_via_list: $form.expand?.list_share_via_list,
+        $formData.trails?.push(trail.id!);
+        $formData.expand = {
+            trails: [...($formData.expand?.trails ?? []), trail],
+            list_share_via_list: $formData.expand?.list_share_via_list,
         };
     }
 
     function deleteTrail(trail: Trail) {
-        $form.trails = $form.trails?.filter((id) => id !== trail.id);
-        $form.expand!.trails = $form.expand!.trails!.filter(
+        $formData.trails = $formData.trails?.filter((id) => id !== trail.id);
+        $formData.expand!.trails = $formData.expand!.trails!.filter(
             (t) => t.id !== trail.id,
         );
     }
 
     async function findNewTrailShares() {
         const usersWithAccess: string[] = [
-            $form.author!,
-            ...($form.expand?.list_share_via_list ?? []).map((s) => s.user),
+            $formData.author!,
+            ...($formData.expand?.list_share_via_list ?? []).map((s) => s.user),
         ];
         for (const userId of usersWithAccess) {
             const existingTrailShares = await trail_share_index({
                 user: userId,
             });
-            for (const trail of $form.expand?.trails ?? []) {
-                if (trail.author == userId) {
+            for (const trail of $formData.expand?.trails ?? []) {
+                if (
+                    trail.author == userId ||
+                    trail.author != $currentUser?.id
+                ) {
                     continue;
                 }
                 const trailShare = existingTrailShares.find(
@@ -160,10 +216,7 @@
                 }
             }
         }
-
-        if (newShares.length) {
-            openConfirmModal();
-        }
+        return newShares.length > 0;
     }
 
     async function updateTrailShares() {
@@ -171,37 +224,47 @@
             await trail_share_create(newShare);
         }
         newShares = [];
-        show_toast({
-            type: "success",
-            icon: "check",
-            text: $_("list-saved-successfully"),
-        });
+    }
+
+    async function publishTrails() {
+        for (const trail of $formData.expand?.trails ?? []) {
+            if (trail.author !== $currentUser?.id) {
+                continue;
+            }
+            const updatedTrail: Trail = { ...trail, public: true };
+            await trails_update(trail, updatedTrail);
+        }
     }
 
     function moveTrail(trail: Trail, index: number, direction: 1 | -1) {
         (document?.activeElement as HTMLElement).blur();
 
-        if (!$form.trails || !$form.expand || !$form.expand.trails) {
+        if (
+            !$formData.trails ||
+            !$formData.expand ||
+            !$formData.expand.trails
+        ) {
             return;
         }
-        const previousTrail = $form.expand?.trails?.at(index + direction);
-        const previousTrailId = $form.trails?.at(index + direction);
+        const previousTrail = $formData.expand?.trails?.at(index + direction);
+        const previousTrailId = $formData.trails?.at(index + direction);
 
         if (!previousTrail || !previousTrailId) {
             return;
         }
 
-        $form.expand!.trails![index] = previousTrail;
-        $form.expand!.trails![index + direction] = trail;
+        $formData.expand!.trails![index] = previousTrail;
+        $formData.expand!.trails![index + direction] = trail;
 
-        $form.trails[index] = previousTrailId;
-        $form.trails[index + direction] = trail.id!;
+        $formData.trails[index] = previousTrailId;
+        $formData.trails[index + direction] = trail.id!;
     }
 </script>
 
 <svelte:head>
     <title
-        >{$form.id ? `${$form.name} | ${$_("edit")}` : $_("new-list")} | wanderer</title
+        >{$formData.id ? `${$formData.name} | ${$_("edit")}` : $_("new-list")} |
+        wanderer</title
     >
 </svelte:head>
 
@@ -209,10 +272,10 @@
     <form
         id="list-form"
         class="flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0 overflow-y-scroll"
-        on:submit={handleSubmit}
+        use:form
     >
         <h2 class="text-2xl font-semibold">
-            {$page.params.id === "new" ? $_("new-list") : $_("edit-list")}
+            {page.params.id === "new" ? $_("new-list") : $_("edit-list")}
         </h2>
         <label for="avatar" class="text-sm font-medium block">
             {$_("avatar")}
@@ -223,7 +286,7 @@
             id="avatar"
             accept="image/*"
             style="display: none;"
-            on:change={handleAvatarSelection}
+            onchange={handleAvatarSelection}
         />
         <div class="flex items-center gap-4">
             {#if previewURL.length > 0}
@@ -234,51 +297,42 @@
                 />
             {:else}
                 <div
-                    class="flex items-center justify-center w-32 aspect-square rounded-full object-cover border border-gray-200"
-                >
-                    <i class="fa fa-table-list text-5xl"></i>
-                </div>
+                    class="w-32 aspect-square rounded-full bg-menu-item-background-focus border-gray-200"
+                ></div>
             {/if}
             <button
                 class="btn-secondary"
                 type="button"
-                on:click={openAvatarBrowser}>{$_("change")}...</button
+                onclick={openAvatarBrowser}>{$_("change")}...</button
             >
         </div>
 
-        <TextField
-            name="name"
-            label={$_("name")}
-            bind:value={$form.name}
-            error={$errors.name}
-            on:change={handleChange}
+        <TextField name="name" label={$_("name")} error={$errors.name}
         ></TextField>
 
         <Textarea
             name="description"
             label={$_("description")}
-            bind:value={$form.description}
             error={$errors.description}
-            on:change={handleChange}
         ></Textarea>
+        <Toggle name="public" label={$_("public")}></Toggle>
         <h3 class="text-xl font-semibold">
             {$_("trail", { values: { n: 2 } })}
         </h3>
         <Search
-            on:update={(e) => search(e.detail)}
-            on:click={(e) => handleSearchClick(e.detail)}
+            onupdate={search}
+            onclick={handleSearchClick}
             placeholder="{$_('search-trails')}..."
             items={searchDropdownItems}
         ></Search>
-        {#if $form.expand?.trails?.length}
-            {#each $form.expand?.trails ?? [] as trail, i}
+        {#if $formData.expand?.trails?.length}
+            {#each $formData.expand?.trails ?? [] as trail, i}
                 <div
                     class="flex gap-4 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors items-center"
                     class:bg-secondary-hover={i == activeTrailIndex}
                     role="presentation"
-                    on:mouseenter={() => map.highlightTrail(trail.id ?? "")}
-                    on:mouseleave={() => map.unHighlightTrail(trail.id ?? "")}
-                    on:click={() => map.selectTrail(trail.id ?? "")}
+                    onmouseenter={() => map?.highlightTrail(trail.id ?? "")}
+                    onmouseleave={() => map?.unHighlightTrail(trail.id ?? "")}
                 >
                     <div class="shrink-0">
                         <img
@@ -286,9 +340,11 @@
                             src={trail.photos.length
                                 ? getFileURL(
                                       trail,
-                                      trail.photos[trail.thumbnail],
+                                      trail.photos[trail.thumbnail ?? 0],
                                   )
-                                : "/imgs/default_thumbnail.webp"}
+                                : $theme === "light"
+                                  ? emptyStateTrailLight
+                                  : emptyStateTrailDark}
                             alt=""
                         />
                     </div>
@@ -329,18 +385,18 @@
                     <div class="basis-0">
                         {#if i > 0}
                             <button
-                                on:click|stopPropagation={() =>
-                                    moveTrail(trail, i, -1)}
+                                aria-label="Move up"
+                                onclick={() => moveTrail(trail, i, -1)}
                                 type="button"
                                 class="btn-icon"
                             >
                                 <i class="fa fa-chevron-up"></i>
                             </button>
                         {/if}
-                        {#if i < $form.expand?.trails?.length - 1}
+                        {#if i < $formData.expand?.trails?.length - 1}
                             <button
-                                on:click|stopPropagation={() =>
-                                    moveTrail(trail, i, 1)}
+                                aria-label="Move down"
+                                onclick={() => moveTrail(trail, i, 1)}
                                 type="button"
                                 class="btn-icon"
                             >
@@ -348,9 +404,10 @@
                             </button>
                         {/if}
                         <button
+                            aria-label="Remove trail"
                             type="button"
                             class="btn-icon text-red-500"
-                            on:click={() => deleteTrail(trail)}
+                            onclick={() => deleteTrail(trail)}
                             ><i class="fa fa-trash"></i></button
                         >
                     </div>
@@ -358,7 +415,7 @@
             {/each}
         {:else}
             <span class="text-center text-sm text-gray-500 my-8"
-                >No routes added</span
+                >{$_("no-routes-added")}</span
             >
         {/if}
         <Button
@@ -371,7 +428,8 @@
     </form>
     <div id="trail-map" class="max-h-full">
         <MapWithElevationMaplibre
-            trails={$form.expand?.trails ?? []}
+            fitBounds="animate"
+            trails={$formData.expand?.trails ?? []}
             bind:activeTrail={activeTrailIndex}
             bind:this={map}
         ></MapWithElevationMaplibre>
@@ -379,14 +437,34 @@
 </main>
 
 <ConfirmModal
+    id="share-confirm-modal"
     text={$_("list-share-warning-update")}
     title={$_("confirm-share")}
     action="confirm"
-    bind:openModal={openConfirmModal}
-    on:confirm={updateTrailShares}
+    bind:this={shareConfirmModal}
+    onconfirm={async () => {
+        await updateTrailShares();
+        await saveList();
+    }}
+></ConfirmModal>
+
+<ConfirmModal
+    id="publish-confirm-modal"
+    text={$_("list-public-warning")}
+    title={$_("confirm-publish")}
+    action="confirm"
+    bind:this={publishConfirmModal}
+    onconfirm={async () => {
+        await publishTrails();
+        await saveList();
+    }}
 ></ConfirmModal>
 
 <style>
+    #trail-map {
+        height: calc(50vh);
+    }
+
     @media only screen and (min-width: 768px) {
         #trail-map,
         #list-form {

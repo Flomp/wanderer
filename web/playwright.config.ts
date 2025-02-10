@@ -33,6 +33,12 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    {
+      name: 'teardown', testMatch: /.*\.teardown\.ts/, use:
+      {
+        storageState: 'playwright/.auth/user.json',
+      }
+    },
 
     // {
     //   name: 'firefox',
@@ -46,6 +52,7 @@ export default defineConfig({
 
     {
       name: 'chromium',
+      // dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user.json',

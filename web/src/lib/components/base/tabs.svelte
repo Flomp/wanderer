@@ -1,24 +1,28 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { cubicOut } from "svelte/easing";
-    import { tweened } from "svelte/motion";
+    import { Tween } from "svelte/motion";
 
-    export let tabs: string[];
-    export let activeTab: number;
-    export let extraClasses: string = "";
+    interface Props {
+        tabs: string[];
+        activeTab: number;
+        extraClasses?: string;
+    }
 
-    const indicatorPosition = tweened(0, {
+    let { tabs, activeTab = $bindable(), extraClasses = "" }: Props = $props();
+
+    const indicatorPosition = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
 
-    const indicatorWidth = tweened(0, {
+    const indicatorWidth = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
 
     onMount(() => {
-        switchTabs(0);
+        switchTabs(activeTab ?? 0);
     });
 
     function switchTabs(index: number) {
@@ -26,7 +30,7 @@
 
         const childElement = tabs?.children[index + 1] as HTMLElement;
         const newWidth = childElement?.getBoundingClientRect().width ?? 0;
-        const newPosition = childElement.offsetLeft;
+        const newPosition = childElement?.offsetLeft;
         indicatorWidth.set(newWidth);
         indicatorPosition.set(newPosition);
 
@@ -36,14 +40,14 @@
 
 <div id="tabs" class="flex gap-2 overflow-x-auto relative {extraClasses}">
     <div
-        class="absolute h-full bg-menu-item-background-hover rounded-t-lg top-0 z-0"
-        style="width: {$indicatorWidth}px; left: {$indicatorPosition}px;"
+        class="tab-indicator absolute h-full rounded-t-lg top-0 z-0 border-b-2 border-content"
+        style="width: {indicatorWidth.current}px; left: {indicatorPosition.current}px;"
     ></div>
     {#each tabs as tab, i}
         <button
             class="tab z-10"
             class:tab-active={activeTab == i}
-            on:click={() => switchTabs(i)}>{tab}</button
+            onclick={() => switchTabs(i)}>{tab}</button
         >
     {/each}
 </div>

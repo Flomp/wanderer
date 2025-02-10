@@ -6,22 +6,33 @@
     import "photoswipe/style.css";
     import { _ } from "svelte-i18n";
 
-    let markers: M.Marker[];
+    let markers: M.Marker[] = $state([]);
 </script>
 
 <svelte:head>
     <title>{$trail.name} | {$_("map")} | wanderer</title>
 </svelte:head>
 <main class="grid grid-cols-1 md:grid-cols-[458px_1fr] gap-x-1 gap-y-4">
-    <TrailInfoPanel trail={$trail} {markers}></TrailInfoPanel>
-    <div id="trail-details" class="sticky top-[62px]">
-        <MapWithElevationMaplibre trails={[$trail]} bind:markers showTerrain={true}></MapWithElevationMaplibre>
+    <div id="panel" class="hidden md:block">
+        <TrailInfoPanel initTrail={$trail} {markers}></TrailInfoPanel>
+    </div>
+    <div id="trail-details">
+        <MapWithElevationMaplibre
+            trails={[$trail]}
+            waypoints={$trail.expand?.waypoints}
+            activeTrail={0}
+            bind:markers
+            showTerrain={true}
+        ></MapWithElevationMaplibre>
     </div>
 </main>
 
 <style>
+    #trail-details, #panel {
+        height: calc(100vh);
+    }
     @media only screen and (min-width: 768px) {
-        #trail-details {
+        #trail-details, #panel {
             height: calc(100vh - 124px);
         }
     }

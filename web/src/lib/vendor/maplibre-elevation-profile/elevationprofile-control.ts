@@ -2,7 +2,7 @@ import { type ControlPosition, type IControl } from "maplibre-gl";
 import * as M from "maplibre-gl";
 import { ElevationProfile, type ElevationProfileOptions } from "./elevationprofile";
 // @ts-ignore
-import type { GeoJsonObject } from "geojson";
+import type { GeoJsonObject, Position } from "geojson";
 import type { Waypoint } from "$lib/models/waypoint";
 
 /**
@@ -73,6 +73,8 @@ export class ElevationProfileControl implements IControl {
     }
 
     toggleTheme(options: ElevationProfileControlOptions) {
+        console.log(options);
+        
         this.settings = { ...this.settings, ...options };
         this.elevationProfileChart?.toggleTheme(this.settings)
     }
@@ -187,6 +189,30 @@ export class ElevationProfileControl implements IControl {
     hideProfile() {
         this.profileContainer?.style.setProperty("display", "none");
         this.isProfileShown = false;
+    }
+
+    moveCrosshair(lat: number, lon: number) {
+        if (!this.elevationProfileChart) {
+            return;
+        }
+        const chart = this.elevationProfileChart.chart
+        const point = this.elevationProfileChart.getChartCoordinatesFromPosition(lat, lon)
+        if (point == null) {
+            return;
+        }
+        const rectangle = chart.canvas.getBoundingClientRect();
+
+        const mouseMoveEvent = new MouseEvent('mousemove', {
+            clientX: rectangle.left + point[0],
+            clientY: rectangle.top + point[1]
+        });
+
+        chart.canvas.dispatchEvent(mouseMoveEvent);
+    }
+
+    hideCrosshair() {
+        const mouseOutEvent = new MouseEvent('mouseout');
+        return this.elevationProfileChart?.chart.canvas.dispatchEvent(mouseOutEvent);
     }
 
     onRemove(): void {

@@ -1,13 +1,13 @@
 import { pb } from "$lib/pocketbase";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { Collection, handleError, upload } from "$lib/util/api_util";
+import { json, type RequestEvent } from "@sveltejs/kit";
 import type { List } from "postcss/lib/list";
 
 export async function POST(event: RequestEvent) {
-    const data = await event.request.formData()
     try {
-        const r = await pb.collection("lists").update<List>(event.params.id as string, data,);
+        const r = await upload<List>(event, Collection.lists);
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }

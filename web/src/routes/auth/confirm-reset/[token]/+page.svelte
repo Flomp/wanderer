@@ -1,40 +1,52 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
-    import type { User } from "$lib/models/user";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
-    import {
-        users_confirm_reset,
-        users_reset_password,
-    } from "$lib/stores/user_store";
-    import { createForm } from "$lib/vendor/svelte-form-lib";
+    import { users_confirm_reset } from "$lib/stores/user_store";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
     import { _ } from "svelte-i18n";
-    import { object, ref, string } from "yup";
+    import { z } from "zod";
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
-    const { form, errors, handleChange, handleSubmit } = createForm({
+    const { form, errors } = createForm({
         initialValues: {
             password: "",
             passwordConfirm: "",
         },
-        validationSchema: object({
-            password: string().required($_("required")),
-            passwordConfirm: string()
-                .required($_("required"))
-                .oneOf([ref("password"), ""], $_('passwords-must-match')),
+        extend: validator({
+            schema: z
+                .object({
+                    password: z.string().min(
+                        8,
+                        $_("must-be-at-least-n-characters-long", {
+                            values: { n: 8 },
+                        }),
+                    ),
+                    passwordConfirm: z.string().min(
+                        8,
+                        $_("must-be-at-least-n-characters-long", {
+                            values: { n: 8 },
+                        }),
+                    ),
+                })
+                .refine((d) => d.password === d.passwordConfirm, {
+                    message: "passwords-must-match",
+                    path: ["passwordConfirm"],
+                }),
         }),
         onSubmit: async (form) => {
             loading = true;
             try {
                 await users_confirm_reset({
                     ...form,
-                    token: $page.params.token,
+                    token: page.params.token,
                 });
                 goto("/login");
                 show_toast({
@@ -61,7 +73,7 @@
 <main class="flex justify-center">
     <form
         class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-4 w-[28rem] mt-8"
-        on:submit={handleSubmit}
+        use:form
     >
         {#if $theme == "light"}
             <LogoTextTwoLineDark></LogoTextTwoLineDark>
@@ -74,16 +86,12 @@
                 name="password"
                 label={$_("password")}
                 type="password"
-                bind:value={$form.password}
-                on:change={handleChange}
                 error={$errors.password}
             ></TextField>
             <TextField
-                name="password"
+                name="passwordConfirm"
                 label={$_("password-confirm")}
                 type="password"
-                bind:value={$form.passwordConfirm}
-                on:change={handleChange}
                 error={$errors.passwordConfirm}
             ></TextField>
 

@@ -1,25 +1,42 @@
+import type { NotificationType } from "./notification";
+
+export enum Language {
+  en = "en",
+  de = "de",
+  es = "es",
+  fr = "fr",
+  hu = "hu",
+  it = "it",
+  nl = "nl",
+  pl = "pl",
+  pt = "pt",
+  zh = "zh"
+}
 
 class Settings {
-  id?: string;
+  id?: string | null;
   unit?: "metric" | "imperial";
-  language?: "en" | "de" | "fr" | "hu"| "it" | "nl" | "pl" | "pt" | "zh";
+  language?: Language;
+  bio?: string | null;
   mapFocus?: "trails" | "location";
   location?: { name: string, lat: number, lon: number };
   category?: string;
-  tilesets?: {name: string, url: string}[]
-  terrain?: string;
+  tilesets?: ({ name: string, url: string }[]) | null
+  terrain?: { terrain: string, hillshading: string } | null;
   user?: string;
+  privacy?: { account: "public" | "private", trails: "public" | "private", lists: "public" | "private" } | null
+  notifications?: Record<NotificationType, { web: boolean, email: boolean }> | null
 
   constructor(
     unit: "metric" | "imperial",
-    language: "en" | "de" | "fr" | "hu"| "it" | "nl" | "pl" | "pt" | "zh",
+    language: Language,
     mapFocus: "trails" | "location",
     user: string,
     params?: {
       location?: { name: string, lat: number, lon: number }
       category?: string
-      tilesets?: {name: string, url: string}[]
-      terrain?: string;
+      tilesets?: { name: string, url: string }[]
+      terrain?: { terrain: string, hillshading: string };
     }
   ) {
     this.unit = unit;

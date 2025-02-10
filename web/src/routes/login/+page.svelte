@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import { env } from "$env/dynamic/public";
     import Button from "$lib/components/base/button.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
@@ -10,45 +9,50 @@
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
     import { login } from "$lib/stores/user_store";
-    import { createForm } from "$lib/vendor/svelte-form-lib";
-    import { ClientResponseError, type AuthProviderInfo } from "pocketbase";
+    import { APIError } from "$lib/util/api_util";
+    import { validator } from "@felte/validator-zod";
+    import { createForm } from "felte";
+    import { type AuthProviderInfo } from "pocketbase";
     import { _ } from "svelte-i18n";
-    import { object, string } from "yup";
+    import { z } from "zod";
 
-    let loading: boolean = false;
+    let loading: boolean = $state(false);
 
-    const authProviders = $page.data.authMethods.authProviders;
-    let loginLabel = "";
+    const authProviders = page.data.authMethods.authProviders;
+    let loginLabel = $state("");
 
     if (
-        $page.data.authMethods.usernamePassword &&
-        $page.data.authMethods.emailPassword
+        page.data.authMethods.usernamePassword &&
+        page.data.authMethods.emailPassword
     ) {
         loginLabel = `${$_("username")}/${$_("email")}`;
-    } else if ($page.data.authMethods.usernamePassword) {
+    } else if (page.data.authMethods.usernamePassword) {
         loginLabel = `${$_("username")}`;
-    } else if ($page.data.authMethods.emailPassword) {
+    } else if (page.data.authMethods.emailPassword) {
         loginLabel = `${$_("email")}`;
     }
 
-    const { form, errors, handleChange, handleSubmit } = createForm<User>({
+    const { form, errors, data } = createForm<User>({
         initialValues: {
             id: "",
             username: "",
             password: "",
         },
-        validationSchema: object<User>({
-            username: string().required($_("required")),
-            password: string().required($_("required")),
+        extend: validator({
+            schema: z.object({
+                username: z.string().min(1, "required"),
+                password: z.string().min(1, "required"),
+            }),
         }),
         onSubmit: async (newUser) => {
             loading = true;
+
             try {
                 await login(newUser);
-                goto($page.url.searchParams.get("r") ?? "/");
+                window.location.href = page.url.searchParams.get("r") ?? "/";
             } catch (e) {
                 if (
-                    e instanceof ClientResponseError &&
+                    e instanceof APIError &&
                     e.message == "Failed to authenticate."
                 ) {
                     show_toast({
@@ -80,7 +84,7 @@
 <main class="flex justify-center">
     <form
         class="login-panel max-w-md border border-input-border rounded-xl p-8 flex flex-col justify-center items-center gap-4 w-[28rem] mt-8"
-        on:submit={handleSubmit}
+        use:form
     >
         {#if $theme == "light"}
             <LogoTextTwoLineDark></LogoTextTwoLineDark>
@@ -88,13 +92,11 @@
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
         <h4 class="text-xl font-semibold">{$_("slogan")}</h4>
-        {#if $page.data.authMethods.usernamePassword || $page.data.authMethods.emailPassword}
+        {#if page.data.authMethods.usernamePassword || page.data.authMethods.emailPassword}
             <div class="space-y-6 w-80">
                 <TextField
                     name="username"
                     label={loginLabel}
-                    bind:value={$form.username}
-                    on:change={handleChange}
                     error={$errors.username}
                 ></TextField>
                 <div class="flex flex-col">
@@ -102,8 +104,6 @@
                         name="password"
                         label={$_("password")}
                         type="password"
-                        bind:value={$form.password}
-                        on:change={handleChange}
                         error={$errors.password}
                     ></TextField>
                     <a
@@ -129,7 +129,7 @@
         {/if}
 
         {#if authProviders.length}
-            {#if $page.data.authMethods.usernamePassword || $page.data.authMethods.emailPassword}
+            {#if page.data.authMethods.usernamePassword || page.data.authMethods.emailPassword}
                 <div class="flex gap-4 items-center w-full">
                     <hr class="basis-full border-input-border" />
                     <span class="text-gray-500 uppercase">{$_("or")}</span>
@@ -141,7 +141,7 @@
                     <a
                         href={provider.url}
                         class="btn-secondary inline-flex min-w-full justify-center"
-                        on:click={() => setProvider(provider)}
+                        onclick={() => setProvider(provider)}
                     >
                         <img
                             class="w-5 aspect-square mr-4"

@@ -1,30 +1,23 @@
 <script lang="ts">
+    import emptyStateUploadDark from "$lib/assets/svgs/empty_states/empty_state_upload_dark.svg";
+    import emptyStateUploadLight from "$lib/assets/svgs/empty_states/empty_state_upload_light.svg";
     import Button from "$lib/components/base/button.svelte";
-    import Settings from "$lib/components/profile/settings.svelte";
+    import { } from "$lib/components/settings/upload_dialog.svelte";
     import TrailExportModal from "$lib/components/trail/trail_export_modal.svelte";
+    import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store";
-    import {
-        fetchGPX,
-        trails_index,
-        trails_upload,
-    } from "$lib/stores/trail_store";
+    import { fetchGPX, trails_index, trails_upload } from "$lib/stores/trail_store";
+    import { processUploadQueue, uploadStore, type Upload } from "$lib/stores/upload_store.svelte";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
     import JSZip from "jszip";
+    import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
-    import { linear } from "svelte/easing";
-    import { tweened } from "svelte/motion";
 
-    const uploadProgress = tweened(0, {
-        duration: 300,
-        easing: linear,
-    });
+    let exportModal: TrailExportModal;
 
-    let openExportModal: () => void;
-
-    let offerUpload: boolean = false;
-    let uploading: boolean = false;
+    let offerUpload: boolean = $state(false);
 
     function openFileBrowser() {
         document.getElementById("file-input")!.click();
@@ -55,40 +48,17 @@
             return;
         }
 
-        let errorsThrown = 0;
-        uploading = true;
-        let progress = 0;
         for (let i = 0; i < files.length; i++) {
-            
-
-            const file = files[i];
-            try {
-                uploadProgress.set(progress += 100 / (files.length * 2));
-                await trails_upload(file);
-            } catch (e) {
-                errorsThrown += 1;
-                show_toast({
-                    type: "error",
-                    icon: "close",
-                    text: `Error uploading file: ${file.name}`,
-                });
-            } finally {
-                uploadProgress.set(progress += 100 / (files.length * 2));
-            }
+            const u: Upload = {
+                file: files[i],
+                progress: 0,
+                status: "enqueued",
+                function: trails_upload
+            };
+            uploadStore.enqueuedUploads.push(u);
         }
 
-        setTimeout(() => {
-            uploadProgress.set(0);
-            uploading = false;
-        }, 1000);
-
-        if (errorsThrown == 0) {
-            show_toast({
-                type: "success",
-                icon: "check",
-                text: `${files.length} ${$_("trail", { values: { n: files.length } })} ${$_("uploaded")}`,
-            });
-        }
+        await processUploadQueue();
     }
 
     async function exportTrails(exportSettings: {
@@ -104,9 +74,9 @@
             for (const trail of trails) {
                 const gpxData: string = await fetchGPX(trail);
                 if (!trail.expand) {
-                    trail.expand = {};
+                    (trail as any).expand = {};
                 }
-                trail.expand.gpx_data = gpxData;
+                trail.expand!.gpx_data = gpxData;
                 const trailFolder = zip.folder(`${trail.name}`);
                 let fileData: string = await trail2gpx(trail);
                 if (exportSettings.fileFormat == "json") {
@@ -162,62 +132,44 @@
 <svelte:head>
     <title>{$_("settings")} | wanderer</title>
 </svelte:head>
-<main>
-    <Settings selected={2}>
-        <div class="space-y-6">
-            <h3 class="text-2xl font-semibold">{$_("import")}</h3>
-            <button
-                class="drop-area relative h-64 w-full p-4 {uploading
-                    ? ''
-                    : 'border border-content border-dashed'} rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
-                class:bg-menu-item-background-hover={uploading}
-                class:border-2={offerUpload && !uploading}
-                style="--progress: {$uploadProgress}%"
-                on:click={openFileBrowser}
-                on:dragover={handleDragOver}
-                on:dragleave={handleDragLeave}
-                on:drop={handleDrop}
-            >
-                {$_("import-hint")}
-            </button>
 
-            <input
-                type="file"
-                id="file-input"
-                accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
-                multiple={true}
-                style="display: none;"
-                on:change={() => handleFileSelection()}
+<div class="space-y-6">
+    <h3 class="text-2xl font-semibold">{$_("import")}</h3>
+    <hr class="mt-4 mb-6 border-input-border" />
+    <button
+        class="drop-area relative h-64 w-full p-4 border border-content border-dashed rounded-xl flex items-center justify-center text-gray-500 bg-background cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
+        class:border-2={offerUpload}
+        onclick={openFileBrowser}
+        ondragover={handleDragOver}
+        ondragleave={handleDragLeave}
+        ondrop={handleDrop}
+    >
+        <div class="">
+            <img
+                class="rounded-full aspect-square mx-auto"
+                src={$theme === "light"
+                    ? emptyStateUploadLight
+                    : emptyStateUploadDark}
+                alt="Empty State showing a wanderer going into the distance"
             />
-            <h3 class="text-2xl font-semibold">{$_("export")}</h3>
-            <Button secondary={true} on:click={() => openExportModal()}
-                >{$_("export-all-trails")}</Button
-            >
+            {$_("import-hint")}
         </div>
-    </Settings>
-</main>
+    </button>
 
-<TrailExportModal
-    bind:openModal={openExportModal}
-    on:export={(e) => exportTrails(e.detail)}
+    <input
+        type="file"
+        id="file-input"
+        accept=".gpx,.GPX,.tcx,.TCX,.kml,.KML,.fit,.FIT"
+        multiple={true}
+        style="display: none;"
+        onchange={() => handleFileSelection()}
+    />
+    <h3 class="text-2xl font-semibold">{$_("export")}</h3>
+    <hr class="mt-4 mb-6 border-input-border" />
+    <Button secondary={true} onclick={() => exportModal.openModal()}
+        >{$_("export-all-trails")}</Button
+    >
+</div>
+
+<TrailExportModal bind:this={exportModal} onexport={exportTrails}
 ></TrailExportModal>
-
-<style>
-    .drop-area::after {
-        content: "";
-        display: block;
-        position: absolute;
-        left: -4px;
-        top: -4px;
-        right: -4px;
-        bottom: -4px;
-        background-color: transparent;
-        z-index: -100;
-        border-radius: 0.75rem;
-        background-image: conic-gradient(
-            rgba(var(--content)),
-            rgba(var(--content)) var(--progress),
-            transparent var(--progress)
-        );
-    }
-</style>

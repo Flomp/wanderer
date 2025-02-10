@@ -22,17 +22,25 @@
     import { currentUser } from "$lib/stores/user_store";
     import { pb } from "$lib/pocketbase";
 
-    export let trail: Trail;
-    export let mode: "overview" | "map" | "list";
+    interface Props {
+        trail: Trail;
+        mode: "overview" | "map" | "list";
+    }
 
-    let openConfirmModal: () => void;
-    let openListSelectModal: () => void;
-    let openExportModal: () => void;
-    let openShareModal: () => void;
+    let { trail, mode }: Props = $props();
+
+    let confirmModal: ConfirmModal;
+    let listSelectModal: ListSelectModal;
+    let trailExportModal: TrailExportModal;
+    let trailShareModal: TrailShareModal;
+
+    let lists: List[] = $state([]);
 
     const allowEdit =
         trail.author == $currentUser?.id ||
-        trail.expand.trail_share_via_trail?.some((s) => s.permission == "edit");
+        trail.expand?.trail_share_via_trail?.some(
+            (s) => s.permission == "edit",
+        );
 
     const dropdownItems: DropdownItem[] = [
         mode == "overview"
@@ -76,7 +84,14 @@
                     : `/trail/view/${trail.id!}`,
             );
         } else if (item.value == "list") {
-            openListSelectModal();
+            lists = (
+                await lists_index(
+                    { q: "", author: $currentUser?.id ?? "" },
+                    1,
+                    -1,
+                )
+            ).items;
+            listSelectModal.openModal();
         } else if (item.value == "direction") {
             window
                 .open(
@@ -87,13 +102,13 @@
         } else if (item.value == "print") {
             goto(`/map/trail/${trail.id}/print`);
         } else if (item.value == "share") {
-            openShareModal();
+            trailShareModal.openModal();
         } else if (item.value == "download") {
-            openExportModal();
+            trailExportModal.openModal();
         } else if (item.value == "edit") {
             goto(`/trail/edit/${trail.id}`);
         } else if (item.value == "delete") {
-            openConfirmModal();
+            confirmModal.openModal();
         }
     }
 
@@ -133,7 +148,7 @@
                 }
                 if (exportSettings.summitLog) {
                     let summitLogString = "";
-                    for (const summitLog of trail.expand.summit_logs) {
+                    for (const summitLog of trail.expand?.summit_logs ?? []) {
                         summitLogString += `${summitLog.date},${summitLog.text}\n`;
                     }
                     zip.file(
@@ -155,7 +170,7 @@
     }
 
     async function deleteTrail() {
-        trails_delete(trail).then(() => history.back());
+        trails_delete(trail).then(() => goto('/trails'));
     }
 
     async function handleListSelection(list: List) {
@@ -175,7 +190,6 @@
                     text: `${$_("added-trail-to")} "${list.name}"`,
                 });
             }
-            await lists_index();
         } catch (e) {
             console.error(e);
 
@@ -188,29 +202,30 @@
     }
 </script>
 
-<Dropdown
-    items={dropdownItems}
-    on:change={(e) => handleDropdownClick(e.detail)}
-    let:toggleMenu={openDropdown}
-    ><button
-        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
-        on:click={openDropdown}
-    >
-        <i class="fa fa-ellipsis-vertical"></i>
-    </button></Dropdown
->
+<Dropdown items={dropdownItems} onchange={(item) => handleDropdownClick(item)}
+    >{#snippet children({ toggleMenu: openDropdown })}
+        <button
+            aria-label="Open dropdown"
+            class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
+            onclick={openDropdown}
+        >
+            <i class="fa fa-ellipsis-vertical"></i>
+        </button>
+    {/snippet}
+</Dropdown>
 
 <ConfirmModal
     text={$_("delete-trail-confirm")}
-    bind:openModal={openConfirmModal}
-    on:confirm={deleteTrail}
+    bind:this={confirmModal}
+    onconfirm={deleteTrail}
 ></ConfirmModal>
 <ListSelectModal
-    bind:openModal={openListSelectModal}
-    on:change={(e) => handleListSelection(e.detail)}
+    {lists}
+    bind:this={listSelectModal}
+    onchange={(list) => handleListSelection(list)}
 ></ListSelectModal>
 <TrailExportModal
-    bind:openModal={openExportModal}
-    on:export={(e) => exportTrail(e.detail)}
+    bind:this={trailExportModal}
+    onexport={(settings) => exportTrail(settings)}
 ></TrailExportModal>
-<TrailShareModal {trail} bind:openShareModal></TrailShareModal>
+<TrailShareModal {trail} bind:this={trailShareModal}></TrailShareModal>

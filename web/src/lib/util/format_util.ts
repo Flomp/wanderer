@@ -1,4 +1,4 @@
-import { page } from "$app/stores";
+import { page } from "$app/state";
 import { get } from "svelte/store";
 
 export function formatTimeHHMM(minutes?: number) {
@@ -12,12 +12,12 @@ export function formatTimeHHMM(minutes?: number) {
     return (h < 10 ? "0" : "") + h.toString() + "h " + (Math.round(m) < 10 ? "0" : "") + Math.round(m).toString() + "m";
 }
 
-export function formatDistance(meters?: number) {    
+export function formatDistance(meters?: number) {
     if (meters === undefined) {
         return "-";
     }
 
-    const unit = get(page).data.settings?.unit ?? "metric";
+    const unit = page.data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         if (meters >= 1000) {
@@ -38,7 +38,7 @@ export function formatElevation(meters?: number) {
         return "-";
     }
 
-    const unit = get(page).data.settings?.unit ?? "metric";
+    const unit = page.data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         return `${Math.round(meters)} m`
@@ -54,7 +54,7 @@ export function formatSpeed(speed?: number) {
         return "-";
     }
 
-    const unit = get(page).data.settings?.unit ?? "metric";
+    const unit = page.data.settings?.unit ?? "metric";
 
     if (unit == "metric") {
         return `${(speed * 3.6).toFixed(2)} km/h`
@@ -66,11 +66,9 @@ export function formatSpeed(speed?: number) {
 }
 
 export function formatTimeSince(date: Date) {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
 
-    var seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-
-    var interval = seconds / 31536000;
-
+    let interval = seconds / 31536000;
     if (interval > 1) {
         return { unit: "years", value: Math.floor(interval) };
     }
@@ -90,5 +88,5 @@ export function formatTimeSince(date: Date) {
     if (interval > 1) {
         return { unit: "minutes", value: Math.floor(interval) };
     }
-    return { unit: "seconds", value: Math.floor(interval) };
+    return { unit: "seconds", value: seconds };
 }

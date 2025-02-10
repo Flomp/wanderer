@@ -1,11 +1,28 @@
 <script lang="ts">
-    export let name: string = "";
-    export let value: string | number = "";
-    export let placeholder: string = "";
-    export let rows: number = 3;
-    export let label: string = "";
-    export let error: string = "";
-    export let extraClasses: string = "";
+    import { createBubbler } from 'svelte/legacy';
+
+    const bubble = createBubbler();
+    import { _ } from "svelte-i18n";
+
+    interface Props {
+        name?: string;
+        value?: string | number;
+        placeholder?: string;
+        rows?: number;
+        label?: string;
+        error?: string | string[] | null;
+        extraClasses?: string;
+    }
+
+    let {
+        name = "",
+        value = $bindable(""),
+        placeholder = "",
+        rows = 3,
+        label = "",
+        error = "",
+        extraClasses = ""
+    }: Props = $props();
 </script>
 
 <div>
@@ -19,12 +36,14 @@
         class="bg-input-background border border-input-border rounded-md p-3 resize-none transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0 w-full {extraClasses}"
         {rows}
         {placeholder}
-        class:border-red-400={error.length > 0}
-        class:bg-red-50={error.length > 0}
+        class:border-red-400={(error?.length ?? 0) > 0}
+        class:bg-input-background-error={(error?.length ?? 0) > 0}
         bind:value
-        on:change
-    />
-    <span class="textfield-error text-xs text-red-400">
-        {error}
-    </span>
+        onchange={bubble('change')}
+></textarea>
+    {#if error}
+        <span class="textfield-error text-xs text-red-400">
+            {error instanceof Array ? $_(error[0]) : error}
+        </span>
+    {/if}
 </div>

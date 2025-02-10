@@ -1,4 +1,5 @@
 import { browser } from '$app/environment'
+import { pb } from '$lib/pocketbase'
 import { currentUser } from '$lib/stores/user_store'
 import { init, register } from 'svelte-i18n'
 import { get } from 'svelte/store'
@@ -17,5 +18,5 @@ register('zh', () => import('./locales/zh.json'))
 
 init({
     fallbackLocale: defaultLocale,
-    initialLocale: browser ? get(currentUser)?.language ?? window.navigator.language : defaultLocale,
+    initialLocale: browser ? pb.authStore.model?.language ?? window.navigator.language : defaultLocale,
 })

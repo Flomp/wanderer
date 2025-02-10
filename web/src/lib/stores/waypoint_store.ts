@@ -1,6 +1,6 @@
 import { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
-import { ClientResponseError } from "pocketbase";
+import { APIError } from "$lib/util/api_util";
 import { writable, type Writable } from "svelte/store";
 
 export const waypoint: Writable<Waypoint> = writable(new Waypoint(0, 0));
@@ -15,8 +15,10 @@ export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo 
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
 
     if (waypoint._photos && waypoint._photos.length) {
         let model: Waypoint = await r.json();
@@ -31,13 +33,14 @@ export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo 
             method: 'POST',
             body: formData,
         })
+
+        if (!r.ok) {
+            const response = await r.json();
+            throw new APIError(r.status, response.message, response.detail)
+        }
     }
 
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
-    }
+    return await r.json();
 
 }
 
@@ -50,7 +53,8 @@ export async function waypoints_update(oldWaypoint: Waypoint, newWaypoint: Waypo
     })
 
     if (!r.ok) {
-        throw new ClientResponseError(await r.json())
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
 
     const formData = new FormData()
@@ -69,23 +73,24 @@ export async function waypoints_update(oldWaypoint: Waypoint, newWaypoint: Waypo
         method: 'POST',
         body: formData,
     })
-
-
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }
 
 export async function waypoints_delete(waypoint: Waypoint) {
     const r = await fetch('/api/v1/waypoint/' + waypoint.id, {
         method: 'DELETE',
     })
-
-    if (r.ok) {
-        return await r.json();
-    } else {
-        throw new ClientResponseError(await r.json())
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
     }
+
+    return await r.json();
+
 }

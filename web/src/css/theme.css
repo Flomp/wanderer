@@ -2,6 +2,7 @@
     --primary: 36, 39, 52;
     --primary-hover: 17, 24, 39;
     --secondary-hover: 243, 244, 246;
+    --secondary-hover-inverse: 36, 39, 52;
 
     --background: 255, 255, 255;
     --background-inverse: 7, 10, 36;
@@ -14,6 +15,7 @@
     --input-border: 209, 213, 219;
     --input-border-focus: 36, 39, 52;
     --input-ring: 148, 163, 184;
+    --input-ring-inverse: 108, 115, 150;
 
     --menu-background: 255, 255, 255;
     --menu-item-background-hover: 243, 244, 246;

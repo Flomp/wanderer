@@ -1,20 +1,26 @@
 <script lang="ts">
     import { afterNavigate, goto } from "$app/navigation";
     import LogoText from "$lib/components/logo/logo_text.svelte";
+    import { pb } from "$lib/pocketbase";
     import { theme, toggleTheme } from "$lib/stores/theme_store";
     import { currentUser, logout } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
+    import { _ } from "svelte-i18n";
     import { backInOut, cubicOut } from "svelte/easing";
-    import { tweened } from "svelte/motion";
     import Drawer from "./base/drawer.svelte";
     import Dropdown from "./base/dropdown.svelte";
     import LogoTextLight from "./logo/logo_text_light.svelte";
-    import { _, format } from "svelte-i18n";
+    import NotificationDropdown from "./notification/notification_dropdown.svelte";
+    import { browser } from "$app/environment";
+    import { page } from "$app/state";
+    import { Tween } from "svelte/motion";
+    import UrlImportModal from "./settings/url_import_modal.svelte";
 
     let navBarItems = [
         { text: "Home", value: "/" },
         { text: $_("trail", { values: { n: 2 } }), value: "/trails" },
         { text: $_("map"), value: "/map" },
+        { text: $_("list", { values: { n: 2 } }), value: "/lists" },
     ];
 
     const dropdownItems = [
@@ -23,22 +29,29 @@
         { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
     ];
 
-    const indicatorPosition = tweened(0, {
+    const importDropdownItems = [
+        { text: $_("from-file"), value: "file", icon: "file-import" },
+        { text: $_("from-url"), value: "url", icon: "server" },
+    ];
+
+    const indicatorPosition = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
 
-    const indicatorWidth = tweened(0, {
+    const indicatorWidth = new Tween(0, {
         duration: 300,
         easing: cubicOut,
     });
 
-    const indicatorScale = tweened(0, {
+    const indicatorScale = new Tween(0, {
         duration: 600,
         easing: backInOut,
     });
 
-    let drawerOpen: boolean = false;
+    let drawerOpen: boolean = $state(false);
+
+    let urlImportModal: UrlImportModal;
 
     afterNavigate((e) => {
         const routeId = e.to?.route.id;
@@ -83,67 +96,70 @@
             logout();
             window.location.href = "/";
         } else if (item.value == "settings") {
-            goto("/settings/account");
+            goto("/settings/profile");
         }
     }
+
+    function handleImportDropdownClick(item: { text: string; value: any }) {
+        if (item.value == "file") {
+            goto(`/settings/export`);
+        } else if (item.value == "url") {
+            urlImportModal.openModal();
+        }
+    }
+
+    let user = $derived(browser ? $currentUser : pb.authStore.model);
 </script>
 
 <Drawer bind:open={drawerOpen}>
     <div class="flex gap-4 items-center m-4">
         <div class="basis-full"></div>
         <button
+            aria-label="Toggle theme"
             class="btn-icon fa-regular fa-{$theme === 'light' ? 'sun' : 'moon'}"
-            on:click={() => toggleTheme()}
+            onclick={() => toggleTheme()}
         ></button>
         <button
+            aria-label="Toggle drawer"
             class="btn-icon block fa fa-close float-right"
-            on:click={() => (drawerOpen = false)}
+            onclick={() => (drawerOpen = false)}
         ></button>
     </div>
     <div class="flex flex-col px-12 gap-8">
         {#each navBarItems as item}
-            <a
-                class="font-semibold text-xl"
-                href={item.value}
-                data-sveltekit-preload-data="off">{item.text}</a
-            >
+            <a class="font-semibold text-xl" href={item.value}>{item.text}</a>
         {/each}
-        {#if $currentUser}
-            <a
-                class="font-semibold text-xl"
-                href="/lists"
-                data-sveltekit-preload-data="off"
-                >{$_("list", { values: { n: 2 } })}</a
-            >
-        {/if}
     </div>
     <hr class="my-6 border-input-border" />
     <div class="flex flex-col basis-full">
-        {#if $currentUser}
-            <a
-                class="btn-primary btn-large text-center mx-4"
-                href="/trail/edit/new"
+        {#if user}
+            <a class="btn-primary text-center mx-4" href="/trail/edit/new"
                 ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
             >
             <div class="basis-full"></div>
             <hr class="border-input-border" />
             <div class="flex gap-4 items-center justify-between m-4">
-                <a href="/profile/{$currentUser.id}">
+                <a class="shrink-0" href="/profile/{user.id}">
                     <img
                         class="rounded-full w-10 aspect-square"
-                        src={getFileURL($currentUser, $currentUser.avatar) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                        src={getFileURL(user, user.avatar) ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
                 </a>
-                <a href="/profile/{$currentUser.id}">
-                    <p class="text-sm">{$currentUser.username}</p>
-                    <p class="text-sm text-gray-500">
-                        {$currentUser.email}
+                <a href="/profile/{user.id}" style="width: calc(100% - 104px)">
+                    <p class="text-sm overflow-hidden text-ellipsis">
+                        {user.username}
+                    </p>
+                    <p
+                        class="text-sm text-gray-500 overflow-hidden text-ellipsis"
+                    >
+                        {user.email}
                     </p>
                 </a>
                 <button
-                    on:click={() => {
+                    aria-label="Logout"
+                    onclick={() => {
                         logout();
                         window.location.href = "/";
                     }}
@@ -161,7 +177,7 @@
 </Drawer>
 
 <nav class="flex justify-between items-center p-6">
-    <a href="/" data-sveltekit-preload-data="off">
+    <a href="/">
         {#if $theme == "light"}
             <LogoText></LogoText>
         {:else}
@@ -171,71 +187,82 @@
     <menu id="nav-bar-links" class="hidden lg:flex gap-8 relative py-1 px-2">
         <div
             class="absolute h-full w-16 bg-menu-item-background-hover rounded-xl top-0 z-0"
-            style="width: {$indicatorWidth}px; left: {$indicatorPosition}px; scale: {$indicatorScale}"
+            style="width: {indicatorWidth.current}px; left: {indicatorPosition.current}px; scale: {indicatorScale.current}"
         ></div>
         {#each navBarItems as item}
-            <a
-                class="font-semibold z-10"
-                href={item.value}
-                data-sveltekit-preload-data="off">{item.text}</a
-            >
+            <a class="font-semibold z-10" href={item.value}>{item.text}</a>
         {/each}
-        {#if $currentUser}
-            <a
-                class="font-semibold z-10"
-                href="/lists"
-                data-sveltekit-preload-data="off"
-                >{$_("list", { values: { n: 2 } })}</a
-            >
-        {/if}
     </menu>
-    {#if $currentUser}
+    {#if user}
         <div class="hidden lg:flex gap-6 items-center">
             <button
+                aria-label="Toggle theme"
                 class="btn-icon fa-regular fa-{$theme === 'light'
                     ? 'sun'
                     : 'moon'}"
-                on:click={() => toggleTheme()}
+                onclick={() => toggleTheme()}
             ></button>
-            <a class="btn-primary btn-large" href="/trail/edit/new"
-                ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
-            >
+            <div class="flex">
+                <a
+                    class="btn-primary btn-large !rounded-r-none focus:ring-0"
+                    href="/trail/edit/new"
+                    ><i class="fa fa-plus mr-2"></i>{$_("new-trail")}</a
+                >
+                <Dropdown
+                    items={importDropdownItems}
+                    onchange={(item) => handleImportDropdownClick(item)}
+                >
+                    {#snippet children({ toggleMenu: openDropdown })}
+                        <button
+                            onclick={openDropdown}
+                            class="bg-primary rounded-r-lg text-white min-h-12 hover:bg-primary-hover px-3"
+                            aria-label="Open trail create dropdown"
+                            ><i class="fa fa-caret-down"></i></button
+                        >
+                    {/snippet}
+                </Dropdown>
+            </div>
+            {#if page.data.notifications}
+                <NotificationDropdown></NotificationDropdown>
+            {/if}
             <Dropdown
                 items={dropdownItems}
-                on:change={(e) => handleDropdownClick(e.detail)}
-                let:toggleMenu={openDropdown}
+                onchange={(item) => handleDropdownClick(item)}
             >
-                <div class="flex items-center">
-                    <button
-                        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 aspect-square"
-                        on:click={openDropdown}
-                    >
-                        <img
-                            class="rounded-full w-full h-full"
-                            src={getFileURL(
-                                $currentUser,
-                                $currentUser.avatar,
-                            ) ||
-                                `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
-                            alt="avatar"
-                        />
-                    </button>
-                </div>
+                {#snippet children({ toggleMenu: openDropdown })}
+                    <div class="flex items-center">
+                        <button
+                            class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-10 aspect-square"
+                            onclick={openDropdown}
+                        >
+                            <img
+                                class="rounded-full w-full h-full"
+                                src={getFileURL(user, user.avatar) ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
+                                alt="avatar"
+                            />
+                        </button>
+                    </div>
+                {/snippet}
             </Dropdown>
         </div>
     {:else}
         <div class="hidden md:flex items-center gap-8">
             <button
+                aria-label="Toggle theme"
                 class="btn-icon fa-regular fa-{$theme === 'light'
                     ? 'sun'
                     : 'moon'}"
-                on:click={() => toggleTheme()}
+                onclick={() => toggleTheme()}
             ></button>
             <a class="btn-primary btn-large" href="/login">{$_("login")}</a>
         </div>
     {/if}
     <button
+        aria-label="Toggle drawer"
         class="btn-icon fa fa-bars lg:hidden"
-        on:click={() => (drawerOpen = !drawerOpen)}
+        onclick={() => (drawerOpen = !drawerOpen)}
     ></button>
 </nav>
+
+<UrlImportModal bind:this={urlImportModal}></UrlImportModal>

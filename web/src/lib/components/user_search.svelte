@@ -3,23 +3,33 @@
     import { show_toast } from "$lib/stores/toast_store";
     import { users_search } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
-    import { createEventDispatcher, tick } from "svelte";
     import Search, { type SearchItem } from "./base/search.svelte";
     import { _ } from "svelte-i18n";
 
-    export let label: string = "";
-    export let value: string = "";
-    export let includeSelf: boolean = true;
-    export let clearAfterSelect: boolean = true;
+    interface Props {
+        label?: string;
+        value?: string;
+        includeSelf?: boolean;
+        clearAfterSelect?: boolean;
+        onclear?: () => void
+        onclick?: (item: SearchItem) => void
+    }
 
-    let searchItems: SearchItem[] = [];
+    let {
+        label = "",
+        value = $bindable(""),
+        includeSelf = true,
+        clearAfterSelect = true,
+        onclear,
+        onclick
+    }: Props = $props();
 
-    const dispatch = createEventDispatcher();
+    let searchItems: SearchItem[] = $state([]);
 
     async function updateUsers(q: string) {
         if (!q.length) {
             searchItems = [];
-            dispatch("clear");
+            onclear?.();
             return;
         }
         try {
@@ -39,29 +49,31 @@
         }
     }
 
-    function onClick(e: CustomEvent<SearchItem>) {
-        value = e.detail.value.username ?? value;
+    function onClick(item: SearchItem) {
+        value = item.value.username ?? value;
 
-        dispatch("click", e.detail);
+        onclick?.(item);
         searchItems = [];
     }
 </script>
 
 <Search
-    on:update={(e) => updateUsers(e.detail)}
-    on:click={(e) => onClick(e)}
+    onupdate={(q) => updateUsers(q)}
+    onclick={(item) => onClick(item)}
     placeholder={`${$_("username")}...`}
     items={searchItems}
     {clearAfterSelect}
     {label}
     bind:value
 >
-    <img
-        slot="item-header"
-        let:item
-        class="rounded-full w-8 aspect-square mr-2"
-        src={getFileURL(item.value, item.value.avatar) ||
-            `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}
-        alt="avatar"
-    />
+    {#snippet prepend({ item })}
+        <img
+            
+            
+            class="rounded-full w-8 aspect-square mr-2"
+            src={getFileURL(item.value, item.value.avatar) ||
+                `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}
+            alt="avatar"
+        />
+    {/snippet}
 </Search>

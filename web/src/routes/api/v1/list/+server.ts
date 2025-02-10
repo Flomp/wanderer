@@ -1,27 +1,32 @@
+import { ListCreateSchema } from '$lib/models/api/list_schema';
 import type { List } from '$lib/models/list';
 import { pb } from '$lib/pocketbase';
-import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { Collection, create, handleError, list } from '$lib/util/api_util';
+import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
-    const sort = event.url.searchParams.get('sort') ?? ""
     try {
-        const r: List[] = await pb.collection('lists').getFullList<List>({
-            expand: "trails,trails.waypoints,trails.category,list_share_via_list",
-            sort: sort,
-        })
+        const r = await list<List>(event, Collection.lists);
+        for (const t of r.items) {
+            if (!t.author || !pb.authStore.model) {
+                continue;
+            }
+            if (!t.expand) {
+                t.expand = {}
+            }
+            t.expand!.author = await pb.collection("users_anonymous").getOne(t.author);
+        }
         return json(r)
-    } catch (e: any) {
-        throw error(e.status, e);
+    } catch (e) {
+        throw handleError(e)
     }
 }
 
 export async function PUT(event: RequestEvent) {
-    const data = await event.request.json();
-
     try {
-        const r = await pb.collection('lists').create<List>(data)
+        const r = await create<List>(event, ListCreateSchema, Collection.lists)
         return json(r);
-    } catch (e: any) {
-        throw error(e.status, e)
+    } catch (e) {
+        throw handleError(e)
     }
 }

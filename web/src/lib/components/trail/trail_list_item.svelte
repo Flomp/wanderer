@@ -1,5 +1,9 @@
 <script lang="ts">
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
+    import { pb } from "$lib/pocketbase";
+    import { theme } from "$lib/stores/theme_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -8,15 +12,20 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
-    import { pb } from "$lib/pocketbase";
+    
 
-    export let trail: Trail;
+    interface Props {
+        trail: Trail;
+        showDescription?: boolean;
+    }
 
-    export let showDescription: boolean = true;
+    let { trail, showDescription = true }: Props = $props();
 
-    $: thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail])
-        : "/imgs/default_thumbnail.webp";
+    let thumbnail = $derived(trail.photos.length
+        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+        : $theme === "light"
+          ? emptyStateTrailLight
+          : emptyStateTrailDark);
 </script>
 
 <li
@@ -49,7 +58,7 @@
                 })}
             </p>
         {/if}
-        {#if trail.expand.author}
+        {#if trail.expand?.author}
             <p class="text-xs text-gray-500 mb-3">
                 {$_("by")}
                 <img

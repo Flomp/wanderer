@@ -1,38 +1,55 @@
 <script lang="ts">
+    
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { SummitLog } from "$lib/models/summit_log";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
+    import { theme } from "$lib/stores/theme_store";
+    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
 
-    let thumbnail: string = "/imgs/default_thumbnail.webp";
+    let thumbnail: string = $state(
+        $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark,
+    );
 
-    $: Promise.all(
-        (log._photos ?? []).map(async (f) => {
-            return await readAsDataURLAsync(f);
-        }),
-    ).then((v) => {
-        if (log.photos.length) {
-            thumbnail = getFileURL(log, log.photos[0]);
-        } else if (v.length) {
-            thumbnail = v[0];
-        } else {
-            thumbnail = "/imgs/default_thumbnail.webp";
-        }
-    });
+    interface Props {
+        log: SummitLog;
+        mode?: "show" | "edit";
+        onchange?: (item: DropdownItem) => void;
+    }
 
-    export let log: SummitLog;
-    export let mode: "show" | "edit" = "show";
+    let { log, mode = "show", onchange }: Props = $props();
 
     const dropdownItems: DropdownItem[] = [
         { text: $_("edit"), value: "edit" },
         { text: $_("delete"), value: "delete" },
     ];
+    $effect(() => fetchPhotos(log._photos ?? []));
+
+    function fetchPhotos(photos: File[]) {
+        Promise.all(
+            photos.map(async (f) => {
+                return await readAsDataURLAsync(f);
+            }),
+        ).then((v) => {
+            if (log.photos.length) {
+                thumbnail = getFileURL(log, log.photos[0]);
+            } else if (v.length) {
+                thumbnail = v[0];
+            } else {
+                thumbnail =
+                    $theme === "light"
+                        ? emptyStateTrailLight
+                        : emptyStateTrailDark;
+            }
+        });
+    }
 </script>
 
 <div class="p-4 my-2 border border-input-border rounded-xl">
@@ -60,7 +77,7 @@
                 </h5>
 
                 {#if mode == "edit"}
-                    <Dropdown items={dropdownItems} on:change></Dropdown>
+                    <Dropdown items={dropdownItems} {onchange}></Dropdown>
                 {/if}
             </div>
             {#if log.distance || log.elevation_gain || log.elevation_loss || log.duration}

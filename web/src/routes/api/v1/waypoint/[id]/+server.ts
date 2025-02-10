@@ -1,32 +1,31 @@
+import { WaypointUpdateSchema } from "$lib/models/api/waypoint_schema";
 import type { Waypoint } from "$lib/models/waypoint";
-import { pb } from "$lib/pocketbase";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
+import { json, type RequestEvent } from "@sveltejs/kit";
 
 export async function GET(event: RequestEvent) {
     try {
-        const r = await pb.collection('waypoints')
-            .getOne<Waypoint>(event.params.id as string)
+        const r = await show<Waypoint>(event, Collection.waypoints)
         return json(r)
     } catch (e: any) {
-        throw error(e.status, e);
+        throw handleError(e)
     }
 }
 
-export async function POST(event: RequestEvent){
-    const data = await event.request.json()
+export async function POST(event: RequestEvent) {
     try {
-        const r = await await pb.collection("waypoints").update<Waypoint>(event.params.id as string, data);
+        const r = await update<Waypoint>(event, WaypointUpdateSchema, Collection.waypoints)
         return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }
 
 export async function DELETE(event: RequestEvent) {
     try {
-        const r = await pb.collection('waypoints').delete(event.params.id as string)
-        return json({ 'acknowledged': r });
+        const r = await remove(event, Collection.waypoints)
+        return json(r);
     } catch (e: any) {
-        throw error(e.status, e)
+        throw handleError(e)
     }
 }

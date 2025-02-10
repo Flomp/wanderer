@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
     export type SelectItem = {
         text: string;
         value: any;
@@ -6,18 +6,26 @@
 </script>
 
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
+    interface Props {
+        name?: string;
+        items?: SelectItem[];
+        value?: any;
+        label?: string;
+        disabled?: boolean;
+        onchange?: (value: any) => void
+    }
 
-    export let name: string = "";
-    export let value: any;
-    export let items: SelectItem[] = [];
-    export let label: string = "";
-    export let disabled: boolean = false;
-
-    const dispatch = createEventDispatcher();
+    let {
+        name = "",
+        items = [],
+        value = $bindable(items.at(0)?.value ?? ""),
+        label = "",
+        disabled = false,
+        onchange
+    }: Props = $props();
 
     function onChange(target: any) {
-        dispatch("change", target?.value);
+        onchange?.(target?.value);
     }
 </script>
 
@@ -33,7 +41,7 @@
         class:text-gray-500={disabled}
         {disabled}
         bind:value
-        on:change={(e) => onChange(e.target)}
+        onchange={(e) => onChange(e.target)}
     >
         {#each items as item}
             <option value={item.value}>{item.text}</option>

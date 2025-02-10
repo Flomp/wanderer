@@ -1,5 +1,8 @@
 <script lang="ts">
+    import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
+    import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { List } from "$lib/models/list";
+    import { theme } from "$lib/stores/theme_store";
     import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -8,60 +11,80 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
-    export let list: List;
-    export let active: boolean = false;
 
-    $: cumulativeDistance = list.expand?.trails?.reduce(
+    interface Props {
+        list: List;
+        active?: boolean;
+    }
+
+    let { list, active = false }: Props = $props();
+
+    let cumulativeDistance = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.distance!,
         0,
-    );
+    ));
 
-    $: cumulativeElevationGain = list.expand?.trails?.reduce(
+    let cumulativeElevationGain = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.elevation_gain!,
         0,
-    );
+    ));
 
-    $: cumulativeElevationLoss = list.expand?.trails?.reduce(
+    let cumulativeElevationLoss = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.elevation_loss!,
         0,
-    );
+    ));
 
-    $: cumulativeDuration = list.expand?.trails?.reduce(
+    let cumulativeDuration = $derived(list.expand?.trails?.reduce(
         (s, b) => s + b.duration!,
         0,
-    );
+    ));
 
-    $: listIsShared = (list.expand?.list_share_via_list?.length ?? 0) > 0;
+    let listIsShared = $derived((list.expand?.list_share_via_list?.length ?? 0) > 0);
 </script>
 
 <div
     class="flex items-start gap-6 p-4 hover:bg-menu-item-background-hover rounded-xl transition-colors cursor-pointer"
     class:bg-menu-item-background-hover={active}
 >
-    {#if list.avatar}
-        <img
-            class="w-16 md:w-20 aspect-square rounded-full object-cover"
-            src={getFileURL(list, list.avatar)}
-            alt="avatar"
-        />
-    {:else}
-        <div
-            class="flex w-16 md:w-20 aspect-square shrink-0 items-center justify-center"
-        >
-            <i class="fa fa-table-list text-5xl"></i>
-        </div>
-    {/if}
-    <div class="self-start min-w-0 w-full transition-transform">
+    <img
+        class="w-16 md:w-20 aspect-square rounded-full object-cover"
+        src={list.avatar
+            ? getFileURL(list, list.avatar)
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark}
+        alt="avatar"
+    />
+
+    <div class="self-start min-w-0 basis-full transition-transform">
         <div class="flex items-center gap-3">
-            <h5
-                class="text-xl font-semibold overflow-hidden overflow-ellipsis basis-full"
-            >
+            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis">
                 {list.name}
             </h5>
+            {#if list.public}
+                <span class="tooltip" data-title={$_("public")}>
+                    <i class="fa fa-globe"></i>
+                </span>
+            {/if}
             {#if listIsShared}
                 <ShareInfo type="list" subject={list}></ShareInfo>
             {/if}
         </div>
+        {#if list.expand?.author}
+            <p class="text-xs text-gray-500 my-2">
+                {$_("by")}
+                <img
+                    class="rounded-full w-5 aspect-square mx-1 inline"
+                    src={getFileURL(
+                        list.expand.author,
+                        list.expand.author.avatar,
+                    ) ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
+                    alt="avatar"
+                />
+                {list.expand?.author.username}
+            </p>
+        {/if}
         <div
             class="grid grid-cols-2 mt-1 mb-2 gap-x-4 gap-y-1 text-sm text-gray-500 whitespace-nowrap flex-wrap"
         >
