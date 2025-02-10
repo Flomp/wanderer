@@ -27,10 +27,10 @@ class Trail {
     summit_logs: string[];
     expand?: {
         category?: Category;
-        waypoints: Waypoint[]
-        summit_logs: SummitLog[]
+        waypoints?: Waypoint[]
+        summit_logs?: SummitLog[]
         author?: UserAnonymous
-        comments_via_trail: Comment[]
+        comments_via_trail?: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]
     }
@@ -142,6 +142,35 @@ interface TrailBoundingBox {
     min_lon: number,
 }
 
+
+interface TrailSearchResult {
+    id: string;
+    author: string;
+    author_name: string;
+    author_avatar: string;
+    name: string;
+    description: string;
+    location: string;
+    distance: number;
+    elevation_gain: number;
+    elevation_loss: number;
+    duration: number;
+    difficulty: "easy" | "moderate" | "difficult";
+    category: string;
+    completed: boolean;
+    date: number;
+    created: number;
+    public: boolean;
+    thumbnail: string;
+    shares?: string[];
+    gpx: string;
+    _geo: {
+        lat: number,
+        lng: number
+    };
+}
+
+
 export { Trail };
 
-    export type { TrailBoundingBox, TrailFilter, TrailFilterValues };
+export type { TrailBoundingBox, TrailFilter, TrailFilterValues, TrailSearchResult };

@@ -55,7 +55,7 @@
     <div
         class="relative w-full basis-full max-h-48 overflow-hidden rounded-t-2xl"
     >
-        <img class="h-full w-full" id="header-img" src={thumbnail} alt="" />
+        <img loading="lazy" class="w-full h-full" id="header-img" src={thumbnail} alt="" />
     </div>
     {#if (trail.public || trailIsShared) && pb.authStore.model}
         <div
@@ -73,7 +73,9 @@
                 </span>
             {/if}
             {#if trail.expand?.trail_share_via_trail?.length}
-                <ShareInfo type="trail" subject={trail}></ShareInfo>
+                <span class="tooltip" data-title={$_("shared")}>
+                    <i class="fa fa-share-nodes"></i>
+                </span>
             {/if}
         </div>
     {/if}

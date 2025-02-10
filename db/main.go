@@ -59,10 +59,10 @@ func registerMigrations(app *pocketbase.PocketBase) {
 func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceManager) {
 	app.OnModelAfterCreate("users").Add(createUserHandler(app, client))
 
-	app.OnModelAfterCreate("trails").Add(createTrailIndexHandler(client))
+	app.OnModelAfterCreate("trails").Add(createTrailIndexHandler(app, client))
 
 	app.OnRecordAfterCreateRequest("trails").Add(createTrailHandler(app))
-	app.OnRecordAfterUpdateRequest("trails").Add(updateTrailHandler(client))
+	app.OnRecordAfterUpdateRequest("trails").Add(updateTrailHandler(app, client))
 	app.OnRecordAfterDeleteRequest("trails").Add(deleteTrailHandler(client))
 
 	app.OnRecordAfterCreateRequest("trail_share").Add(createTrailShareHandler(app, client))
@@ -128,10 +128,14 @@ func createDefaultUserSettings(app *pocketbase.PocketBase, userId string) error 
 	return app.Dao().SaveRecord(settings)
 }
 
-func createTrailIndexHandler(client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
+func createTrailIndexHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
 	return func(e *core.ModelEvent) error {
 		record := e.Model.(*models.Record)
-		if err := util.IndexTrail(record, client); err != nil {
+		author, err := app.Dao().FindRecordById("users", record.GetString(("author")))
+		if err != nil {
+			return err
+		}
+		if err := util.IndexTrail(record, author, client); err != nil {
 			return err
 		}
 		return nil
@@ -156,9 +160,13 @@ func createTrailHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEve
 	}
 }
 
-func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordUpdateEvent) error {
+func updateTrailHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordUpdateEvent) error {
 	return func(e *core.RecordUpdateEvent) error {
-		return util.UpdateTrail(e.Record, client)
+		author, err := app.Dao().FindRecordById("users", e.Record.GetString(("author")))
+		if err != nil {
+			return err
+		}
+		return util.UpdateTrail(e.Record, author, client)
 	}
 }
 
@@ -727,8 +735,13 @@ func bootstrapMeilisearchTrails(app *pocketbase.PocketBase, client meilisearch.S
 		return err
 	}
 
+	client.Index("trails").DeleteAllDocuments()
 	for _, trail := range trails {
-		if err := util.UpdateTrail(trail, client); err != nil {
+		author, err := app.Dao().FindRecordById("users", trail.GetString(("author")))
+		if err != nil {
+			return err
+		}
+		if err := util.IndexTrail(trail, author, client); err != nil {
 			return err
 		}
 	}

@@ -1,12 +1,12 @@
 import type { SummitLog } from "$lib/models/summit_log";
-import { Trail, type TrailFilter, type TrailFilterValues } from "$lib/models/trail";
+import { Trail, type TrailFilter, type TrailFilterValues, type TrailSearchResult } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { deepEqual } from "$lib/util/deep_util";
 import { getFileURL } from "$lib/util/file_util";
 import * as M from "maplibre-gl";
 import type { Hits } from "meilisearch";
-import { type ListResult } from "pocketbase";
+import { type ListResult, type RecordModel } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
@@ -59,7 +59,15 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
     let r = await f("/api/v1/search/trails", {
         method: "POST",
-        body: JSON.stringify({ q: filter.q, options: { filter: filterText, sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`], hitsPerPage: 12, page: page } }),
+        body: JSON.stringify({
+            q: filter.q,
+            options: {
+                filter: filterText,
+                sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
+                hitsPerPage: 12,
+                page: page
+            }
+        }),
     });
 
     if (!r.ok) {
@@ -67,35 +75,19 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const result: { page: number, totalPages: number, hits: Hits<Record<string, any>> } = await r.json();
+    const result: { page: number, totalPages: number, hits: Hits<TrailSearchResult> } = await r.json();
 
-
-    const trailIds = result.hits.map((h: Record<string, any>) => h.id);
-
-    if (trailIds.length == 0) {
+    if (result.hits.length == 0) {
         return { items: [], ...result };
     }
 
-    r = await f('/api/v1/trail?' + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail",
-        filter: `'${trailIds.join(',')}'~id`,
-        sort: `${filter.sortOrder}${filter.sort}`
-    }), {
-        method: 'GET',
-    })
+    const resultTrails: Trail[] = await searchResultToTrailList(result.hits)
 
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    const response: ListResult<Trail> = await r.json()
-
-    return { items: response.items, ...result };
+    return { items: resultTrails, ...result };
 
 }
 
-export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, loadGPX: boolean = true) {
+export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, page: number = 1, loadGPX: boolean = true) {
 
     let filterText: string = "";
 
@@ -106,57 +98,29 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
     let r = await fetch("/api/v1/search/trails", {
         method: "POST",
         body: JSON.stringify({
-            q: "", options: {
-                limit: 100,
+            q: "",
+            options: {
                 filter: [
                     `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
                     filterText
                 ],
+                hitsPerPage: 500,
+                page: page
             }
         }),
     });
-    const result = await r.json();
+    const result: { page: number, totalPages: number, hits: Hits<TrailSearchResult> } = await r.json();
 
-    const trailIds = result.hits?.map((h: Record<string, any>) => h.id) ?? [];
-
-    if (trailIds.length == 0) {
-        const currentTrails: Trail[] = trails;
-        const comparison = compareObjectArrays<Trail>(currentTrails, []);
+    if (result.hits.length == 0) {
         trails = [];
-        return { trails: [], ...comparison }
+        return { trails: [], ...result }
     }
 
-    r = await fetch('/api/v1/trail?' + new URLSearchParams({
-        "perPage": "-1",
-        filter: `'${trailIds.join(',')}'~id`,
-        expand: "category,waypoints,summit_logs",
-        sort: `+name`,
-    }), {
-        method: 'GET',
-    })
+    const resultTrails: Trail[] = await searchResultToTrailList(result.hits, loadGPX)
 
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
+    trails = page > 1 ? trails.concat(resultTrails) : resultTrails
 
-
-    const response = await r.json()
-
-    if (loadGPX) {
-        for (const trail of response.items) {
-            const gpxData: string = await fetchGPX(trail);
-            if (!trail.expand) {
-                trail.expand = {};
-            }
-            trail.expand.gpx_data = gpxData;
-        }
-    }
-
-    const comparison = compareObjectArrays<Trail>(trails, response.items)
-    trails = response.items;
-
-    return { trails: response.items, ...comparison };
+    return { trails, ...result };
 
 
 }
@@ -269,7 +233,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     }
 
     for (const updatedWaypoint of waypointUpdates.updated) {
-        const oldWaypoint = oldTrail.expand?.waypoints.find(w => w.id == updatedWaypoint.id);
+        const oldWaypoint = oldTrail.expand?.waypoints?.find(w => w.id == updatedWaypoint.id);
         const model = await waypoints_update(oldWaypoint!, {
             ...updatedWaypoint,
             marker: undefined,
@@ -288,7 +252,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     }
 
     for (const updatedSummitLog of summitLogUpdates.updated) {
-        const oldSummitLog = oldTrail.expand?.summit_logs.find(w => w.id == updatedSummitLog.id);
+        const oldSummitLog = oldTrail.expand?.summit_logs?.find(w => w.id == updatedSummitLog.id);
 
         const model = await summit_logs_update(oldSummitLog!, updatedSummitLog);
     }
@@ -446,6 +410,60 @@ export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f:
     const gpxData = await response.text();
 
     return gpxData
+}
+
+async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: boolean = false): Promise<Trail[]> {
+    const trails: Trail[] = []
+    for (const h of hits) {
+        const t: Trail & RecordModel = {
+            collectionId: "trails",
+            collectionName: "trails",
+            updated: new Date(h.created * 1000).toISOString(),
+            author: h.author,
+            name: h.name,
+            photos: h.thumbnail ? [h.thumbnail] : [],
+            public: h.public,
+            summit_logs: [],
+            waypoints: [],
+            category: h.category,
+            created: new Date(h.created * 1000).toISOString(),
+            date: new Date(h.date * 1000).toISOString(),
+            description: h.description,
+            difficulty: h.difficulty,
+            distance: h.distance,
+            duration: h.duration,
+            elevation_gain: h.elevation_gain,
+            elevation_loss: h.elevation_loss,
+            id: h.id,
+            lat: h._geo.lat,
+            lon: h._geo.lng,
+            location: h.location,
+            gpx: h.gpx,
+            thumbnail: 0,
+            expand: {
+                author: {
+                    collectionId: "users",
+                    private: false,
+                    id: h.author,
+                    avatar: h.author_avatar,
+                    username: h.author_name
+                } as any,
+                trail_share_via_trail: h.shares?.map(s => ({
+                    permission: "view",
+                    trail: h.id,
+                    user: s,
+                })),
+            }
+        }
+
+        if (loadGPX) {
+            const gpxData: string = await fetchGPX(t);
+            t.expand!.gpx_data = gpxData;
+        }
+        
+        trails.push(t)
+    }
+    return trails
 }
 
 function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {

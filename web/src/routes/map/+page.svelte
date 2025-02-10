@@ -46,8 +46,12 @@
     const MIN_ZOOM = 6;
 
     let loading: boolean = $state(true);
+    let loadingNextPage: boolean = false;
 
-    onMount(async () => {});
+    let pagination = {
+        page: 1,
+        totalPages: 1,
+    };
 
     async function search(q: string) {
         const r = await searchMulti({
@@ -103,15 +107,24 @@
         }
     }
 
-    async function searchTrails(northEast: M.LngLat, southWest: M.LngLat) {
-        loading = true;
-        const changes = await trails_search_bounding_box(
+    async function searchTrails(
+        northEast: M.LngLat,
+        southWest: M.LngLat,
+        reset: boolean = true,
+    ) {
+        if (reset) {
+            pagination.page = 1;
+            loading = true;
+        }
+        const trailsInBox = await trails_search_bounding_box(
             northEast,
             southWest,
             filter,
+            pagination.page,
             (map?.getZoom() ?? 0) > MIN_ZOOM,
         );
-        trails = changes.trails;
+        pagination.totalPages = trailsInBox.totalPages;
+        trails = trailsInBox.trails;
         loading = false;
     }
 
@@ -147,7 +160,6 @@
                 bounds.getNorthEast().lat,
             ),
         };
-
         await searchTrails(
             normalizedBounds.northEast,
             normalizedBounds.southWest,
@@ -214,6 +226,32 @@
             );
         }
     }
+
+    async function onListScroll(e: Event) {
+        const container = e.target as HTMLDivElement;
+        const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+
+        if (
+            scrollTop + clientHeight >= scrollHeight * 0.8 &&
+            pagination.page !== pagination.totalPages &&
+            !loadingNextPage
+        ) {
+            loadingNextPage = true;
+            await loadNextPage();
+            loadingNextPage = false;
+        }
+    }
+
+    async function loadNextPage() {
+        if (!map) {
+            return;
+        }
+        pagination.page += 1;
+        const bounds = map.getBounds();
+        await searchTrails(bounds.getNorthEast(), bounds.getSouthWest(), false);
+    }
 </script>
 
 <svelte:head>
@@ -223,6 +261,7 @@
     <div
         id="trail-list"
         class="flex flex-col items-stretch gap-4 px-3 md:px-8 overflow-y-scroll"
+        onscroll={onListScroll}
     >
         <div class="sticky top-0 z-10 bg-background pb-4 space-y-4">
             <div class="flex items-center gap-2 md:gap-4">
@@ -276,6 +315,7 @@
                     <a href="map/trail/{trail.id}">
                         <TrailCard
                             {trail}
+                            fullWidth={true}
                             onmouseenter={() =>
                                 handleTrailCardMouseEnter(trail)}
                             onmouseleave={() =>

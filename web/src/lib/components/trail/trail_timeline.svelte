@@ -68,7 +68,7 @@
             <div class="p-4">
                 <h5 class="text-xl font-semibold">{wp.name}</h5>
                 <span class="text-sm text-gray-500"
-                    >{wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span
+                    ><i class="fa fa-location-dot mr-1"></i> {wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span
                 >
                 <p class="whitespace-pre-line">
                     {wp.description}

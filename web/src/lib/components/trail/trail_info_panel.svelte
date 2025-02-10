@@ -214,8 +214,8 @@
             <div
                 class="flex absolute justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
             >
-                <div class="text-white">
-                    <h4 class="text-4xl font-bold">
+                <div class="text-white overflow-hidden">
+                    <h4 title={trail.name} class="text-4xl font-bold line-clamp-3">
                         {trail.name}
                     </h4>
                     {#if trail.date}
@@ -370,7 +370,7 @@
                     <EmptyStateDescription></EmptyStateDescription>
                 {/if}
                 <h4 class="text-2xl font-semibold mb-6 mt-12">
-                    {$_("route", { values: { n: 2 } })}
+                    {$_("route", { values: { n: 1 } })}
                 </h4>
                 {#if mode === "overview"}
                     <div

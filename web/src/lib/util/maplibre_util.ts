@@ -158,7 +158,7 @@ export function createPopupFromTrail(trail: Trail) {
 
     // Create the image element
     const img = document.createElement("img");
-    img.className = "h-full w-28 object-cover";
+    img.className = "h-full w-20 object-cover";
     img.src = thumbnail; // Set image source safely
     img.alt = ""; // Always include a safe alt attribute
     imageContainer.appendChild(img);
