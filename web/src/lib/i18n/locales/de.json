@@ -100,7 +100,7 @@
   "error-during-login": "Fehler beim Login",
   "error-during-password-reset": "Email zum Zurücksetzen des Passworts konnte nicht versandt werden",
   "error-exporting-trail": "Fehler beim Exportieren des Trails",
-  "error-logging-in-to-komoot": "Fehleranmelde bei Komoot",
+  "error-logging-in-to-komoot": "Fehler bei der Anmeldung bei komoot",
   "error-posting-comment": "Fehler beim Posten des Kommentars",
   "error-printing-map": "Fehler beim Drucken der Karte",
   "error-reading-file": "Fehler beim Lesen der Datei",
