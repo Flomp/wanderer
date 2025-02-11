@@ -2,6 +2,24 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.15.0
+
+### Features
+- Integrations: you can now sync your strava and komoot trails directly with wanderer. [Learn more](https://wanderer.to/guides/integrations/).
+- Updates the trail details view to give a clearer idea of the trail's course
+- Improved trail import dialog
+- Duplicate detection when importing trails
+- Adds option to import a trail directly from a URL
+- Significant preformance improvements when displaying trails in the map view (allows for up to 500 trails to be displayed at once)
+- Improves calculation of total elevation gain and loss by apllying a smoothing function (thanks @gri38)
+
+### Bug fixes
+- Fixes a bug that caused batch import jobs to fail if a filename contained a comma
+- Fixes trail card height issues
+- Fixes bug that caused some trails to be hidden from the list view
+- Fixes response headers to be <4kB to prevent crashing default reverse proxy configs
+  
+
 ## v0.14.0
 :::note
 This release introduces significant updates, including the migration of the frontend to Svelte 5. While the migration has been rigorously tested, there is a possibility that some features may not function as expected. We encourage you to report any issues you encounter.
