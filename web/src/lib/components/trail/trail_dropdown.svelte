@@ -170,7 +170,10 @@
     }
 
     async function deleteTrail() {
-        trails_delete(trail).then(() => goto('/trails'));
+        await trails_delete(trail);
+        setTimeout(() => {
+            goto("/trails");
+        }, 500);
     }
 
     async function handleListSelection(list: List) {
