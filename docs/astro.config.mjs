@@ -74,7 +74,12 @@ export default defineConfig({
       {
         label: 'Import/Export',
         link: '/guides/import-export/'
-      }, {
+      },
+      {
+        label: 'Integrations',
+        link: '/guides/integrations/'
+      },
+      {
         label: 'API',
         link: '/guides/api/'
       }]

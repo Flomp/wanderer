@@ -20,17 +20,22 @@ Since we use an unmodified installation of meilisearch you can use all variables
 | -------------------- | ----------------------------- | ------- |
 | MEILI_NO_ANALYTICS   | Disable meilisearch telemetry | true    |
 
+## Pocketbase
+| Environment Variable          | Description                                                                         | Default   |
+| ----------------------------- | ----------------------------------------------------------------------------------- | --------- |
+| POCKETBASE_ENCRYPTION_KEY     | Valid 32 character AES key. Used to encrypt secrets                                 |           |
+| POCKETBASE_CRON_SYNC_SCHEDULE | Valid cron expression. Sets how often trails are synced from 3rd party integrations | 0 2 * * * |
 
 ## Frontend
 
-| Environment Variable  | Description                                                          | Default                            |
-| --------------------- | -------------------------------------------------------------------- | ---------------------------------- |
-| ORIGIN                | Public IP or hostname (including the port) of your wanderer instance | http://localhost:3000              |
-| BODY_SIZE_LIMIT       | Maximum allowed upload size                                          | Infinity                           |
-| PUBLIC_POCKETBASE_URL | IP or hostname (including the port) of your wanderer instance        | http://db:8090                     |
-| PUBLIC_DISABLE_SIGNUP | Disables signup option for new users                                 | false                              |
-| PUBLIC_VALHALLA_URL   | Public IP or hostname (including the port) of a valhalla instance    | https://valhalla1.openstreetmap.de |
-| PUBLIC_NOMINATIM_URL  | Public IP or hostname (including the port) of a nominatim instance   | https://nominatim.openstreetmap.org|
-| UPLOAD_FOLDER         | Folder from which wanderer auto-uploads trails                       | /app/uploads                       |
-| UPLOAD_USER           | Username for the account with which wanderer auto-uploads trails     |                                    |
-| UPLOAD_PASSWORD       | Password for the account with which wanderer auto-uploads trails     |                                    |
+| Environment Variable  | Description                                                          | Default                             |
+| --------------------- | -------------------------------------------------------------------- | ----------------------------------- |
+| ORIGIN                | Public IP or hostname (including the port) of your wanderer instance | http://localhost:3000               |
+| BODY_SIZE_LIMIT       | Maximum allowed upload size                                          | Infinity                            |
+| PUBLIC_POCKETBASE_URL | IP or hostname (including the port) of your wanderer instance        | http://db:8090                      |
+| PUBLIC_DISABLE_SIGNUP | Disables signup option for new users                                 | false                               |
+| PUBLIC_VALHALLA_URL   | Public IP or hostname (including the port) of a valhalla instance    | https://valhalla1.openstreetmap.de  |
+| PUBLIC_NOMINATIM_URL  | Public IP or hostname (including the port) of a nominatim instance   | https://nominatim.openstreetmap.org |
+| UPLOAD_FOLDER         | Folder from which wanderer auto-uploads trails                       | /app/uploads                        |
+| UPLOAD_USER           | Username for the account with which wanderer auto-uploads trails     |                                     |
+| UPLOAD_PASSWORD       | Password for the account with which wanderer auto-uploads trails     |                                     |

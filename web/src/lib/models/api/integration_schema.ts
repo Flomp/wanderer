@@ -2,7 +2,7 @@ import { z, ZodType } from "zod";
 import type { Integration } from "../integration";
 
 const StravaSchema = z.object({
-    clientId: z.number({ coerce: true }).int().positive(),
+    clientId: z.number({ coerce: true }).int().nonnegative(),
     clientSecret: z.string().length(40).optional().or(z.literal('')),
     routes: z.boolean(),
     activities: z.boolean(),
