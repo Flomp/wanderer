@@ -356,14 +356,14 @@ func generateTourGPX(detailedTour *DetailedKomootTour) (*filesystem.File, error)
 	var points []*gpx.WptType
 
 	for _, item := range detailedTour.Embedded.Coordinates.Items {
-		t := detailedTour.Date.Unix() + int64(item.T)
+		t := detailedTour.Date.Unix() + int64(item.T/1000)
 
 		points = append(points, &gpx.WptType{Lat: item.Lat, Lon: item.Lng, Ele: item.Alt, Time: time.Unix(t, 0)})
 	}
 
 	gpx := &gpx.GPX{
 		Version: "1.1",
-		Creator: "Strava GPX Exporter",
+		Creator: "komoot GPX Exporter",
 		Trk: []*gpx.TrkType{
 			{
 				Name: detailedTour.Name,
