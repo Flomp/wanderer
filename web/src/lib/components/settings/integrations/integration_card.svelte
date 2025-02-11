@@ -22,7 +22,7 @@
         description,
     }: Props = $props();
 </script>
-<div class="border border-input-border rounded-lg p-4 space-y-4">
+<div class="border border-input-border rounded-lg p-4 space-y-4 flex flex-col justify-between">
     <img class="h-20" src={img} alt="integration logo"/>
     <div>
         <h5 class="text-xl font-semibold">{title}</h5>

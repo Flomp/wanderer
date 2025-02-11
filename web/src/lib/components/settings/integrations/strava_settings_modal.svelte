@@ -37,6 +37,7 @@
             schema: StravaSchema,
         }),
         onSubmit: async (form) => {
+            form.active = integration?.strava?.active ?? form.active
             onsave?.(form);
             modal.closeModal();
         },

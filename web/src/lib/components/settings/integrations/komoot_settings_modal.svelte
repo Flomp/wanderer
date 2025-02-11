@@ -38,6 +38,7 @@
             schema: KomootSchema,
         }),
         onSubmit: async (form) => {
+            form.active = integration?.komoot?.active ?? form.active
             onsave?.(form);
             modal.closeModal();
         },

@@ -1,6 +1,5 @@
 import { IntegrationUpdateSchema } from "$lib/models/api/integration_schema";
 import type { Integration } from "$lib/models/integration";
-import { pb } from "$lib/pocketbase";
 import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
