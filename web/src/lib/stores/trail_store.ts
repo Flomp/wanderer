@@ -43,12 +43,12 @@ export async function trails_recommend(size: number, f: (url: RequestInfo | URL,
     }), {
         method: 'GET',
     })
-    const response: Trail[] = await r.json()
 
     if (!r.ok) {
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
+    const response: Trail[] = await r.json()
 
     return response;
 
