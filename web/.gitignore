@@ -17,3 +17,4 @@ playwright-report/
 blob-report/
 playwright/.cache/
 playwright/.auth
+__debug_bin*

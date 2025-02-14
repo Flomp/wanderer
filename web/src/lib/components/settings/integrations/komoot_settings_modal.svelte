@@ -70,11 +70,11 @@
                 error={$errors.password}
             ></TextField>
             <div class="flex gap-x-4">
-                <Toggle name="planned" label={$_("completed-tours", { values: { n: 2 } })}
+                <Toggle name="planned" label={$_("planned-tours", { values: { n: 2 } })}
                 ></Toggle>
                 <Toggle
                     name="completed"
-                    label={$_("planned-tours", { values: { n: 2 } })}
+                    label={$_("completed-tours", { values: { n: 2 } })}
                 ></Toggle>
             </div>
         </form>
