@@ -24,8 +24,6 @@ export function show_toast(newToast: Toast, duration: number = 3000) {
 }
 
 export function closeToast(toast: Toast) {
-    const toastIndex = toastStore.toasts.findIndex(t => t.id == toast.id)
-    console.log(toastIndex);
-    
+    const toastIndex = toastStore.toasts.findIndex(t => t.id == toast.id)    
     toastStore.toasts.splice(toastIndex, 1)
 }
