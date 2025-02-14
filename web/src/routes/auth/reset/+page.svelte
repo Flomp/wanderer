@@ -5,7 +5,7 @@
     import LogoTextTwoLineDark from "$lib/components/logo/logo_text_two_line_dark.svelte";
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
     import { theme } from "$lib/stores/theme_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { users_reset_password } from "$lib/stores/user_store";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";

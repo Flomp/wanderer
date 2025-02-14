@@ -16,7 +16,7 @@ setup('create user', async ({ page }) => {
 
     } catch (e) {
         if (e instanceof Error && e.message.includes("No resource with given identifier found")) {
-            console.log("Already logged in!")
+            console.error("Already logged in!")
         } else {
             throw e
         }

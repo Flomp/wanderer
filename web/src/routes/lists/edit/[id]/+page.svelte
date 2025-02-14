@@ -21,7 +21,7 @@
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
     import { theme } from "$lib/stores/theme_store.js";
-    import { show_toast } from "$lib/stores/toast_store.js";
+    import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import {
         trail_share_create,
         trail_share_index,

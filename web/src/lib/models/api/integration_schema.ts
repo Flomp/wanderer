@@ -12,7 +12,9 @@ const StravaSchema = z.object({
 const KomootSchema = z.object({
     email: z.string().email(),
     password: z.string(),
-    active: z.boolean()
+    completed: z.boolean(),
+    planned: z.boolean(),
+    active: z.boolean(),
 })
 
 const IntegrationCreateSchema = z.object({

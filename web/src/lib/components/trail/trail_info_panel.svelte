@@ -25,7 +25,7 @@
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import { pb } from "$lib/pocketbase";
     import { theme } from "$lib/stores/theme_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import * as M from "maplibre-gl";
     import "photoswipe/style.css";
     import { onMount } from "svelte";

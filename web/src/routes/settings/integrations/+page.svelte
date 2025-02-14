@@ -14,7 +14,7 @@
         integrations_create,
         integrations_update,
     } from "$lib/stores/integration_store.js";
-    import { show_toast } from "$lib/stores/toast_store.js";
+    import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import { _ } from "svelte-i18n";
 
     let { data } = $props();
@@ -102,9 +102,7 @@
             }
 
             show_toast({
-                text:
-                    "strava " +
-                    $_("integration-disabled"),
+                text: "strava " + $_("integration-disabled"),
                 icon: "check",
                 type: "success",
             });
@@ -117,9 +115,13 @@
         }
         if (value) {
             try {
-                await pb.send("/integration/komoot/login", {
+                const r = await fetch("/api/v1/integration/komoot/login", {
                     method: "GET",
                 });
+
+                if (!r.ok) {
+                    throw Error();
+                }
             } catch (e) {
                 komootToggleValue = false;
                 show_toast({
@@ -127,6 +129,7 @@
                     icon: "close",
                     type: "error",
                 });
+                return;
             }
             integration.komoot.active = true;
         } else {
@@ -140,6 +143,7 @@
                 icon: "close",
                 type: "error",
             });
+            return;
         }
 
         show_toast({

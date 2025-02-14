@@ -7,7 +7,7 @@
     import LogoTextTwoLineLight from "$lib/components/logo/logo_text_two_line_light.svelte";
     import type { User } from "$lib/models/user";
     import { theme } from "$lib/stores/theme_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { login } from "$lib/stores/user_store";
     import { APIError } from "$lib/util/api_util";
     import { validator } from "@felte/validator-zod";

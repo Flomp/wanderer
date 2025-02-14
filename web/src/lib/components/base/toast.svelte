@@ -1,37 +1,33 @@
 <script lang="ts">
-    import { toast } from "$lib/stores/toast_store";
+    import { closeToast, toastStore } from "$lib/stores/toast_store.svelte";
     import { fade } from "svelte/transition";
-
-    function closeToast() {
-        toast.set(null);
-    }
 </script>
 
-{#if $toast}
+{#each toastStore.toasts as t, i}
     <div
-        class="fixed px-4 py-3 shadow-xl rounded-xl border bottom-4 right-4 bg-white text-gray-500 flex items-center max-w-md"
-        style="z-index: 1001;"
+        class="fixed px-4 py-3 shadow-xl rounded-xl border right-4 bg-white text-gray-500 flex items-center max-w-md"
+        style="z-index: 1001; bottom: {16 + i * 72}px"
         in:fade={{ duration: 250 }}
         out:fade={{ duration: 250 }}
     >
         <i
-            class="fa fa-{$toast.icon} p-3 mr-2 rounded-lg"
-            class:success-toast={$toast.type == "success"}
-            class:error-toast={$toast.type == "error"}
+            class="fa fa-{t.icon} p-3 mr-2 rounded-lg"
+            class:success-toast={t.type == "success"}
+            class:error-toast={t.type == "error"}
         ></i>
         <p class="mr-4">
-            {$toast.text}
+            {t.text}
         </p>
         <button
             type="button"
             class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white ml-6"
-            onclick={closeToast}
+            onclick={() => closeToast(t)}
         >
             <i class="fa fa-close"></i>
             <span class="sr-only">Close modal</span>
         </button>
     </div>
-{/if}
+{/each}
 
 <style>
     .success-toast {

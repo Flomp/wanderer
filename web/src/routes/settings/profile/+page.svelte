@@ -6,7 +6,7 @@
     import Textarea from "$lib/components/base/textarea.svelte";
     import type { Category } from "$lib/models/category.js";
     import { settings_update } from "$lib/stores/settings_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import { currentUser, users_update } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";

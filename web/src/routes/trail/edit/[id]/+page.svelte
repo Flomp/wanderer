@@ -28,7 +28,7 @@
         lists_remove_trail,
     } from "$lib/stores/list_store";
     import { summitLog } from "$lib/stores/summit_log_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import {
         trail,
         trails_create,
@@ -106,12 +106,12 @@
         expand: z
             .object({
                 gpx_data: z.string().optional(),
-                summit_logs: z.array(SummitLogCreateSchema),
+                summit_logs: z.array(SummitLogCreateSchema).optional(),
                 waypoints: z.array(
                     WaypointCreateSchema.extend({
                         marker: z.any().optional(),
                     }),
-                ),
+                ).optional(),
             })
             .optional(),
     });
@@ -188,12 +188,13 @@
                     );
                     form.id = createdTrail.id;
                 } else {
-                    await trails_update(
+                    const updatedTrail = await trails_update(
                         $trail,
                         form as Trail,
                         photoFiles,
                         gpxFile,
                     );
+                    setFields(updatedTrail)
                 }
 
                 listAddEnabled = true;
@@ -294,7 +295,7 @@
                 type: selectedFile.type,
             });
 
-            $formData.expand!.summit_logs.push(log);
+            $formData.expand!.summit_logs?.push(log);
 
             if (parseResult.gpx.rte?.length && !parseResult.gpx.trk) {
                 parseResult.gpx.trk = [
@@ -328,7 +329,7 @@
     }
 
     function clearWaypoints() {
-        for (const waypoint of $formData.expand!.waypoints) {
+        for (const waypoint of $formData.expand!.waypoints ?? []) {
             waypoint.marker?.remove();
         }
         $formData.expand!.waypoints = [];
@@ -395,23 +396,23 @@
     }
 
     function deleteWaypoint(index: number) {
-        $formData.expand!.waypoints.splice(index, 1);
+        $formData.expand!.waypoints?.splice(index, 1);
         $formData.waypoints.splice(index, 1);
         $formData.expand!.waypoints = $formData.expand!.waypoints;
         // updateTrailOnMap();
     }
 
     function saveWaypoint(savedWaypoint: Waypoint) {
-        let editedWaypointIndex = $formData.expand!.waypoints.findIndex(
+        let editedWaypointIndex = $formData.expand!.waypoints?.findIndex(
             (s) => s.id == savedWaypoint.id,
-        );
+        ) ?? -1;
 
         if (editedWaypointIndex >= 0) {
-            $formData.expand!.waypoints[editedWaypointIndex] = savedWaypoint;
+            $formData.expand!.waypoints![editedWaypointIndex] = savedWaypoint;
         } else {
             savedWaypoint.id = cryptoRandomString({ length: 15 });
             $formData.expand!.waypoints = [
-                ...$formData.expand!.waypoints,
+                ...$formData.expand!.waypoints ?? [],
                 savedWaypoint,
             ];
 
@@ -421,17 +422,17 @@
 
     function moveMarker(marker: M.Marker, wpId?: string) {
         const position = marker.getLngLat();
-        const editableWaypointIndex = $formData.expand!.waypoints.findIndex(
+        const editableWaypointIndex = $formData.expand!.waypoints?.findIndex(
             (w) => w.id == wpId,
-        );
+        ) ?? -1;
         const editableWaypoint =
-            $formData.expand!.waypoints[editableWaypointIndex];
+            $formData.expand!.waypoints![editableWaypointIndex];
         if (!editableWaypoint) {
             return;
         }
         editableWaypoint.lat = position.lat;
         editableWaypoint.lon = position.lng;
-        $formData.expand!.waypoints = [...$formData.expand!.waypoints];
+        $formData.expand!.waypoints = [...$formData.expand!.waypoints ?? []];
         // updateTrailOnMap();
     }
 
@@ -441,16 +442,16 @@
     }
 
     function saveSummitLog(log: SummitLog) {
-        let editedSummitLogIndex = $formData.expand!.summit_logs.findIndex(
+        let editedSummitLogIndex = $formData.expand!.summit_logs?.findIndex(
             (s) => s.id == log.id,
         );
 
-        if (editedSummitLogIndex >= 0) {
-            $formData.expand!.summit_logs[editedSummitLogIndex] = log;
+        if (editedSummitLogIndex ?? 0 >= 0) {
+            $formData.expand!.summit_logs![editedSummitLogIndex!] = log;
         } else {
             log.id = cryptoRandomString({ length: 15 });
             $formData.expand!.summit_logs = [
-                ...$formData.expand!.summit_logs,
+                ...$formData.expand!.summit_logs ?? [],
                 log,
             ];
         }
@@ -465,7 +466,7 @@
             summitLog.set(currentSummitLog);
             summitLogModal.openModal();
         } else if (item.value === "delete") {
-            $formData.expand!.summit_logs.splice(index, 1);
+            $formData.expand!.summit_logs?.splice(index, 1);
             $formData.summit_logs.splice(index, 1);
             $formData.expand!.summit_logs = $formData.expand!.summit_logs;
         }

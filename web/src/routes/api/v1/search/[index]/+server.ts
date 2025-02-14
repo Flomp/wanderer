@@ -7,7 +7,7 @@ export async function POST(event: RequestEvent) {
         const r = await event.locals.ms.index(event.params.index as string).search(data.q, data.options);       
         return json(r);
     } catch (e: any) {
-        console.log(e);
+        console.error(e);
         
         throw error(e.httpStatus, e)
     }

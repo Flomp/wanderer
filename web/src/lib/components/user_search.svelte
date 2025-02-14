@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { User } from "$lib/models/user";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { users_search } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
     import Search, { type SearchItem } from "./base/search.svelte";

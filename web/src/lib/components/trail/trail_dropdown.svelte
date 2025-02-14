@@ -7,7 +7,7 @@
         lists_index,
         lists_remove_trail,
     } from "$lib/stores/list_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { trails_delete } from "$lib/stores/trail_store";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";

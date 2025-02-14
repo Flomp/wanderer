@@ -16,6 +16,8 @@ export interface StravaIntegration extends BaseIntegration {
 export interface KomootIntegration extends BaseIntegration {
     email: string,
     password: string,
+    completed: boolean,
+    planned: boolean
 }
 
 

@@ -150,7 +150,6 @@ export async function searchLocationReverse(lat: number, lon: number) {
 
 function getLocationDescription(address: Address) {
     let description = ""
-    console.log(address);
 
     if (address.country) {
         description += address.country;

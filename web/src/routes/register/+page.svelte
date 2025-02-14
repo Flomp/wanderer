@@ -9,7 +9,7 @@
     import type { User } from "$lib/models/user";
     import { settings_update } from "$lib/stores/settings_store";
     import { theme } from "$lib/stores/theme_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { login, users_create } from "$lib/stores/user_store";
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";

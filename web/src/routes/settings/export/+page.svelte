@@ -5,7 +5,7 @@
     import { } from "$lib/components/settings/upload_dialog.svelte";
     import TrailExportModal from "$lib/components/trail/trail_export_modal.svelte";
     import { theme } from "$lib/stores/theme_store";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { fetchGPX, trails_index, trails_upload } from "$lib/stores/trail_store";
     import { processUploadQueue, uploadStore, type Upload } from "$lib/stores/upload_store.svelte";
     import { getFileURL, saveAs } from "$lib/util/file_util";

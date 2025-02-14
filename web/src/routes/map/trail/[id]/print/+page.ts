@@ -11,7 +11,7 @@ export const load: Load = async ({ params, fetch }) => {
                 message: e.status == 404 ? 'Not found' : e.message
             });
         }
-        console.log(e);
+        console.error(e);
 
     }
 };

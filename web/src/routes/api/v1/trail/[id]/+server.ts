@@ -16,17 +16,7 @@ export async function GET(event: RequestEvent) {
         }
 
         // remove time from dates
-        r.date = r.date?.substring(0, 10) ?? ""
-        for (const log of r.expand?.summit_logs ?? []) {
-            log.date = log.date.substring(0, 10)
-
-            if (!log.expand) {
-                log.expand = {} as any
-            }
-            if (log.author) {
-                log.expand!.author = await pb.collection("users_anonymous").getOne(log.author);
-            }
-        }
+        await enrichRecord(r);
 
         // sort waypoints by distance
         r.expand?.waypoints?.sort((a, b) => (a.distance_from_start ?? 0) - (b.distance_from_start ?? 0))
@@ -36,10 +26,10 @@ export async function GET(event: RequestEvent) {
     }
 }
 
-
 export async function POST(event: RequestEvent) {
     try {
         const r = await update<Trail>(event, TrailUpdateSchema, Collection.trails)
+        await enrichRecord(r)
         return json(r);
     } catch (e: any) {
         throw handleError(e)
@@ -52,5 +42,21 @@ export async function DELETE(event: RequestEvent) {
         return json(r);
     } catch (e: any) {
         throw handleError(e)
+    }
+}
+
+
+
+async function enrichRecord(r: Trail) {
+    r.date = r.date?.substring(0, 10) ?? "";
+    for (const log of r.expand?.summit_logs ?? []) {
+        log.date = log.date.substring(0, 10);
+
+        if (!log.expand) {
+            log.expand = {} as any;
+        }
+        if (log.author) {
+            log.expand!.author = await pb.collection("users_anonymous").getOne(log.author);
+        }
     }
 }

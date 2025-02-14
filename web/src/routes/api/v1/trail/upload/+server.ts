@@ -50,7 +50,7 @@ export async function PUT(event: RequestEvent) {
         const fileName = (data.get("name") as string | null)?.length ? data.get("name") as string : "file"
         log._gpx = new File([gpxFile], fileName);
 
-        trail.expand!.summit_logs.push(log);
+        trail.expand!.summit_logs?.push(log);
 
 
         try {

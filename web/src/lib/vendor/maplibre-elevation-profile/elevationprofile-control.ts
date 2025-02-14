@@ -72,9 +72,7 @@ export class ElevationProfileControl implements IControl {
         this.settings = { ...options };
     }
 
-    toggleTheme(options: ElevationProfileControlOptions) {
-        console.log(options);
-        
+    toggleTheme(options: ElevationProfileControlOptions) {        
         this.settings = { ...this.settings, ...options };
         this.elevationProfileChart?.toggleTheme(this.settings)
     }

@@ -3,7 +3,7 @@
 
     import { WaypointCreateSchema } from "$lib/models/api/waypoint_schema";
     import { convertDMSToDD } from "$lib/models/gpx/utils";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { waypoint } from "$lib/stores/waypoint_store";
     import { cloneDeep } from "$lib/util/deep_util";
     import { icons } from "$lib/util/icon_util";

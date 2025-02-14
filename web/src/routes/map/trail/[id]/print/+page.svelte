@@ -8,7 +8,7 @@
     import LogoText from "$lib/components/logo/logo_text.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import type { Settings } from "$lib/models/settings";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { trail } from "$lib/stores/trail_store";
     import {
         formatDistance,

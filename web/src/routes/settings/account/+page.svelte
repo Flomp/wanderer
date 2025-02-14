@@ -4,7 +4,7 @@
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import EmailModal from "$lib/components/settings/email_modal.svelte";
     import PasswordModal from "$lib/components/settings/password_modal.svelte";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import {
         currentUser,
         logout,

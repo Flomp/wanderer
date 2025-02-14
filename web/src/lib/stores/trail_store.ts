@@ -304,7 +304,10 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         throw new APIError(r.status, response.message, response.detail)
     }
 
+    const response: Trail = await r.json();
 
+    model.photos = response.photos
+    model.gpx = response.gpx
 
     trail.set(model);
 
@@ -460,7 +463,7 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: b
             const gpxData: string = await fetchGPX(t);
             t.expand!.gpx_data = gpxData;
         }
-        
+
         trails.push(t)
     }
     return trails

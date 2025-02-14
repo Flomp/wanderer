@@ -5,7 +5,7 @@
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import TextField from "../base/text_field.svelte";
-    import { show_toast } from "$lib/stores/toast_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
 
     let modal: Modal;
 

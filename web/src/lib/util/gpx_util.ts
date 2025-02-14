@@ -35,7 +35,7 @@ export async function gpx2trail(gpxString: string, fallbackName?: string) {
         wp.id = cryptoRandomString({ length: 15 });
         wp.name = wpt.name ?? ""
         wp.description = wpt.desc;
-        trail.expand!.waypoints.push(wp);
+        trail.expand!.waypoints?.push(wp);
     }
 
     const totals = gpx.features
@@ -158,7 +158,7 @@ export async function fromFIT(fitData: ArrayBuffer) {
     return new Promise<string>((resolve, reject) => easyFit.parse(fitData, function (error, data) {
 
         if (error) {
-            console.log(error);
+            console.error(error);
             reject(error)
         }
 
