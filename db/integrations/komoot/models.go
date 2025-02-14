@@ -3,9 +3,11 @@ package komoot
 import "time"
 
 type KomootIntegration struct {
-	Active   bool   `json:"active"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Active    bool   `json:"active"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	Planned   bool   `json:"planned"`
+	Completed bool   `json:"completed"`
 }
 
 type LoginResponse struct {

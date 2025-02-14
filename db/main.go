@@ -735,7 +735,10 @@ func bootstrapMeilisearchTrails(app *pocketbase.PocketBase, client meilisearch.S
 		return err
 	}
 
-	client.Index("trails").DeleteAllDocuments()
+	_, err := client.Index("trails").DeleteAllDocuments()
+	if err != nil {
+		return err
+	}
 	for _, trail := range trails {
 		author, err := app.Dao().FindRecordById("users", trail.GetString(("author")))
 		if err != nil {

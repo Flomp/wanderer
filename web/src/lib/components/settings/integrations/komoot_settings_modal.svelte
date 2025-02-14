@@ -1,6 +1,7 @@
 <script lang="ts">
     import Modal from "$lib/components/base/modal.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
+    import Toggle from "$lib/components/base/toggle.svelte";
     import { KomootSchema } from "$lib/models/api/integration_schema";
     import type {
         Integration,
@@ -20,7 +21,7 @@
     let modal: Modal;
 
     export function openModal() {
-        errors.set({})
+        errors.set({});
         modal.openModal();
     }
 
@@ -32,13 +33,15 @@
         initialValues: {
             email: integration?.komoot?.email ?? "",
             password: integration?.komoot?.password ?? "",
+            completed: integration?.komoot?.completed ?? true,
+            planned: integration?.komoot?.planned ?? true,
             active: integration?.komoot?.active ?? false,
         },
         extend: validator({
             schema: KomootSchema,
         }),
         onSubmit: async (form) => {
-            form.active = integration?.komoot?.active ?? form.active
+            form.active = integration?.komoot?.active ?? form.active;
             onsave?.(form);
             modal.closeModal();
         },
@@ -66,6 +69,14 @@
                 type="password"
                 error={$errors.password}
             ></TextField>
+            <div class="flex gap-x-4">
+                <Toggle name="planned" label={$_("completed-tours", { values: { n: 2 } })}
+                ></Toggle>
+                <Toggle
+                    name="completed"
+                    label={$_("planned-tours", { values: { n: 2 } })}
+                ></Toggle>
+            </div>
         </form>
     {/snippet}
     {#snippet footer()}

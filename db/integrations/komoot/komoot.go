@@ -36,7 +36,10 @@ func SyncKomoot(app *pocketbase.PocketBase) error {
 
 		userId := i.GetString("user")
 		komootString := i.GetString("komoot")
-		var komootIntegration KomootIntegration
+		komootIntegration := KomootIntegration{
+			Planned:   true,
+			Completed: true,
+		}
 		json.Unmarshal([]byte(komootString), &komootIntegration)
 
 		if !komootIntegration.Active || komootIntegration.Email == "" || komootIntegration.Password == "" {
@@ -67,7 +70,7 @@ func SyncKomoot(app *pocketbase.PocketBase) error {
 				break
 			}
 
-			hasNewTours, err = syncTrailWithTours(app, k, userId, tours)
+			hasNewTours, err = syncTrailWithTours(app, k, komootIntegration, userId, tours)
 			if err != nil {
 				warning := fmt.Sprintf("error syncing komoot tours with trails: %v\n", err)
 				fmt.Print(warning)
@@ -172,14 +175,14 @@ func (k *KomootApi) fetchDetailedTour(tour KomootTour) (*DetailedKomootTour, err
 	return data, nil
 }
 
-func syncTrailWithTours(app *pocketbase.PocketBase, k *KomootApi, user string, tours []KomootTour) (bool, error) {
+func syncTrailWithTours(app *pocketbase.PocketBase, k *KomootApi, i KomootIntegration, user string, tours []KomootTour) (bool, error) {
 	hasNewTours := false
 	for _, tour := range tours {
 		trails, err := app.Dao().FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": strconv.Itoa(int(tour.ID))})
 		if err != nil {
 			return hasNewTours, err
 		}
-		if len(trails) != 0 {
+		if len(trails) != 0 || (tour.Type == "tour_planned" && !i.Planned) || (tour.Type == "tour_recorded" && !i.Completed) {
 			continue
 		}
 		hasNewTours = true
