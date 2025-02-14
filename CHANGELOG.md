@@ -1,5 +1,15 @@
-# v0.15.0
+# v0.15.1
+## Features
+- You can now choose to sync only completed or planned tours from komoot
+- Toast messages now stack
 
+## Bug fixes
+- Fixes bug that prevented the komoot integration from toggling on
+- Fixes bug that caused orphaned summit logs
+- Fixes bug that prevented users from saving an updated trail
+
+
+# v0.15.0
 ## Features
 - Integrations: you can now sync your strava and komoot trails directly with wanderer. [Learn more](https://wanderer.to/guides/integrations/).
 - Updates the trail details view to give a clearer idea of the trail's course
