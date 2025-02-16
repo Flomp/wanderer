@@ -35,7 +35,7 @@ type StravaRoute struct {
 	Description         string      `json:"description"`
 	Distance            float32     `json:"distance"`
 	ElevationGain       float32     `json:"elevation_gain"`
-	ID                  int         `json:"id"`
+	ID                  int64       `json:"id"`
 	IDStr               string      `json:"id_str"`
 	Map                 Map         `json:"map"`
 	Name                string      `json:"name"`
@@ -52,7 +52,7 @@ type StravaRoute struct {
 }
 
 type Athlete struct {
-	ID            int       `json:"id"`
+	ID            int64     `json:"id"`
 	ResourceState int       `json:"resource_state"`
 	Firstname     string    `json:"firstname"`
 	Lastname      string    `json:"lastname"`
@@ -75,7 +75,7 @@ type Map struct {
 }
 
 type AthletePrEffort struct {
-	PrActivityID  int       `json:"pr_activity_id"`
+	PrActivityID  int64     `json:"pr_activity_id"`
 	PrElapsedTime int       `json:"pr_elapsed_time"`
 	PrDate        time.Time `json:"pr_date"`
 	EffortCount   int       `json:"effort_count"`
@@ -92,7 +92,7 @@ type AthleteSegmentStats struct {
 }
 
 type Segments struct {
-	ID                  int                 `json:"id"`
+	ID                  int64               `json:"id"`
 	Name                string              `json:"name"`
 	ActivityType        string              `json:"activity_type"`
 	Distance            float32             `json:"distance"`
@@ -164,7 +164,7 @@ type StravaActivity struct {
 	DeviceWatts          bool      `json:"device_watts"`
 	HasHeartrate         bool      `json:"has_heartrate"`
 	AverageHeartrate     float64   `json:"average_heartrate"`
-	MaxHeartrate         int       `json:"max_heartrate"`
+	MaxHeartrate         float64   `json:"max_heartrate"`
 	MaxWatts             int       `json:"max_watts"`
 	PrCount              int       `json:"pr_count"`
 	TotalPhotoCount      int       `json:"total_photo_count"`
@@ -242,7 +242,7 @@ type SegmentActivity struct {
 }
 
 type Segment struct {
-	ID            int       `json:"id"`
+	ID            int64     `json:"id"`
 	ResourceState int       `json:"resource_state"`
 	Name          string    `json:"name"`
 	ActivityType  string    `json:"activity_type"`
