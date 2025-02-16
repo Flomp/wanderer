@@ -2,6 +2,16 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.15.2
+### Features
+- Password fields now display a hint when the maximum length of 72 characters is exceeded
+
+### Bug fixes
+- Fixes bug that prevented strava activities with heartrate data being imported
+- Fixes bug that prevented users from creating new summit logs
+- Fixes unclear error messages when saving integrations
+- Fixes login issues for wanderer instances hosted via http
+
 ## v0.15.1
 ### Features
 - You can now choose to sync only completed or planned tours from komoot

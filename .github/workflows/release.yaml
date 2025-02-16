@@ -79,11 +79,11 @@ jobs:
           VERSION: ${{ needs.versioning.outputs.version }}
         run: |
           # Build db image
-          cd db
-          env GOOS=linux GOARCH=arm64 go build -o pocketbase_arm64
-          env GOOS=linux GOARCH=amd64 go build -o pocketbase_amd64
-          cd ..
-          docker buildx build db/ --no-cache -t flomp/wanderer-db:$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64 --push
+          # cd db
+          # env GOOS=linux GOARCH=arm64 go build -o pocketbase_arm64
+          # env GOOS=linux GOARCH=amd64 go build -o pocketbase_amd64
+          # cd ..
+          # docker buildx build db/ --no-cache -t flomp/wanderer-db:$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64 --push
 
           # Build web image
           export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de

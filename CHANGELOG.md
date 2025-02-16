@@ -1,3 +1,14 @@
+# v0.15.2
+## Features
+- Password fields now have a hint if you surpass the maximum password length (72)
+
+## Bug fixes
+- Fixes bug that prevented strava activities with heartrate data being imported
+- Fixes bug that prevented users from creating new summit logs
+- Fixes unclear error messages when saving integrations
+- Fixes login issues for wanderer instances hosted via http
+
+
 # v0.15.1
 ## Features
 - You can now choose to sync only completed or planned tours from komoot
