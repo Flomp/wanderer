@@ -107,11 +107,13 @@
             .object({
                 gpx_data: z.string().optional(),
                 summit_logs: z.array(SummitLogCreateSchema).optional(),
-                waypoints: z.array(
-                    WaypointCreateSchema.extend({
-                        marker: z.any().optional(),
-                    }),
-                ).optional(),
+                waypoints: z
+                    .array(
+                        WaypointCreateSchema.extend({
+                            marker: z.any().optional(),
+                        }),
+                    )
+                    .optional(),
             })
             .optional(),
     });
@@ -194,7 +196,7 @@
                         photoFiles,
                         gpxFile,
                     );
-                    setFields(updatedTrail)
+                    setFields(updatedTrail);
                 }
 
                 listAddEnabled = true;
@@ -403,16 +405,17 @@
     }
 
     function saveWaypoint(savedWaypoint: Waypoint) {
-        let editedWaypointIndex = $formData.expand!.waypoints?.findIndex(
-            (s) => s.id == savedWaypoint.id,
-        ) ?? -1;
+        let editedWaypointIndex =
+            $formData.expand!.waypoints?.findIndex(
+                (s) => s.id == savedWaypoint.id,
+            ) ?? -1;
 
         if (editedWaypointIndex >= 0) {
             $formData.expand!.waypoints![editedWaypointIndex] = savedWaypoint;
         } else {
             savedWaypoint.id = cryptoRandomString({ length: 15 });
             $formData.expand!.waypoints = [
-                ...$formData.expand!.waypoints ?? [],
+                ...($formData.expand!.waypoints ?? []),
                 savedWaypoint,
             ];
 
@@ -422,9 +425,8 @@
 
     function moveMarker(marker: M.Marker, wpId?: string) {
         const position = marker.getLngLat();
-        const editableWaypointIndex = $formData.expand!.waypoints?.findIndex(
-            (w) => w.id == wpId,
-        ) ?? -1;
+        const editableWaypointIndex =
+            $formData.expand!.waypoints?.findIndex((w) => w.id == wpId) ?? -1;
         const editableWaypoint =
             $formData.expand!.waypoints![editableWaypointIndex];
         if (!editableWaypoint) {
@@ -432,7 +434,7 @@
         }
         editableWaypoint.lat = position.lat;
         editableWaypoint.lon = position.lng;
-        $formData.expand!.waypoints = [...$formData.expand!.waypoints ?? []];
+        $formData.expand!.waypoints = [...($formData.expand!.waypoints ?? [])];
         // updateTrailOnMap();
     }
 
@@ -445,16 +447,18 @@
         let editedSummitLogIndex = $formData.expand!.summit_logs?.findIndex(
             (s) => s.id == log.id,
         );
-
-        if (editedSummitLogIndex ?? 0 >= 0) {
+        if ((editedSummitLogIndex ?? -1) >= 0) {            
             $formData.expand!.summit_logs![editedSummitLogIndex!] = log;
-        } else {
+        } else {                        
             log.id = cryptoRandomString({ length: 15 });
             $formData.expand!.summit_logs = [
-                ...$formData.expand!.summit_logs ?? [],
+                ...($formData.expand!.summit_logs ?? []),
                 log,
             ];
         }
+
+        console.log($formData.expand?.summit_logs);
+        
     }
 
     function handleSummitLogMenuClick(
