@@ -103,9 +103,11 @@ const auth: Handle = async ({ event, resolve }) => {
   const response = await resolve(event)
 
   // send back the default 'pb_auth' cookie to the client with the latest store state
+  const secure = event.url.protocol === "https:" 
+
   response.headers.set(
     'set-cookie',
-    pb.authStore.exportToCookie({ httpOnly: false, secure: event.url.protocol === "https:" || event.url.hostname === "localhost", sameSite: "none" })
+    pb.authStore.exportToCookie({ httpOnly: false, secure: secure, sameSite: "Lax" })
   )
 
   return response
