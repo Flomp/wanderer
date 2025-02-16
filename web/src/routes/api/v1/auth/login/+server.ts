@@ -9,7 +9,7 @@ export async function POST(event: RequestEvent) {
         const safeData = z.object({
             email: z.string().email().optional(),
             username: z.string().optional(),
-            password: z.string()
+            password: z.string().min(8).max(72)
         }).refine(d => d.email !== undefined || d.username !== undefined).parse(data);
 
 

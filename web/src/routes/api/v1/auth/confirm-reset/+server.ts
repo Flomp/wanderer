@@ -8,8 +8,8 @@ export async function POST(event: RequestEvent) {
         const data = await event.request.json()
         const safeData = z.object({
             token: z.string(),
-            password: z.string(),
-            passwordConfirm: z.string()
+            password: z.string().min(8).max(72),
+            passwordConfirm: z.string().min(8).max(72)
         }).refine(d => d.password === d.passwordConfirm).parse(data)
         const r = await pb.collection('users').confirmPasswordReset(safeData.token, safeData.password, safeData.passwordConfirm);
         return json(r);

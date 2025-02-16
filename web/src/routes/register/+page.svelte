@@ -39,12 +39,20 @@
                     .string()
                     .min(1, "required")
                     .email("not-a-valid-email-address"),
-                password: z.string().min(
-                    8,
-                    $_("must-be-at-least-n-characters-long", {
-                        values: { n: 8 },
-                    }),
-                ),
+                password: z
+                    .string()
+                    .min(
+                        8,
+                        $_("must-be-at-least-n-characters-long", {
+                            values: { n: 8 },
+                        }),
+                    )
+                    .max(
+                        72,
+                        $_("must-be-at-most-n-characters-long", {
+                            values: { n: 72 },
+                        }),
+                    ),
             }),
         }),
         onSubmit: async (newUser) => {

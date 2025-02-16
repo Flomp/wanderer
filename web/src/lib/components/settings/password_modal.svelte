@@ -34,24 +34,48 @@
         extend: validator({
             schema: z
                 .object({
-                    oldPassword: z.string().min(
-                        8,
-                        $_("must-be-at-least-n-characters-long", {
-                            values: { n: 8 },
-                        }),
-                    ),
-                    password: z.string().min(
-                        8,
-                        $_("must-be-at-least-n-characters-long", {
-                            values: { n: 8 },
-                        }),
-                    ),
-                    passwordConfirm: z.string().min(
-                        8,
-                        $_("must-be-at-least-n-characters-long", {
-                            values: { n: 8 },
-                        }),
-                    ),
+                    oldPassword: z
+                        .string()
+                        .min(
+                            8,
+                            $_("must-be-at-least-n-characters-long", {
+                                values: { n: 8 },
+                            }),
+                        )
+                        .max(
+                            72,
+                            $_("must-be-at-most-n-characters-long", {
+                                values: { n: 72 },
+                            }),
+                        ),
+                    password: z
+                        .string()
+                        .min(
+                            8,
+                            $_("must-be-at-least-n-characters-long", {
+                                values: { n: 8 },
+                            }),
+                        )
+                        .max(
+                            72,
+                            $_("must-be-at-most-n-characters-long", {
+                                values: { n: 72 },
+                            }),
+                        ),
+                    passwordConfirm: z
+                        .string()
+                        .min(
+                            8,
+                            $_("must-be-at-least-n-characters-long", {
+                                values: { n: 8 },
+                            }),
+                        )
+                        .max(
+                            72,
+                            $_("must-be-at-most-n-characters-long", {
+                                values: { n: 72 },
+                            }),
+                        ),
                 })
                 .refine((d) => d.password === d.passwordConfirm, {
                     message: "passwords-must-match",

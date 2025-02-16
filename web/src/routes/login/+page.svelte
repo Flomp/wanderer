@@ -41,7 +41,15 @@
         extend: validator({
             schema: z.object({
                 username: z.string().min(1, "required"),
-                password: z.string().min(1, "required"),
+                password: z
+                    .string()
+                    .min(1, "required")
+                    .max(
+                        72,
+                        $_("must-be-at-most-n-characters-long", {
+                            values: { n: 72 },
+                        }),
+                    ),
             }),
         }),
         onSubmit: async (newUser) => {
