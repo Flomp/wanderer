@@ -3,6 +3,7 @@ import type { Trail } from '$lib/models/trail';
 import { pb } from '$lib/pocketbase';
 import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { ClientResponseError } from 'pocketbase';
 
 export async function GET(event: RequestEvent) {
     try {
@@ -12,6 +13,12 @@ export async function GET(event: RequestEvent) {
         const r = await event.fetch(pb.buildUrl("/trail/recommend?" + new URLSearchParams({
             size: safeSearchParams.size?.toString() ?? ""
         })));
+
+        if (!r.ok) {
+            const response = await r.json()
+            console.error(response)
+            throw new ClientResponseError({ status: response.code, response })
+        }
 
         const result: Trail[] = await r.json();
 

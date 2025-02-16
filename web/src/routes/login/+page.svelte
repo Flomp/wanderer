@@ -126,7 +126,7 @@
                     {loading}>Login</Button
                 >
             </div>
-            {#if env.PUBLIC_DISABLE_SIGNUP === "false"}
+            {#if env.PUBLIC_DISABLE_SIGNUP !== "true"}
                 <span
                     >{$_("no-account")}
                     <a class="text-blue-500 underline" href="/register"
