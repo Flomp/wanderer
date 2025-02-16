@@ -57,7 +57,9 @@
             });
         } catch (e) {
             show_toast({
-                text: $_("error-setting-up-strava-integration"),
+                text: $_("error-setting-up-integration", {
+                    values: { provider: key },
+                }),
                 icon: "close",
                 type: "error",
             });
