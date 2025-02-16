@@ -199,7 +199,14 @@
             const lon = page.url.searchParams.get("lon");
             map?.setZoom(14);
             map?.setCenter([parseFloat(lon!), parseFloat(lat!)]);
-        } else if (settings && settings.mapFocus == "trails") {
+        } else if (
+            settings &&
+            settings.mapFocus == "trails" &&
+            (maxBoundingBox.min_lon != 0 ||
+                maxBoundingBox.max_lat != 0 ||
+                maxBoundingBox.max_lon != 0 ||
+                maxBoundingBox.min_lat != 0)
+        ) {
             const boundingBox: M.LngLatBoundsLike = [
                 [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
                 [maxBoundingBox.max_lon, maxBoundingBox.min_lat],
