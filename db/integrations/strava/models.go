@@ -117,7 +117,7 @@ type Waypoints struct {
 	Categories        []string  `json:"categories"`
 	Title             string    `json:"title"`
 	Description       string    `json:"description"`
-	DistanceIntoRoute int       `json:"distance_into_route"`
+	DistanceIntoRoute float64   `json:"distance_into_route"`
 }
 
 type StravaActivity struct {
@@ -169,7 +169,7 @@ type StravaActivity struct {
 	PrCount              int       `json:"pr_count"`
 	TotalPhotoCount      int       `json:"total_photo_count"`
 	HasKudoed            bool      `json:"has_kudoed"`
-	SufferScore          int       `json:"suffer_score"`
+	SufferScore          float64   `json:"suffer_score"`
 }
 
 type DetailedStravaActivity struct {
@@ -219,7 +219,7 @@ type DetailedStravaActivity struct {
 	TotalPhotoCount          int                   `json:"total_photo_count"`
 	HasKudoed                bool                  `json:"has_kudoed"`
 	WorkoutType              int                   `json:"workout_type"`
-	SufferScore              any                   `json:"suffer_score"`
+	SufferScore              float64               `json:"suffer_score"`
 	Description              string                `json:"description"`
 	Calories                 float64               `json:"calories"`
 	SegmentEfforts           []SegmentEfforts      `json:"segment_efforts"`
