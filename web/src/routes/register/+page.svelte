@@ -80,10 +80,11 @@
             }
             try {
                 await invalidateAll();
-                const language = Object.values(Language).includes(
-                    window.navigator.language as Language,
-                )
-                    ? (window.navigator.language as Language)
+                const browserLang: Language = window.navigator.language
+                    .toLocaleLowerCase()
+                    .slice(0, 2) as Language;
+                const language = Object.values(Language).includes(browserLang)
+                    ? browserLang
                     : Language.en;
                 await settings_update({ id: page.data.settings.id, language });
             } catch (e) {
