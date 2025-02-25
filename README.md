@@ -7,7 +7,7 @@
 [![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/flomp/wanderer-web/latest)](https://github.com/Flomp/wanderer/)
 [![GitHub Repo stars](https://img.shields.io/github/stars/flomp/wanderer?style=social)](https://github.com/Flomp/wanderer/)
 [![Buy Me A Coffee](https://img.shields.io/badge/Support-wanderer-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/wanderertrails)
-[![Discord](https://img.shields.io/discord/1249895457396621332?style=social&logo=discord&label=Developer%20Discord)](https://discord.gg/Ew6Bkrbg)
+[![Discord](https://img.shields.io/discord/1249895457396621332?style=social&logo=discord&label=Developer%20Discord)](https://discord.gg/USSEBY98CP)
 
 [![Try the demo](https://img.shields.io/badge/Try_the_demo-EF2D5E?style=for-the-badge&logoColor=white&logo=rocket&color=2a56f1&labelColor=242734)](https://demo.wanderer.to)
 
