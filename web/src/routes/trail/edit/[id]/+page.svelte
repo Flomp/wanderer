@@ -127,7 +127,7 @@
 
     let autoRouting = $state(true);
 
-    let listAddEnabled = $state(false);
+    let savedAtLeastOnce = $state(false);
 
     const {
         form,
@@ -182,13 +182,14 @@
                         ?.trkpt?.at(0)?.$.lon;
                 }
 
-                if (page.params.id === "new") {
+                if (page.params.id === "new" && !savedAtLeastOnce) {
                     const createdTrail = await trails_create(
                         form as Trail,
                         photoFiles,
                         gpxFile,
                     );
-                    form.id = createdTrail.id;
+                    setFields(createdTrail);
+                    trail.set(createdTrail);
                 } else {
                     const updatedTrail = await trails_update(
                         $trail,
@@ -199,7 +200,7 @@
                     setFields(updatedTrail);
                 }
 
-                listAddEnabled = true;
+                savedAtLeastOnce = true;
                 show_toast({
                     type: "success",
                     icon: "check",
@@ -447,18 +448,15 @@
         let editedSummitLogIndex = $formData.expand!.summit_logs?.findIndex(
             (s) => s.id == log.id,
         );
-        if ((editedSummitLogIndex ?? -1) >= 0) {            
+        if ((editedSummitLogIndex ?? -1) >= 0) {
             $formData.expand!.summit_logs![editedSummitLogIndex!] = log;
-        } else {                        
+        } else {
             log.id = cryptoRandomString({ length: 15 });
             $formData.expand!.summit_logs = [
                 ...($formData.expand!.summit_logs ?? []),
                 log,
             ];
         }
-
-        console.log($formData.expand?.summit_logs);
-        
     }
 
     function handleSummitLogMenuClick(
@@ -1093,7 +1091,7 @@
             <Button
                 secondary={true}
                 tooltip={$_("save-your-trail-first")}
-                disabled={page.params.id == "new" && !listAddEnabled}
+                disabled={page.params.id == "new" && !savedAtLeastOnce}
                 type="button"
                 onclick={() => listSelectModal.openModal()}
                 ><i class="fa fa-plus mr-2"></i>{$_("add-to-list")}</Button

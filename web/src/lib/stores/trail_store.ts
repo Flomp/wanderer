@@ -184,9 +184,11 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
 
     trail.author = pb.authStore.model!.id
 
-    let r = await f('/api/v1/trail', {
+    let r = await f(`/api/v1/trail?` + new URLSearchParams({
+        expand: "category,waypoints,summit_logs,trail_share_via_trail",
+    }), {
         method: 'PUT',
-        body: JSON.stringify({ ...trail, expand: undefined }),
+        body: JSON.stringify({ ...trail }),
     })
 
     if (!r.ok) {
@@ -216,7 +218,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    return await r.json();
+    return model;
 
 }
 
