@@ -53,14 +53,23 @@
     } from "$lib/util/format_util";
     import { fromFile, gpx2trail } from "$lib/util/gpx_util";
 
+    import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
+    import {
+        searchLocationReverse,
+        searchLocations,
+    } from "$lib/stores/search_store.js";
     import { theme } from "$lib/stores/theme_store.js";
-    import { country_codes } from "$lib/util/country_code_util.js";
-    import { createAnchorMarker } from "$lib/util/maplibre_util";
+    import { getIconForLocation } from "$lib/util/icon_util.js";
+    import {
+        createAnchorMarker,
+        createEditTrailMapPopup,
+    } from "$lib/util/maplibre_util";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
@@ -70,17 +79,11 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
-    import { page } from "$app/state";
-    import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
-    import {
-        searchLocationReverse,
-        searchLocations,
-    } from "$lib/stores/search_store.js";
-    import { getIconForLocation } from "$lib/util/icon_util.js";
 
     let { data } = $props();
 
     let map: M.Map | undefined = $state();
+    let mapPopup: M.Popup | undefined;
     let mapTrail: Trail[] = $state([]);
     let lists = $state(data.lists);
 
@@ -389,12 +392,12 @@
         }
     }
 
-    function beforeWaypointModalOpen() {
+    function beforeWaypointModalOpen(lat?: number, lon?: number) {
         if (!map) {
             return;
         }
         const mapCenter = map.getCenter();
-        waypoint.set(new Waypoint(mapCenter.lat, mapCenter.lng));
+        waypoint.set(new Waypoint(lat ?? mapCenter.lat, lon ?? mapCenter.lng));
         waypointModal.openModal();
     }
 
@@ -536,14 +539,24 @@
     }
 
     async function handleMapClick(e: M.MapMouseEvent) {
-        if (!drawingActive) {
-            return;
-        }
-        const anchorCount = anchors.length;
-        if (anchorCount == 0) {
-            addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
+        if (!drawingActive) {            
+            if ((e.originalEvent.target as HTMLElement).tagName.toLowerCase() !== "canvas") {
+                return;
+            }
+            mapPopup?.remove();
+
+            mapPopup = createEditTrailMapPopup(e.lngLat, () => {
+                mapPopup?.remove();
+                beforeWaypointModalOpen(e.lngLat.lat, e.lngLat.lng);
+            });
+            mapPopup.addTo(map!);
         } else {
-            await addAnchorAndRecalculate(e.lngLat.lat, e.lngLat.lng);
+            const anchorCount = anchors.length;
+            if (anchorCount == 0) {
+                addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
+            } else {
+                await addAnchorAndRecalculate(e.lngLat.lat, e.lngLat.lng);
+            }
         }
     }
 
@@ -1030,7 +1043,7 @@
         <button
             class="btn-secondary"
             type="button"
-            onclick={beforeWaypointModalOpen}
+            onclick={() => beforeWaypointModalOpen()}
             ><i class="fa fa-plus mr-2"></i>{$_("add-waypoint")}</button
         >
         <hr class="border-separator" />

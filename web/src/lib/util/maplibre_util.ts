@@ -136,6 +136,35 @@ export function createAnchorMarker(lat: number, lon: number, index: number,
     return marker
 }
 
+export function createEditTrailMapPopup(lnglat: M.LngLat, onCreateWaypointClick: () => void) {
+    const popup = new M.Popup({ closeOnClick: false })
+        .setLngLat(lnglat)
+
+    const popupContent = document.createElement("div");
+    popupContent.className = "pt-1 pb-3 pl-3"
+    const popupH = document.createElement("h5")
+    popupH.classList.add("text-base", "font-medium", "mb-2");
+    popupH.textContent = `${lnglat.lat.toFixed(4)}, ${lnglat.lng.toFixed(4)}`;
+
+    const createWaypointButton = document.createElement("button");
+    createWaypointButton.className = "btn-secondary w-full mt-2 text-sm";
+    const deleteButtonIcon = document.createElement("i")
+    deleteButtonIcon.classList.add("fa", "fa-location-dot", "mr-2")
+    createWaypointButton.appendChild(deleteButtonIcon)
+    const createWaypointButtonText = document.createElement("span")
+    createWaypointButtonText.textContent = get(_)("create-waypoint")
+    createWaypointButton.appendChild(deleteButtonIcon)
+    createWaypointButton.appendChild(createWaypointButtonText)
+    createWaypointButton.addEventListener("click", onCreateWaypointClick)
+
+    popupContent.appendChild(popupH)
+    popupContent.appendChild(createWaypointButton)
+
+    popup.setDOMContent(popupContent)
+
+    return popup
+}
+
 export function createPopupFromTrail(trail: Trail) {
     const thumbnail = trail.photos.length
         ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
