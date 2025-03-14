@@ -35,6 +35,9 @@ class GpxMetricsComputation {
     );
 
     this.totalDistance += distance;
+
+    this.lastFilteredPointXY = point;
+
     const elevation = point.ele ?? 0;
     // @ts-ignore I know this.lastZ is not null
     const elevationDiff = elevation - this.lastZ;
@@ -52,7 +55,6 @@ class GpxMetricsComputation {
 
     this.totalDistanceSmoothed += distance;
 
-    this.lastFilteredPointXY = point;
     // @ts-ignore: I know this.lastFilteredZ is not null
     const elevationDiffSmoothed = elevation - this.lastFilteredZ;
 

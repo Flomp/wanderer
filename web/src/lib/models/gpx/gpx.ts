@@ -119,7 +119,7 @@ export default class GPX {
         const pointLength = points.length
         for (let i = 1; i < pointLength; i++) {
           const point = points[i];
-          metrics.addAndFilter(point)         
+          metrics.addAndFilter(point)
 
           totalLat += point.$.lat ?? 0;
           totalLon += point.$.lon ?? 0;
