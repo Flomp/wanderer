@@ -164,7 +164,7 @@ func (k *KomootApi) fetchTours(page int) ([]KomootTour, error) {
 }
 
 func (k *KomootApi) fetchDetailedTour(tour KomootTour) (*DetailedKomootTour, error) {
-	url := fmt.Sprintf("https://api.komoot.de/v007/tours/%d?_embedded=coordinates,way_types,surfaces,directions,participants,timeline&directions=v2&fields=timeline&format=coordinate_array&timeline_highlights_fields=tips,recommenders", tour.ID)
+	url := fmt.Sprintf("https://api.komoot.de/v007/tours/%d?_embedded=coordinates,way_types,surfaces,directions,participants,timeline,cover_images&directions=v2&fields=timeline&format=coordinate_array&timeline_highlights_fields=tips,recommenders", tour.ID)
 	body, err := sendRequest(url, k.buildHeader())
 	if err != nil {
 		return nil, err
@@ -234,9 +234,18 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		categoryId = category.Id
 	}
 
-	photo, err := fetchPhoto(detailedTour.MapImage.Src, "", "")
-	if err != nil {
-		return err
+	var photos []*filesystem.File
+	if len(detailedTour.Embedded.CoverImages.Embedded.Items) > 0 {
+		photos, err = fetchRoutePhotos(detailedTour)
+		if err != nil {
+			return err
+		}
+	} else {
+		photo, err := fetchPhoto(detailedTour.MapImage.Src, "", "")
+		if err != nil {
+			return err
+		}
+		photos = append(photos, photo)
 	}
 
 	diffculty := detailedTour.Difficulty.Grade
@@ -262,7 +271,9 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		"author":            user,
 	})
 
-	form.AddFiles("photos", photo)
+	for _, photo := range photos {
+		form.AddFiles("photos", photo)
+	}
 	form.AddFiles("gpx", gpx)
 
 	if err := form.Submit(); err != nil {
@@ -325,6 +336,23 @@ func createWaypointsFromTour(app *pocketbase.PocketBase, tour *DetailedKomootTou
 	}
 
 	return wpIds, nil
+}
+
+func fetchRoutePhotos(tour *DetailedKomootTour) ([]*filesystem.File, error) {
+
+	photos := make([]*filesystem.File, len(tour.Embedded.CoverImages.Embedded.Items))
+
+	for i, img := range tour.Embedded.CoverImages.Embedded.Items {
+		photo, err := fetchPhoto(img.Src, "", "")
+		if err != nil {
+			return nil, err
+		}
+		photos[i] = photo
+
+		//TODO: komoot photos can have location data. Maybe we should create a waypoint for those photos?
+	}
+
+	return photos, nil
 }
 
 func fetchWaypointPhotos(wp Item) ([]*filesystem.File, error) {

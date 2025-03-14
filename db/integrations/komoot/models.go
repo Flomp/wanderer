@@ -246,6 +246,17 @@ type Coordinates struct {
 type DetailedTourEmbedded struct {
 	Coordinates Coordinates `json:"coordinates"`
 	Timeline    Timeline    `json:"timeline"`
+	CoverImages CoverImages `json:"cover_images"`
+}
+
+type CoverImages struct {
+	Embedded CoverImagesEmbedded `json:"_embedded"`
+	Links    Links               `json:"_links"`
+	Page     Page                `json:"page"`
+}
+
+type CoverImagesEmbedded struct {
+	Items []ImageItem `json:"items"`
 }
 
 type Timeline struct {
@@ -346,6 +357,7 @@ type ImageItem struct {
 	Templated   bool        `json:"templated"`
 	HighlightID int         `json:"highlight_id"`
 	ClientHash  string      `json:"client_hash,omitempty"`
+	Location    Location    `json:"location"`
 	Type        string      `json:"type"`
 	Links       Links       `json:"_links"`
 	Embedded    SubEmbedded `json:"_embedded"`
