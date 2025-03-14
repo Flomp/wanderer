@@ -402,9 +402,12 @@
     }
 
     function deleteWaypoint(index: number) {
-        $formData.expand!.waypoints?.splice(index, 1);
+        const wp = $formData.expand!.waypoints?.splice(index, 1);
         $formData.waypoints.splice(index, 1);
         $formData.expand!.waypoints = $formData.expand!.waypoints;
+
+        wp?.[0]?.marker?.remove();
+        
         // updateTrailOnMap();
     }
 

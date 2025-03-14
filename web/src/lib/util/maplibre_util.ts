@@ -72,6 +72,7 @@ export function createMarkerFromWaypoint(waypoint: Waypoint, onDragEnd?: (marker
         marker.on("dragend", () => onDragEnd(marker, waypoint.id,));
     }
 
+    waypoint.marker = marker
     return marker;
 }
 
