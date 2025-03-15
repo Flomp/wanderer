@@ -19,7 +19,7 @@ class Settings {
   language?: Language;
   bio?: string | null;
   mapFocus?: "trails" | "location";
-  location?: { name: string, lat: number, lon: number };
+  location?: { name: string, lat: number, lon: number } | null;
   category?: string;
   tilesets?: ({ name: string, url: string }[]) | null
   terrain?: { terrain: string, hillshading: string } | null;
