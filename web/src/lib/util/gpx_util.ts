@@ -14,6 +14,7 @@ import EasyFit from "$lib/vendor/easy-fit/easy-fit";
 import type { Feature, FeatureCollection, GeoJSON, GeoJsonProperties, Position } from 'geojson';
 import * as xmldom from 'xmldom';
 import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
+import JSZip from "jszip";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string) {
@@ -108,27 +109,33 @@ export async function fromFile(file: File | Blob) {
     const fileContent = await file.text();
     const fileBuffer = await file.arrayBuffer();
 
-    if (!isFITFile(fileBuffer)) {
-        if (fileContent.includes("http://www.opengis.net/kml")) {
-            gpxData = fromKML(fileContent);
-            gpxFile = new Blob([gpxData], {
-                type: "application/gpx+xml",
-            });
-        } else if (fileContent.includes("TrainingCenterDatabase")) {
-            gpxData = fromTCX(fileContent);
-            gpxFile = new Blob([gpxData], {
-                type: "application/gpx+xml",
-            });
-        } else {
-            gpxData = fileContent;
-            gpxFile = file;
-        }
-    } else {
+    if (isFITFile(fileBuffer)) {
         gpxData = await fromFIT(fileBuffer);
         gpxFile = new Blob([gpxData], {
             type: "application/gpx+xml",
         });
+
+    } else if (isKMZFile(fileBuffer)) {
+        gpxData = await fromKMZ(fileBuffer);
+        gpxFile = new Blob([gpxData], {
+            type: "application/gpx+xml",
+        });
+
+    } else if (fileContent.includes("http://www.opengis.net/kml")) {
+        gpxData = fromKML(fileContent);
+        gpxFile = new Blob([gpxData], {
+            type: "application/gpx+xml",
+        });
+    } else if (fileContent.includes("TrainingCenterDatabase")) {
+        gpxData = fromTCX(fileContent);
+        gpxFile = new Blob([gpxData], {
+            type: "application/gpx+xml",
+        });
+    } else {
+        gpxData = fileContent;
+        gpxFile = file;
     }
+
 
     return { gpxData, gpxFile };
 }
@@ -141,6 +148,13 @@ export function fromKML(kmlData: string) {
     const gpx = fromGeoJSON(geojson);
 
     return gpx
+}
+
+export async function fromKMZ(kmzData: ArrayBuffer) {
+    const zip = new JSZip()
+    const zipContents = await zip.loadAsync(kmzData)
+    const kmlFile = await zip.file('doc.kml')?.async('string');
+    return fromKML(kmlFile ?? "")
 }
 
 export function fromTCX(tcxData: string) {
@@ -313,6 +327,11 @@ export function isFITFile(buffer: ArrayBuffer) {
     }
 
     return true;
+}
+
+function isKMZFile(buffer: ArrayBuffer) {
+    const blob = new Uint8Array(buffer);
+    return blob[0] === 0x50 && blob[1] === 0x4B && blob[2] === 0x03 && blob[3] === 0x04;
 }
 
 export function toGeoJson(gpxData: string) {
