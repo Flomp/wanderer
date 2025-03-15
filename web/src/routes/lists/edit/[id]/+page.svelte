@@ -94,8 +94,8 @@
         if (
             (data.list?.public === false && $formData.public === true) ||
             ($formData.public === true &&
-                data.list?.expand?.trails?.length !==
-                    $formData.expand?.trails?.length)
+                (data.list?.expand?.trails?.length ?? 0) <
+                    ($formData.expand?.trails?.length ?? 0))
         ) {
             publishConfirmModal.openModal();
             return false;
