@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { SummitLog } from "$lib/models/summit_log";
 
-    import { getFileURL } from "$lib/util/file_util";
+    import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -31,7 +31,7 @@
         showDescription = false,
         showPhotos = false,
         onopen,
-        ontext
+        ontext,
     }: Props = $props();
 
     let gallery: PhotoGallery;
@@ -81,13 +81,27 @@
                     onclick={() => gallery.openGallery()}
                 >
                     {#each imgSrc as img, i}
-                        <img
-                            class="absolute h-full rounded-xl object-cover"
-                            style="top: {4 * i}px; right: {4 *
-                                i}px; transform: rotate(-{i * 5}deg)"
-                            src={img}
-                            alt="waypoint"
-                        />
+                        {#if isVideoURL(img)}
+                            <!-- svelte-ignore a11y_media_has_caption -->
+                            <video
+                                controls={false}
+                                loop
+                                class="absolute h-full w-full rounded-xl object-cover"
+                                style="top: {4 * i}px; right: {4 *
+                                    i}px; transform: rotate(-{i * 5}deg)"
+                                onmouseenter={(e) => (e.target as any).play()}
+                                onmouseleave={(e) => (e.target as any).pause()}
+                                src={img}
+                            ></video>
+                        {:else}
+                            <img
+                                class="absolute h-full rounded-xl object-cover"
+                                style="top: {4 * i}px; right: {4 *
+                                    i}px; transform: rotate(-{i * 5}deg)"
+                                src={img}
+                                alt="waypoint"
+                            />
+                        {/if}
                     {/each}
                 </button>
             {/if}

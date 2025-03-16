@@ -167,12 +167,11 @@
         }
     });
     $effect(() => {
-        if (waypoints) {
-            untrack(() => {
-                showWaypoints();
-                refreshElevationProfile();
-            });
-        }
+        waypoints;
+        untrack(() => {
+            showWaypoints();
+            refreshElevationProfile();
+        });
     });
 
     function getData(trails: Trail[]) {
@@ -280,7 +279,7 @@
                 right: 16,
                 bottom:
                     16 +
-                    (epc?.isProfileShown
+                    (epc?.isProfileShown && !elevationProfileContainer
                         ? map!.getContainer().clientHeight * 0.3
                         : 0),
             },
@@ -663,6 +662,13 @@
                 markers.push(marker);
             }
         }
+        markers = markers.filter((marker) => {
+            if (!waypoints.find((w) => w.id == marker._element.id)) {
+                marker.remove();
+                return false;
+            }
+            return true;
+        });
     }
 
     function hideWaypoints() {

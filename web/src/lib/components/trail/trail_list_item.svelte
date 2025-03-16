@@ -4,7 +4,7 @@
     import type { Trail } from "$lib/models/trail";
     import { pb } from "$lib/pocketbase";
     import { theme } from "$lib/stores/theme_store";
-    import { getFileURL } from "$lib/util/file_util";
+    import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -12,7 +12,6 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
-    
 
     interface Props {
         trail: Trail;
@@ -21,18 +20,34 @@
 
     let { trail, showDescription = true }: Props = $props();
 
-    let thumbnail = $derived(trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
-        : $theme === "light"
-          ? emptyStateTrailLight
-          : emptyStateTrailDark);
+    let thumbnail = $derived(
+        trail.photos.length
+            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            : $theme === "light"
+              ? emptyStateTrailLight
+              : emptyStateTrailDark,
+    );
 </script>
 
 <li
     class="flex gap-8 p-4 rounded-xl border border-input-border cursor-pointer hover:bg-secondary-hover transition-colors items-center"
 >
     <div class="shrink-0">
-        <img class="h-28 w-28 object-cover rounded-xl" src={thumbnail} alt="" />
+        {#if isVideoURL(thumbnail)}
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video
+                class="h-28 w-28 object-cover rounded-xl"
+                autoplay
+                loop
+                src={thumbnail}
+            ></video>
+        {:else}
+            <img
+                class="h-28 w-28 object-cover rounded-xl"
+                src={thumbnail}
+                alt=""
+            />
+        {/if}
     </div>
     <div class="min-w-0 basis-full">
         <div class="flex items-center gap-4">

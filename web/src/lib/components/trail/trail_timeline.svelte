@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Trail } from "$lib/models/trail";
-    import { getFileURL } from "$lib/util/file_util";
+    import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import { formatDistance } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import PhotoGallery from "../photo_gallery.svelte";
@@ -52,23 +52,40 @@
                         : 'grid-cols-1'} cursor-pointer"
                 >
                     {#each wp.photos as photo, j}
-                        <img
-                            onclick={() => gallery[i].openGallery(j)}
-                            role="presentation"
-                            class="w-full object-cover {j == 0 &&
-                            wp.photos.length > 2
-                                ? 'row-span-2 h-80'
-                                : 'h-[159.5px]'}"
-                            src={getFileURL(wp, photo)}
-                            alt=""
-                        />
+                        {#if isVideoURL(photo)}
+                            <!-- svelte-ignore a11y_media_has_caption -->
+                            <video
+                                controls={false}
+                                loop
+                                class="w-full object-cover {j == 0 &&
+                                wp.photos.length > 2
+                                    ? 'row-span-2 h-80'
+                                    : 'h-[159.5px]'}"
+                                onclick={() => gallery[i].openGallery(j)}
+                                onmouseenter={(e) => (e.target as any).play()}
+                                onmouseleave={(e) => (e.target as any).pause()}
+                                src={getFileURL(wp, photo)}
+                            ></video>
+                        {:else}
+                            <img
+                                onclick={() => gallery[i].openGallery(j)}
+                                role="presentation"
+                                class="w-full object-cover {j == 0 &&
+                                wp.photos.length > 2
+                                    ? 'row-span-2 h-80'
+                                    : 'h-[159.5px]'}"
+                                src={getFileURL(wp, photo)}
+                                alt=""
+                            />
+                        {/if}
                     {/each}
                 </div>
             {/if}
             <div class="p-4">
                 <h5 class="text-xl font-semibold">{wp.name}</h5>
                 <span class="text-sm text-gray-500"
-                    ><i class="fa fa-location-dot mr-1"></i> {wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span
+                    ><i class="fa fa-location-dot mr-1"></i>
+                    {wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span
                 >
                 <p class="whitespace-pre-line">
                     {wp.description}

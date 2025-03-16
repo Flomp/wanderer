@@ -87,7 +87,10 @@
                 continue;
             }
             let photoFile = file;
-            if (!file.type.startsWith("image")) {
+            if (
+                !file.type.startsWith("image") &&
+                !["video/mp4", "video/ogg", "video/webm"].includes(file.type)
+            ) {
                 continue;
             } else if (file.type === "image/heic") {
                 const heic2any = (await import("heic2any")).default;
@@ -151,7 +154,7 @@
     <input
         type="file"
         id="{id}-photo-input"
-        accept="image/*"
+        accept="image/*,video/mp4"
         multiple={true}
         style="display: none;"
         onchange={() => handlePhotoSelection()}

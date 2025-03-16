@@ -1,6 +1,10 @@
 <script lang="ts">
     import type { Waypoint } from "$lib/models/waypoint";
-    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import {
+        getFileURL,
+        isVideoURL,
+        readAsDataURLAsync,
+    } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import { browser } from "$app/environment";
@@ -60,13 +64,27 @@
             onclick={mode == "show" ? () => gallery.openGallery() : undefined}
         >
             {#each imgSrc as img, i}
-                <img
-                    class="absolute h-full rounded-xl object-cover aspect-square"
-                    style="top: {6 * i}px; right: {6 *
-                        i}px; transform: rotate(-{i * 5}deg)"
-                    src={img}
-                    alt="waypoint"
-                />
+                {#if isVideoURL(img)}
+                    <!-- svelte-ignore a11y_media_has_caption -->
+                    <video
+                        controls={false}
+                        loop
+                        class="absolute h-full rounded-xl object-cover aspect-square"
+                        style="top: {6 * i}px; right: {6 *
+                            i}px; transform: rotate(-{i * 5}deg)"
+                        onmouseenter={(e) => (e.target as any).play()}
+                        onmouseleave={(e) => (e.target as any).pause()}
+                        src={img}
+                    ></video>
+                {:else}
+                    <img
+                        class="absolute h-full rounded-xl object-cover aspect-square"
+                        style="top: {6 * i}px; right: {6 *
+                            i}px; transform: rotate(-{i * 5}deg)"
+                        src={img}
+                        alt="waypoint"
+                    />
+                {/if}
             {/each}
         </button>
     {/if}

@@ -13,7 +13,7 @@
         comments_update,
     } from "$lib/stores/comment_store";
     import { currentUser } from "$lib/stores/user_store";
-    import { getFileURL } from "$lib/util/file_util";
+    import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -172,12 +172,23 @@
 >
     <div class="trail-info-panel-header">
         <section class="relative h-80">
-            <img
-                class="w-full h-80"
-                class:rounded-t-3xl={mode !== "list"}
-                src={thumbnail}
-                alt=""
-            />
+            {#if isVideoURL(thumbnail)}
+                <!-- svelte-ignore a11y_media_has_caption -->
+                <video
+                    class="w-full h-80 object-cover rounded-t-3xl"
+                    autoplay
+                    loop
+                    src={thumbnail}
+                ></video>
+            {:else}
+                <img
+                    class="w-full h-80"
+                    class:rounded-t-3xl={mode !== "list"}
+                    src={thumbnail}
+                    alt=""
+                />
+            {/if}
+
             <div
                 class="absolute bottom-0 w-full h-full bg-gradient-to-b from-transparent to-black opacity-60"
             ></div>
@@ -215,7 +226,10 @@
                 class="flex absolute justify-between items-end w-full bottom-8 left-0 px-8 gap-y-4"
             >
                 <div class="text-white overflow-hidden">
-                    <h4 title={trail.name} class="text-4xl font-bold line-clamp-3">
+                    <h4
+                        title={trail.name}
+                        class="text-4xl font-bold line-clamp-3"
+                    >
                         {trail.name}
                     </h4>
                     {#if trail.date}
@@ -414,12 +428,27 @@
                             {#each trail.photos ?? [] as photo, i}
                                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                                <img
-                                    class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                                    onclick={() => gallery.openGallery(i)}
-                                    src={getFileURL(trail, photo)}
-                                    alt=""
-                                />
+                                {#if isVideoURL(photo)}
+                                    <!-- svelte-ignore a11y_media_has_caption -->
+                                    <video
+                                        controls={false}
+                                        loop
+                                        class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                                        onclick={() => gallery.openGallery(i)}
+                                        onmouseenter={(e) =>
+                                            (e.target as any).play()}
+                                        onmouseleave={(e) =>
+                                            (e.target as any).pause()}
+                                        src={getFileURL(trail, photo)}
+                                    ></video>
+                                {:else}
+                                    <img
+                                        class="rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                                        onclick={() => gallery.openGallery(i)}
+                                        src={getFileURL(trail, photo)}
+                                        alt=""
+                                    />
+                                {/if}
                             {/each}
                         </div>
                     {:else}

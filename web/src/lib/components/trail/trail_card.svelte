@@ -7,7 +7,7 @@
     import type { Trail } from "$lib/models/trail";
     import { pb } from "$lib/pocketbase";
     import { theme } from "$lib/stores/theme_store";
-    import { getFileURL } from "$lib/util/file_util";
+    import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -55,7 +55,24 @@
     <div
         class="relative w-full basis-full max-h-48 overflow-hidden rounded-t-2xl"
     >
-        <img loading="lazy" class="w-full h-full" id="header-img" src={thumbnail} alt="" />
+        {#if isVideoURL(thumbnail)}
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video
+                id="header-img"
+                class="w-full h-full object-cover"
+                autoplay
+                loop
+                src={thumbnail}
+            ></video>
+        {:else}
+            <img
+                loading="lazy"
+                class="w-full h-full"
+                id="header-img"
+                src={thumbnail}
+                alt=""
+            />
+        {/if}
     </div>
     {#if (trail.public || trailIsShared) && pb.authStore.model}
         <div

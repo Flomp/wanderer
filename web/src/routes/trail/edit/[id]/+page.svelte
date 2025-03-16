@@ -151,7 +151,7 @@
         extend: validator({
             schema: ClientTrailCreateSchema,
         }),
-        onSubmit: async (form) => {
+        onSubmit: async (form) => {            
             loading = true;
             try {
                 const htmlForm = document.getElementById(
@@ -404,10 +404,12 @@
     function deleteWaypoint(index: number) {
         const wp = $formData.expand!.waypoints?.splice(index, 1);
         $formData.waypoints.splice(index, 1);
-        $formData.expand!.waypoints = $formData.expand!.waypoints;
 
-        wp?.[0]?.marker?.remove();
-        
+        if(!$formData.expand!.waypoints?.length) {
+            $formData.expand!.waypoints = []
+        }
+        $formData.expand!.waypoints = $formData.expand!.waypoints;
+                
         // updateTrailOnMap();
     }
 
@@ -1033,7 +1035,7 @@
         </h3>
         <ul>
             {#each $formData.expand?.waypoints ?? [] as waypoint, i}
-                <li onmouseenter={() => openMarkerPopup(waypoint)}>
+                <li onmouseenter={() => openMarkerPopup(waypoint)} onmouseleave={() => openMarkerPopup(waypoint)}>
                     <WaypointCard
                         {waypoint}
                         mode="edit"

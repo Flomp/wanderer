@@ -1,5 +1,4 @@
 <script lang="ts">
-    
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { SummitLog } from "$lib/models/summit_log";
@@ -7,7 +6,7 @@
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
     import { theme } from "$lib/stores/theme_store";
-    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import { getFileURL, isVideoURL, readAsDataURLAsync } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -55,12 +54,24 @@
 <div class="p-4 my-2 border border-input-border rounded-xl">
     <div class="flex items-center gap-x-4">
         <div class="h-24 aspect-square shrink-0 rounded-xl overflow-hidden">
-            <img
-                id="header-img"
-                class="object-cover h-full"
-                src={thumbnail}
-                alt=""
-            />
+            {#if isVideoURL(thumbnail)}
+                <!-- svelte-ignore a11y_media_has_caption -->
+                <video
+                    controls={false}
+                    loop
+                    class="object-cover h-full w-full"
+                    onmouseenter={(e) => (e.target as any).play()}
+                    onmouseleave={(e) => (e.target as any).pause()}
+                    src={thumbnail}
+                ></video>
+            {:else}
+                <img
+                    id="header-img"
+                    class="object-cover h-full w-full"
+                    src={thumbnail}
+                    alt=""
+                />
+            {/if}
         </div>
         <div class="basis-full">
             <div
