@@ -12,7 +12,11 @@ func documentFromTrailRecord(r *models.Record, author *models.Record, includeSha
 	photos := r.GetStringSlice("photos")
 	thumbnail := ""
 	if len(photos) > 0 {
-		thumbnail = r.GetStringSlice("photos")[r.GetInt("thumbnail")]
+		thumbnailIndex := r.GetInt("thumbnail")
+		if thumbnailIndex >= len(photos) {
+			thumbnailIndex = 0
+		}
+		thumbnail = photos[thumbnailIndex]
 	}
 
 	document := map[string]interface{}{

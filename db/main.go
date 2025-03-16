@@ -60,10 +60,10 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnModelAfterCreate("users").Add(createUserHandler(app, client))
 
 	app.OnModelAfterCreate("trails").Add(createTrailIndexHandler(app, client))
+	app.OnModelAfterUpdate("trails").Add(updateTrailIndexHandler(app, client))
+	app.OnModelAfterDelete("trails").Add(deleteTrailIndexHandler(client))
 
 	app.OnRecordAfterCreateRequest("trails").Add(createTrailHandler(app))
-	app.OnRecordAfterUpdateRequest("trails").Add(updateTrailHandler(app, client))
-	app.OnRecordAfterDeleteRequest("trails").Add(deleteTrailHandler(client))
 
 	app.OnRecordAfterCreateRequest("trail_share").Add(createTrailShareHandler(app, client))
 	app.OnRecordAfterDeleteRequest("trail_share").Add(deleteTrailShareHandler(client))
@@ -160,19 +160,21 @@ func createTrailHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEve
 	}
 }
 
-func updateTrailHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordUpdateEvent) error {
-	return func(e *core.RecordUpdateEvent) error {
-		author, err := app.Dao().FindRecordById("users", e.Record.GetString(("author")))
+func updateTrailIndexHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
+	return func(e *core.ModelEvent) error {
+		record := e.Model.(*models.Record)
+		author, err := app.Dao().FindRecordById("users", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
-		return util.UpdateTrail(e.Record, author, client)
+		return util.UpdateTrail(record, author, client)
 	}
 }
 
-func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
-	return func(e *core.RecordDeleteEvent) error {
-		_, err := client.Index("trails").DeleteDocument(e.Record.Id)
+func deleteTrailIndexHandler(client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
+	return func(e *core.ModelEvent) error {
+		record := e.Model.(*models.Record)
+		_, err := client.Index("trails").DeleteDocument(record.Id)
 		return err
 	}
 }

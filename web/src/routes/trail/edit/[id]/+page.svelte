@@ -202,7 +202,8 @@
                     );
                     setFields(updatedTrail);
                 }
-
+                photoFiles = []
+                
                 savedAtLeastOnce = true;
                 show_toast({
                     type: "success",
