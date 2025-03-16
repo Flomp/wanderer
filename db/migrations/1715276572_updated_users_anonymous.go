@@ -3,18 +3,15 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db)
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		collection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
@@ -24,10 +21,10 @@ func init() {
 		collection.ViewRule = types.Pointer("@request.auth.id != \"\"")
 
 		// remove
-		collection.Schema.RemoveField("cknini6y")
+		collection.Fields.RemoveById("cknini6y")
 
 		// add
-		new_username := &schema.SchemaField{}
+		new_username := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "qzkmy7nv",
@@ -44,13 +41,12 @@ func init() {
 		}`), new_username); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_username)
+		collection.Fields.Add(new_username)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db)
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		collection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
@@ -60,7 +56,7 @@ func init() {
 		collection.ViewRule = nil
 
 		// add
-		del_username := &schema.SchemaField{}
+		del_username := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "cknini6y",
@@ -77,11 +73,11 @@ func init() {
 		}`), del_username); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_username)
+		collection.Fields.Add(del_username)
 
 		// remove
-		collection.Schema.RemoveField("qzkmy7nv")
+		collection.Fields.RemoveById("qzkmy7nv")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

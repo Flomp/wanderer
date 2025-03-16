@@ -3,23 +3,20 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("goeo2ubp103rzp9")
+		collection, err := app.FindCollectionByNameOrId("goeo2ubp103rzp9")
 		if err != nil {
 			return err
 		}
 
 		// update
-		edit_photos := &schema.SchemaField{}
+		edit_photos := &core.FileField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "tfhs3juh",
@@ -44,10 +41,10 @@ func init() {
 		}`), edit_photos); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_photos)
+		collection.Fields.Add(edit_photos)
 
 		// update
-		edit_author := &schema.SchemaField{}
+		edit_author := &core.RelationField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "8qbxrsd8",
@@ -66,19 +63,18 @@ func init() {
 		}`), edit_author); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_author)
+		collection.Fields.Add(edit_author)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("goeo2ubp103rzp9")
+		collection, err := app.FindCollectionByNameOrId("goeo2ubp103rzp9")
 		if err != nil {
 			return err
 		}
 
 		// update
-		edit_photos := &schema.SchemaField{}
+		edit_photos := &core.FileField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "tfhs3juh",
@@ -103,10 +99,10 @@ func init() {
 		}`), edit_photos); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_photos)
+		collection.Fields.Add(edit_photos)
 
 		// update
-		edit_author := &schema.SchemaField{}
+		edit_author := &core.RelationField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "8qbxrsd8",
@@ -125,8 +121,8 @@ func init() {
 		}`), edit_author); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_author)
+		collection.Fields.Add(edit_author)
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

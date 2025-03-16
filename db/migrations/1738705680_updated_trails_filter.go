@@ -3,55 +3,46 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("4wbv9tz5zjdrjh1")
+		collection, err := app.FindCollectionByNameOrId("4wbv9tz5zjdrjh1")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT users.id, COALESCE(printf(\"%.2f\", MAX(trails.distance)), 0) AS max_distance,\n  COALESCE(printf(\"%.2f\", MAX(trails.elevation_gain)), 0) AS max_elevation_gain, \n  COALESCE(printf(\"%.2f\", MAX(trails.elevation_loss)), 0) AS max_elevation_loss, \n  COALESCE(printf(\"%.2f\", MAX(trails.duration)), 0) AS max_duration, \n  COALESCE(printf(\"%.2f\", MIN(trails.distance)), 0) AS min_distance,   \n  COALESCE(printf(\"%.2f\", MIN(trails.elevation_gain)), 0) AS min_elevation_gain, \n  COALESCE(printf(\"%.2f\", MIN(trails.elevation_loss)), 0) AS min_elevation_loss, \n  COALESCE(printf(\"%.2f\", MIN(trails.duration)), 0) AS min_duration \nFROM users \n  LEFT JOIN trails ON \n  users.id = trails.author OR \n  trails.public = 1 OR \n  EXISTS (\n    SELECT 1 \n    FROM trail_share \n    WHERE trail_share.trail = trails.id \n    AND trail_share.user = users.id\n  ) GROUP BY users.id;"
-		}`), &options); err != nil {
-			return err
-		}
-		collection.SetOptions(options)
+		collection.ViewQuery = "SELECT users.id, COALESCE(printf(\"%.2f\", MAX(trails.distance)), 0) AS max_distance,\n  COALESCE(printf(\"%.2f\", MAX(trails.elevation_gain)), 0) AS max_elevation_gain, \n  COALESCE(printf(\"%.2f\", MAX(trails.elevation_loss)), 0) AS max_elevation_loss, \n  COALESCE(printf(\"%.2f\", MAX(trails.duration)), 0) AS max_duration, \n  COALESCE(printf(\"%.2f\", MIN(trails.distance)), 0) AS min_distance,   \n  COALESCE(printf(\"%.2f\", MIN(trails.elevation_gain)), 0) AS min_elevation_gain, \n  COALESCE(printf(\"%.2f\", MIN(trails.elevation_loss)), 0) AS min_elevation_loss, \n  COALESCE(printf(\"%.2f\", MIN(trails.duration)), 0) AS min_duration \nFROM users \n  LEFT JOIN trails ON \n  users.id = trails.author OR \n  trails.public = 1 OR \n  EXISTS (\n    SELECT 1 \n    FROM trail_share \n    WHERE trail_share.trail = trails.id \n    AND trail_share.user = users.id\n  ) GROUP BY users.id;"
 
 		// remove
-		collection.Schema.RemoveField("h18nofwq")
+		collection.Fields.RemoveById("h18nofwq")
 
 		// remove
-		collection.Schema.RemoveField("thhrslvh")
+		collection.Fields.RemoveById("thhrslvh")
 
 		// remove
-		collection.Schema.RemoveField("e2bbiudy")
+		collection.Fields.RemoveById("e2bbiudy")
 
 		// remove
-		collection.Schema.RemoveField("smzzpwpp")
+		collection.Fields.RemoveById("smzzpwpp")
 
 		// remove
-		collection.Schema.RemoveField("1b2horvp")
+		collection.Fields.RemoveById("1b2horvp")
 
 		// remove
-		collection.Schema.RemoveField("m8ghv383")
+		collection.Fields.RemoveById("m8ghv383")
 
 		// remove
-		collection.Schema.RemoveField("awhc47b7")
+		collection.Fields.RemoveById("awhc47b7")
 
 		// remove
-		collection.Schema.RemoveField("q2houpyd")
+		collection.Fields.RemoveById("q2houpyd")
 
 		// add
-		new_max_distance := &schema.SchemaField{}
+		new_max_distance := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "sds7j8bk",
@@ -66,10 +57,10 @@ func init() {
 		}`), new_max_distance); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_distance)
+		collection.Fields.Add(new_max_distance)
 
 		// add
-		new_max_elevation_gain := &schema.SchemaField{}
+		new_max_elevation_gain := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "olgpl62o",
@@ -84,10 +75,10 @@ func init() {
 		}`), new_max_elevation_gain); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_elevation_gain)
+		collection.Fields.Add(new_max_elevation_gain)
 
 		// add
-		new_max_elevation_loss := &schema.SchemaField{}
+		new_max_elevation_loss := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "hsacrn8r",
@@ -102,10 +93,10 @@ func init() {
 		}`), new_max_elevation_loss); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_elevation_loss)
+		collection.Fields.Add(new_max_elevation_loss)
 
 		// add
-		new_max_duration := &schema.SchemaField{}
+		new_max_duration := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "ctoyvjxp",
@@ -120,10 +111,10 @@ func init() {
 		}`), new_max_duration); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_duration)
+		collection.Fields.Add(new_max_duration)
 
 		// add
-		new_min_distance := &schema.SchemaField{}
+		new_min_distance := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "jlwabean",
@@ -138,10 +129,10 @@ func init() {
 		}`), new_min_distance); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_distance)
+		collection.Fields.Add(new_min_distance)
 
 		// add
-		new_min_elevation_gain := &schema.SchemaField{}
+		new_min_elevation_gain := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "w3zecui8",
@@ -156,10 +147,10 @@ func init() {
 		}`), new_min_elevation_gain); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_elevation_gain)
+		collection.Fields.Add(new_min_elevation_gain)
 
 		// add
-		new_min_elevation_loss := &schema.SchemaField{}
+		new_min_elevation_loss := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "nby5xyd9",
@@ -174,10 +165,10 @@ func init() {
 		}`), new_min_elevation_loss); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_elevation_loss)
+		collection.Fields.Add(new_min_elevation_loss)
 
 		// add
-		new_min_duration := &schema.SchemaField{}
+		new_min_duration := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "rn0ije3h",
@@ -192,27 +183,20 @@ func init() {
 		}`), new_min_duration); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_duration)
+		collection.Fields.Add(new_min_duration)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("4wbv9tz5zjdrjh1")
+		collection, err := app.FindCollectionByNameOrId("4wbv9tz5zjdrjh1")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT users.id, COALESCE(MAX(trails.distance), 0) AS max_distance,\n  COALESCE(MAX(trails.elevation_gain), 0) AS max_elevation_gain, \n  COALESCE(MAX(trails.elevation_loss), 0) AS max_elevation_loss, \n  COALESCE(MAX(trails.duration), 0) AS max_duration, \n  COALESCE(MIN(trails.distance), 0) AS min_distance,   \n  COALESCE(MIN(trails.elevation_gain), 0) AS min_elevation_gain, \n  COALESCE(MIN(trails.elevation_loss), 0) AS min_elevation_loss, \n  COALESCE(MIN(trails.duration), 0) AS min_duration \nFROM users \n  LEFT JOIN trails ON \n  users.id = trails.author OR \n  trails.public = 1 OR \n  EXISTS (\n    SELECT 1 \n    FROM trail_share \n    WHERE trail_share.trail = trails.id \n    AND trail_share.user = users.id\n  ) GROUP BY users.id;"
-		}`), &options); err != nil {
-			return err
-		}
-		collection.SetOptions(options)
+		collection.ViewQuery = "SELECT users.id, COALESCE(MAX(trails.distance), 0) AS max_distance,\n  COALESCE(MAX(trails.elevation_gain), 0) AS max_elevation_gain, \n  COALESCE(MAX(trails.elevation_loss), 0) AS max_elevation_loss, \n  COALESCE(MAX(trails.duration), 0) AS max_duration, \n  COALESCE(MIN(trails.distance), 0) AS min_distance,   \n  COALESCE(MIN(trails.elevation_gain), 0) AS min_elevation_gain, \n  COALESCE(MIN(trails.elevation_loss), 0) AS min_elevation_loss, \n  COALESCE(MIN(trails.duration), 0) AS min_duration \nFROM users \n  LEFT JOIN trails ON \n  users.id = trails.author OR \n  trails.public = 1 OR \n  EXISTS (\n    SELECT 1 \n    FROM trail_share \n    WHERE trail_share.trail = trails.id \n    AND trail_share.user = users.id\n  ) GROUP BY users.id;"
 
 		// add
-		del_max_distance := &schema.SchemaField{}
+		del_max_distance := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "h18nofwq",
@@ -227,10 +211,10 @@ func init() {
 		}`), del_max_distance); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_distance)
+		collection.Fields.Add(del_max_distance)
 
 		// add
-		del_max_elevation_gain := &schema.SchemaField{}
+		del_max_elevation_gain := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "thhrslvh",
@@ -245,10 +229,10 @@ func init() {
 		}`), del_max_elevation_gain); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_elevation_gain)
+		collection.Fields.Add(del_max_elevation_gain)
 
 		// add
-		del_max_elevation_loss := &schema.SchemaField{}
+		del_max_elevation_loss := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "e2bbiudy",
@@ -263,10 +247,10 @@ func init() {
 		}`), del_max_elevation_loss); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_elevation_loss)
+		collection.Fields.Add(del_max_elevation_loss)
 
 		// add
-		del_max_duration := &schema.SchemaField{}
+		del_max_duration := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "smzzpwpp",
@@ -281,10 +265,10 @@ func init() {
 		}`), del_max_duration); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_duration)
+		collection.Fields.Add(del_max_duration)
 
 		// add
-		del_min_distance := &schema.SchemaField{}
+		del_min_distance := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "1b2horvp",
@@ -299,10 +283,10 @@ func init() {
 		}`), del_min_distance); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_distance)
+		collection.Fields.Add(del_min_distance)
 
 		// add
-		del_min_elevation_gain := &schema.SchemaField{}
+		del_min_elevation_gain := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "m8ghv383",
@@ -317,10 +301,10 @@ func init() {
 		}`), del_min_elevation_gain); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_elevation_gain)
+		collection.Fields.Add(del_min_elevation_gain)
 
 		// add
-		del_min_elevation_loss := &schema.SchemaField{}
+		del_min_elevation_loss := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "awhc47b7",
@@ -335,10 +319,10 @@ func init() {
 		}`), del_min_elevation_loss); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_elevation_loss)
+		collection.Fields.Add(del_min_elevation_loss)
 
 		// add
-		del_min_duration := &schema.SchemaField{}
+		del_min_duration := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "q2houpyd",
@@ -353,32 +337,32 @@ func init() {
 		}`), del_min_duration); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_duration)
+		collection.Fields.Add(del_min_duration)
 
 		// remove
-		collection.Schema.RemoveField("sds7j8bk")
+		collection.Fields.RemoveById("sds7j8bk")
 
 		// remove
-		collection.Schema.RemoveField("olgpl62o")
+		collection.Fields.RemoveById("olgpl62o")
 
 		// remove
-		collection.Schema.RemoveField("hsacrn8r")
+		collection.Fields.RemoveById("hsacrn8r")
 
 		// remove
-		collection.Schema.RemoveField("ctoyvjxp")
+		collection.Fields.RemoveById("ctoyvjxp")
 
 		// remove
-		collection.Schema.RemoveField("jlwabean")
+		collection.Fields.RemoveById("jlwabean")
 
 		// remove
-		collection.Schema.RemoveField("w3zecui8")
+		collection.Fields.RemoveById("w3zecui8")
 
 		// remove
-		collection.Schema.RemoveField("nby5xyd9")
+		collection.Fields.RemoveById("nby5xyd9")
 
 		// remove
-		collection.Schema.RemoveField("rn0ije3h")
+		collection.Fields.RemoveById("rn0ije3h")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

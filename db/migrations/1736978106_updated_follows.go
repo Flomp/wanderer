@@ -3,23 +3,20 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("8obn1ukumze565i")
+		collection, err := app.FindCollectionByNameOrId("8obn1ukumze565i")
 		if err != nil {
 			return err
 		}
 
 		// update
-		edit_follower := &schema.SchemaField{}
+		edit_follower := &core.RelationField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "in1traur",
@@ -38,10 +35,10 @@ func init() {
 		}`), edit_follower); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_follower)
+		collection.Fields.Add(edit_follower)
 
 		// update
-		edit_followee := &schema.SchemaField{}
+		edit_followee := &core.RelationField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "wxwomfd5",
@@ -60,19 +57,18 @@ func init() {
 		}`), edit_followee); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_followee)
+		collection.Fields.Add(edit_followee)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("8obn1ukumze565i")
+		collection, err := app.FindCollectionByNameOrId("8obn1ukumze565i")
 		if err != nil {
 			return err
 		}
 
 		// update
-		edit_follower := &schema.SchemaField{}
+		edit_follower := &core.RelationField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "in1traur",
@@ -91,10 +87,10 @@ func init() {
 		}`), edit_follower); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_follower)
+		collection.Fields.Add(edit_follower)
 
 		// update
-		edit_followee := &schema.SchemaField{}
+		edit_followee := &core.RelationField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "wxwomfd5",
@@ -113,8 +109,8 @@ func init() {
 		}`), edit_followee); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_followee)
+		collection.Fields.Add(edit_followee)
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

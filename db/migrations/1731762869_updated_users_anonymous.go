@@ -3,37 +3,28 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		collection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT id, username, avatar, created FROM users"
-		}`), &options); err != nil {
-			return err
-		}
-		collection.SetOptions(options)
+		collection.ViewQuery = "SELECT id, username, avatar, created FROM users"
 
 		// remove
-		collection.Schema.RemoveField("ogrxf4ps")
+		collection.Fields.RemoveById("ogrxf4ps")
 
 		// remove
-		collection.Schema.RemoveField("7k4bozux")
+		collection.Fields.RemoveById("7k4bozux")
 
 		// add
-		new_username := &schema.SchemaField{}
+		new_username := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "kvteagv6",
@@ -50,10 +41,10 @@ func init() {
 		}`), new_username); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_username)
+		collection.Fields.Add(new_username)
 
 		// add
-		new_avatar := &schema.SchemaField{}
+		new_avatar := &core.FileField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "m9efnpak",
@@ -78,27 +69,20 @@ func init() {
 		}`), new_avatar); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_avatar)
+		collection.Fields.Add(new_avatar)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		collection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT id, username, avatar FROM users"
-		}`), &options); err != nil {
-			return err
-		}
-		collection.SetOptions(options)
+		collection.ViewQuery = "SELECT id, username, avatar FROM users"
 
 		// add
-		del_username := &schema.SchemaField{}
+		del_username := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "ogrxf4ps",
@@ -115,10 +99,10 @@ func init() {
 		}`), del_username); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_username)
+		collection.Fields.Add(del_username)
 
 		// add
-		del_avatar := &schema.SchemaField{}
+		del_avatar := &core.FileField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "7k4bozux",
@@ -143,14 +127,14 @@ func init() {
 		}`), del_avatar); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_avatar)
+		collection.Fields.Add(del_avatar)
 
 		// remove
-		collection.Schema.RemoveField("kvteagv6")
+		collection.Fields.RemoveById("kvteagv6")
 
 		// remove
-		collection.Schema.RemoveField("m9efnpak")
+		collection.Fields.RemoveById("m9efnpak")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

@@ -3,43 +3,34 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("urytyc428mwlbqq")
+		collection, err := app.FindCollectionByNameOrId("urytyc428mwlbqq")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT \n    users.id, \n    COALESCE(MAX(trails.lat), 0) AS max_lat, \n    COALESCE(MAX(trails.lon), 0) AS max_lon, \n    COALESCE(MIN(trails.lat), 0) AS min_lat, \n    COALESCE(MIN(trails.lon), 0) AS min_lon \nFROM users \nLEFT JOIN trails \n    ON users.id = trails.author \n    OR trails.public = TRUE \n    OR EXISTS (\n        SELECT 1 \n        FROM trail_share \n        WHERE trail_share.trail = trails.id \n        AND trail_share.user = users.id\n    ) \nGROUP BY users.id;"
-		}`), &options); err != nil {
-			return err
-		}
-		collection.SetOptions(options)
+		collection.ViewQuery = "SELECT \n    users.id, \n    COALESCE(MAX(trails.lat), 0) AS max_lat, \n    COALESCE(MAX(trails.lon), 0) AS max_lon, \n    COALESCE(MIN(trails.lat), 0) AS min_lat, \n    COALESCE(MIN(trails.lon), 0) AS min_lon \nFROM users \nLEFT JOIN trails \n    ON users.id = trails.author \n    OR trails.public = TRUE \n    OR EXISTS (\n        SELECT 1 \n        FROM trail_share \n        WHERE trail_share.trail = trails.id \n        AND trail_share.user = users.id\n    ) \nGROUP BY users.id;"
 
 		// remove
-		collection.Schema.RemoveField("bgvxoscz")
+		collection.Fields.RemoveById("bgvxoscz")
 
 		// remove
-		collection.Schema.RemoveField("6ac8q26g")
+		collection.Fields.RemoveById("6ac8q26g")
 
 		// remove
-		collection.Schema.RemoveField("4mr8aenf")
+		collection.Fields.RemoveById("4mr8aenf")
 
 		// remove
-		collection.Schema.RemoveField("srt9ztkk")
+		collection.Fields.RemoveById("srt9ztkk")
 
 		// add
-		new_max_lat := &schema.SchemaField{}
+		new_max_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "alj5aoig",
@@ -54,10 +45,10 @@ func init() {
 		}`), new_max_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_lat)
+		collection.Fields.Add(new_max_lat)
 
 		// add
-		new_max_lon := &schema.SchemaField{}
+		new_max_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "mbtzxsrk",
@@ -72,10 +63,10 @@ func init() {
 		}`), new_max_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_lon)
+		collection.Fields.Add(new_max_lon)
 
 		// add
-		new_min_lat := &schema.SchemaField{}
+		new_min_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "jwvtbqll",
@@ -90,10 +81,10 @@ func init() {
 		}`), new_min_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_lat)
+		collection.Fields.Add(new_min_lat)
 
 		// add
-		new_min_lon := &schema.SchemaField{}
+		new_min_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "1waq3sdo",
@@ -108,27 +99,20 @@ func init() {
 		}`), new_min_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_lon)
+		collection.Fields.Add(new_min_lon)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("urytyc428mwlbqq")
+		collection, err := app.FindCollectionByNameOrId("urytyc428mwlbqq")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT users.id, COALESCE(MAX(trails.lat), 0) AS max_lat, COALESCE(MAX(trails.lon), 0) AS max_lon, COALESCE(MIN(trails.lat), 0) AS min_lat, COALESCE(MIN(trails.lon), 0) AS min_lon FROM users LEFT JOIN trails ON users.id = trails.author GROUP BY users.id;"
-		}`), &options); err != nil {
-			return err
-		}
-		collection.SetOptions(options)
+		collection.ViewQuery = "SELECT users.id, COALESCE(MAX(trails.lat), 0) AS max_lat, COALESCE(MAX(trails.lon), 0) AS max_lon, COALESCE(MIN(trails.lat), 0) AS min_lat, COALESCE(MIN(trails.lon), 0) AS min_lon FROM users LEFT JOIN trails ON users.id = trails.author GROUP BY users.id;"
 
 		// add
-		del_max_lat := &schema.SchemaField{}
+		del_max_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "bgvxoscz",
@@ -143,10 +127,10 @@ func init() {
 		}`), del_max_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_lat)
+		collection.Fields.Add(del_max_lat)
 
 		// add
-		del_max_lon := &schema.SchemaField{}
+		del_max_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "6ac8q26g",
@@ -161,10 +145,10 @@ func init() {
 		}`), del_max_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_lon)
+		collection.Fields.Add(del_max_lon)
 
 		// add
-		del_min_lat := &schema.SchemaField{}
+		del_min_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "4mr8aenf",
@@ -179,10 +163,10 @@ func init() {
 		}`), del_min_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_lat)
+		collection.Fields.Add(del_min_lat)
 
 		// add
-		del_min_lon := &schema.SchemaField{}
+		del_min_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "srt9ztkk",
@@ -197,20 +181,20 @@ func init() {
 		}`), del_min_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_lon)
+		collection.Fields.Add(del_min_lon)
 
 		// remove
-		collection.Schema.RemoveField("alj5aoig")
+		collection.Fields.RemoveById("alj5aoig")
 
 		// remove
-		collection.Schema.RemoveField("mbtzxsrk")
+		collection.Fields.RemoveById("mbtzxsrk")
 
 		// remove
-		collection.Schema.RemoveField("jwvtbqll")
+		collection.Fields.RemoveById("jwvtbqll")
 
 		// remove
-		collection.Schema.RemoveField("1waq3sdo")
+		collection.Fields.RemoveById("1waq3sdo")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

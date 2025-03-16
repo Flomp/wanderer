@@ -1,16 +1,12 @@
 package migrations
 
 import (
-	"encoding/json"
-
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
+	m.Register(func(app core.App) error {
 		jsonData := `[
 			{
 				"id": "e864strfxo14pm4",
@@ -19,7 +15,7 @@ func init() {
 				"name": "trails",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "wquvuytd",
@@ -319,7 +315,7 @@ func init() {
 				"name": "categories",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "38tbd8u4",
@@ -366,7 +362,7 @@ func init() {
 				"name": "waypoints",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "2yegzjtk",
@@ -491,7 +487,7 @@ func init() {
 				"name": "summit_logs",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "gxq1yeld",
@@ -646,7 +642,7 @@ func init() {
 				"name": "lists",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "0goi1ipa",
@@ -755,7 +751,7 @@ func init() {
 				"name": "trails_filter",
 				"type": "view",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "oyvx8oaq",
@@ -870,7 +866,7 @@ func init() {
 				"name": "comments",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "0udwb0kl",
@@ -947,7 +943,7 @@ func init() {
 				"name": "settings",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "0sepzvkh",
@@ -1099,7 +1095,7 @@ func init() {
 				"name": "trails_bounding_box",
 				"type": "view",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "qtzda9la",
@@ -1166,7 +1162,7 @@ func init() {
 				"name": "users_anonymous",
 				"type": "view",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "hkdk6yjz",
@@ -1245,7 +1241,7 @@ func init() {
 				"name": "trail_share",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "eskurfx6",
@@ -1310,7 +1306,7 @@ func init() {
 				"name": "users",
 				"type": "auth",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "dlzhxcn2",
@@ -1387,7 +1383,7 @@ func init() {
 				"name": "list_share",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "luqrtipy",
@@ -1452,7 +1448,7 @@ func init() {
 				"name": "activities",
 				"type": "view",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "7xrdkudh",
@@ -1615,7 +1611,7 @@ func init() {
 				"name": "follows",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "in1traur",
@@ -1664,7 +1660,7 @@ func init() {
 				"name": "follow_counts",
 				"type": "view",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "6axn8l2f",
@@ -1702,13 +1698,8 @@ func init() {
 			}
 		]`
 
-		collections := []*models.Collection{}
-		if err := json.Unmarshal([]byte(jsonData), &collections); err != nil {
-			return err
-		}
-
-		return daos.New(db).ImportCollections(collections, true, nil)
-	}, func(db dbx.Builder) error {
+		return app.ImportCollectionsByMarshaledJSON([]byte(jsonData), true)
+	}, func(app core.App) error {
 		return nil
 	})
 }

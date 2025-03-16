@@ -3,26 +3,23 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("uavt73rsqcn1n13")
+		collection, err := app.FindCollectionByNameOrId("uavt73rsqcn1n13")
 		if err != nil {
 			return err
 		}
 
 		// remove
-		collection.Schema.RemoveField("mvxf9llv")
+		collection.Fields.RemoveById("mvxf9llv")
 
 		// add
-		new_terrain := &schema.SchemaField{}
+		new_terrain := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "unsh0qsp",
@@ -37,19 +34,18 @@ func init() {
 		}`), new_terrain); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_terrain)
+		collection.Fields.Add(new_terrain)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("uavt73rsqcn1n13")
+		collection, err := app.FindCollectionByNameOrId("uavt73rsqcn1n13")
 		if err != nil {
 			return err
 		}
 
 		// add
-		del_terrain := &schema.SchemaField{}
+		del_terrain := &core.URLField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "mvxf9llv",
@@ -65,11 +61,11 @@ func init() {
 		}`), del_terrain); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_terrain)
+		collection.Fields.Add(del_terrain)
 
 		// remove
-		collection.Schema.RemoveField("unsh0qsp")
+		collection.Fields.RemoveById("unsh0qsp")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

@@ -3,23 +3,20 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("goeo2ubp103rzp9")
+		collection, err := app.FindCollectionByNameOrId("goeo2ubp103rzp9")
 		if err != nil {
 			return err
 		}
 
 		// add
-		new_distance_from_start := &schema.SchemaField{}
+		new_distance_from_start := &core.NumberField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "s1prb3fx",
@@ -36,20 +33,19 @@ func init() {
 		}`), new_distance_from_start); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_distance_from_start)
+		collection.Fields.Add(new_distance_from_start)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("goeo2ubp103rzp9")
+		collection, err := app.FindCollectionByNameOrId("goeo2ubp103rzp9")
 		if err != nil {
 			return err
 		}
 
 		// remove
-		collection.Schema.RemoveField("s1prb3fx")
+		collection.Fields.RemoveById("s1prb3fx")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

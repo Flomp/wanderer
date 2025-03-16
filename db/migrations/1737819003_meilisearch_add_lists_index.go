@@ -7,14 +7,14 @@ import (
 	"github.com/meilisearch/meilisearch-go"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
 )
 
 func init() {
 	client := meilisearch.New(os.Getenv("MEILI_URL"), meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")))
 
-	m.Register(func(db dbx.Builder) error {
+	m.Register(func(app core.App) error {
 
 		_, err := client.CreateIndex(&meilisearch.IndexConfig{
 			Uid:        "lists",
@@ -38,9 +38,7 @@ func init() {
 			return err
 		}
 
-		dao := daos.New(db)
-
-		lists, err := dao.FindRecordsByExpr("lists", dbx.NewExp("true"))
+		lists, err := app.FindAllRecords("lists", dbx.NewExp("true"))
 		if err != nil {
 			return err
 		}
@@ -50,7 +48,7 @@ func init() {
 			if err != nil {
 				return err
 			}
-			shares, err := dao.FindRecordsByExpr("list_share",
+			shares, err := app.FindAllRecords("list_share",
 				dbx.NewExp("list = {:listId}", dbx.Params{"listId": l.Id}),
 			)
 			if err != nil {
@@ -67,7 +65,7 @@ func init() {
 		}
 
 		var usernames []string
-		err = db.NewQuery("SELECT username FROM users").Column(&usernames)
+		err = app.DB().NewQuery("SELECT username FROM users").Column(&usernames)
 
 		if err != nil {
 			return err
@@ -75,7 +73,7 @@ func init() {
 
 		for _, username := range usernames {
 
-			record, err := dao.FindAuthRecordByUsername("users", username)
+			record, err := app.FindFirstRecordByData("users", "username", username)
 			if err != nil {
 				return err
 			}
@@ -94,7 +92,7 @@ func init() {
 			} else {
 				record.Set("token", token)
 
-				if err := dao.SaveRecord(record); err != nil {
+				if err := app.Save(record); err != nil {
 					return err
 				}
 			}
@@ -107,7 +105,7 @@ func init() {
 		}
 
 		return nil
-	}, func(db dbx.Builder) error {
+	}, func(app core.App) error {
 		_, err := client.DeleteIndex("lists")
 		if err != nil {
 			return err

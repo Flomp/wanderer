@@ -3,23 +3,20 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("e864strfxo14pm4")
+		collection, err := app.FindCollectionByNameOrId("e864strfxo14pm4")
 		if err != nil {
 			return err
 		}
 
 		// update
-		edit_external_provider := &schema.SchemaField{}
+		edit_external_provider := &core.SelectField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "htr35nha",
@@ -38,19 +35,18 @@ func init() {
 		}`), edit_external_provider); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_external_provider)
+		collection.Fields.Add(edit_external_provider)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("e864strfxo14pm4")
+		collection, err := app.FindCollectionByNameOrId("e864strfxo14pm4")
 		if err != nil {
 			return err
 		}
 
 		// update
-		edit_external_provider := &schema.SchemaField{}
+		edit_external_provider := &core.SelectField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "htr35nha",
@@ -68,8 +64,8 @@ func init() {
 		}`), edit_external_provider); err != nil {
 			return err
 		}
-		collection.Schema.AddField(edit_external_provider)
+		collection.Fields.Add(edit_external_provider)
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

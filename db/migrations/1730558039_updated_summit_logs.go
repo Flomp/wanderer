@@ -3,23 +3,20 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db)
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("dd2l9a4vxpy2ni8")
+		collection, err := app.FindCollectionByNameOrId("dd2l9a4vxpy2ni8")
 		if err != nil {
 			return err
 		}
 
 		// add
-		new_distance := &schema.SchemaField{}
+		new_distance := &core.NumberField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "jovws28m",
@@ -36,10 +33,10 @@ func init() {
 		}`), new_distance); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_distance)
+		collection.Fields.Add(new_distance)
 
 		// add
-		new_elevation_gain := &schema.SchemaField{}
+		new_elevation_gain := &core.NumberField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "m2kndtwn",
@@ -56,10 +53,10 @@ func init() {
 		}`), new_elevation_gain); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_elevation_gain)
+		collection.Fields.Add(new_elevation_gain)
 
 		// add
-		new_elevation_loss := &schema.SchemaField{}
+		new_elevation_loss := &core.NumberField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "uqqo9cws",
@@ -76,10 +73,10 @@ func init() {
 		}`), new_elevation_loss); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_elevation_loss)
+		collection.Fields.Add(new_elevation_loss)
 
 		// add
-		new_duration := &schema.SchemaField{}
+		new_duration := &core.NumberField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "vwxjsrae",
@@ -96,29 +93,28 @@ func init() {
 		}`), new_duration); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_duration)
+		collection.Fields.Add(new_duration)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db)
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("dd2l9a4vxpy2ni8")
+		collection, err := app.FindCollectionByNameOrId("dd2l9a4vxpy2ni8")
 		if err != nil {
 			return err
 		}
 
 		// remove
-		collection.Schema.RemoveField("jovws28m")
+		collection.Fields.RemoveById("jovws28m")
 
 		// remove
-		collection.Schema.RemoveField("m2kndtwn")
+		collection.Fields.RemoveById("m2kndtwn")
 
 		// remove
-		collection.Schema.RemoveField("uqqo9cws")
+		collection.Fields.RemoveById("uqqo9cws")
 
 		// remove
-		collection.Schema.RemoveField("vwxjsrae")
+		collection.Fields.RemoveById("vwxjsrae")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

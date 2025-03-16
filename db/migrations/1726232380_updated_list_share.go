@@ -1,17 +1,15 @@
 package migrations
 
 import (
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("1kot7t9na3hi0gl")
+		collection, err := app.FindCollectionByNameOrId("1kot7t9na3hi0gl")
 		if err != nil {
 			return err
 		}
@@ -26,11 +24,10 @@ func init() {
 
 		collection.DeleteRule = types.Pointer("list.author = @request.auth.id")
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("1kot7t9na3hi0gl")
+		collection, err := app.FindCollectionByNameOrId("1kot7t9na3hi0gl")
 		if err != nil {
 			return err
 		}
@@ -45,6 +42,6 @@ func init() {
 
 		collection.DeleteRule = nil
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

@@ -3,31 +3,28 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("iz4sezoehde64wp")
+		collection, err := app.FindCollectionByNameOrId("iz4sezoehde64wp")
 		if err != nil {
 			return err
 		}
 
 		if err := json.Unmarshal([]byte(`[
-			"CREATE UNIQUE INDEX ` + "`" + `idx_qMhw0Em` + "`" + ` ON ` + "`" + `integrations` + "`" + ` (` + "`" + `user` + "`" + `)"
+			"CREATE UNIQUE INDEX `+"`"+`idx_qMhw0Em`+"`"+` ON `+"`"+`integrations`+"`"+` (`+"`"+`user`+"`"+`)"
 		]`), &collection.Indexes); err != nil {
 			return err
 		}
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("iz4sezoehde64wp")
+		collection, err := app.FindCollectionByNameOrId("iz4sezoehde64wp")
 		if err != nil {
 			return err
 		}
@@ -36,6 +33,6 @@ func init() {
 			return err
 		}
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

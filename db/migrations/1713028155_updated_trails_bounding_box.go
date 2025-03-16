@@ -3,18 +3,15 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("urytyc428mwlbqq")
+		collection, err := app.FindCollectionByNameOrId("urytyc428mwlbqq")
 		if err != nil {
 			return err
 		}
@@ -22,19 +19,19 @@ func init() {
 		collection.ViewRule = types.Pointer("@request.auth.id = id")
 
 		// remove
-		collection.Schema.RemoveField("iyhsoisl")
+		collection.Fields.RemoveById("iyhsoisl")
 
 		// remove
-		collection.Schema.RemoveField("kx2qfztr")
+		collection.Fields.RemoveById("kx2qfztr")
 
 		// remove
-		collection.Schema.RemoveField("z4qsnjeb")
+		collection.Fields.RemoveById("z4qsnjeb")
 
 		// remove
-		collection.Schema.RemoveField("p66xomdb")
+		collection.Fields.RemoveById("p66xomdb")
 
 		// add
-		new_max_lat := &schema.SchemaField{}
+		new_max_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "osfey1yx",
@@ -49,10 +46,10 @@ func init() {
 		}`), new_max_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_lat)
+		collection.Fields.Add(new_max_lat)
 
 		// add
-		new_max_lon := &schema.SchemaField{}
+		new_max_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "eohslzky",
@@ -67,10 +64,10 @@ func init() {
 		}`), new_max_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_max_lon)
+		collection.Fields.Add(new_max_lon)
 
 		// add
-		new_min_lat := &schema.SchemaField{}
+		new_min_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "kigvankd",
@@ -85,10 +82,10 @@ func init() {
 		}`), new_min_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_lat)
+		collection.Fields.Add(new_min_lat)
 
 		// add
-		new_min_lon := &schema.SchemaField{}
+		new_min_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "ifnks9mg",
@@ -103,13 +100,12 @@ func init() {
 		}`), new_min_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_min_lon)
+		collection.Fields.Add(new_min_lon)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("urytyc428mwlbqq")
+		collection, err := app.FindCollectionByNameOrId("urytyc428mwlbqq")
 		if err != nil {
 			return err
 		}
@@ -117,7 +113,7 @@ func init() {
 		collection.ViewRule = nil
 
 		// add
-		del_max_lat := &schema.SchemaField{}
+		del_max_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "iyhsoisl",
@@ -132,10 +128,10 @@ func init() {
 		}`), del_max_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_lat)
+		collection.Fields.Add(del_max_lat)
 
 		// add
-		del_max_lon := &schema.SchemaField{}
+		del_max_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "kx2qfztr",
@@ -150,10 +146,10 @@ func init() {
 		}`), del_max_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_max_lon)
+		collection.Fields.Add(del_max_lon)
 
 		// add
-		del_min_lat := &schema.SchemaField{}
+		del_min_lat := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "z4qsnjeb",
@@ -168,10 +164,10 @@ func init() {
 		}`), del_min_lat); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_lat)
+		collection.Fields.Add(del_min_lat)
 
 		// add
-		del_min_lon := &schema.SchemaField{}
+		del_min_lon := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "p66xomdb",
@@ -186,20 +182,20 @@ func init() {
 		}`), del_min_lon); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_min_lon)
+		collection.Fields.Add(del_min_lon)
 
 		// remove
-		collection.Schema.RemoveField("osfey1yx")
+		collection.Fields.RemoveById("osfey1yx")
 
 		// remove
-		collection.Schema.RemoveField("eohslzky")
+		collection.Fields.RemoveById("eohslzky")
 
 		// remove
-		collection.Schema.RemoveField("kigvankd")
+		collection.Fields.RemoveById("kigvankd")
 
 		// remove
-		collection.Schema.RemoveField("ifnks9mg")
+		collection.Fields.RemoveById("ifnks9mg")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

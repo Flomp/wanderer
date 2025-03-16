@@ -4,41 +4,33 @@ import (
 	"encoding/json"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db)
+	m.Register(func(app core.App) error {
 
 		// remove bio from users_anonymous to prevent ambiguity
-		uaCollection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		uaCollection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT users.id, username, avatar, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
-		}`), &options); err != nil {
-			return err
-		}
-		uaCollection.SetOptions(options)
+		uaCollection.ViewQuery = "SELECT users.id, username, avatar, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
 
-		err = dao.SaveCollection(uaCollection)
+		err = app.Save(uaCollection)
 		if err != nil {
 			return err
 		}
 
 		// add bio field to settings
-		collection, err := dao.FindCollectionByNameOrId("settings")
+		collection, err := app.FindCollectionByNameOrId("settings")
 		if err != nil {
 			return err
 		}
 
-		new_bio := &schema.SchemaField{}
+		new_bio := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "pd2cq8sq",
@@ -55,100 +47,88 @@ func init() {
 		}`), new_bio); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_bio)
+		collection.Fields.Add(new_bio)
 
-		err = dao.SaveCollection(collection)
+		err = app.Save(collection)
 		if err != nil {
 			return err
 		}
 
 		// migrate existing bios
-		users, err := dao.FindRecordsByFilter("_pb_users_auth_", "bio != null", "", -1, 0)
+		users, err := app.FindRecordsByFilter("_pb_users_auth_", "bio != null", "", -1, 0)
 		if err != nil {
 			return nil
 		}
 
 		for _, user := range users {
 			bio := user.GetString(("bio"))
-			userSettings, err := dao.FindRecordsByFilter("settings", "user = {:userId}", "", 1, 0, dbx.Params{"userId": user.Id})
+			userSettings, err := app.FindRecordsByFilter("settings", "user = {:userId}", "", 1, 0, dbx.Params{"userId": user.Id})
 			if err != nil {
 				return err
 			}
 
 			userSettings[0].Set("bio", bio)
 
-			if err := dao.SaveRecord(userSettings[0]); err != nil {
+			if err := app.Save(userSettings[0]); err != nil {
 				return err
 			}
 		}
 
 		// remove bio from users
-		uCollection, err := dao.FindCollectionByNameOrId("_pb_users_auth_")
+		uCollection, err := app.FindCollectionByNameOrId("_pb_users_auth_")
 		if err != nil {
 			return err
 		}
 
-		uCollection.Schema.RemoveField("pd2cq8sq")
-		err = dao.SaveCollection(uCollection)
+		uCollection.Fields.RemoveById("pd2cq8sq")
+		err = app.Save(uCollection)
 		if err != nil {
 			return err
 		}
 
 		// add bio back to users_anaonymous
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT users.id, username, avatar, bio, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
-		}`), &options); err != nil {
-			return err
-		}
-		uaCollection.SetOptions(options)
+		uaCollection.ViewQuery = "SELECT users.id, username, avatar, bio, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
 
-		err = dao.SaveCollection(uaCollection)
+		err = app.Save(uaCollection)
 		if err != nil {
 			return err
 		}
 
 		return nil
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db)
+	}, func(app core.App) error {
 
-		uaCollection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		uaCollection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
 
-		options := map[string]any{}
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT users.id, username, avatar, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
-		}`), &options); err != nil {
-			return err
-		}
-		uaCollection.SetOptions(options)
+		uaCollection.ViewQuery = "SELECT users.id, username, avatar, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
 
-		err = dao.SaveCollection(uaCollection)
+		err = app.Save(uaCollection)
 		if err != nil {
 			return err
 		}
 
-		collection, err := dao.FindCollectionByNameOrId("settings")
+		collection, err := app.FindCollectionByNameOrId("settings")
 		if err != nil {
 			return err
 		}
 
 		// remove
-		collection.Schema.RemoveField("pd2cq8sq")
+		collection.Fields.RemoveById("pd2cq8sq")
 
-		err = dao.SaveCollection(collection)
+		err = app.Save(collection)
 		if err != nil {
 			return err
 		}
 
-		uCollection, err := dao.FindCollectionByNameOrId("_pb_users_auth_")
+		uCollection, err := app.FindCollectionByNameOrId("_pb_users_auth_")
 		if err != nil {
 			return err
 		}
 
 		// add
-		new_bio := &schema.SchemaField{}
+		new_bio := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "pd2cq8sq",
@@ -165,21 +145,16 @@ func init() {
 		}`), new_bio); err != nil {
 			return err
 		}
-		uCollection.Schema.AddField(new_bio)
+		uCollection.Fields.Add(new_bio)
 
-		err = dao.SaveCollection(uCollection)
+		err = app.Save(uCollection)
 		if err != nil {
 			return err
 		}
 
-		if err := json.Unmarshal([]byte(`{
-			"query": "SELECT users.id, username, avatar, bio, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
-		}`), &options); err != nil {
-			return err
-		}
-		uaCollection.SetOptions(options)
+		uaCollection.ViewQuery = "SELECT users.id, username, avatar, bio, users.created, CAST(COALESCE(json_extract(privacy, '$.account') = 'private', false) as BOOL) as private FROM users LEFT JOIN settings ON settings.user = users.id"
 
-		return dao.SaveCollection(uaCollection)
+		return app.Save(uaCollection)
 
 	})
 }

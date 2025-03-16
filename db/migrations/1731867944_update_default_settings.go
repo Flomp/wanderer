@@ -1,24 +1,19 @@
 package migrations
 
 import (
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db)
-		settings, err := dao.FindSettings()
+	m.Register(func(app core.App) error {
 
-		if err != nil {
-			return err
-		}
+		settings := app.Settings()
 
 		settings.Meta.AppName = "wanderer"
-		settings.Meta.ResetPasswordTemplate.ActionUrl = "{APP_URL}/auth/confirm-reset/{TOKEN}"
-		settings.Meta.VerificationTemplate.ActionUrl = "{APP_URL}/auth/confirm-verification/{TOKEN}"
-		settings.Meta.ConfirmEmailChangeTemplate.ActionUrl = "{APP_URL}/auth/confirm-email-change/{TOKEN}"
+		// settings.Meta.ResetPasswordTemplate.ActionUrl = "{APP_URL}/auth/confirm-reset/{TOKEN}"
+		// settings.Meta.VerificationTemplate.ActionUrl = "{APP_URL}/auth/confirm-verification/{TOKEN}"
+		// settings.Meta.ConfirmEmailChangeTemplate.ActionUrl = "{APP_URL}/auth/confirm-email-change/{TOKEN}"
 
 		//   settings.meta.verificationTemplate.subject = 'your default subject';
 		//   settings.meta.verificationTemplate.body = '<p>Hello world - {ACTION_URL}!</p>';
@@ -30,9 +25,9 @@ func init() {
 		// use the https://pocketbase.io/docs/api-settings/ > Update settings
 		// "Body parameters" section as a reference
 
-		return dao.SaveSettings(settings)
+		return app.Save(settings)
 
-	}, func(db dbx.Builder) error {
+	}, func(app core.App) error {
 		// add down queries...
 
 		return nil

@@ -3,35 +3,31 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("e864strfxo14pm4")
+		collection, err := app.FindCollectionByNameOrId("e864strfxo14pm4")
 		if err != nil {
 			return err
 		}
 
 		// remove
-		collection.Schema.RemoveField("phhhroww")
+		collection.Fields.RemoveById("phhhroww")
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("e864strfxo14pm4")
+		collection, err := app.FindCollectionByNameOrId("e864strfxo14pm4")
 		if err != nil {
 			return err
 		}
 
 		// add
-		del_comments := &schema.SchemaField{}
+		del_comments := &core.RelationField{}
 		json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "phhhroww",
@@ -48,8 +44,8 @@ func init() {
 				"displayFields": null
 			}
 		}`), del_comments)
-		collection.Schema.AddField(del_comments)
+		collection.Fields.Add(del_comments)
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

@@ -3,48 +3,44 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db)
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("_pb_users_auth_")
+		collection, err := app.FindCollectionByNameOrId("_pb_users_auth_")
 		if err != nil {
 			return err
 		}
 
 		// remove
-		collection.Schema.RemoveField("wjofulpg")
+		collection.Fields.RemoveById("wjofulpg")
 
 		// remove
-		collection.Schema.RemoveField("t1wlsqyp")
+		collection.Fields.RemoveById("t1wlsqyp")
 
 		// remove
-		collection.Schema.RemoveField("fhxhln9g")
+		collection.Fields.RemoveById("fhxhln9g")
 
 		// remove
-		collection.Schema.RemoveField("wosrk4ue")
+		collection.Fields.RemoveById("wosrk4ue")
 
-		query := dao.RecordQuery("_pb_users_auth_")
+		query := app.RecordQuery("_pb_users_auth_")
 
-		users := []*models.Record{}
+		users := []*core.Record{}
 		if err := query.All(&users); err != nil {
 			return err
 		}
-		settingsCollection, err := dao.FindCollectionByNameOrId("settings")
+		settingsCollection, err := app.FindCollectionByNameOrId("settings")
 
 		if err != nil {
 			return err
 		}
 
 		for _, user := range users {
-			settings := models.NewRecord(settingsCollection)
+			settings := core.NewRecord(settingsCollection)
 			language := user.Get("language")
 			unit := user.Get("unit")
 			location := user.Get("location")
@@ -53,22 +49,21 @@ func init() {
 			settings.Set("location", location)
 			settings.Set("user", user.Id)
 			settings.Set("mapFocus", "location")
-			if err := dao.SaveRecord(settings); err != nil {
+			if err := app.Save(settings); err != nil {
 				return err
 			}
 		}
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db)
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("_pb_users_auth_")
+		collection, err := app.FindCollectionByNameOrId("_pb_users_auth_")
 		if err != nil {
 			return err
 		}
 
 		// add
-		del_unit := &schema.SchemaField{}
+		del_unit := &core.SelectField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "wjofulpg",
@@ -87,10 +82,10 @@ func init() {
 		}`), del_unit); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_unit)
+		collection.Fields.Add(del_unit)
 
 		// add
-		del_language := &schema.SchemaField{}
+		del_language := &core.SelectField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "t1wlsqyp",
@@ -115,10 +110,10 @@ func init() {
 		}`), del_language); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_language)
+		collection.Fields.Add(del_language)
 
 		// add
-		del_mapView := &schema.SchemaField{}
+		del_mapView := &core.SelectField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "fhxhln9g",
@@ -137,10 +132,10 @@ func init() {
 		}`), del_mapView); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_mapView)
+		collection.Fields.Add(del_mapView)
 
 		// add
-		del_location := &schema.SchemaField{}
+		del_location := &core.JSONField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "wosrk4ue",
@@ -155,8 +150,8 @@ func init() {
 		}`), del_location); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_location)
+		collection.Fields.Add(del_location)
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

@@ -22,7 +22,7 @@ import (
 	"pocketbase/integrations/komoot"
 	"pocketbase/integrations/strava"
 
-	// _ "pocketbase/migrations"
+	_ "pocketbase/migrations"
 	"pocketbase/util"
 )
 
@@ -30,7 +30,7 @@ func main() {
 	app := pocketbase.New()
 	client := initializeMeiliSearch()
 
-	// registerMigrations(app)
+	registerMigrations(app)
 	setupEventHandlers(app, client)
 
 	if err := app.Start(); err != nil {
@@ -489,7 +489,9 @@ func onBeforeServeHandler(app *pocketbase.PocketBase, client meilisearch.Service
 	return func(e *core.ServeEvent) error {
 		registerRoutes(e, app, client)
 		registerCronJobs(app)
-		return bootstrapData(app, client)
+		bootstrapData(app, client)
+
+		return e.Next()
 	}
 
 }

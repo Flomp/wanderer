@@ -3,23 +3,20 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("lf06qip3f4d11yk")
+		collection, err := app.FindCollectionByNameOrId("lf06qip3f4d11yk")
 		if err != nil {
 			return err
 		}
 
 		// add
-		new_trail := &schema.SchemaField{}
+		new_trail := &core.RelationField{}
 		json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "snrlpxar",
@@ -36,20 +33,19 @@ func init() {
 				"displayFields": null
 			}
 		}`), new_trail)
-		collection.Schema.AddField(new_trail)
+		collection.Fields.Add(new_trail)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("lf06qip3f4d11yk")
+		collection, err := app.FindCollectionByNameOrId("lf06qip3f4d11yk")
 		if err != nil {
 			return err
 		}
 
 		// remove
-		collection.Schema.RemoveField("snrlpxar")
+		collection.Fields.RemoveById("snrlpxar")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

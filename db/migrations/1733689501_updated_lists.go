@@ -3,18 +3,15 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("r6gu2ajyidy1x69")
+		collection, err := app.FindCollectionByNameOrId("r6gu2ajyidy1x69")
 		if err != nil {
 			return err
 		}
@@ -24,7 +21,7 @@ func init() {
 		collection.ViewRule = types.Pointer("author = @request.auth.id || public = true || (@request.auth.id != \"\" && list_share_via_list.user ?= @request.auth.id)")
 
 		// add
-		new_public := &schema.SchemaField{}
+		new_public := &core.BoolField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "rolk3q3j",
@@ -37,13 +34,12 @@ func init() {
 		}`), new_public); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_public)
+		collection.Fields.Add(new_public)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("r6gu2ajyidy1x69")
+		collection, err := app.FindCollectionByNameOrId("r6gu2ajyidy1x69")
 		if err != nil {
 			return err
 		}
@@ -53,8 +49,8 @@ func init() {
 		collection.ViewRule = types.Pointer("author = @request.auth.id || (@request.auth.id != \"\" && list_share_via_list.user ?= @request.auth.id)")
 
 		// remove
-		collection.Schema.RemoveField("rolk3q3j")
+		collection.Fields.RemoveById("rolk3q3j")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }

@@ -28,7 +28,7 @@ func init() {
 				"name": "users",
 				"type": "auth",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "dlzhxcn2",
@@ -73,13 +73,11 @@ func init() {
 						"required": false,
 						"presentable": false,
 						"unique": false,
-						"options": {
-							"maxSelect": 1,
-							"values": [
-								"metric",
-								"imperial"
-							]
-						}
+						"maxSelect": 1,
+						"values": [
+							"metric",
+							"imperial"
+						]
 					},
 					{
 						"system": false,
@@ -89,13 +87,11 @@ func init() {
 						"required": false,
 						"presentable": false,
 						"unique": false,
-						"options": {
-							"maxSelect": 1,
-							"values": [
-								"en",
-								"de"
-							]
-						}
+						"maxSelect": 1,
+						"values": [
+							"en",
+							"de"
+						]
 					},
 					{
 						"system": false,
@@ -105,9 +101,7 @@ func init() {
 						"required": false,
 						"presentable": false,
 						"unique": false,
-						"options": {
-							"maxSize": 2000000
-						}
+						"maxSize": 2000000
 					}
 				],
 				"indexes": [],
@@ -135,7 +129,7 @@ func init() {
 				"name": "trails",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "wquvuytd",
@@ -172,11 +166,9 @@ func init() {
 						"required": false,
 						"presentable": false,
 						"unique": false,
-						"options": {
-							"min": null,
-							"max": null,
-							"pattern": ""
-						}
+						"min": null,
+						"max": null,
+						"pattern": ""
 					},
 					{
 						"system": false,
@@ -196,11 +188,9 @@ func init() {
 						"required": false,
 						"presentable": false,
 						"unique": false,
-						"options": {
-							"min": 0,
-							"max": null,
-							"noDecimal": false
-						}
+						"min": 0,
+						"max": null,
+						"noDecimal": false
 					},
 					{
 						"system": false,
@@ -210,11 +200,9 @@ func init() {
 						"required": false,
 						"presentable": false,
 						"unique": false,
-						"options": {
-							"min": null,
-							"max": null,
-							"noDecimal": false
-						}
+						"min": null,
+						"max": null,
+						"onlyInt": true
 					},
 					{
 						"system": false,
@@ -224,11 +212,9 @@ func init() {
 						"required": false,
 						"presentable": false,
 						"unique": false,
-						"options": {
-							"min": 0,
-							"max": null,
-							"noDecimal": false
-						}
+						"min": 0,
+						"max": null,
+						"onlyInt": true
 					},
 					{
 						"system": false,
@@ -390,7 +376,7 @@ func init() {
 				"name": "categories",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "38tbd8u4",
@@ -437,7 +423,7 @@ func init() {
 				"name": "waypoints",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "2yegzjtk",
@@ -524,7 +510,7 @@ func init() {
 				"name": "summit_logs",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "gxq1yeld",
@@ -568,7 +554,7 @@ func init() {
 				"name": "lists",
 				"type": "base",
 				"system": false,
-				"schema": [
+				"fields": [
 					{
 						"system": false,
 						"id": "0goi1ipa",

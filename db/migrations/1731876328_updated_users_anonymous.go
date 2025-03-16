@@ -3,18 +3,15 @@ package migrations
 import (
 	"encoding/json"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models/schema"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 func init() {
-	m.Register(func(db dbx.Builder) error {
-		dao := daos.New(db);
+	m.Register(func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		collection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
@@ -24,13 +21,13 @@ func init() {
 		collection.ViewRule = types.Pointer("")
 
 		// remove
-		collection.Schema.RemoveField("kvteagv6")
+		collection.Fields.RemoveById("kvteagv6")
 
 		// remove
-		collection.Schema.RemoveField("m9efnpak")
+		collection.Fields.RemoveById("m9efnpak")
 
 		// add
-		new_username := &schema.SchemaField{}
+		new_username := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "femc0ok5",
@@ -47,10 +44,10 @@ func init() {
 		}`), new_username); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_username)
+		collection.Fields.Add(new_username)
 
 		// add
-		new_avatar := &schema.SchemaField{}
+		new_avatar := &core.FileField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "aglcodpn",
@@ -75,13 +72,12 @@ func init() {
 		}`), new_avatar); err != nil {
 			return err
 		}
-		collection.Schema.AddField(new_avatar)
+		collection.Fields.Add(new_avatar)
 
-		return dao.SaveCollection(collection)
-	}, func(db dbx.Builder) error {
-		dao := daos.New(db);
+		return app.Save(collection)
+	}, func(app core.App) error {
 
-		collection, err := dao.FindCollectionByNameOrId("xku110v5a5xbufa")
+		collection, err := app.FindCollectionByNameOrId("xku110v5a5xbufa")
 		if err != nil {
 			return err
 		}
@@ -91,7 +87,7 @@ func init() {
 		collection.ViewRule = types.Pointer("@request.auth.id != \"\"")
 
 		// add
-		del_username := &schema.SchemaField{}
+		del_username := &core.TextField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "kvteagv6",
@@ -108,10 +104,10 @@ func init() {
 		}`), del_username); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_username)
+		collection.Fields.Add(del_username)
 
 		// add
-		del_avatar := &schema.SchemaField{}
+		del_avatar := &core.FileField{}
 		if err := json.Unmarshal([]byte(`{
 			"system": false,
 			"id": "m9efnpak",
@@ -136,14 +132,14 @@ func init() {
 		}`), del_avatar); err != nil {
 			return err
 		}
-		collection.Schema.AddField(del_avatar)
+		collection.Fields.Add(del_avatar)
 
 		// remove
-		collection.Schema.RemoveField("femc0ok5")
+		collection.Fields.RemoveById("femc0ok5")
 
 		// remove
-		collection.Schema.RemoveField("aglcodpn")
+		collection.Fields.RemoveById("aglcodpn")
 
-		return dao.SaveCollection(collection)
+		return app.Save(collection)
 	})
 }
