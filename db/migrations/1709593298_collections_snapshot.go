@@ -1,20 +1,17 @@
 package migrations
 
 import (
-	"encoding/json"
 	"os"
 
 	"github.com/meilisearch/meilisearch-go"
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
-	"github.com/pocketbase/pocketbase/models"
 )
 
 func init() {
 	client := meilisearch.New(os.Getenv("MEILI_URL"), meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")))
 
-	m.Register(func(db dbx.Builder) error {
+	m.Register(func(app core.App) error {
 		_, err := client.CreateIndex(&meilisearch.IndexConfig{
 			Uid:        "trails",
 			PrimaryKey: "id",
@@ -665,13 +662,6 @@ func init() {
 			}
 		]`
 
-		collections := []*models.Collection{}
-		if err := json.Unmarshal([]byte(jsonData), &collections); err != nil {
-			return err
-		}
-
-		return daos.New(db).ImportCollections(collections, true, nil)
-	}, func(db dbx.Builder) error {
-		return nil
-	})
+		return app.ImportCollectionsByMarshaledJSON([]byte(jsonData), true)
+	}, nil)
 }

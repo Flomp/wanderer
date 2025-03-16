@@ -5,10 +5,10 @@ import (
 	"log"
 
 	"github.com/meilisearch/meilisearch-go"
-	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/core"
 )
 
-func documentFromTrailRecord(r *models.Record, author *models.Record, includeShares bool) map[string]interface{} {
+func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares bool) map[string]interface{} {
 	photos := r.GetStringSlice("photos")
 	thumbnail := ""
 	if len(photos) > 0 {
@@ -52,7 +52,7 @@ func documentFromTrailRecord(r *models.Record, author *models.Record, includeSha
 	return document
 }
 
-func documentFromListRecord(r *models.Record, includeShares bool) map[string]interface{} {
+func documentFromListRecord(r *core.Record, includeShares bool) map[string]interface{} {
 	document := map[string]interface{}{
 		"id":          r.Id,
 		"author":      r.GetString("author"),
@@ -70,7 +70,7 @@ func documentFromListRecord(r *models.Record, includeShares bool) map[string]int
 	return document
 }
 
-func IndexTrail(r *models.Record, author *models.Record, client meilisearch.ServiceManager) error {
+func IndexTrail(r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
 	documents := []map[string]interface{}{documentFromTrailRecord(r, author, true)}
 
 	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
@@ -80,7 +80,7 @@ func IndexTrail(r *models.Record, author *models.Record, client meilisearch.Serv
 	return nil
 }
 
-func UpdateTrail(r *models.Record, author *models.Record, client meilisearch.ServiceManager) error {
+func UpdateTrail(r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
 	documents := documentFromTrailRecord(r, author, false)
 
 	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {
@@ -103,7 +103,7 @@ func UpdateTrailShares(trailId string, shares []string, client meilisearch.Servi
 	return nil
 }
 
-func IndexList(r *models.Record, client meilisearch.ServiceManager) error {
+func IndexList(r *core.Record, client meilisearch.ServiceManager) error {
 	documents := []map[string]interface{}{documentFromListRecord(r, true)}
 
 	if _, err := client.Index("lists").AddDocuments(documents); err != nil {
@@ -113,7 +113,7 @@ func IndexList(r *models.Record, client meilisearch.ServiceManager) error {
 	return nil
 }
 
-func UpdateList(r *models.Record, client meilisearch.ServiceManager) error {
+func UpdateList(r *core.Record, client meilisearch.ServiceManager) error {
 	documents := documentFromListRecord(r, false)
 
 	if _, err := client.Index("lists").UpdateDocuments(documents); err != nil {

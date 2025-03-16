@@ -6,7 +6,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/mailer"
 )
 
@@ -34,7 +34,7 @@ type NotificationSettings struct {
 }
 
 func getNotificationPermissions(app *pocketbase.PocketBase, user string, notificationType NotificationType) (*NotificationSettings, error) {
-	settings, err := app.Dao().FindFirstRecordByFilter("settings", "user={:user}", dbx.Params{"user": user})
+	settings, err := app.FindFirstRecordByFilter("settings", "user={:user}", dbx.Params{"user": user})
 	if err != nil {
 		return nil, err
 	}
@@ -62,34 +62,34 @@ func SendNotification(app *pocketbase.PocketBase, notification Notification, rec
 		return err
 	}
 
-	notifications, err := app.Dao().FindCollectionByNameOrId("notifications")
+	notifications, err := app.FindCollectionByNameOrId("notifications")
 	if err != nil {
 		return err
 	}
 
 	if permissions.Web {
-		n := models.NewRecord(notifications)
+		n := core.NewRecord(notifications)
 		n.Set("type", string(notification.Type))
 		n.Set("metadata", notification.Metadata)
 		n.Set("seen", notification.Seen)
 		n.Set("recipient", recipient)
 		n.Set("author", notification.Author)
 
-		if err := app.Dao().SaveRecord(n); err != nil {
+		if err := app.Save(n); err != nil {
 			return err
 		}
 	}
 
 	if permissions.Email {
-		recipientUser, err := app.Dao().FindRecordById("users", recipient)
+		recipientUser, err := app.FindAuthRecordByEmail("users", recipient)
 		if err != nil {
 			return err
 		}
-		authorUser, err := app.Dao().FindRecordById("users", notification.Author)
+		authorUser, err := app.FindRecordById("users", notification.Author)
 		if err != nil {
 			return err
 		}
-		html, err := GenerateHTML(app.Settings().Meta.AppUrl, recipientUser.Username(), authorUser.Username(), notification.Type, notification.Metadata)
+		html, err := GenerateHTML(app.Settings().Meta.AppURL, recipientUser.GetString("username"), authorUser.GetString("username"), notification.Type, notification.Metadata)
 		if err != nil {
 			return err
 		}
@@ -110,7 +110,7 @@ func SendNotification(app *pocketbase.PocketBase, notification Notification, rec
 }
 
 func SendNotificationToFollowers(app *pocketbase.PocketBase, notification Notification) error {
-	followers, err := app.Dao().FindRecordsByFilter("follows", "followee={:user}", "", -1, 0, dbx.Params{"user": notification.Author})
+	followers, err := app.FindRecordsByFilter("follows", "followee={:user}", "", -1, 0, dbx.Params{"user": notification.Author})
 
 	if err != nil {
 		return err

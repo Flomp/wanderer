@@ -58,7 +58,7 @@
     "nouislider": "^15.7.1",
     "pdfkit": "^0.15.0",
     "photoswipe": "^5.4.3",
-    "pocketbase": "^0.21.0",
+    "pocketbase": "^0.25.1",
     "qrcode": "^1.4.4",
     "svelte-i18n": "^4.0.0",
     "three": "^0.161.0",

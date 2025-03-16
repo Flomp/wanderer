@@ -10,23 +10,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labstack/echo/v5"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/forms"
-	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
-	"github.com/pocketbase/pocketbase/tools/cron"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/security"
 
 	"pocketbase/integrations/komoot"
 	"pocketbase/integrations/strava"
-	_ "pocketbase/migrations"
+
+	// _ "pocketbase/migrations"
 	"pocketbase/util"
 )
 
@@ -34,7 +30,7 @@ func main() {
 	app := pocketbase.New()
 	client := initializeMeiliSearch()
 
-	registerMigrations(app)
+	// registerMigrations(app)
 	setupEventHandlers(app, client)
 
 	if err := app.Start(); err != nil {
@@ -57,41 +53,36 @@ func registerMigrations(app *pocketbase.PocketBase) {
 }
 
 func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceManager) {
-	app.OnModelAfterCreate("users").Add(createUserHandler(app, client))
+	app.OnRecordAfterCreateSuccess("users").BindFunc(createUserHandler(app, client))
 
-	app.OnModelAfterCreate("trails").Add(createTrailIndexHandler(app, client))
-	app.OnModelAfterUpdate("trails").Add(updateTrailIndexHandler(app, client))
-	app.OnModelAfterDelete("trails").Add(deleteTrailIndexHandler(client))
+	app.OnRecordAfterCreateSuccess("trails").BindFunc(createTrailHandler(app, client))
+	app.OnRecordAfterUpdateSuccess("trails").BindFunc(updateTrailHandler(app, client))
+	app.OnRecordAfterDeleteSuccess("trails").BindFunc(deleteTrailHandler(client))
 
-	app.OnRecordAfterCreateRequest("trails").Add(createTrailHandler(app))
+	app.OnRecordAfterCreateSuccess("trail_share").BindFunc(createTrailShareHandler(app, client))
+	app.OnRecordAfterDeleteSuccess("trail_share").BindFunc(deleteTrailShareHandler(client))
 
-	app.OnRecordAfterCreateRequest("trail_share").Add(createTrailShareHandler(app, client))
-	app.OnRecordAfterDeleteRequest("trail_share").Add(deleteTrailShareHandler(client))
+	app.OnRecordAfterCreateSuccess("lists").BindFunc(createListHandler(app, client))
+	app.OnRecordAfterUpdateSuccess("lists").BindFunc(updateListHandler(client))
+	app.OnRecordAfterDeleteSuccess("lists").BindFunc(deleteListHandler(client))
 
-	app.OnRecordAfterCreateRequest("lists").Add(createListHandler(app, client))
-	app.OnRecordAfterUpdateRequest("lists").Add(updateListHandler(client))
-	app.OnRecordAfterDeleteRequest("lists").Add(deleteListHandler(client))
+	app.OnRecordAfterCreateSuccess("list_share").BindFunc(createListShareHandler(app, client))
+	app.OnRecordAfterDeleteSuccess("list_share").BindFunc(deleteListShareHandler(client))
 
-	app.OnRecordAfterCreateRequest("list_share").Add(createListShareHandler(app, client))
-	app.OnRecordAfterDeleteRequest("list_share").Add(deleteListShareHandler(client))
+	app.OnRecordAfterCreateSuccess("follows").BindFunc(createFollowHandler(app))
+	app.OnRecordAfterCreateSuccess("comments").BindFunc(createCommentHandler(app))
 
-	app.OnRecordAfterCreateRequest("follows").Add(createFollowHandler(app))
-	app.OnRecordAfterCreateRequest("comments").Add(createCommentHandler(app))
+	app.OnRecordsListRequest("integrations").BindFunc(listIntegrationHandler())
+	app.OnRecordCreateRequest("integrations").BindFunc(createIntegrationHandler(app))
+	app.OnRecordUpdateRequest("integrations").BindFunc(updateIntegrationHandler(app))
 
-	app.OnRecordsListRequest("integrations").Add(listIntegrationHandler())
-	app.OnRecordAfterCreateRequest("integrations").Add(createIntegrationAfterHandler())
-	app.OnRecordAfterUpdateRequest("integrations").Add(updateIntegrationAfterHandler())
-	app.OnRecordBeforeCreateRequest("integrations").Add(createIntegrationBeforeHandler(app))
-	app.OnRecordBeforeUpdateRequest("integrations").Add(updateIntegrationBeforeHandler(app))
-
-	app.OnRecordBeforeRequestEmailChangeRequest("users").Add(changeUserEmailHandler(app))
-	app.OnBeforeServe().Add(onBeforeServeHandler(app, client))
+	app.OnRecordRequestEmailChangeRequest("users").BindFunc(changeUserEmailHandler(app))
+	app.OnServe().BindFunc(onBeforeServeHandler(app, client))
 }
 
-func createUserHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
-	return func(e *core.ModelEvent) error {
-		record := e.Model.(*models.Record)
-		userId := record.GetId()
+func createUserHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		userId := e.Record.Id
 
 		searchRules := map[string]interface{}{
 			"lists": map[string]string{
@@ -106,53 +97,48 @@ func createUserHandler(app *pocketbase.PocketBase, client meilisearch.ServiceMan
 		if err != nil {
 			return err
 		}
-		record.Set("token", token)
-		if err := app.Dao().SaveRecord(record); err != nil {
+		e.Record.Set("token", token)
+		if err := app.Save(e.Record); err != nil {
 			return err
 		}
 
-		return createDefaultUserSettings(app, record.Id)
+		return createDefaultUserSettings(app, e.Record.Id)
 	}
 }
 
 func createDefaultUserSettings(app *pocketbase.PocketBase, userId string) error {
-	collection, err := app.Dao().FindCollectionByNameOrId("settings")
+	collection, err := app.FindCollectionByNameOrId("settings")
 	if err != nil {
 		return err
 	}
-	settings := models.NewRecord(collection)
+	settings := core.NewRecord(collection)
 	settings.Set("language", "en")
 	settings.Set("unit", "metric")
 	settings.Set("mapFocus", "trails")
 	settings.Set("user", userId)
-	return app.Dao().SaveRecord(settings)
+	return app.Save(settings)
 }
 
-func createTrailIndexHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
-	return func(e *core.ModelEvent) error {
-		record := e.Model.(*models.Record)
-		author, err := app.Dao().FindRecordById("users", record.GetString(("author")))
+func createTrailHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+		author, err := app.FindRecordById("users", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
 		if err := util.IndexTrail(record, author, client); err != nil {
 			return err
 		}
-		return nil
-	}
-}
 
-func createTrailHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		if e.Record.GetBool("public") {
+		if record.GetBool("public") {
 			notification := util.Notification{
 				Type: util.TrailCreate,
 				Metadata: map[string]string{
-					"id":    e.Record.Id,
-					"trail": e.Record.GetString("name"),
+					"id":    record.Id,
+					"trail": record.GetString("name"),
 				},
 				Seen:   false,
-				Author: e.Record.GetString("author"),
+				Author: record.GetString("author"),
 			}
 			return util.SendNotificationToFollowers(app, notification)
 		}
@@ -160,10 +146,10 @@ func createTrailHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEve
 	}
 }
 
-func updateTrailIndexHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
-	return func(e *core.ModelEvent) error {
-		record := e.Model.(*models.Record)
-		author, err := app.Dao().FindRecordById("users", record.GetString(("author")))
+func updateTrailHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+		author, err := app.FindRecordById("users", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
@@ -171,18 +157,20 @@ func updateTrailIndexHandler(app *pocketbase.PocketBase, client meilisearch.Serv
 	}
 }
 
-func deleteTrailIndexHandler(client meilisearch.ServiceManager) func(e *core.ModelEvent) error {
-	return func(e *core.ModelEvent) error {
-		record := e.Model.(*models.Record)
+func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
 		_, err := client.Index("trails").DeleteDocument(record.Id)
 		return err
 	}
 }
 
-func createTrailShareHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		trailId := e.Record.GetString("trail")
-		shares, err := app.Dao().FindRecordsByExpr("trail_share",
+func createTrailShareHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+
+		trailId := record.GetString("trail")
+		shares, err := app.FindAllRecords("trail_share",
 			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trailId}),
 		)
 		if err != nil {
@@ -198,10 +186,10 @@ func createTrailShareHandler(app *pocketbase.PocketBase, client meilisearch.Serv
 			return err
 		}
 
-		if errs := app.Dao().ExpandRecord(e.Record, []string{"trail", "trail.author"}, nil); len(errs) > 0 {
+		if errs := app.ExpandRecord(record, []string{"trail", "trail.author"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
 		}
-		shareTrail := e.Record.ExpandedOne("trail")
+		shareTrail := record.ExpandedOne("trail")
 		shareTrailAuthor := shareTrail.ExpandedOne("author")
 
 		notification := util.Notification{
@@ -214,55 +202,62 @@ func createTrailShareHandler(app *pocketbase.PocketBase, client meilisearch.Serv
 			Seen:   false,
 			Author: shareTrailAuthor.Id,
 		}
-		return util.SendNotification(app, notification, e.Record.GetString("user"))
+		return util.SendNotification(app, notification, record.GetString("user"))
 	}
 }
 
-func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
-	return func(e *core.RecordDeleteEvent) error {
-		trailId := e.Record.GetString("trail")
+func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+
+		trailId := record.GetString("trail")
 		return util.UpdateTrailShares(trailId, []string{}, client)
 	}
 }
 
-func createListHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		if err := util.IndexList(e.Record, client); err != nil {
+func createListHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+
+		if err := util.IndexList(record, client); err != nil {
 			return err
 		}
-		if !e.Record.GetBool("public") {
+		if !record.GetBool("public") {
 			return nil
 		}
 		notification := util.Notification{
 			Type: util.ListCreate,
 			Metadata: map[string]string{
-				"id":   e.Record.Id,
-				"list": e.Record.GetString("name"),
+				"id":   record.Id,
+				"list": record.GetString("name"),
 			},
 			Seen:   false,
-			Author: e.Record.GetString("author"),
+			Author: record.GetString("author"),
 		}
 		return util.SendNotificationToFollowers(app, notification)
 	}
 }
 
-func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordUpdateEvent) error {
-	return func(e *core.RecordUpdateEvent) error {
-		return util.UpdateList(e.Record, client)
+func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+		return util.UpdateList(record, client)
 	}
 }
 
-func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
-	return func(e *core.RecordDeleteEvent) error {
-		_, err := client.Index("lists").DeleteDocument(e.Record.Id)
+func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+		_, err := client.Index("lists").DeleteDocument(record.Id)
 		return err
 	}
 }
 
-func createListShareHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		listId := e.Record.GetString("list")
-		shares, err := app.Dao().FindRecordsByExpr("list_share",
+func createListShareHandler(app *pocketbase.PocketBase, client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+		listId := record.GetString("list")
+		shares, err := app.FindAllRecords("list_share",
 			dbx.NewExp("list = {:listId}", dbx.Params{"listId": listId}),
 		)
 		if err != nil {
@@ -278,10 +273,10 @@ func createListShareHandler(app *pocketbase.PocketBase, client meilisearch.Servi
 			return err
 		}
 
-		if errs := app.Dao().ExpandRecord(e.Record, []string{"list", "list.author"}, nil); len(errs) > 0 {
+		if errs := app.ExpandRecord(record, []string{"list", "list.author"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
 		}
-		shareList := e.Record.ExpandedOne("list")
+		shareList := record.ExpandedOne("list")
 		shareListAuthor := shareList.ExpandedOne("author")
 
 		notification := util.Notification{
@@ -294,23 +289,25 @@ func createListShareHandler(app *pocketbase.PocketBase, client meilisearch.Servi
 			Seen:   false,
 			Author: shareListAuthor.Id,
 		}
-		return util.SendNotification(app, notification, e.Record.GetString("user"))
+		return util.SendNotification(app, notification, record.GetString("user"))
 	}
 }
 
-func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordDeleteEvent) error {
-	return func(e *core.RecordDeleteEvent) error {
-		listId := e.Record.GetString("list")
+func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+		listId := record.GetString("list")
 		return util.UpdateListShares(listId, []string{}, client)
 	}
 }
 
-func createFollowHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		if errs := app.Dao().ExpandRecord(e.Record, []string{"follower"}, nil); len(errs) > 0 {
+func createFollowHandler(app *pocketbase.PocketBase) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
+		if errs := app.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
 		}
-		follower := e.Record.ExpandedOne("follower")
+		follower := record.ExpandedOne("follower")
 
 		notification := util.Notification{
 			Type: util.NewFollower,
@@ -318,20 +315,21 @@ func createFollowHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEv
 				"follower": follower.GetString("username"),
 			},
 			Seen:   false,
-			Author: e.Record.GetString("follower"),
+			Author: record.GetString("follower"),
 		}
-		return util.SendNotification(app, notification, e.Record.GetString("followee"))
+		return util.SendNotification(app, notification, record.GetString("followee"))
 	}
 }
 
-func createCommentHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
+func createCommentHandler(app *pocketbase.PocketBase) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		record := e.Record
 
-		if errs := app.Dao().ExpandRecord(e.Record, []string{"trail", "author"}, nil); len(errs) > 0 {
+		if errs := app.ExpandRecord(record, []string{"trail", "author"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
 		}
-		commentAuthor := e.Record.ExpandedOne("author")
-		commentTrail := e.Record.ExpandedOne("trail")
+		commentAuthor := record.ExpandedOne("author")
+		commentTrail := record.ExpandedOne("trail")
 
 		notification := util.Notification{
 			Type: util.TrailComment,
@@ -339,19 +337,18 @@ func createCommentHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateE
 				"id":      commentTrail.Id,
 				"author":  commentAuthor.GetString("username"),
 				"trail":   commentTrail.GetString("name"),
-				"comment": e.Record.GetString("text"),
+				"comment": record.GetString("text"),
 			},
 			Seen:   false,
-			Author: e.Record.GetString("author"),
+			Author: record.GetString("author"),
 		}
 		return util.SendNotification(app, notification, commentTrail.GetString("author"))
 	}
 }
 
-func listIntegrationHandler() func(e *core.RecordsListEvent) error {
-	return func(e *core.RecordsListEvent) error {
-		info := apis.RequestInfo(e.HttpContext)
-		if info.Admin != nil {
+func listIntegrationHandler() func(e *core.RecordsListRequestEvent) error {
+	return func(e *core.RecordsListRequestEvent) error {
+		if e.HasSuperuserAuth() {
 			return nil
 		}
 		for _, r := range e.Records {
@@ -366,40 +363,18 @@ func listIntegrationHandler() func(e *core.RecordsListEvent) error {
 	}
 }
 
-func createIntegrationBeforeHandler(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		err := encryptIntegrationSecrets(app, e.Record)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-func createIntegrationAfterHandler() func(e *core.RecordCreateEvent) error {
-	return func(e *core.RecordCreateEvent) error {
-		err := censorIntegrationSecrets(e.Record)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-func updateIntegrationBeforeHandler(app *pocketbase.PocketBase) func(e *core.RecordUpdateEvent) error {
-	return func(e *core.RecordUpdateEvent) error {
+func createIntegrationHandler(app *pocketbase.PocketBase) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		err := encryptIntegrationSecrets(app, e.Record)
 		if err != nil {
 			return err
 		}
 
-		return nil
-	}
-}
+		if err := e.Next(); err != nil {
+			return err
+		}
 
-func updateIntegrationAfterHandler() func(e *core.RecordUpdateEvent) error {
-	return func(e *core.RecordUpdateEvent) error {
-		err := censorIntegrationSecrets(e.Record)
+		err = censorIntegrationSecrets(e.Record)
 		if err != nil {
 			return err
 		}
@@ -407,7 +382,25 @@ func updateIntegrationAfterHandler() func(e *core.RecordUpdateEvent) error {
 	}
 }
 
-func censorIntegrationSecrets(r *models.Record) error {
+func updateIntegrationHandler(app *pocketbase.PocketBase) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		err := encryptIntegrationSecrets(app, e.Record)
+		if err != nil {
+			return err
+		}
+
+		if err := e.Next(); err != nil {
+			return err
+		}
+
+		err = censorIntegrationSecrets(e.Record)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+func censorIntegrationSecrets(r *core.Record) error {
 	secrets := map[string][]string{
 		"strava": {"clientSecret", "refreshToken", "accessToken", "expiresAt"},
 		"komoot": {"password"},
@@ -432,7 +425,7 @@ func censorIntegrationSecrets(r *models.Record) error {
 	return nil
 }
 
-func encryptIntegrationSecrets(app *pocketbase.PocketBase, r *models.Record) error {
+func encryptIntegrationSecrets(app *pocketbase.PocketBase, r *core.Record) error {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 	if len(encryptionKey) == 0 {
 		return apis.NewBadRequestError("POCKETBASE_ENCRYPTION_KEY not set", nil)
@@ -443,7 +436,7 @@ func encryptIntegrationSecrets(app *pocketbase.PocketBase, r *models.Record) err
 		"komoot": {"password"},
 	}
 
-	original, _ := app.Dao().FindRecordById("integrations", r.Id)
+	original, _ := app.FindRecordById("integrations", r.Id)
 
 	for key, secretKeys := range secrets {
 		if integrationString := r.GetString(key); integrationString != "" {
@@ -481,17 +474,14 @@ func encryptIntegrationSecrets(app *pocketbase.PocketBase, r *models.Record) err
 	return nil
 }
 
-func changeUserEmailHandler(app *pocketbase.PocketBase) func(e *core.RecordRequestEmailChangeEvent) error {
-	return func(e *core.RecordRequestEmailChangeEvent) error {
-		form := forms.NewRecordEmailChangeRequest(app, e.Record)
-		if err := e.HttpContext.Bind(form); err != nil {
+func changeUserEmailHandler(app *pocketbase.PocketBase) func(e *core.RecordRequestEmailChangeRequestEvent) error {
+	return func(e *core.RecordRequestEmailChangeRequestEvent) error {
+
+		e.Record.Set("email", e.Record.Email())
+		if err := app.Save(e.Record); err != nil {
 			return err
 		}
-		e.Record.Set("email", form.NewEmail)
-		if err := app.Dao().SaveRecord(e.Record); err != nil {
-			return err
-		}
-		return hook.StopPropagation
+		return nil
 	}
 }
 
@@ -505,7 +495,7 @@ func onBeforeServeHandler(app *pocketbase.PocketBase, client meilisearch.Service
 }
 
 func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meilisearch.ServiceManager) {
-	e.Router.GET("/public/search/token", func(c echo.Context) error {
+	e.Router.GET("/public/search/token", func(e *core.RequestEvent) error {
 		searchRules := map[string]interface{}{
 			"lists": map[string]string{
 				"filter": "public = true",
@@ -518,21 +508,17 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, map[string]string{"token": token})
+		return e.JSON(http.StatusOK, map[string]string{"token": token})
 	})
-	e.Router.GET("/trail/recommend", func(c echo.Context) error {
-		qSize := c.QueryParam("size")
+	e.Router.GET("/trail/recommend", func(e *core.RequestEvent) error {
+		qSize := e.Request.URL.Query().Get("size")
 		size, err := strconv.Atoi(qSize)
 		if err != nil {
 			size = 4
 		}
-		user, success := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		userId := e.Auth.Id
 
-		userId := ""
-		if success {
-			userId = user.Id
-		}
-		trails, err := app.Dao().FindRecordsByFilter(
+		trails, err := app.FindRecordsByFilter(
 			"trails",
 			"author = {:userId} || public = true || ({:userId} != '' && trail_share_via_trail.user ?= {:userId})",
 			"",
@@ -550,28 +536,24 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 			trails[i], trails[j] = trails[j], trails[i]
 		})
 		randomTrails := trails[:size]
-		return c.JSON(http.StatusOK, randomTrails)
+		return e.JSON(http.StatusOK, randomTrails)
 
 	})
 
-	e.Router.POST("/integration/strava/token", func(c echo.Context) error {
+	e.Router.POST("/integration/strava/token", func(e *core.RequestEvent) error {
 		encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 		if len(encryptionKey) == 0 {
 			return apis.NewBadRequestError("POCKETBASE_ENCRYPTION_KEY not set", nil)
 		}
 
 		var data strava.TokenRequest
-		if err := c.Bind(&data); err != nil {
+		if err := e.BindBody(&data); err != nil {
 			return apis.NewBadRequestError("Failed to read request data", err)
 		}
 
-		user, success := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-		userId := ""
-		if success {
-			userId = user.Id
-		}
+		userId := e.Auth.Id
 
-		integrations, err := app.Dao().FindRecordsByExpr("integrations", dbx.NewExp("user = {:id}", dbx.Params{"id": userId}))
+		integrations, err := app.FindAllRecords("integrations", dbx.NewExp("user = {:id}", dbx.Params{"id": userId}))
 		if err != nil {
 			return err
 		}
@@ -620,26 +602,22 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 			return err
 		}
 		integration.Set("strava", string(b))
-		err = app.Dao().SaveRecord(integration)
+		err = app.Save(integration)
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, nil)
+		return e.JSON(http.StatusOK, nil)
 	})
 
-	e.Router.GET("/integration/komoot/login", func(c echo.Context) error {
+	e.Router.GET("/integration/komoot/login", func(e *core.RequestEvent) error {
 		encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 		if len(encryptionKey) == 0 {
 			return apis.NewBadRequestError("POCKETBASE_ENCRYPTION_KEY not set", nil)
 		}
 
-		user, success := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-		userId := ""
-		if success {
-			userId = user.Id
-		}
+		userId := e.Auth.Id
 
-		integrations, err := app.Dao().FindRecordsByExpr("integrations", dbx.NewExp("user = {:id}", dbx.Params{"id": userId}))
+		integrations, err := app.FindAllRecords("integrations", dbx.NewExp("user = {:id}", dbx.Params{"id": userId}))
 		if err != nil {
 			return err
 		}
@@ -668,19 +646,17 @@ func registerRoutes(e *core.ServeEvent, app *pocketbase.PocketBase, client meili
 			return apis.NewUnauthorizedError("invalid credentials", nil)
 		}
 
-		return c.JSON(http.StatusOK, nil)
+		return e.JSON(http.StatusOK, nil)
 	})
 }
 
 func registerCronJobs(app *pocketbase.PocketBase) {
-	scheduler := cron.New()
-
 	schedule := os.Getenv("POCKETBASE_CRON_SYNC_SCHEDULE")
 	if len(schedule) == 0 {
 		schedule = "0 2 * * *"
 	}
 
-	scheduler.MustAdd("integrations", schedule, func() {
+	app.Cron().MustAdd("integrations", schedule, func() {
 		err := strava.SyncStrava(app)
 		if err != nil {
 			warning := fmt.Sprintf("Error syncing with strava: %v", err)
@@ -694,8 +670,6 @@ func registerCronJobs(app *pocketbase.PocketBase) {
 			app.Logger().Error(warning)
 		}
 	})
-
-	scheduler.Start()
 }
 
 func bootstrapData(app *pocketbase.PocketBase, client meilisearch.ServiceManager) error {
@@ -705,33 +679,33 @@ func bootstrapData(app *pocketbase.PocketBase, client meilisearch.ServiceManager
 }
 
 func bootstrapCategories(app *pocketbase.PocketBase) error {
-	query := app.Dao().RecordQuery("categories")
-	records := []*models.Record{}
+	query := app.RecordQuery("categories")
+	records := []*core.Record{}
 
 	if err := query.All(&records); err != nil {
 		return err
 	}
 	if len(records) == 0 {
-		collection, _ := app.Dao().FindCollectionByNameOrId("categories")
+		collection, _ := app.FindCollectionByNameOrId("categories")
 
 		categories := []string{"Hiking", "Walking", "Climbing", "Skiing", "Canoeing", "Biking"}
 		for _, element := range categories {
-			record := models.NewRecord(collection)
-			form := forms.NewRecordUpsert(app, record)
-			form.LoadData(map[string]any{
-				"name": element,
-			})
+			record := core.NewRecord(collection)
+			record.Set("name", element)
 			f, _ := filesystem.NewFileFromPath("migrations/initial_data/" + strings.ToLower(element) + ".jpg")
-			form.AddFiles("img", f)
-			form.Submit()
+			record.Set("img", f)
+			err := app.Save(record)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 func bootstrapMeilisearchTrails(app *pocketbase.PocketBase, client meilisearch.ServiceManager) error {
-	query := app.Dao().RecordQuery("trails")
-	trails := []*models.Record{}
+	query := app.RecordQuery("trails")
+	trails := []*core.Record{}
 
 	if err := query.All(&trails); err != nil {
 		return err
@@ -742,7 +716,7 @@ func bootstrapMeilisearchTrails(app *pocketbase.PocketBase, client meilisearch.S
 		return err
 	}
 	for _, trail := range trails {
-		author, err := app.Dao().FindRecordById("users", trail.GetString(("author")))
+		author, err := app.FindRecordById("users", trail.GetString(("author")))
 		if err != nil {
 			return err
 		}

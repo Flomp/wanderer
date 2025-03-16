@@ -15,15 +15,14 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/forms"
-	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/twpayne/go-gpx"
 )
 
 func SyncKomoot(app *pocketbase.PocketBase) error {
-	integrations, err := app.Dao().FindRecordsByExpr("integrations", dbx.NewExp("true"))
+	integrations, err := app.FindAllRecords("integrations", dbx.NewExp("true"))
 	if err != nil {
 		return err
 	}
@@ -178,7 +177,7 @@ func (k *KomootApi) fetchDetailedTour(tour KomootTour) (*DetailedKomootTour, err
 func syncTrailWithTours(app *pocketbase.PocketBase, k *KomootApi, i KomootIntegration, user string, tours []KomootTour) (bool, error) {
 	hasNewTours := false
 	for _, tour := range tours {
-		trails, err := app.Dao().FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": strconv.Itoa(int(tour.ID))})
+		trails, err := app.FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": strconv.Itoa(int(tour.ID))})
 		if err != nil {
 			return hasNewTours, err
 		}
@@ -208,14 +207,12 @@ func syncTrailWithTours(app *pocketbase.PocketBase, k *KomootApi, i KomootIntegr
 }
 
 func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomootTour, gpx *filesystem.File, user string, wpIds []string) error {
-	collection, err := app.Dao().FindCollectionByNameOrId("trails")
+	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
 	}
 
-	record := models.NewRecord(collection)
-
-	form := forms.NewRecordUpsert(app, record)
+	record := core.NewRecord(collection)
 
 	categoryMap := map[string]string{
 		"hike":           "Hiking",
@@ -228,7 +225,7 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		"mountaineering": "Hiking",
 	}
 
-	category, _ := app.Dao().FindFirstRecordByData("categories", "name", categoryMap[detailedTour.Sport])
+	category, _ := app.FindFirstRecordByData("categories", "name", categoryMap[detailedTour.Sport])
 	categoryId := ""
 	if category != nil {
 		categoryId = category.Id
@@ -253,7 +250,7 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		diffculty = "easy"
 	}
 
-	form.LoadData(map[string]any{
+	record.Load(map[string]any{
 		"name":              detailedTour.Name,
 		"public":            detailedTour.Status == "public",
 		"distance":          detailedTour.Distance,
@@ -271,12 +268,11 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		"author":            user,
 	})
 
-	for _, photo := range photos {
-		form.AddFiles("photos", photo)
-	}
-	form.AddFiles("gpx", gpx)
+	record.Set("photos", photos)
 
-	if err := form.Submit(); err != nil {
+	record.Set("gpx", gpx)
+
+	if err := app.Save(record); err != nil {
 		return err
 	}
 
@@ -284,7 +280,7 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 }
 
 func createWaypointsFromTour(app *pocketbase.PocketBase, tour *DetailedKomootTour, user string) ([]string, error) {
-	collection, err := app.Dao().FindCollectionByNameOrId("waypoints")
+	collection, err := app.FindCollectionByNameOrId("waypoints")
 	if err != nil {
 		return nil, err
 	}
@@ -296,8 +292,7 @@ func createWaypointsFromTour(app *pocketbase.PocketBase, tour *DetailedKomootTou
 		if err != nil {
 			return nil, err
 		}
-		record := models.NewRecord(collection)
-		form := forms.NewRecordUpsert(app, record)
+		record := core.NewRecord(collection)
 
 		wpDescription := ""
 		if len(wp.Embedded.Reference.Embedded.Tips.Embedded.Items) > 0 {
@@ -314,7 +309,7 @@ func createWaypointsFromTour(app *pocketbase.PocketBase, tour *DetailedKomootTou
 			wpLon = tour.StartPoint.Lng
 		}
 
-		form.LoadData(map[string]any{
+		record.Load(map[string]any{
 			"name":                wp.Embedded.Reference.Name,
 			"description":         wpDescription,
 			"lat":                 wpLat,
@@ -324,11 +319,9 @@ func createWaypointsFromTour(app *pocketbase.PocketBase, tour *DetailedKomootTou
 			"distance_from_start": 0,
 		})
 
-		for _, photo := range photos {
-			form.AddFiles("photos", photo)
-		}
+		record.Set("photos", photos)
 
-		if err := form.Submit(); err != nil {
+		if err := app.Save(record); err != nil {
 			return nil, err
 		}
 
