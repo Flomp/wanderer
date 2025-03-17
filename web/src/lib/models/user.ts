@@ -1,6 +1,7 @@
 import type { Settings } from "./settings";
+import { type AuthRecord } from "pocketbase";
 
-export type User = {
+export type User = AuthRecord & {
     id: string,
     username?: string,
     email?: string,

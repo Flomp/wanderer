@@ -80,7 +80,7 @@ func SendNotification(app core.App, notification Notification, recipient string)
 	}
 
 	if permissions.Email {
-		recipientUser, err := app.FindAuthRecordByEmail("users", recipient)
+		recipientUser, err := app.FindRecordById("users", recipient)
 		if err != nil {
 			return err
 		}

@@ -106,7 +106,7 @@
 <div class="dropdown relative">
     {#if unreadCount > 0}
         <div
-            class="absolute pointer-events-none -top-1 left-4 text-sm rounded-full bg-content text-content-inverse px-1 text-center"
+            class="absolute pointer-events-none -top-[2px] left-5 text-xs rounded-full bg-content text-content-inverse px-1 text-center"
         >
             {unreadCount}{unreadCount >= 10 ? "+" : ""}
         </div>
