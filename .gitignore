@@ -4,7 +4,7 @@
 db/pocketbase*
 
 search/meilisearch
-search/data.ms
+search/data.ms*
 search/dumps
 
 run.sh

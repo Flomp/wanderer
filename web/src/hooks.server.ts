@@ -80,7 +80,7 @@ const auth: Handle = async ({ event, resolve }) => {
     meiliApiKey = pb.authStore.model.token
     settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.model.id}"`, { requestKey: null })
   } else {
-    const r = await event.fetch(pb.buildUrl("/public/search/token"));
+    const r = await event.fetch(pb.buildURL("/public/search/token"));
     const response = await r.json();
     meiliApiKey = response.token;
   }
