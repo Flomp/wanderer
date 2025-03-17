@@ -46,7 +46,7 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
 }
 
 export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    summitLog.author = pb.authStore.model!.id
+    summitLog.author = pb.authStore.record!.id
 
     let r = await f('/api/v1/summit-log', {
         method: 'PUT',
@@ -101,7 +101,7 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
 }
 
 export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: SummitLog) {
-    newSummitLog.author = pb.authStore.model!.id
+    newSummitLog.author = pb.authStore.record!.id
 
     let r = await fetch('/api/v1/summit-log/' + newSummitLog.id, {
         method: 'POST',

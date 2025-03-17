@@ -7,7 +7,7 @@ export const waypoint: Writable<Waypoint> = writable(new Waypoint(0, 0));
 
 export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
-    waypoint.author = pb.authStore.model!.id
+    waypoint.author = pb.authStore.record!.id
 
     let r = await f('/api/v1/waypoint', {
         method: 'PUT',
@@ -45,7 +45,7 @@ export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo 
 }
 
 export async function waypoints_update(oldWaypoint: Waypoint, newWaypoint: Waypoint) {
-    newWaypoint.author = pb.authStore.model!.id
+    newWaypoint.author = pb.authStore.record!.id
 
     let r = await fetch('/api/v1/waypoint/' + newWaypoint.id, {
         method: 'POST',

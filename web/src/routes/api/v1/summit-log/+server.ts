@@ -9,7 +9,7 @@ export async function GET(event: RequestEvent) {
         const r = await list<SummitLog>(event, Collection.summit_logs);
 
         for (const t of r.items) {
-            if (!t.author || !pb.authStore.model) {
+            if (!t.author || !pb.authStore.record) {
                 continue;
             }
             if (!t.expand) {

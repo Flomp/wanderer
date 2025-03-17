@@ -74,13 +74,13 @@
             />
         {/if}
     </div>
-    {#if (trail.public || trailIsShared) && pb.authStore.model}
+    {#if (trail.public || trailIsShared) && pb.authStore.record}
         <div
             class="flex absolute top-4 right-4 {trail.public && trailIsShared
                 ? 'w-14'
                 : 'w-8'} h-8 rounded-full items-center justify-center bg-background text-content"
         >
-            {#if trail.public && pb.authStore.model}
+            {#if trail.public && pb.authStore.record}
                 <span
                     class="tooltip"
                     class:mr-2={trail.public && trailIsShared}

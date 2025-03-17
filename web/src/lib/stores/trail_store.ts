@@ -182,7 +182,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         trail.summit_logs.push(model.id!);
     }
 
-    trail.author = pb.authStore.model!.id
+    trail.author = pb.authStore.record!.id
 
     let r = await f(`/api/v1/trail?` + new URLSearchParams({
         expand: "category,waypoints,summit_logs,trail_share_via_trail",
@@ -501,17 +501,17 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == pb.authStore.model?.id) {
-                filterText += ` OR author = ${pb.authStore.model?.id}`
+            if (!filter.author?.length || filter.author == pb.authStore.record?.id) {
+                filterText += ` OR author = ${pb.authStore.record?.id}`
             }
             filterText += ")"
         }
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${pb.authStore.model?.id}`
+                filterText += ` OR shares = ${pb.authStore.record?.id}`
             } else {
-                filterText += ` AND NOT shares = ${pb.authStore.model?.id}`
+                filterText += ` AND NOT shares = ${pb.authStore.record?.id}`
 
             }
         }

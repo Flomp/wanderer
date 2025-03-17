@@ -8,7 +8,7 @@ export async function GET(event: RequestEvent) {
     try {
         const r = await show<Trail>(event, Collection.trails)
 
-        if (pb.authStore.model) {
+        if (pb.authStore.record) {
             if (!r.expand) {
                 r.expand = {} as any
             }

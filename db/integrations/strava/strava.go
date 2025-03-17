@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -24,7 +23,7 @@ type StravaApi struct {
 	AceessToken string
 }
 
-func SyncStrava(app *pocketbase.PocketBase) error {
+func SyncStrava(app core.App) error {
 	integrations, err := app.FindAllRecords("integrations", dbx.NewExp("true"))
 	if err != nil {
 		return err
@@ -222,7 +221,7 @@ func fetchStravaActivities(accessToken string, page int) ([]StravaActivity, erro
 	return activities, nil
 }
 
-func syncTrailsWithRoutes(app *pocketbase.PocketBase, accessToken string, user string, routes []StravaRoute) (bool, error) {
+func syncTrailsWithRoutes(app core.App, accessToken string, user string, routes []StravaRoute) (bool, error) {
 	hasNewRoutes := false
 	for _, route := range routes {
 		trails, err := app.FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": route.IDStr})
@@ -289,7 +288,7 @@ func fetchRouteGPX(route StravaRoute, accessToken string) (*filesystem.File, err
 	return gpxFile, nil
 }
 
-func createTrailFromRoute(app *pocketbase.PocketBase, route StravaRoute, gpx *filesystem.File, user string, wpIds []string) error {
+func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File, user string, wpIds []string) error {
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
@@ -338,7 +337,9 @@ func createTrailFromRoute(app *pocketbase.PocketBase, route StravaRoute, gpx *fi
 		"author":            user,
 	})
 
-	record.Set("gpx", gpx)
+	if gpx != nil {
+		record.Set("gpx", gpx)
+	}
 
 	if err := app.Save(record); err != nil {
 		return err
@@ -347,7 +348,7 @@ func createTrailFromRoute(app *pocketbase.PocketBase, route StravaRoute, gpx *fi
 	return nil
 }
 
-func createWaypointsFromRoute(app *pocketbase.PocketBase, route StravaRoute, user string) ([]string, error) {
+func createWaypointsFromRoute(app core.App, route StravaRoute, user string) ([]string, error) {
 	collection, err := app.FindCollectionByNameOrId("waypoints")
 	if err != nil {
 		return nil, err
@@ -374,7 +375,7 @@ func createWaypointsFromRoute(app *pocketbase.PocketBase, route StravaRoute, use
 	return wpIds, nil
 }
 
-func syncTrailsWithActivities(app *pocketbase.PocketBase, accessToken string, user string, activities []StravaActivity) (bool, error) {
+func syncTrailsWithActivities(app core.App, accessToken string, user string, activities []StravaActivity) (bool, error) {
 	hasNewActivites := false
 	for _, activity := range activities {
 		trails, err := app.FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": strconv.Itoa(int(activity.ID))})
@@ -430,7 +431,7 @@ func fetchDetailedActivity(activity StravaActivity, accessToken string) (*Detail
 	return &detailedActivity, nil
 }
 
-func createTrailFromActivity(app *pocketbase.PocketBase, activity *DetailedStravaActivity, gpx *filesystem.File, user string) error {
+func createTrailFromActivity(app core.App, activity *DetailedStravaActivity, gpx *filesystem.File, user string) error {
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
@@ -509,9 +510,13 @@ func createTrailFromActivity(app *pocketbase.PocketBase, activity *DetailedStrav
 		"author":            user,
 	})
 
-	record.Set("photos", photo)
+	if photo != nil {
+		record.Set("photos", photo)
+	}
 
-	record.Set("gpx", gpx)
+	if gpx != nil {
+		record.Set("gpx", gpx)
+	}
 
 	if err := app.Save(record); err != nil {
 		return err

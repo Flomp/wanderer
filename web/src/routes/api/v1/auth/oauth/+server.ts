@@ -12,10 +12,10 @@ export async function GET(event: RequestEvent) {
     try {
         const r = await pb.collection('users').listAuthMethods();
 
-        for (const provider of r.authProviders) {
+        for (const provider of r.oauth2.providers) {
             const imageURL = `${env.PUBLIC_POCKETBASE_URL}/_/images/oauth2/${provider.name}.svg`
             provider['img' as keyof typeof provider] = await imageUrlToBase64(imageURL, event.fetch);
-            provider['url' as keyof typeof provider] = `${provider.authUrl}${redirectURL}`
+            provider['url' as keyof typeof provider] = `${provider.authURL}${redirectURL}`
         }
         return json(r)
     } catch (e: any) {

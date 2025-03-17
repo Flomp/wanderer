@@ -14,14 +14,13 @@ import (
 	"time"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/twpayne/go-gpx"
 )
 
-func SyncKomoot(app *pocketbase.PocketBase) error {
+func SyncKomoot(app core.App) error {
 	integrations, err := app.FindAllRecords("integrations", dbx.NewExp("true"))
 	if err != nil {
 		return err
@@ -174,7 +173,7 @@ func (k *KomootApi) fetchDetailedTour(tour KomootTour) (*DetailedKomootTour, err
 	return data, nil
 }
 
-func syncTrailWithTours(app *pocketbase.PocketBase, k *KomootApi, i KomootIntegration, user string, tours []KomootTour) (bool, error) {
+func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user string, tours []KomootTour) (bool, error) {
 	hasNewTours := false
 	for _, tour := range tours {
 		trails, err := app.FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": strconv.Itoa(int(tour.ID))})
@@ -206,7 +205,7 @@ func syncTrailWithTours(app *pocketbase.PocketBase, k *KomootApi, i KomootIntegr
 	return hasNewTours, nil
 }
 
-func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomootTour, gpx *filesystem.File, user string, wpIds []string) error {
+func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *filesystem.File, user string, wpIds []string) error {
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
@@ -268,9 +267,12 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 		"author":            user,
 	})
 
-	record.Set("photos", photos)
-
-	record.Set("gpx", gpx)
+	if photos != nil {
+		record.Set("photos", photos)
+	}
+	if gpx != nil {
+		record.Set("gpx", gpx)
+	}
 
 	if err := app.Save(record); err != nil {
 		return err
@@ -279,7 +281,7 @@ func createTrailFromTour(app *pocketbase.PocketBase, detailedTour *DetailedKomoo
 	return nil
 }
 
-func createWaypointsFromTour(app *pocketbase.PocketBase, tour *DetailedKomootTour, user string) ([]string, error) {
+func createWaypointsFromTour(app core.App, tour *DetailedKomootTour, user string) ([]string, error) {
 	collection, err := app.FindCollectionByNameOrId("waypoints")
 	if err != nil {
 		return nil, err
@@ -319,7 +321,9 @@ func createWaypointsFromTour(app *pocketbase.PocketBase, tour *DetailedKomootTou
 			"distance_from_start": 0,
 		})
 
-		record.Set("photos", photos)
+		if photos != nil {
+			record.Set("photos", photos)
+		}
 
 		if err := app.Save(record); err != nil {
 			return nil, err

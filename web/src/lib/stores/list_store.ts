@@ -121,11 +121,11 @@ export async function lists_show(id: string, f: (url: RequestInfo | URL, config?
 }
 
 export async function lists_create(list: List, avatar?: File) {
-    if (!pb.authStore.model) {
+    if (!pb.authStore.record) {
         throw new Error("Unauthenticated");
     }
 
-    list.author = pb.authStore.model!.id;
+    list.author = pb.authStore.record!.id;
 
     let r = await fetch('/api/v1/list', {
         method: 'PUT',
@@ -241,13 +241,13 @@ function buildFilterText(filter: ListFilter): string {
     if (filter.author?.length) {
         filterText += `&&author="${filter.author}"`
     }
-    if (pb.authStore.model) {
+    if (pb.authStore.record) {
         if (filter.public === false && filter.shared === false) {
-            filterText += `&&author="${pb.authStore.model.id}"`
+            filterText += `&&author="${pb.authStore.record.id}"`
         } else if (filter.public === true && filter.shared === false) {
-            filterText += `&&(public=true||list_share_via_list.user!="${pb.authStore.model.id}"||author="${pb.authStore.model.id}")`
+            filterText += `&&(public=true||list_share_via_list.user!="${pb.authStore.record.id}"||author="${pb.authStore.record.id}")`
         } else if (filter.public === false && filter.shared === true) {
-            filterText += `&&(public=false||list_share_via_list.user="${pb.authStore.model.id}"||author="${pb.authStore.model.id}")`
+            filterText += `&&(public=false||list_share_via_list.user="${pb.authStore.record.id}"||author="${pb.authStore.record.id}")`
         }
     }
     return filterText
@@ -268,17 +268,17 @@ function buildSearchFilterText(filter: ListFilter): string {
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == pb.authStore.model?.id) {
-                filterText += ` OR author = ${pb.authStore.model?.id}`
+            if (!filter.author?.length || filter.author == pb.authStore.record?.id) {
+                filterText += ` OR author = ${pb.authStore.record?.id}`
             }
             filterText += ")"
         }
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${pb.authStore.model?.id}`
+                filterText += ` OR shares = ${pb.authStore.record?.id}`
             } else {
-                filterText += ` AND NOT shares = ${pb.authStore.model?.id}`
+                filterText += ` AND NOT shares = ${pb.authStore.record?.id}`
 
             }
         }

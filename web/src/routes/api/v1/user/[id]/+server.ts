@@ -23,9 +23,9 @@ export async function POST(event: RequestEvent) {
 
         const safeData = UserUpdateSchema.parse(data);
 
-        if (safeData.email && safeData.email != pb.authStore.model!.email) {
+        if (safeData.email && safeData.email != pb.authStore.record!.email) {
             const r = await pb.collection('users').requestEmailChange(safeData.email);
-            pb.authStore.model!.email = safeData.email;
+            pb.authStore.record!.email = safeData.email;
         }
         const r = await pb.collection('users').update<User>(safeParams.id, safeData)
         if (safeData.password) {

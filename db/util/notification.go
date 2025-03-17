@@ -5,7 +5,6 @@ import (
 	"net/mail"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/mailer"
 )
@@ -33,7 +32,7 @@ type NotificationSettings struct {
 	Email bool `json:"email"`
 }
 
-func getNotificationPermissions(app *pocketbase.PocketBase, user string, notificationType NotificationType) (*NotificationSettings, error) {
+func getNotificationPermissions(app core.App, user string, notificationType NotificationType) (*NotificationSettings, error) {
 	settings, err := app.FindFirstRecordByFilter("settings", "user={:user}", dbx.Params{"user": user})
 	if err != nil {
 		return nil, err
@@ -53,7 +52,7 @@ func getNotificationPermissions(app *pocketbase.PocketBase, user string, notific
 	return &settingsForType, nil
 }
 
-func SendNotification(app *pocketbase.PocketBase, notification Notification, recipient string) error {
+func SendNotification(app core.App, notification Notification, recipient string) error {
 	if notification.Author == recipient {
 		return nil
 	}
@@ -109,7 +108,7 @@ func SendNotification(app *pocketbase.PocketBase, notification Notification, rec
 	return nil
 }
 
-func SendNotificationToFollowers(app *pocketbase.PocketBase, notification Notification) error {
+func SendNotificationToFollowers(app core.App, notification Notification) error {
 	followers, err := app.FindRecordsByFilter("follows", "followee={:user}", "", -1, 0, dbx.Params{"user": notification.Author})
 
 	if err != nil {

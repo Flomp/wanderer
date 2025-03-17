@@ -62,7 +62,7 @@
     const tabs = [
         $_("summit-book"),
         $_("photos"),
-        ...(pb.authStore.model ? [$_("comment", { values: { n: 2 } })] : []),
+        ...(pb.authStore.record ? [$_("comment", { values: { n: 2 } })] : []),
     ];
 
     const trailIsShared =
@@ -192,14 +192,14 @@
             <div
                 class="absolute bottom-0 w-full h-full bg-gradient-to-b from-transparent to-black opacity-60"
             ></div>
-            {#if (trail.public || trailIsShared) && pb.authStore.model}
+            {#if (trail.public || trailIsShared) && pb.authStore.record}
                 <div
                     class="flex absolute top-6 right-6 {trail.public &&
                     trailIsShared
                         ? 'w-16'
                         : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
                 >
-                    {#if trail.public && pb.authStore.model}
+                    {#if trail.public && pb.authStore.record}
                         <span
                             class:tooltip={mode != "map"}
                             class:mr-3={trail.public && trailIsShared}

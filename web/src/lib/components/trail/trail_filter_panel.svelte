@@ -169,7 +169,7 @@
                 placeholder={`${$_("filter-categories")}...`}
             ></MultiSelect>
             <hr class="my-4 border-separator" />
-            {#if pb.authStore.model}
+            {#if pb.authStore.record}
                 <UserSearch
                     onclick={(item) => setAuthorFilter(item)}
                     onclear={() => {

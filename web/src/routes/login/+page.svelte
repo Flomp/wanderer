@@ -15,21 +15,19 @@
     import { type AuthProviderInfo } from "pocketbase";
     import { _ } from "svelte-i18n";
     import { z } from "zod";
+    import type { PageProps } from "./$types";
 
     let loading: boolean = $state(false);
 
-    const authProviders = page.data.authMethods.authProviders;
+    let { data: pageData }: PageProps = $props();
+
+    const authProviders = pageData.authMethods.oauth2.providers;
     let loginLabel = $state("");
 
-    if (
-        page.data.authMethods.usernamePassword &&
-        page.data.authMethods.emailPassword
-    ) {
+    if (pageData.authMethods.password) {
         loginLabel = `${$_("username")}/${$_("email")}`;
-    } else if (page.data.authMethods.usernamePassword) {
-        loginLabel = `${$_("username")}`;
-    } else if (page.data.authMethods.emailPassword) {
-        loginLabel = `${$_("email")}`;
+    }else if (pageData.authMethods.password) {
+        loginLabel = `${$_("username")}/${$_("email")}`;
     }
 
     const { form, errors, data } = createForm<User>({
@@ -100,7 +98,7 @@
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
         <h4 class="text-xl font-semibold">{$_("slogan")}</h4>
-        {#if page.data.authMethods.usernamePassword || page.data.authMethods.emailPassword}
+        {#if page.data.authMethods.password}
             <div class="space-y-6 w-80">
                 <TextField
                     name="username"
@@ -147,13 +145,13 @@
             <div class="w-80 space-y-4">
                 {#each authProviders as provider}
                     <a
-                        href={provider.url}
+                        href={(provider as any).url}
                         class="btn-secondary inline-flex min-w-full justify-center"
                         onclick={() => setProvider(provider)}
                     >
                         <img
                             class="w-5 aspect-square mr-4"
-                            src={provider.img}
+                            src={(provider as any).img}
                             alt="Provider logo"
                         />
                         Login with {provider.displayName}

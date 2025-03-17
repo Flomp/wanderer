@@ -21,7 +21,7 @@ export async function GET(event: RequestEvent) {
     parts.push(encodeURIComponent(safeParams.data.record));
     parts.push(encodeURIComponent(safeParams.data.file));
 
-    let fileURL = pb.buildUrl(parts.join("/"));
+    let fileURL = pb.buildURL(parts.join("/"));
 
     try {
         const r = await event.fetch(fileURL)

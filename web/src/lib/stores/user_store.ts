@@ -25,7 +25,7 @@ export async function users_create(user: User) {
 
 export async function users_search(q: string, includeSelf: boolean = true) {
     let r = await fetch('/api/v1/user/anonymous?' + new URLSearchParams({
-        "filter": `username~"${q}"${includeSelf ? '' : `&&id!="${pb.authStore.model?.id}"`}`,
+        "filter": `username~"${q}"${includeSelf ? '' : `&&id!="${pb.authStore.record?.id}"`}`,
     }), {
         method: 'GET',
     })
@@ -62,7 +62,7 @@ export async function users_auth_methods(f: (url: RequestInfo | URL, config?: Re
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
-    return await r.json()
+    return await r.json() as AuthMethodsList
 
 
 }

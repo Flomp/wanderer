@@ -108,7 +108,7 @@
         }
     }
 
-    let user = $derived(browser ? $currentUser : pb.authStore.model);
+    let user = $derived(browser ? $currentUser : pb.authStore.record);
 </script>
 
 <Drawer bind:open={drawerOpen}>

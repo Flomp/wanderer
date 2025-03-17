@@ -8,7 +8,7 @@ export async function GET(event: RequestEvent) {
     try {
         const r = await list<List>(event, Collection.lists);
         for (const t of r.items) {
-            if (!t.author || !pb.authStore.model) {
+            if (!t.author || !pb.authStore.record) {
                 continue;
             }
             if (!t.expand) {

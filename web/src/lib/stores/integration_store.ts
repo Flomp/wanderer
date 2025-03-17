@@ -25,11 +25,11 @@ export async function integrations_index(f: (url: RequestInfo | URL, config?: Re
 }
 
 export async function integrations_create(integration: Integration) {
-    if (!pb.authStore.model) {
+    if (!pb.authStore.record) {
         throw new Error("Unauthenticated");
     }
 
-    integration.user = pb.authStore.model!.id;
+    integration.user = pb.authStore.record!.id;
 
     let r = await fetch('/api/v1/integration', {
         method: 'PUT',

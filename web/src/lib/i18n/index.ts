@@ -18,5 +18,5 @@ register('zh', () => import('./locales/zh.json'))
 
 init({
     fallbackLocale: defaultLocale,
-    initialLocale: browser ? pb.authStore.model?.language ?? window.navigator.language : defaultLocale,
+    initialLocale: browser ? pb.authStore.record?.language ?? window.navigator.language : defaultLocale,
 })

@@ -10,7 +10,7 @@ export async function GET(event: RequestEvent) {
         const searchParams = Object.fromEntries(event.url.searchParams);
         const safeSearchParams = TrailRecommendSchema.parse(searchParams);
 
-        const r = await event.fetch(pb.buildUrl("/trail/recommend?" + new URLSearchParams({
+        const r = await event.fetch(pb.buildURL("/trail/recommend?" + new URLSearchParams({
             size: safeSearchParams.size?.toString() ?? ""
         })));
 
@@ -23,7 +23,7 @@ export async function GET(event: RequestEvent) {
         const result: Trail[] = await r.json();
 
         for (const t of result) {
-            if (!t.author || !pb.authStore.model) {
+            if (!t.author || !pb.authStore.record) {
                 continue;
             }
             if (!t.expand) {

@@ -28,11 +28,11 @@ export async function comments_index(trail: Trail) {
 }
 
 export async function comments_create(comment: Comment) {
-    if (!pb.authStore.model) {
+    if (!pb.authStore.record) {
         throw new Error("Unauthenticated");
     }
 
-    comment.author = pb.authStore.model!.id;
+    comment.author = pb.authStore.record!.id;
 
     let r = await fetch('/api/v1/comment', {
         method: 'PUT',

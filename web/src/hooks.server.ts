@@ -56,9 +56,9 @@ const auth: Handle = async ({ event, resolve }) => {
 
 
   // validate the user existence and if the path is acceesible
-  if (!pb.authStore.model && isRouteProtected(url.pathname)) {
+  if (!pb.authStore.record && isRouteProtected(url.pathname)) {
     throw redirect(302, '/login?r=' + url.pathname);
-  } else if (pb.authStore.model && url.pathname === "/login") {
+  } else if (pb.authStore.record && url.pathname === "/login") {
     throw redirect(302, '/');
   } else if (envPub.PUBLIC_DISABLE_SIGNUP === "true" && url.pathname === "/register") {
     throw redirect(302, '/');
@@ -76,9 +76,9 @@ const auth: Handle = async ({ event, resolve }) => {
 
   let meiliApiKey: string = "";
   let settings: Settings | undefined;
-  if (pb.authStore.model) {
-    meiliApiKey = pb.authStore.model.token
-    settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.model.id}"`, { requestKey: null })
+  if (pb.authStore.record) {
+    meiliApiKey = pb.authStore.record.token
+    settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.record.id}"`, { requestKey: null })
   } else {
     const r = await event.fetch(pb.buildURL("/public/search/token"));
     const response = await r.json();
@@ -88,15 +88,15 @@ const auth: Handle = async ({ event, resolve }) => {
 
   event.locals.ms = ms
   event.locals.pb = pb
-  event.locals.user = pb.authStore.model
+  event.locals.user = pb.authStore.record
   event.locals.settings = settings
 
   const lang = settings?.language ?? event.request.headers.get('accept-language')?.split(',')[0]
 
   if (lang) {
     locale.set(lang)
-    if (pb.authStore.model) {
-      pb.authStore.model!.language = lang;
+    if (pb.authStore.record) {
+      pb.authStore.record!.language = lang;
     }
   }
 

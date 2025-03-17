@@ -54,7 +54,7 @@
             <h4 class="font-semibold text-lg">
                 {trail.name}
             </h4>
-            {#if trail.public && pb.authStore.model}
+            {#if trail.public && pb.authStore.record}
                 <span class="tooltip ml-3" data-title={$_("public")}>
                     <i class="fa fa-globe"></i>
                 </span>

@@ -62,10 +62,10 @@
               ]
             : []),
         { text: $_("print"), value: "print", icon: "print" },
-        ...(trail.author != pb.authStore.model?.id
+        ...(trail.author != pb.authStore.record?.id
             ? []
             : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
-        ...(trail.author != pb.authStore.model?.id
+        ...(trail.author != pb.authStore.record?.id
             ? []
             : [{ text: $_("share"), value: "share", icon: "share" }]),
         ...(allowEdit

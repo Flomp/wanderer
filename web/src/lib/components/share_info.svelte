@@ -21,7 +21,7 @@
     let showInfo: boolean = $state(false);
     let loading: boolean = $state(false);
     let infoLoaded: boolean = $state(false);
-    let subjectIsOwned: boolean = subject.author == pb.authStore.model?.id;
+    let subjectIsOwned: boolean = subject.author == pb.authStore.record?.id;
     let author: UserAnonymous | undefined = $state();
 
     async function fetchInfo() {
