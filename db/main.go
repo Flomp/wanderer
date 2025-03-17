@@ -792,6 +792,22 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 		if err := util.IndexTrail(trail, author, client); err != nil {
 			return err
 		}
+
+		shares, err := app.FindAllRecords("trail_share",
+			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trail.Id}),
+		)
+		if err != nil {
+			return err
+		}
+		userIds := make([]string, len(shares))
+		for i, r := range shares {
+			userIds[i] = r.GetString("user")
+		}
+		err = util.UpdateTrailShares(trail.Id, userIds, client)
+
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
