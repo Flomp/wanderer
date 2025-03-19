@@ -79,6 +79,13 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
+    import Combobox, {
+        type ComboboxItem,
+    } from "$lib/components/base/combobox.svelte";
+    import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
+    import { SvelteSet } from "svelte/reactivity";
+    import { Tag } from "$lib/models/tag.js";
+    import { tags_index } from "$lib/stores/tag_store.js";
 
     let { data } = $props();
 
@@ -117,6 +124,7 @@
                         }),
                     )
                     .optional(),
+                tags: z.array(TagCreateSchema).optional(),
             })
             .optional(),
     });
@@ -131,6 +139,8 @@
     let autoRouting = $state(true);
 
     let savedAtLeastOnce = $state(false);
+
+    let tagItems: ComboboxItem[] = $state([]);
 
     const {
         form,
@@ -151,7 +161,7 @@
         extend: validator({
             schema: ClientTrailCreateSchema,
         }),
-        onSubmit: async (form) => {            
+        onSubmit: async (form) => {
             loading = true;
             try {
                 const htmlForm = document.getElementById(
@@ -202,8 +212,8 @@
                     );
                     setFields(updatedTrail);
                 }
-                photoFiles = []
-                
+                photoFiles = [];
+
                 savedAtLeastOnce = true;
                 show_toast({
                     type: "success",
@@ -406,11 +416,11 @@
         const wp = $formData.expand!.waypoints?.splice(index, 1);
         $formData.waypoints.splice(index, 1);
 
-        if(!$formData.expand!.waypoints?.length) {
-            $formData.expand!.waypoints = []
+        if (!$formData.expand!.waypoints?.length) {
+            $formData.expand!.waypoints = [];
         }
         $formData.expand!.waypoints = $formData.expand!.waypoints;
-                
+
         // updateTrailOnMap();
     }
 
@@ -545,8 +555,12 @@
     }
 
     async function handleMapClick(e: M.MapMouseEvent) {
-        if (!drawingActive) {            
-            if ((e.originalEvent.target as HTMLElement).tagName.toLowerCase() !== "canvas") {
+        if (!drawingActive) {
+            if (
+                (
+                    e.originalEvent.target as HTMLElement
+                ).tagName.toLowerCase() !== "canvas"
+            ) {
                 return;
             }
             mapPopup?.remove();
@@ -853,6 +867,26 @@
             untrack(() => updateTrailOnMap());
         }
     });
+
+    function getTrailTags() {
+        return (
+            $formData.expand?.tags?.map((t) => ({
+                text: t.name,
+                value: t,
+            })) ?? []
+        );
+    }
+
+    function setTrailTags(items: ComboboxItem[]) {
+        $formData.expand!.tags = items.map((i) =>
+            i.value ? i.value : new Tag(i.text),
+        );
+    }
+
+    async function searchTags(q: string) {
+        const result = await tags_index(q);
+        tagItems = result.items.map((t) => ({ text: t.name, value: t }));        
+    }
 </script>
 
 <svelte:head>
@@ -1009,6 +1043,14 @@
         <Datepicker label={$_("date")} bind:value={$formData.date}></Datepicker>
         <Textarea name="description" label={$_("describe-your-trail")}
         ></Textarea>
+        <Combobox
+            bind:value={getTrailTags, setTrailTags}
+            onupdate={searchTags}
+            items={tagItems}
+            label={$_("tags")}
+            multiple
+            chips
+        ></Combobox>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4">
             <Select
                 name="difficulty"
@@ -1036,7 +1078,10 @@
         </h3>
         <ul>
             {#each $formData.expand?.waypoints ?? [] as waypoint, i}
-                <li onmouseenter={() => openMarkerPopup(waypoint)} onmouseleave={() => openMarkerPopup(waypoint)}>
+                <li
+                    onmouseenter={() => openMarkerPopup(waypoint)}
+                    onmouseleave={() => openMarkerPopup(waypoint)}
+                >
                     <WaypointCard
                         {waypoint}
                         mode="edit"

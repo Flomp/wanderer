@@ -2,50 +2,63 @@
     export type ComboboxItem = {
         text: string;
         value: any;
-        icon: string;
+        icon?: string;
     };
 </script>
 
 <script lang="ts">
     import type { ChangeEventHandler } from "svelte/elements";
-    import TextField from "./text_field.svelte";
-    import { tick } from "svelte";
+    import Chip from "./chip.svelte";
 
     interface Props {
         name?: string;
         icon?: string;
         label?: string;
-        value?: string;
+        value?: string | ComboboxItem[];
         items?: ComboboxItem[];
+        multiple?: boolean;
+        chips?: boolean;
         placeholder?: string;
         extraClasses?: string;
         onchange?: ChangeEventHandler<HTMLInputElement>;
         onupdate?: (q: string) => void;
-        onclick?: (item: ComboboxItem) => void;
     }
 
     let {
         name = "",
         icon = "",
         label = "",
-        value = $bindable(""),
+        multiple = false,
+        value = $bindable(multiple ? [] : undefined),
         items = [],
+        chips = false,
         placeholder = "",
         extraClasses = "",
         onchange,
         onupdate,
-        onclick,
     }: Props = $props();
 
     let searching: boolean = $state(false);
 
+    let inputValue: string = $state("");
+
     let dropDownOpen = $derived(
-        value.length > 0 && items.length > 0 && searching,
+        ((multiple && inputValue.length > 0) ||
+            (!multiple && (value as string)?.length > 0)) &&
+            items.length > 0 &&
+            searching,
     );
 
-    async function onSearchType() {
-        await tick();
+    $effect(() => {
+        items;
+        makeMatchesBold();
+    });
+
+    async function makeMatchesBold() {
         const dropdownMenu = document.querySelector(".menu");
+
+        const relevantValue = multiple ? inputValue : (value as string);
+
         if (dropdownMenu) {
             for (let i = 0; i < dropdownMenu.children.length; i++) {
                 const li = dropdownMenu.children[i];
@@ -53,14 +66,18 @@
                 textNode.innerHTML = items[i].text;
 
                 const text = textNode.innerText.replace(
-                    new RegExp(value, "gi"),
+                    new RegExp(relevantValue, "gi"),
                     (match) => `<strong>${match}</strong>`,
                 );
                 textNode.innerHTML = text;
             }
         }
+    }
 
-        update(value);
+    async function onSearchType() {
+        const relevantValue = multiple ? inputValue : (value as string);
+
+        update(relevantValue);
     }
 
     function update(q: string) {
@@ -69,25 +86,117 @@
 
     function handleItemClick(e: Event, item: ComboboxItem) {
         e.stopPropagation();
-        value = item.value;
-        onclick?.(item);
+
+        if (multiple) {
+            if ((value as ComboboxItem[]).some((i) => i.text == item.text)) {
+                return;
+            }
+            inputValue = "";
+            value = [...(value as ComboboxItem[]), item];
+        } else {
+            value = item.value;
+        }
+    }
+
+    function handleKeydown(e: KeyboardEvent) {
+        if (!multiple) {
+            return;
+        }
+
+        if (e.key == "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!inputValue.length) {
+                return;
+            }
+            if ((value as ComboboxItem[]).some((i) => i.text == inputValue)) {
+                inputValue = "";
+                return;
+            }
+
+            const matchingItemFromSuggestions = items.find(
+                (i) => i.text == inputValue,
+            );
+
+            value = [
+                ...(value as ComboboxItem[]),
+                matchingItemFromSuggestions
+                    ? matchingItemFromSuggestions
+                    : {
+                          text: inputValue,
+                          value: null,
+                      },
+            ];
+
+            inputValue = "";
+        } else if (e.key == "Backspace" && inputValue.length == 0) {
+            value = (value as ComboboxItem[]).filter(
+                (_, i) => i !== value.length - 1,
+            );
+        }
+    }
+
+    function getInputValue() {
+        if (multiple) {
+            return inputValue;
+        } else {
+            return value as string;
+        }
+    }
+
+    function setInputValue(v: string) {
+        if (multiple) {
+            inputValue = v;
+        } else {
+            value = v;
+        }
     }
 </script>
 
 <div class="relative {extraClasses}">
-    <TextField
-        type="search"
-        {name}
-        autocomplete="off"
-        {icon}
-        {label}
-        {placeholder}
-        bind:value
-        {onchange}
-        oninput={onSearchType}
-        onfocusin={() => (searching = true)}
-        onfocusout={() => (searching = false)}
-    ></TextField>
+    {#if label.length}
+        <label for={name} class="text-sm font-medium pb-1">
+            {label}
+        </label>
+    {/if}
+    <div
+        class="flex items-center gap-1 flex-wrap bg-input-background border border-input-border rounded-md p-3 transition-colors focus-within:border-input-border-focus focus-within:ring-0 w-full {extraClasses}"
+    >
+        {#if multiple}
+            {#each value as ComboboxItem[] as v, i}
+                {#if chips}
+                    <Chip
+                        text={v.text}
+                        closable
+                        onclick={(e) => {
+                            value = (value as ComboboxItem[]).filter(
+                                (_, idx) => i != idx,
+                            );
+                        }}
+                    ></Chip>
+                {:else}
+                    <span
+                        >{v.text}{i < (value as ComboboxItem[]).length - 1
+                            ? ","
+                            : ""}</span
+                    >
+                {/if}
+            {/each}
+        {/if}
+        <input
+            class="flex-1 min-w-24 bg-input-background focus:outline-none"
+            type="search"
+            {name}
+            oninput={onSearchType}
+            autocomplete="off"
+            {onchange}
+            placeholder={value.length ? undefined : placeholder}
+            onfocusin={() => (searching = true)}
+            onfocusout={() => (searching = false)}
+            onkeydown={(e) => handleKeydown(e)}
+            bind:value={getInputValue, setInputValue}
+        />
+    </div>
 
     {#if dropDownOpen}
         <ul
@@ -104,8 +213,9 @@
                     onmousedown={(e) => handleItemClick(e, item)}
                     onkeydown={(e) => handleItemClick(e, item)}
                 >
-                    <i class="fa fa-{item.icon} mr-6"></i>
-
+                    {#if item.icon}
+                        <i class="fa fa-{item.icon} mr-6"></i>
+                    {/if}
                     <p class="text-ellipsis">{item.text}</p>
                 </li>
             {/each}

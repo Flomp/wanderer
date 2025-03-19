@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/meilisearch/meilisearch-go"
@@ -17,6 +18,13 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 			thumbnailIndex = 0
 		}
 		thumbnail = photos[thumbnailIndex]
+	}
+
+	tagRecords := r.ExpandedAll("tags")
+	tags := make([]string, len(tagRecords))
+
+	for i, v := range tagRecords {
+		tags[i] = v.GetString("name")
 	}
 
 	document := map[string]interface{}{
@@ -39,6 +47,7 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 		"public":         r.GetBool("public"),
 		"thumbnail":      thumbnail,
 		"gpx":            r.GetString("gpx"),
+		"tags":           tags,
 		"_geo": map[string]float64{
 			"lat": r.GetFloat("lat"),
 			"lng": r.GetFloat("lon"),
@@ -70,7 +79,12 @@ func documentFromListRecord(r *core.Record, includeShares bool) map[string]inter
 	return document
 }
 
-func IndexTrail(r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+func IndexTrail(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+	errs := app.ExpandRecord(r, []string{"tags"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand: %v", errs)
+	}
+
 	documents := []map[string]interface{}{documentFromTrailRecord(r, author, true)}
 
 	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
@@ -80,7 +94,12 @@ func IndexTrail(r *core.Record, author *core.Record, client meilisearch.ServiceM
 	return nil
 }
 
-func UpdateTrail(r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+	errs := app.ExpandRecord(r, []string{"tags"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand: %v", errs)
+	}
+
 	documents := documentFromTrailRecord(r, author, false)
 
 	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {

@@ -11,6 +11,8 @@ import { writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
 import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
 import { APIError } from "$lib/util/api_util";
+import { tags_create } from "./tag_store";
+import type { Tag } from "$lib/models/tag";
 
 let trails: Trail[] = []
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -20,7 +22,7 @@ export const editTrail: Writable<Trail> = writable(new Trail(""));
 export async function trails_index(perPage: number = 21, random: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail?' + new URLSearchParams({
         "perPage": perPage.toString(),
-        expand: "category,waypoints,summit_logs",
+        expand: "category,waypoints,summit_logs,tags",
         sort: random ? "@random" : "",
     }), {
         method: 'GET',
@@ -127,7 +129,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 
 export async function trails_show(id: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f(`/api/v1/trail/${id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail",
+        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
     }), {
         method: 'GET',
     })
@@ -181,11 +183,19 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         const model = await summit_logs_create(summitLog, f);
         trail.summit_logs.push(model.id!);
     }
+    for (const tag of trail.expand?.tags ?? []) {
+        if (!tag.id) {
+            const model = await tags_create(tag)
+            trail.tags.push(model.id!)
+        } else {
+            trail.tags.push(tag.id)
+        }
+    }
 
     trail.author = pb.authStore.record!.id
 
     let r = await f(`/api/v1/trail?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail",
+        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
     }), {
         method: 'PUT',
         body: JSON.stringify({ ...trail }),
@@ -263,8 +273,23 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         const success = await summit_logs_delete(deletedSummitLog);
     }
 
+    const tagUpdates = compareObjectArrays<Tag>(oldTrail.expand?.tags ?? [], newTrail.expand?.tags ?? []);
+
+    for (const tag of tagUpdates.added) {
+        if (!tag.id) {
+            const model = await tags_create(tag)
+            newTrail.tags.push(model.id!)
+        } else {
+            newTrail.tags.push(tag.id)
+        }
+    }
+
+    for (const tag of tagUpdates.deleted) {
+        newTrail.tags = newTrail.tags.filter(t => t != tag.id);
+    }
+
     let r = await fetch(`/api/v1/trail/${newTrail.id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail",
+        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
     }), {
         method: 'POST',
         body: JSON.stringify({ ...newTrail, expand: undefined }),
@@ -430,6 +455,7 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: b
             public: h.public,
             summit_logs: [],
             waypoints: [],
+            tags: h.tags ?? [],
             category: h.category,
             created: new Date(h.created * 1000).toISOString(),
             date: new Date(h.date * 1000).toISOString(),
@@ -529,6 +555,11 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
     if (filter.category.length > 0) {
         filterText += ` AND category IN [${filter.category.join(",")}]`;
     }
+
+    if (filter.tags.length > 0) {
+        filterText += ` AND (${filter.tags.map(t => `tags = '${t}'`).join(" OR ")})`;
+    }
+
     if (filter.completed !== undefined) {
         filterText += ` AND completed = ${filter.completed}`;
     }

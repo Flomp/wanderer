@@ -17,6 +17,9 @@
     import { pb } from "$lib/pocketbase";
     import { searchLocations } from "$lib/stores/search_store";
     import { getIconForLocation } from "$lib/util/icon_util";
+    import { tags_index } from "$lib/stores/tag_store";
+    import Combobox, { type ComboboxItem } from "../base/combobox.svelte";
+    import { T } from "@threlte/core";
 
     interface Props {
         categories: Category[];
@@ -58,6 +61,8 @@
     let searchDropdownItems: SearchItem[] = $state([]);
 
     let citySearchQuery: string = $state("");
+
+    let tagItems: ComboboxItem[] = $state([]);
 
     async function update() {
         onupdate?.(filter);
@@ -133,6 +138,20 @@
 
         update();
     }
+
+    async function searchTags(q: string) {
+        const result = await tags_index(q);
+        tagItems = result.items.map((t) => ({ text: t.name, value: t }));
+    }
+
+    function getFilterTags(): ComboboxItem[] {
+        return filter.tags.map((t) => ({ text: t, value: t }));
+    }
+
+    function setFilterTags(tags: ComboboxItem[]) {
+        filter.tags = tags.map((t) => t.text);
+        update();
+    }
 </script>
 
 <div class="trail-filter p-8 border border-input-border rounded-xl">
@@ -169,6 +188,17 @@
                 placeholder={`${$_("filter-categories")}...`}
             ></MultiSelect>
             <hr class="my-4 border-separator" />
+            <Combobox
+                bind:value={getFilterTags, setFilterTags}
+                onupdate={searchTags}
+                placeholder={`${$_("filter-tags")}...`}
+                items={tagItems}
+                label={$_("tags")}
+                multiple
+                chips
+            ></Combobox>
+            <hr class="my-4 border-separator" />
+
             {#if pb.authStore.record}
                 <UserSearch
                     onclick={(item) => setAuthorFilter(item)}

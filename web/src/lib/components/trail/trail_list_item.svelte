@@ -12,6 +12,7 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
+    import Chip from "../base/chip.svelte";
 
     interface Props {
         trail: Trail;
@@ -87,6 +88,13 @@
                 />
                 {trail.expand.author.username}
             </p>
+        {/if}
+        {#if trail.tags?.length}
+            <div class="flex gap-1 mb-3">
+                {#each trail.tags ?? [] as t}
+                    <Chip text={t} closable={false} primary={false}></Chip>
+                {/each}
+            </div>
         {/if}
         <div class="flex flex-wrap gap-x-8">
             {#if trail.location}

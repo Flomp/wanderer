@@ -1,6 +1,7 @@
 <script lang="ts">
     import { _ } from "svelte-i18n";
     import type { SelectItem } from "./select.svelte";
+    import Chip from "./chip.svelte";
 
     interface Props {
         items?: SelectItem[];
@@ -58,18 +59,11 @@
             <span class="text-gray-400">{placeholder}</span>
         {/if}
         {#each value as item}
-            <div
-                class="bg-primary text-white px-2 py-1 rounded-full flex items-center gap-1"
-            >
-                <span class="text-sm">{$_(item.text)}</span>
-                <button
-                    aria-label="Close"
-                    onclick={(e) => removeItem(e, item)}
-                    class="text-white hover:bg-primary-hover rounded-full w-4 h-4 flex items-center justify-center"
-                >
-                    <i class="fa fa-close"></i>
-                </button>
-            </div>
+            <Chip
+                text={$_(item.text)}
+                closable
+                onclick={(e) => removeItem(e, item)}
+            ></Chip>
         {/each}
         <i
             class="fa fa-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 transition-transform"

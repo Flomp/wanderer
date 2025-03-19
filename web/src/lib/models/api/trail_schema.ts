@@ -21,6 +21,7 @@ const TrailCreateSchema = z.object({
     waypoints: z.array(z.string()).default([]),
     summit_logs: z.array(z.string()).default([]),
     category: z.string().length(15).optional().or(z.literal('')),
+    tags: z.array(z.string()).default([]),
     gpx: z.string().optional(),
     author: z.string().length(15),
 
@@ -46,6 +47,7 @@ const TrailUpdateSchema = z.object({
     waypoints: z.array(z.string()).optional(),
     summit_logs: z.array(z.string()).optional(),
     category: z.string().optional(),
+    tags: z.array(z.string()).optional(),
     gpx: z.string().optional(),
 }) satisfies ZodType<Partial<Trail>>
 

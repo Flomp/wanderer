@@ -42,6 +42,7 @@
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
     import TrailTimeline from "./trail_timeline.svelte";
+    import Chip from "../base/chip.svelte";
 
     interface Props {
         initTrail: Trail;
@@ -246,7 +247,7 @@
                         </h5>
                     {/if}
                     {#if trail.expand?.author}
-                        <p class="my-3">
+                        <p class="mt-2 mb-3">
                             {$_("by")}
                             <img
                                 class="rounded-full w-8 aspect-square mx-1 inline"
@@ -268,7 +269,14 @@
                             {/if}
                         </p>
                     {/if}
-                    <div class="flex flex-wrap gap-x-8 gap-y-2 mt-4 mr-8">
+                    {#if trail.expand?.tags && trail.expand.tags.length > 0}
+                        <div class="flex flex-wrap gap-2 text-gray-600">
+                            {#each trail.expand.tags as tag}
+                                <Chip text={tag.name}></Chip>
+                            {/each}
+                        </div>
+                    {/if}
+                    <div class="flex flex-wrap gap-x-8 gap-y-2 mt-2 mr-8">
                         {#if trail.location}
                             <h3 class="text-lg">
                                 <i class="fa fa-location-dot mr-2"></i>
@@ -342,15 +350,6 @@
                 </div>
             {/if}
         </section>
-        {#if trail.tags && trail.tags.length > 0}
-            <hr class="border-separator" />
-            <section class="flex p-8 gap-4 text-gray-600">
-                {#each trail.tags as tag}
-                    <span class="py-2 px-4 border rounded-full">{tag}</span>
-                {/each}
-            </section>
-            <hr class="border-separator" />
-        {/if}
     </div>
     <section class="trail-info-panel-content px-8">
         <div

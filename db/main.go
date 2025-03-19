@@ -130,7 +130,7 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		if err != nil {
 			return err
 		}
-		if err := util.IndexTrail(record, author, client); err != nil {
+		if err := util.IndexTrail(e.App, record, author, client); err != nil {
 			return err
 		}
 
@@ -160,7 +160,7 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		if err != nil {
 			return err
 		}
-		err = util.UpdateTrail(record, author, client)
+		err = util.UpdateTrail(e.App, record, author, client)
 		if err != nil {
 			return err
 		}
@@ -789,7 +789,7 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 		if err != nil {
 			return err
 		}
-		if err := util.IndexTrail(trail, author, client); err != nil {
+		if err := util.IndexTrail(app, trail, author, client); err != nil {
 			return err
 		}
 

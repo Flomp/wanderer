@@ -31,6 +31,7 @@ export enum Collection {
     summit_logs = "summit_logs",
     trail_share = "trail_share",
     trails = "trails",
+    tags = "tags",
     waypoints = "waypoints",
     activities = "activities",
     follow_counts = "follow_counts",

@@ -6,6 +6,7 @@ export const load: Load = async ({ params, fetch }) => {
     const filter: TrailFilter = {
         q: "",
         category: [],
+        tags: [],
         difficulty: ["easy", "moderate", "difficult"],
         author: params.id,
         public: true,
