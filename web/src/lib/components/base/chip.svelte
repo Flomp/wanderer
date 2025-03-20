@@ -14,7 +14,7 @@
 <div
     class="{primary
         ? 'bg-primary text-white'
-        : 'border border-input-border'} px-2 py-1 rounded-full flex items-center gap-1"
+        : 'border border-input-border bg-menu-item-background-hover'} px-2 py-1 rounded-full flex items-center gap-1"
 >
     <span class="text-sm">{text}</span>
     {#if closable}

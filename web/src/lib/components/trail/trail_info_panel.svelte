@@ -226,9 +226,9 @@
         <section class="border-b border-input-border p-8">
             <div class="flex justify-between items-center gap-x-4">
                 {#if trail.expand?.tags && trail.expand.tags.length > 0}
-                    <div class="flex flex-wrap gap-2 text-gray-600">
+                    <div class="flex flex-wrap gap-2">
                         {#each trail.expand.tags as tag}
-                            <Chip text={tag.name}></Chip>
+                            <Chip text={tag.name} primary={false}></Chip>
                         {/each}
                     </div>
                 {/if}
@@ -236,7 +236,7 @@
                     <div
                         class="flex {trail.public && trailIsShared
                             ? 'w-16'
-                            : 'w-8'} h-8 rounded-full items-center justify-center"
+                            : 'w-8'} h-8 rounded-full items-center"
                     >
                         {#if trail.public && pb.authStore.record}
                             <span
