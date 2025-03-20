@@ -14,7 +14,9 @@
 
     let filter: TrailFilter = $state(page.data.filter);
     const pagination: { page: number; totalPages: number } = $state({
-        page: 1,
+        page: page.url.searchParams.has("page")
+            ? parseInt(page.url.searchParams.get("page")!)
+            : 1,
         totalPages: 1,
     });
     let trails: Trail[] = $state([]);
