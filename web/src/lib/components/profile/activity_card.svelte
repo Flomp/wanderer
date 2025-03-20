@@ -76,7 +76,7 @@
                 ? 'grid-cols-[8fr_5fr]'
                 : 'grid-cols-1'}"
         >
-            {#each activity.photos as photo, i}
+            {#each activity.photos.slice(0,3) as photo, i}
                 {#if isVideoURL(photo)}
                     <!-- svelte-ignore a11y_media_has_caption -->
                     <video

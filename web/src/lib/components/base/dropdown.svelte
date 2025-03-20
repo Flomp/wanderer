@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-    import { type Snippet } from "svelte";
+    import { tick, type Snippet } from "svelte";
     import { fly } from "svelte/transition";
 
     interface Props {
@@ -21,10 +21,38 @@
 
     let isOpen = $state(false);
 
-    export function toggleMenu(e: MouseEvent) {
+    let dropdownElement: HTMLUListElement;
+    let dropdownToggleElement: HTMLDivElement;
+
+    export async function toggleMenu(e: MouseEvent) {
         e.stopPropagation();
         e.preventDefault();
+
         isOpen = !isOpen;
+        if (isOpen) {
+            await tick();
+            const toggleRect = dropdownToggleElement.getBoundingClientRect();
+
+            const dropdownRect = dropdownElement.getBoundingClientRect();
+            dropdownElement.style.visibility = "";
+
+            const viewportHeight = window.innerHeight;
+            const spaceBelow = viewportHeight - toggleRect.bottom;
+            const spaceAbove = toggleRect.top;
+
+            if (
+                spaceBelow < dropdownRect.height &&
+                spaceAbove > dropdownRect.height
+            ) {
+                dropdownElement.classList.remove("rounded-b-xl");
+                dropdownElement.classList.add("rounded-t-xl");
+                dropdownElement.style.top = `${-8-dropdownRect.height}px`;
+            } else {
+                dropdownElement.classList.remove("rounded-t-xl");
+                dropdownElement.classList.add("rounded-b-xl");
+                dropdownElement.style.top = `${toggleRect.height +8}px`;
+            }
+        }
     }
 
     function closeMenu() {
@@ -53,7 +81,7 @@
 <svelte:window onmouseup={handleWindowClick} />
 
 <div class="dropdown relative">
-    <div class="dropdown-toggle">
+    <div class="dropdown-toggle" bind:this={dropdownToggleElement}>
         {#if children}{@render children({ toggleMenu })}{:else}
             <button
                 aria-label="Toggle menu"
@@ -68,11 +96,12 @@
 
     {#if isOpen}
         <ul
-            class="menu absolute bg-menu-background border border-input-border rounded-l-xl rounded-b-xl shadow-md right-0 overflow-hidden mt-2"
+            class="menu absolute bg-menu-background border border-input-border shadow-md rounded-l-xl rounded-b-xl right-0 overflow-hidden"
             class:none={isOpen}
             style="z-index: 1001"
             in:fly={{ y: -10, duration: 150 }}
             out:fly={{ y: -10, duration: 150 }}
+            bind:this={dropdownElement}
         >
             {#each items as item}
                 <li

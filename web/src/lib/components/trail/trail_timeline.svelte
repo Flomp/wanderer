@@ -51,7 +51,7 @@
                         ? 'grid-cols-[8fr_5fr]'
                         : 'grid-cols-1'} cursor-pointer"
                 >
-                    {#each wp.photos as photo, j}
+                    {#each wp.photos.slice(0,3) as photo, j}
                         {#if isVideoURL(photo)}
                             <!-- svelte-ignore a11y_media_has_caption -->
                             <video

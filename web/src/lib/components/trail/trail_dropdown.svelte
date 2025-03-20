@@ -209,7 +209,7 @@
     >{#snippet children({ toggleMenu: openDropdown })}
         <button
             aria-label="Open dropdown"
-            class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-12 w-12"
+            class=" btn-primary !rounded-full h-12 w-12"
             onclick={openDropdown}
         >
             <i class="fa fa-ellipsis-vertical"></i>
