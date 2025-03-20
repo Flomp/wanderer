@@ -2,6 +2,34 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.16.0
+:::caution
+This release contains breaking changes. The necessary migrations will happen automatically.
+**Please update to version v0.15.2 first before updating to v0.16.0.**
+:::
+
+### Maintenance
+- Updates to PocketBase v0.26.1
+- Bumps required go version to >= 1.23.0
+
+### Features
+- Introduces tags for trails
+- Adds support for KMZ files
+- Waypoints can now be created by clicking on the map when creating a new trail
+- Adds support for videos
+
+### Bugfixes
+- Fixes map trail bounding box to include public and shared trails
+- Fixes bug that caused orphan waypoints and summit logs
+- The default language is now set correctly after registering
+- Non-highlight photos from komoot are now synced correctly
+- Fixes bug that prevented newly created trails from being saved again
+- Fixes calculation of the total trail distance
+- Waypoint map markers are now removed correctly when editing a trail
+- Trails with no category can now be added to lists
+- Trail shares are now persisted correctly in meilisearch
+- Fixes pagination when a URL parameter is present
+
 ## v0.15.2
 ### Features
 - Password fields now display a hint when the maximum length of 72 characters is exceeded
