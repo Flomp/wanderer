@@ -109,6 +109,8 @@
 
     let hoveringTrail: boolean = false;
 
+    let loadedAfterStyleSwitch = false;
+
     const trailColors = [
         "#3549BB",
         "#592E9E",
@@ -795,6 +797,7 @@
                 layers = {};
                 map?.setStyle(style.value);
                 localStorage.setItem("layer", style.text);
+                loadedAfterStyleSwitch = true;
             },
             selectedIndex:
                 preferredMapStyleIndex !== -1 ? preferredMapStyleIndex : 0,
@@ -900,6 +903,20 @@
                             source: "terrain",
                             type: "hillshade",
                         });
+                    }
+
+                    if (loadedAfterStyleSwitch) {
+                        trails.forEach((t, i) => {
+                            const layerId = t.id!;
+                            addTrailLayer(t, layerId, i, data[i]);
+                        });                        
+                        if (activeTrail !== null) {
+                            console.log(activeTrail);
+                            
+                            addCaretLayer(trails[activeTrail].id!);
+                        }
+
+                        loadedAfterStyleSwitch = false;
                     }
                 } catch (e) {}
             }
