@@ -695,7 +695,12 @@
             if (markerIcon) {
                 const markerText = markerIcon.textContent ?? "0";
                 const markerIndex = parseInt(markerText);
-                markerIcon.textContent = markerIndex - 1 + "";
+                const newIndex = markerIndex - 1;
+                markerIcon.textContent = newIndex + "";
+                anchor
+                    .marker!.getPopup()
+                    ._content.getElementsByTagName("h5")[0].textContent =
+                    $_("route-point") + " #" + newIndex;
             }
         }
         if (anchorIndex == 0) {
@@ -787,7 +792,12 @@
             if (markerIcon) {
                 const markerText = markerIcon.textContent ?? "0";
                 const markerIndex = parseInt(markerText);
-                markerIcon.textContent = markerIndex + 1 + "";
+                const newIndex = markerIndex + 1;
+                markerIcon.textContent = newIndex + "";
+                anchor
+                    .marker!.getPopup()
+                    ._content.getElementsByTagName("h5")[0].textContent =
+                    $_("route-point") + " #" + newIndex;
             }
         }
         const previousAnchor = anchors[data.segment];
@@ -885,7 +895,7 @@
 
     async function searchTags(q: string) {
         const result = await tags_index(q);
-        tagItems = result.items.map((t) => ({ text: t.name, value: t }));        
+        tagItems = result.items.map((t) => ({ text: t.name, value: t }));
     }
 </script>
 
