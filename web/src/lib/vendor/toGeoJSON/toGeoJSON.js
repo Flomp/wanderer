@@ -674,8 +674,8 @@ const removeSpace = /\s*/g;
 const trimSpace = /^\s*|\s*$/g;
 const splitSpace = /\s+/;
 /**
-                           * Get one coordinate from a coordinate array, if any
-                           */
+ * Get one coordinate from a coordinate array, if any
+ */
 function coord1(value) {
   return value.
     replace(removeSpace, "").
@@ -701,12 +701,25 @@ function gxCoords(node) {
   if (elems.length === 0) {
     elems = $ns(node, "coord", "*");
   }
-  const coordinates = elems.map(elem => {
+  let coordinates = elems.map(elem => {
     return nodeVal(elem).split(" ").map(parseFloat);
   });
   if (coordinates.length === 0) {
     return null;
   }
+
+  let times = $(node, "when").map(elem => nodeVal(elem));
+
+  const invalidCoordinateIndices = []
+  coordinates.forEach((c, i) => {
+    if (c.length < 2) {
+      invalidCoordinateIndices.push(i)
+    } else {
+      c.push(times[i])
+    }
+  })
+  coordinates = coordinates.filter((_, i) => !invalidCoordinateIndices.includes(i))
+
   return {
     geometry: coordinates.length > 2 ?
       {
@@ -719,7 +732,7 @@ function gxCoords(node) {
         coordinates: coordinates[0]
       },
 
-    times: $(node, "when").map(elem => nodeVal(elem))
+    times: times
   };
 
 }
@@ -848,15 +861,18 @@ function getPlacemark(node, styleMap, schema, options) {
       "open",
       "phoneNumber",
       "description"]),
-      getMaybeHTMLDescription(node), extractCascadedStyle(node, styleMap), extractStyle(node), extractExtendedData(node, schema), extractTimeSpan(node), extractTimeStamp(node), coordTimes.length ?
-      {
-        coordinateProperties: {
-          times: coordTimes.length === 1 ? coordTimes[0] : coordTimes
-        }
-      } :
-
-
-      {})
+      getMaybeHTMLDescription(node),
+      extractCascadedStyle(node, styleMap),
+      extractStyle(node),
+      extractExtendedData(node, schema),
+      extractTimeSpan(node),
+      extractTimeStamp(node),
+      coordTimes.length ?
+        {
+          coordinateProperties: {
+            times: coordTimes.length === 1 ? coordTimes[0] : coordTimes
+          }
+        } : {})
   };
 
   if (((_feature$properties = feature.properties) === null || _feature$properties === void 0 ? void 0 : _feature$properties.visibility) !== undefined) {
