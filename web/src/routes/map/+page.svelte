@@ -25,6 +25,7 @@
     } from "$lib/stores/search_store";
     import { trails_search_bounding_box } from "$lib/stores/trail_store";
     import { getIconForLocation } from "$lib/util/icon_util";
+    import type { Snapshot } from "@sveltejs/kit";
     import * as M from "maplibre-gl";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
@@ -51,6 +52,14 @@
     let pagination = {
         page: 1,
         totalPages: 1,
+    };
+
+    export const snapshot: Snapshot<TrailFilter> = {
+        capture: () => filter,
+        restore: (value) => {            
+            filter = value;
+            handleFilterUpdate();
+        },
     };
 
     async function search(q: string) {
@@ -136,7 +145,7 @@
         mapWithElevation?.togglePopup(trail.id!, true);
     }
 
-    async function handleFilterUpdate(filter: TrailFilter) {
+    async function handleFilterUpdate() {
         if (!map) {
             return;
         }
