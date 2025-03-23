@@ -26,7 +26,31 @@ import (
 	"pocketbase/util"
 )
 
+const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+
+// verifySettings checks if the required environment variables are set.
+// If they are not set, it logs an error and exits the program.
+func verifySettings() {
+	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+
+	if len(encryptionKey) == 0 || len(encryptionKey) < 32 {
+		log.Fatal("POCKETBASE_ENCRYPTION_KEY not set or is shorter than 32 bytes")
+	}
+
+	meiliMasterKey := os.Getenv("MEILI_MASTER_KEY")
+
+	if len(meiliMasterKey) == 0 || len(meiliMasterKey) < 32 {
+		log.Fatal("MEILI_MASTER_KEY not set or is shorter than 32 bytes")
+	}
+
+	if meiliMasterKey == defaultMeiliMasterKey {
+		log.Println("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value.")
+	}
+}
+
 func main() {
+	verifySettings()
+
 	app := pocketbase.New()
 	client := initializeMeiliSearch()
 
