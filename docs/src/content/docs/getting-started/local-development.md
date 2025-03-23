@@ -35,6 +35,12 @@ When you are done with development and would like to build wanderer for producti
 
 If you modified code in any of the `*.go` files make sure to build an updated binary with `go build`. In case you only edited tables via the `PocketBase` admin panel you don't need to do anything. The database will be migrated automatically.
 
+Since the Docker image is using Alpine linux with musl, you need to compile the binary
+using musl or using `CGO_ENABLED=false` as shown below.
+
+```bash
+env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o pocketbase_amd64
+```
 
 ### Frontend
 
