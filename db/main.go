@@ -524,7 +524,11 @@ func encryptIntegrationSecrets(app core.App, r *core.Record) error {
 			}
 
 			for _, secretKey := range secretKeys {
-				if secret, ok := integration[secretKey].(string); ok && len(secret) > 0 {
+				// If the secret is already encrypted, we don't re-encrypt it.
+				// TODO: This is a bit of a hack, we should handle this in a more robust way (e.g.
+				// storing flag on the record or prefixing encrypted strings with enc: or smilar).
+				// Doing that would also potentially allow us to support key rotation in the future.
+				if secret, ok := integration[secretKey].(string); ok && len(secret) > 0 && !util.CanDecrypSecret(secret) {
 					encryptedSecret, err := security.Encrypt([]byte(secret), encryptionKey)
 					if err != nil {
 						return err
