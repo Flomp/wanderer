@@ -1,3 +1,20 @@
+# v0.16.1
+## Features
+- Trail filter settings are now saved when you visit a trail and come back
+- Trail descriptions can now be up to 10000 characters long
+  
+## Bug fixes
+- Fixes error in the KML file parser
+- Fixes error that caused trails to disappear from the map when switching styles
+- Fixes route point numbering when deleting in-between route points
+- Fixes bug that caused integration secrets to be encrypted multiple times (thanks @Kami)
+- Improves error handling when encountering unexpected data while syncing integrations
+- Fixes a bug that allowed unregistered users to access the list creation page
+- strava activities with no or empty GPS data are now ignored (thanks @dyuri)
+
+## Docs
+- Multiple updates by the community to increase clarity and update outdated info (thanks @huggenknubbel, @Kami)
+
 # v0.16.0
 > [!CAUTION]
 This release contains breaking changes. The necessary migrations will happen automatically.
