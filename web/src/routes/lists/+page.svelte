@@ -259,12 +259,14 @@
                 onclick={() => (filterExpanded = !filterExpanded)}
                 ><i class="fa fa-sliders"></i></button
             >
+            {#if $currentUser}
             <a
                 aria-label="New list"
                 class="btn-primary tooltip"
                 data-title={$_("new-list")}
                 href="/lists/edit/new"><i class="fa fa-plus"></i></a
             >
+            {/if}
         </div>
         {#if filterExpanded}
             <div
@@ -273,7 +275,7 @@
                 out:slide
             >
                 <p class="text-sm font-medium pb-1">{$_("sort")}</p>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2" class:mb-6={!$currentUser}>
                     <Select
                         bind:value={filter.sort}
                         items={sortOptions}
