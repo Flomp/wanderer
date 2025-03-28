@@ -35,7 +35,7 @@ func verifySettings() {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 
 	if len(encryptionKey) == 0 || len(encryptionKey) < 32 {
-		log.Fatal("POCKETBASE_ENCRYPTION_KEY not set or is shorter than 32 bytes")
+		log.Println("POCKETBASE_ENCRYPTION_KEY not set or is shorter than 32 bytes")
 	}
 
 	meiliMasterKey := os.Getenv("MEILI_MASTER_KEY")

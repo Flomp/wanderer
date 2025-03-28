@@ -8,7 +8,7 @@ wanderer uses categories to classify what kind of activity a trail belongs to. O
 ## Backend access
 
 First, you need access to the PocketBase backend. If you are using docker make sure to forward the internal port 8090 to a public port. With the default configuration, the PocketBase admin panel is available at `http://localhost:8090/_/`. If this is your first time visiting the panel you will need to create an admin account. 
-To create backend acces navigate to your docker-compose.yaml file and type:
+To create backend access navigate to your docker-compose.yaml file and type:
 ```
 docker compose exec -it db /pocketbase superuser upsert email@example.com myverysecurepassword
 ```
