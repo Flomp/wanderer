@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
@@ -97,9 +98,9 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterCreateSuccess("comments").BindFunc(createCommentHandler())
 
 	app.OnRecordsListRequest("integrations").BindFunc(listIntegrationHandler())
-	app.OnRecordCreateRequest("integrations").BindFunc(createIntegrationHandler())
+	app.OnRecordCreate("integrations").BindFunc(createIntegrationHandler())
 	app.OnRecordAfterCreateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
-	app.OnRecordUpdateRequest("integrations").BindFunc(updateIntegrationHandler())
+	app.OnRecordUpdate("integrations").BindFunc(updateIntegrationHandler())
 	app.OnRecordAfterUpdateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 
 	app.OnRecordRequestEmailChangeRequest("users").BindFunc(changeUserEmailHandler())
@@ -197,10 +198,17 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		_, err := client.Index("trails").DeleteDocument(record.Id)
+		task, err := client.Index("trails").DeleteDocument(record.Id)
 		if err != nil {
 			return err
 		}
+
+		interval := 500 * time.Millisecond
+		_, err = client.WaitForTask(task.TaskUID, interval)
+		if err != nil {
+			log.Fatalf("Error waiting for task completion: %v", err)
+		}
+
 		return e.Next()
 	}
 }
@@ -440,8 +448,8 @@ func listIntegrationHandler() func(e *core.RecordsListRequestEvent) error {
 	}
 }
 
-func createIntegrationHandler() func(e *core.RecordRequestEvent) error {
-	return func(e *core.RecordRequestEvent) error {
+func createIntegrationHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
 		err := encryptIntegrationSecrets(e.App, e.Record)
 		if err != nil {
 			return err
@@ -461,8 +469,8 @@ func createUpdateIntegrationSuccessHandler() func(e *core.RecordEvent) error {
 	}
 }
 
-func updateIntegrationHandler() func(e *core.RecordRequestEvent) error {
-	return func(e *core.RecordRequestEvent) error {
+func updateIntegrationHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
 		err := encryptIntegrationSecrets(e.App, e.Record)
 		if err != nil {
 			return err

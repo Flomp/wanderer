@@ -52,10 +52,15 @@ func SyncStrava(app core.App) error {
 			return err
 		}
 
+		decryptedRefreshToken, err := security.Decrypt(stravaIntegration.RefreshToken, encryptionKey)
+		if err != nil {
+			return err
+		}
+
 		request := RefreshTokenRequest{
 			ClientID:     stravaIntegration.ClientID,
 			ClientSecret: string(decryptedSecret),
-			RefreshToken: stravaIntegration.RefreshToken,
+			RefreshToken: string(decryptedRefreshToken),
 			GrantType:    "refresh_token",
 		}
 		r, err := GetStravaToken(request)

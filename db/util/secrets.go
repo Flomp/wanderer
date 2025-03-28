@@ -43,11 +43,33 @@ func CanDecryptSecret(ciphertext string) bool {
 		return false
 	}
 
-	decryptedSecret, err := security.Decrypt(ciphertext, encryptionKey)
-
-	if len(decryptedSecret) > 0 && err == nil {
-		return true
+	// Decode Base64 first
+	cipherBytes, err := base64.StdEncoding.DecodeString(ciphertext)
+	if err != nil {
+		return false // Not a valid Base64 string
 	}
 
-	return false
+	// Get nonce size from encryption parameters
+	block, err := aes.NewCipher([]byte(encryptionKey))
+	if err != nil {
+		return false
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return false
+	}
+
+	nonceSize := gcm.NonceSize()
+
+	// Ensure decoded cipherBytes is long enough to contain a nonce
+	if len(cipherBytes) < nonceSize {
+		return false
+	}
+
+	// Try to decrypt (only now)
+	decryptedSecret, err := security.Decrypt(ciphertext, encryptionKey)
+
+	// Check if decryption was successful
+	return err == nil && len(decryptedSecret) > 0
 }
