@@ -26,7 +26,31 @@ import (
 	"pocketbase/util"
 )
 
+const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+
+// verifySettings checks if the required environment variables are set.
+// If they are not set, it logs an error and exits the program.
+func verifySettings() {
+	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+
+	if len(encryptionKey) == 0 || len(encryptionKey) < 32 {
+		log.Fatal("POCKETBASE_ENCRYPTION_KEY not set or is shorter than 32 bytes")
+	}
+
+	meiliMasterKey := os.Getenv("MEILI_MASTER_KEY")
+
+	if len(meiliMasterKey) == 0 || len(meiliMasterKey) < 32 {
+		log.Fatal("MEILI_MASTER_KEY not set or is shorter than 32 bytes")
+	}
+
+	if meiliMasterKey == defaultMeiliMasterKey {
+		log.Println("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value.")
+	}
+}
+
 func main() {
+	verifySettings()
+
 	app := pocketbase.New()
 	client := initializeMeiliSearch()
 
@@ -496,7 +520,11 @@ func encryptIntegrationSecrets(app core.App, r *core.Record) error {
 			}
 
 			for _, secretKey := range secretKeys {
-				if secret, ok := integration[secretKey].(string); ok && len(secret) > 0 {
+				// If the secret is already encrypted, we don't re-encrypt it.
+				// TODO: This is a bit of a hack, we should handle this in a more robust way (e.g.
+				// storing flag on the record or prefixing encrypted strings with enc: or smilar).
+				// Doing that would also potentially allow us to support key rotation in the future.
+				if secret, ok := integration[secretKey].(string); ok && len(secret) > 0 && !util.CanDecryptSecret(secret) {
 					encryptedSecret, err := security.Encrypt([]byte(secret), encryptionKey)
 					if err != nil {
 						return err
