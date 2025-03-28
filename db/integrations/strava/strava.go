@@ -91,20 +91,20 @@ func SyncStrava(app core.App) error {
 			for hasNewRoutes {
 
 				routes, err := fetchStravaRoutes(r.AccessToken, page)
+				page += 1
 				if err != nil {
 					warning := fmt.Sprintf("error fetching routes from strava: %v\n", err)
 					fmt.Print(warning)
 					app.Logger().Warn(warning)
-					break
+					continue
 				}
 				hasNewRoutes, err = syncTrailsWithRoutes(app, r.AccessToken, userId, routes)
 				if err != nil {
 					warning := fmt.Sprintf("error syncing strava routes with trails: %v\n", err)
 					fmt.Print(warning)
 					app.Logger().Warn(warning)
-					break
+					continue
 				}
-				page += 1
 			}
 		}
 		if stravaIntegration.Activities {
@@ -112,20 +112,20 @@ func SyncStrava(app core.App) error {
 			hasNewActivities := true
 			for hasNewActivities {
 				activities, err := fetchStravaActivities(r.AccessToken, page)
+				page += 1
 				if err != nil {
 					warning := fmt.Sprintf("error fetching activities from strava: %v", err)
 					fmt.Print(warning)
 					app.Logger().Warn(warning)
-					break
+					continue
 				}
 				hasNewActivities, err = syncTrailsWithActivities(app, r.AccessToken, userId, activities)
 				if err != nil {
 					warning := fmt.Sprintf("error syncing strava activities with trails: %v", err)
 					fmt.Print(warning)
 					app.Logger().Warn(warning)
-					break
+					continue
 				}
-				page += 1
 			}
 		}
 	}
@@ -234,15 +234,18 @@ func syncTrailsWithRoutes(app core.App, accessToken string, user string, routes 
 		hasNewRoutes = true
 		gpx, err := fetchRouteGPX(route, accessToken)
 		if err != nil {
-			return hasNewRoutes, err
+			app.Logger().Warn(fmt.Sprintf("Unable to fetch GPX for route '%s': %v", route.Name, err))
+			continue
 		}
 		wpIds, err := createWaypointsFromRoute(app, route, user)
 		if err != nil {
-			return hasNewRoutes, err
+			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for route '%s': %v", route.Name, err))
+			continue
 		}
 		err = createTrailFromRoute(app, route, gpx, user, wpIds)
 		if err != nil {
-			return hasNewRoutes, err
+			app.Logger().Warn(fmt.Sprintf("Unable to create trail for route '%s': %v", route.Name, err))
+			continue
 		}
 
 	}
@@ -388,15 +391,18 @@ func syncTrailsWithActivities(app core.App, accessToken string, user string, act
 		hasNewActivites = true
 		detailedActivity, err := fetchDetailedActivity(activity, accessToken)
 		if err != nil {
-			return hasNewActivites, err
+			app.Logger().Warn(fmt.Sprintf("Unable to fetch detailed activity '%s': %v", activity.Name, err))
+			continue
 		}
 		gpx, err := generateActivityGPX(detailedActivity, accessToken)
 		if err != nil {
-			return hasNewActivites, err
+			app.Logger().Warn(fmt.Sprintf("Unable to fetch GPX for activity '%s': %v", activity.Name, err))
+			continue
 		}
 		err = createTrailFromActivity(app, detailedActivity, gpx, user)
 		if err != nil {
-			return hasNewActivites, err
+			app.Logger().Warn(fmt.Sprintf("Unable to create trail from activity '%s': %v", activity.Name, err))
+			continue
 		}
 
 	}

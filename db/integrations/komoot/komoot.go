@@ -65,7 +65,7 @@ func SyncKomoot(app core.App) error {
 				warning := fmt.Sprintf("error fetching tours from komoot: %v\n", err)
 				fmt.Print(warning)
 				app.Logger().Warn(warning)
-				break
+				continue
 			}
 
 			hasNewTours, err = syncTrailWithTours(app, k, komootIntegration, userId, tours)
@@ -73,7 +73,7 @@ func SyncKomoot(app core.App) error {
 				warning := fmt.Sprintf("error syncing komoot tours with trails: %v\n", err)
 				fmt.Print(warning)
 				app.Logger().Warn(warning)
-				break
+				continue
 			}
 			page += 1
 		}
@@ -186,19 +186,23 @@ func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user st
 		hasNewTours = true
 		detailedTour, err := k.fetchDetailedTour(tour)
 		if err != nil {
-			return hasNewTours, err
+			app.Logger().Warn(fmt.Sprintf("Unable to fetch details for tour '%s': %v", tour.Name, err))
+			continue
 		}
 		gpx, err := generateTourGPX(detailedTour)
 		if err != nil {
-			return hasNewTours, err
+			app.Logger().Warn(fmt.Sprintf("Unable to generate GPX for tour '%s': %v", tour.Name, err))
+			continue
 		}
 		wpIds, err := createWaypointsFromTour(app, detailedTour, user)
 		if err != nil {
-			return hasNewTours, err
+			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for tour '%s': %v", tour.Name, err))
+			continue
 		}
 		err = createTrailFromTour(app, detailedTour, gpx, user, wpIds)
 		if err != nil {
-			return hasNewTours, err
+			app.Logger().Warn(fmt.Sprintf("Unable to create trail for tour '%s': %v", tour.Name, err))
+			continue
 		}
 
 	}
