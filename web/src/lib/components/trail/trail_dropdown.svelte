@@ -121,7 +121,7 @@
             let fileData: string = await trail2gpx(trail);
             if (exportSettings.fileFormat == "json") {
                 fileData = JSON.stringify(
-                    gpx(new DOMParser().parseFromString(fileData, "text/xml")),
+                    gpx(new DOMParser().parseFromString(fileData, "application/gpx+xml" as any)),
                 );
             }
             if (!exportSettings.photos && !exportSettings.summitLog) {
