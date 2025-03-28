@@ -69,7 +69,7 @@
                 type="password"
                 error={$errors.password}
             ></TextField>
-            <div class="flex gap-x-4">
+            <div class="flex flex-wrap gap-x-4">
                 <Toggle name="planned" label={$_("planned-tours", { values: { n: 2 } })}
                 ></Toggle>
                 <Toggle
