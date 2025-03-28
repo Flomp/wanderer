@@ -438,6 +438,10 @@ func fetchDetailedActivity(activity StravaActivity, accessToken string) (*Detail
 }
 
 func createTrailFromActivity(app core.App, activity *DetailedStravaActivity, gpx *filesystem.File, user string) error {
+	if len(activity.StartLatlng) < 2 {
+		return nil
+	}
+
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
