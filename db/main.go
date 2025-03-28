@@ -528,7 +528,7 @@ func encryptIntegrationSecrets(app core.App, r *core.Record) error {
 				// TODO: This is a bit of a hack, we should handle this in a more robust way (e.g.
 				// storing flag on the record or prefixing encrypted strings with enc: or smilar).
 				// Doing that would also potentially allow us to support key rotation in the future.
-				if secret, ok := integration[secretKey].(string); ok && len(secret) > 0 && !util.CanDecrypSecret(secret) {
+				if secret, ok := integration[secretKey].(string); ok && len(secret) > 0 && !util.CanDecryptSecret(secret) {
 					encryptedSecret, err := security.Encrypt([]byte(secret), encryptionKey)
 					if err != nil {
 						return err

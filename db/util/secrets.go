@@ -37,7 +37,7 @@ func LooksLikeEncrypted(s string) bool {
 }
 
 // Return true if the provided value can be decrypted using the secret key
-func CanDecrypSecret(ciphertext string) bool {
+func CanDecryptSecret(ciphertext string) bool {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 	if len(encryptionKey) == 0 {
 		return false

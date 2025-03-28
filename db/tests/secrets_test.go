@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"os"
+	"pocketbase/util"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -13,14 +14,14 @@ import (
 func TestLooksLikeEncrypted(t *testing.T) {
 	// Sub-test for non-base64 input.
 	t.Run("NonBase64", func(t *testing.T) {
-		if LooksLikeEncrypted("not a base64 string!") {
+		if util.LooksLikeEncrypted("not a base64 string!") {
 			t.Errorf("Expected false for non-base64 input")
 		}
 	})
 
 	// Sub-test for an empty string.
 	t.Run("EmptyString", func(t *testing.T) {
-		if LooksLikeEncrypted("") {
+		if util.LooksLikeEncrypted("") {
 			t.Errorf("Expected false for empty string")
 		}
 	})
@@ -42,7 +43,7 @@ func TestLooksLikeEncrypted(t *testing.T) {
 	t.Run("ShortData", func(t *testing.T) {
 		shortData := make([]byte, minSize-1)
 		encodedShort := base64.StdEncoding.EncodeToString(shortData)
-		if LooksLikeEncrypted(encodedShort) {
+		if util.LooksLikeEncrypted(encodedShort) {
 			t.Errorf("Expected false for data length < nonce+16, got true")
 		}
 	})
@@ -51,7 +52,7 @@ func TestLooksLikeEncrypted(t *testing.T) {
 	t.Run("ExactData", func(t *testing.T) {
 		exactData := make([]byte, minSize)
 		encodedExact := base64.StdEncoding.EncodeToString(exactData)
-		if !LooksLikeEncrypted(encodedExact) {
+		if !util.LooksLikeEncrypted(encodedExact) {
 			t.Errorf("Expected true for data length == nonce+16")
 		}
 	})
@@ -60,17 +61,17 @@ func TestLooksLikeEncrypted(t *testing.T) {
 	t.Run("LongData", func(t *testing.T) {
 		longData := make([]byte, minSize+10)
 		encodedLong := base64.StdEncoding.EncodeToString(longData)
-		if !LooksLikeEncrypted(encodedLong) {
+		if !util.LooksLikeEncrypted(encodedLong) {
 			t.Errorf("Expected true for data length > nonce+16")
 		}
 	})
 }
 
-func TestCanDecrypSecret(t *testing.T) {
+func TestCanDecryptSecret(t *testing.T) {
 	// Sub-test: When POCKETBASE_ENCRYPTION_KEY is not set.
 	t.Run("NoEncryptionKey", func(t *testing.T) {
 		os.Unsetenv("POCKETBASE_ENCRYPTION_KEY")
-		if CanDecrypSecret("anyciphertext") {
+		if util.CanDecryptSecret("anyciphertext") {
 			t.Errorf("Expected false when POCKETBASE_ENCRYPTION_KEY is not set")
 		}
 	})
@@ -91,7 +92,7 @@ func TestCanDecrypSecret(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to encrypt secret: %v", err)
 		}
-		if !CanDecrypSecret(ciphertext) {
+		if !util.CanDecryptSecret(ciphertext) {
 			t.Errorf("Expected true for valid ciphertext with correct key")
 		}
 	})
@@ -99,7 +100,7 @@ func TestCanDecrypSecret(t *testing.T) {
 	// Sub-test: Invalid ciphertext should return false.
 	t.Run("InvalidCiphertext", func(t *testing.T) {
 		invalidCiphertext := "invalid_ciphertext"
-		if CanDecrypSecret(invalidCiphertext) {
+		if util.CanDecryptSecret(invalidCiphertext) {
 			t.Errorf("Expected false for invalid ciphertext")
 		}
 	})
