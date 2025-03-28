@@ -98,14 +98,14 @@
         onupdate?.(filter);
     }
 
-    function handleSortUpdate(sort: any) {
+    function handleSortUpdate(sort: any) {        
         if (!filter) {
             return;
         }
-        if (sort.detail === filter.sort) {
+        if (sort === filter.sort) {
             setSortOrder();
         } else {
-            filter.sort = sort.detail;
+            filter.sort = sort;
             filter.sortOrder = "+";
             setSort();
         }
