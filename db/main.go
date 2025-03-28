@@ -74,7 +74,9 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 
 	app.OnRecordsListRequest("integrations").BindFunc(listIntegrationHandler())
 	app.OnRecordCreateRequest("integrations").BindFunc(createIntegrationHandler())
+	app.OnRecordAfterCreateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 	app.OnRecordUpdateRequest("integrations").BindFunc(updateIntegrationHandler())
+	app.OnRecordAfterUpdateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 
 	app.OnRecordRequestEmailChangeRequest("users").BindFunc(changeUserEmailHandler())
 	app.OnServe().BindFunc(onBeforeServeHandler(client))
@@ -421,11 +423,13 @@ func createIntegrationHandler() func(e *core.RecordRequestEvent) error {
 			return err
 		}
 
-		if err := e.Next(); err != nil {
-			return err
-		}
+		return e.Next()
+	}
+}
 
-		err = censorIntegrationSecrets(e.Record)
+func createUpdateIntegrationSuccessHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		err := censorIntegrationSecrets(e.Record)
 		if err != nil {
 			return err
 		}
@@ -440,14 +444,6 @@ func updateIntegrationHandler() func(e *core.RecordRequestEvent) error {
 			return err
 		}
 
-		if err := e.Next(); err != nil {
-			return err
-		}
-
-		err = censorIntegrationSecrets(e.Record)
-		if err != nil {
-			return err
-		}
 		return e.Next()
 	}
 }
