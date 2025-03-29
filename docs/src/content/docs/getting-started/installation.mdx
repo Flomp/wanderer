@@ -143,6 +143,17 @@ npm run build
 
 This will create a directory `wanderer/web/build`. Verify that it is there.
 
+If you run into issues regarding vitest, please ensure it is properly installed. Ohterwise you can get it with
+```bash
+npm i -s vitest
+```
+
+Further issue which can appear is import error for PUBLIC_VALHALLA_URL. You can export it using
+```bash
+export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
+```
+
+
 ### Launch
 
 To launch our three services we will use a small bash script. This ensures that all necessary environment variables are set and the services are started in the correct order. All three services are executed as background tasks, but are being trapped so that terminating the bash script will also terminate all three services at once.
