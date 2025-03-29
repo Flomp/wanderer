@@ -20,7 +20,7 @@
     import type { List } from "$lib/models/list";
     import { SummitLog } from "$lib/models/summit_log";
     import { Trail } from "$lib/models/trail";
-    import type { ValhallaAnchor } from "$lib/models/valhalla";
+    import type { RoutingOptions, ValhallaAnchor } from "$lib/models/valhalla";
     import { Waypoint } from "$lib/models/waypoint";
     import { categories } from "$lib/stores/category_store";
     import {
@@ -56,14 +56,21 @@
     import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
+    import Combobox, {
+        type ComboboxItem,
+    } from "$lib/components/base/combobox.svelte";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
+    import RoutingOptionsPopup from "$lib/components/trail/routing_options_popup.svelte";
+    import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
+    import { Tag } from "$lib/models/tag.js";
     import {
         searchLocationReverse,
         searchLocations,
     } from "$lib/stores/search_store.js";
+    import { tags_index } from "$lib/stores/tag_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { getIconForLocation } from "$lib/util/icon_util.js";
     import {
@@ -79,13 +86,6 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
-    import Combobox, {
-        type ComboboxItem,
-    } from "$lib/components/base/combobox.svelte";
-    import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
-    import { SvelteSet } from "svelte/reactivity";
-    import { Tag } from "$lib/models/tag.js";
-    import { tags_index } from "$lib/stores/tag_store.js";
 
     let { data } = $props();
 
@@ -129,14 +129,10 @@
             .optional(),
     });
 
-    const modesOfTransport = [
-        { text: $_("hiking"), value: "pedestrian" },
-        { text: $_("cycling"), value: "bicycle" },
-        { text: $_("driving"), value: "auto" },
-    ];
-    let selectedModeOfTransport = $state(modesOfTransport[0].value);
-
-    let autoRouting = $state(true);
+    let routingOptions: RoutingOptions = $state({
+        autoRouting: true,
+        modeOfTransport: "pedestrian",
+    })
 
     let savedAtLeastOnce = $state(false);
 
@@ -590,8 +586,7 @@
                 previousAnchor.lon,
                 lat,
                 lon,
-                selectedModeOfTransport,
-                autoRouting,
+                routingOptions
             );
             insertIntoRoute(routeWaypoints);
             updateTrailWithRouteData();
@@ -735,8 +730,7 @@
                     anchor.lon,
                     nextAnchor.lat,
                     nextAnchor.lon,
-                    selectedModeOfTransport,
-                    autoRouting,
+                    routingOptions
                 );
             }
             if (anchorIndex > 0) {
@@ -746,8 +740,7 @@
                     previousAnchor.lon,
                     anchor.lat,
                     anchor.lon,
-                    selectedModeOfTransport,
-                    autoRouting,
+                    routingOptions
                 );
             }
 
@@ -809,16 +802,14 @@
                 previousAnchor.lon,
                 anchor.lat,
                 anchor.lon,
-                selectedModeOfTransport,
-                autoRouting,
+                routingOptions
             );
             const nextRouteSegment = await calculateRouteBetween(
                 anchor.lat,
                 anchor.lon,
                 nextAnchor.lat,
                 nextAnchor.lon,
-                selectedModeOfTransport,
-                autoRouting,
+                routingOptions
             );
 
             editRoute(data.segment, previousRouteSegment);
@@ -1183,17 +1174,13 @@
     <div class="relative">
         {#if drawingActive}
             <div
-                class="absolute top-0 left-16 z-50 p-4 my-2 rounded-xl bg-background space-y-4"
                 in:scale={{ easing: backInOut }}
                 out:scale={{ easing: backInOut }}
+                class="absolute top-0 left-16 z-50"
             >
-                <Toggle bind:value={autoRouting} label="Enable auto-routing"
-                ></Toggle>
-                <Select
-                    items={modesOfTransport}
-                    bind:value={selectedModeOfTransport}
-                    disabled={!autoRouting}
-                ></Select>
+                <RoutingOptionsPopup
+                    bind:options={routingOptions}
+                ></RoutingOptionsPopup>
             </div>
         {/if}
         <div id="trail-map">

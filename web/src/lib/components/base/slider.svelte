@@ -2,6 +2,7 @@
     import noUiSlider from "nouislider";
     import "nouislider/dist/nouislider.css";
     import { onMount } from "svelte";
+    import { type Options as SliderOptions } from "nouislider";
 
     interface Props {
         minValue?: number;
@@ -15,7 +16,8 @@
         maxValue = 100,
         currentValue = $bindable(maxValue / 2),
         onset,
-    }: Props = $props();
+        ...sliderOptions
+    }: Props & Partial<SliderOptions> = $props();
 
     let sliderContainer: any = $state();
 
@@ -27,6 +29,7 @@
         noUiSlider.create(sliderContainer, {
             start: currentValue,
             connect: [true, false],
+            ...sliderOptions,
             range: {
                 min: minValue,
                 max: maxValue,
@@ -39,6 +42,10 @@
             onset?.(currentValue);
         });
     });
+
+    export function set(value: number) {
+        sliderContainer.noUiSlider.set(value)
+    }
 </script>
 
 <div class="my-4" id="slider" bind:this={sliderContainer}></div>

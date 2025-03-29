@@ -2,7 +2,7 @@ import GPX from "$lib/models/gpx/gpx";
 import type Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import Waypoint from "$lib/models/gpx/waypoint";
-import { type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
+import { type RoutingOptions, type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
 import { APIError } from "$lib/util/api_util";
 import { decodePolyline, encodePolyline } from "$lib/util/polyline_util";
 
@@ -20,19 +20,21 @@ export function setRoute(newRoute: GPX) {
     route = newRoute
 }
 
-export async function calculateRouteBetween(startLat: number, startLon: number, endLat: number, endLon: number, costing: string = "pedestrian", autoRoute: boolean = true) {
+export async function calculateRouteBetween(startLat: number, startLon: number, endLat: number, endLon: number, options: RoutingOptions) {
 
     let shape;
-    if (autoRoute) {
+    if (options.autoRouting) {
         let costingBody;
-        switch (costing) {
+        switch (options.modeOfTransport) {
             case "bicycle":
-                costingBody = { "costing": "bicycle", "costing_options": { "bicycle": { "bicycle_type": "Hybrid", "use_roads": 0.5, "use_hills": 0.5, "avoid_bad_surfaces": 0.5, "use_ferry": 0 } } }
+                costingBody = { "costing": options.modeOfTransport, "costing_options": { [options.modeOfTransport]: options.autoOptions } }
                 break;
             case "auto":
-                costingBody = { "costing": "auto", "costing_options": { "auto": { "use_ferry": 0 } } }
-            default:
-                costingBody = { "costing": costing, "costing_options": { costing: { "max_hiking_difficulty": 6, "use_ferry": 0 } } }
+                costingBody = { "costing": options.modeOfTransport, "costing_options": { [options.modeOfTransport]: options.bicycleOptions } }
+                break;
+
+            case "pedestrian":
+                costingBody = { "costing": options.modeOfTransport, "costing_options": { [options.modeOfTransport]: options.pedestrianOptions } }
                 break;
         }
         const requestBody = {
