@@ -23,6 +23,7 @@ export function setRoute(newRoute: GPX) {
 export async function calculateRouteBetween(startLat: number, startLon: number, endLat: number, endLon: number, options: RoutingOptions) {
 
     let shape;
+    let duration: number;
     if (options.autoRouting) {
         let costingBody;
         switch (options.modeOfTransport) {
@@ -52,8 +53,10 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
 
         const routeResponse: ValhallaRouteResponse = await r.json();
         shape = routeResponse.trip.legs[0].shape
+        duration = routeResponse.trip.summary.time
     } else {
         shape = encodePolyline([[startLat, startLon], [endLat, endLon]])
+        duration = 0;
     }
 
     const r2 = await fetch("/api/v1/valhalla/height", { method: "POST", body: JSON.stringify({ encoded_polyline: shape }) })
@@ -65,7 +68,9 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
 
     const heightResponse: ValhallaHeightResponse = await r2.json()
     const points = decodePolyline(shape);
-    const waypoints = points.map((p, i) => new Waypoint({ $: { lat: p[0], lon: p[1] }, ele: heightResponse.height[i] }))
+    const startTime = new Date().getTime();
+
+    const waypoints = points.map((p, i) => new Waypoint({ $: { lat: p[0], lon: p[1] }, ele: heightResponse.height[i], time: new Date(startTime + (((duration * 1000) / points.length) * i)) }))
 
     return waypoints
 }
@@ -78,6 +83,8 @@ export async function insertIntoRoute(waypoints: Waypoint[], index?: number) {
     } else {
         route.trk?.at(0)?.trkseg?.push(segment);
     }
+
+    route.features = route.getTotals();
 }
 
 export async function editRoute(index: number, waypoints: Waypoint[]) {
@@ -85,8 +92,12 @@ export async function editRoute(index: number, waypoints: Waypoint[]) {
     if (segment) {
         segment.trkpt = waypoints
     }
+    route.features = route.getTotals();
+
 }
 
 export function deleteFromRoute(index: number) {
     route.trk?.at(0)?.trkseg?.splice(index, 1);
+    route.features = route.getTotals();
+
 }

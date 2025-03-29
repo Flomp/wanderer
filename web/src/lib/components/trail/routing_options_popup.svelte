@@ -1,16 +1,14 @@
 <script lang="ts">
     import type {
         RoutingOptions,
-        ValhallaAutoCostingOptions,
-        ValhallaBicycleCostingOptions,
-        ValhallaPedestrianCostingOptions,
+        ValhallaBicycleCostingOptions
     } from "$lib/models/valhalla";
+    import { formatSpeed } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
+    import { slide } from "svelte/transition";
     import Select, { type SelectItem } from "../base/select.svelte";
     import Slider from "../base/slider.svelte";
     import Toggle from "../base/toggle.svelte";
-    import { formatDistance, formatSpeed } from "$lib/util/format_util";
-    import { slide } from "svelte/transition";
     interface Props {
         options: RoutingOptions;
     }
@@ -66,7 +64,7 @@
         }
     })
 
-    let showSettings = $state(true);
+    let showSettings = $state(false);
 
     // svelte-ignore non_reactive_update
     let cycleSpeedSlider: Slider;
@@ -209,7 +207,7 @@
                     }
                 ></Slider>
                 <p class="text-sm text-end">
-                    {options.bicycleOptions.avoid_bad_surfaces?.toFixed(0)}
+                    {options.bicycleOptions.avoid_bad_surfaces?.toFixed(2)}
                 </p>
                 <hr class="border-input-border my-3" />
                 <Toggle

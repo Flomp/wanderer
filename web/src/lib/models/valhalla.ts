@@ -83,11 +83,43 @@ export interface RoutingOptions {
 }
 
 interface ValhallaRouteResponse {
-    trip: {
-        legs: {
-            shape: string;
-        }[];
-    };
+    trip: Trip
+}
+
+export interface Trip {
+    locations: Location[]
+    legs: Leg[]
+    summary: Summary
+    status_message: string
+    status: number
+    units: string
+    language: string
+}
+
+export interface Location {
+    type: string
+    lat: number
+    lon: number
+    original_index: number
+}
+
+export interface Leg {
+    summary: Summary
+    shape: string
+}
+
+export interface Summary {
+    has_time_restrictions: boolean
+    has_toll: boolean
+    has_highway: boolean
+    has_ferry: boolean
+    min_lat: number
+    min_lon: number
+    max_lat: number
+    max_lon: number
+    time: number
+    length: number
+    cost: number
 }
 
 interface ValhallaHeightResponse {

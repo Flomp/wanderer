@@ -831,7 +831,7 @@
         overwriteGPX = true;
         const totals = route.features;
         $formData.distance = totals.distance;
-        $formData.duration = totals.duration;
+        $formData.duration = totals.duration / 1000 / 60;
         $formData.elevation_gain = totals.elevationGain;
         $formData.elevation_loss = totals.elevationLoss;
         $formData.expand!.gpx_data = route.toString();
