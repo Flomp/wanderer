@@ -1,0 +1,61 @@
+version: "0.5"
+
+environment:
+  - ORIGIN=http://localhost:5173
+  - MEILI_URL=http://127.0.0.1:7700
+  - MEILI_MASTER_KEY=YOU_SHOULD_DEFINITELY_CHANGE_ME_
+  - PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
+  - POCKETBASE_ENCRYPTION_KEY=YOU_SHOULD_DEFINITELY_CHANGE_ME_
+  - PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
+  - MEILI_NO_ANALYTICS=true
+
+processes:
+  meilisearch-install:
+    command: type meilisearch >/dev/null 2>&1 || brew install meilisearch
+
+  meilisearch:
+    command: meilisearch
+    working_dir: search
+    depends_on:
+      meilisearch-install:
+        condition: process_completed
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        scheme: http
+        path: "/health"
+        port: 7700
+      initial_delay_seconds: 1
+
+  db-build:
+    command: go mod tidy && go build
+    working_dir: db
+
+  db:
+    command: ./pocketbase serve
+    working_dir: db
+    depends_on:
+      db-build:
+        condition: process_completed
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        scheme: http
+        path: "/api/health"
+        port: 8090
+      initial_delay_seconds: 1
+
+  web-build:
+    command: npm install
+    working_dir: web
+
+  web:
+    command: npm run dev
+    working_dir: web
+    depends_on:
+      web-build:
+        condition: process_completed
+      db:
+        condition: process_healthy
+      meilisearch:
+        condition: process_healthy
