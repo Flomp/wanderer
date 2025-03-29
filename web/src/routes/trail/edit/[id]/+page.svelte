@@ -132,7 +132,7 @@
     let routingOptions: RoutingOptions = $state({
         autoRouting: true,
         modeOfTransport: "pedestrian",
-    })
+    });
 
     let savedAtLeastOnce = $state(false);
 
@@ -170,6 +170,18 @@
                 form.photos = form.photos.filter(
                     (p) => !p.startsWith("data:image/svg+xml;base64"),
                 );
+
+                if (!form.photos?.length &&
+                !photoFiles.length) {
+                    const canvas = document.querySelector(
+                        "#map .maplibregl-canvas",
+                    ) as HTMLCanvasElement;
+
+                    const dataURL = canvas.toDataURL("image/webp", 0.3);
+                    const response = await fetch(dataURL);
+                    const blob = await response.blob();
+                    photoFiles = [new File([blob], "route")];
+                }
 
                 if (form.expand!.gpx_data && overwriteGPX) {
                     gpxFile = new Blob([form.expand!.gpx_data], {
@@ -586,7 +598,7 @@
                 previousAnchor.lon,
                 lat,
                 lon,
-                routingOptions
+                routingOptions,
             );
             insertIntoRoute(routeWaypoints);
             updateTrailWithRouteData();
@@ -730,7 +742,7 @@
                     anchor.lon,
                     nextAnchor.lat,
                     nextAnchor.lon,
-                    routingOptions
+                    routingOptions,
                 );
             }
             if (anchorIndex > 0) {
@@ -740,7 +752,7 @@
                     previousAnchor.lon,
                     anchor.lat,
                     anchor.lon,
-                    routingOptions
+                    routingOptions,
                 );
             }
 
@@ -802,14 +814,14 @@
                 previousAnchor.lon,
                 anchor.lat,
                 anchor.lon,
-                routingOptions
+                routingOptions,
             );
             const nextRouteSegment = await calculateRouteBetween(
                 anchor.lat,
                 anchor.lon,
                 nextAnchor.lat,
                 nextAnchor.lon,
-                routingOptions
+                routingOptions,
             );
 
             editRoute(data.segment, previousRouteSegment);
@@ -1178,8 +1190,7 @@
                 out:scale={{ easing: backInOut }}
                 class="absolute top-0 left-16 z-50"
             >
-                <RoutingOptionsPopup
-                    bind:options={routingOptions}
+                <RoutingOptionsPopup bind:options={routingOptions}
                 ></RoutingOptionsPopup>
             </div>
         {/if}
@@ -1194,6 +1205,7 @@
                 bind:map
                 onclick={(target) => handleMapClick(target)}
                 onsegmentdragend={(data) => handleSegmentDragEnd(data)}
+                mapOptions={{ preserveDrawingBuffer: true }}
             ></MapWithElevationMaplibre>
         </div>
     </div>
