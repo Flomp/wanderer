@@ -196,7 +196,7 @@
                     },
                 } as GeoJSON);
             }
-        });        
+        });
         return r;
     }
 
@@ -909,10 +909,8 @@
                         trails.forEach((t, i) => {
                             const layerId = t.id!;
                             addTrailLayer(t, layerId, i, data[i]);
-                        });                        
+                        });
                         if (activeTrail !== null) {
-                            console.log(activeTrail);
-                            
                             addCaretLayer(trails[activeTrail].id!);
                         }
 
@@ -957,8 +955,31 @@
     onDestroy(() => {
         map?.remove();
     });
+
+    function handleKeydown(e: KeyboardEvent) {
+        if (e.key == "m") {
+            if (trails.length === 1) {
+                removeCaretLayer();
+                removeTrailLayer(trails[0].id!);
+            }
+        }
+    }
+
+    function handleKeyup(e: KeyboardEvent) {
+        if (e.key == "m") {
+            if (trails.length === 1) {
+                addTrailLayer(trails[0], trails[0].id!, 0, data[0]);
+                addCaretLayer(trails[0].id);
+            }
+        } else if (e.key == "p") {
+            if (showElevation) {
+                epc?.toggleProfile();
+            }
+        }
+    }
 </script>
 
+<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
 <div id="map" bind:this={mapContainer}></div>
 
 <style>

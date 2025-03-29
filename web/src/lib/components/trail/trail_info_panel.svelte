@@ -179,13 +179,15 @@
 >
     <div class="trail-info-panel-header">
         <section class="relative">
-            <button
-                aria-label="Back"
-                class="bg-black/40 text-white text-lg rounded-full w-10 h-10 hover:bg-black/50 transition-colors focus:ring-4 focus:ring-primary/70 top-6 left-6 absolute"
-                onclick={() => history.back()}
-            >
-                <i class="fa fa-arrow-left"></i>
-            </button>
+            {#if mode !== "list"}
+                <button
+                    aria-label="Back"
+                    class="bg-black/40 text-white text-lg rounded-full w-10 h-10 hover:bg-black/50 transition-colors focus:ring-4 focus:ring-primary/70 top-6 left-6 absolute"
+                    onclick={() => history.back()}
+                >
+                    <i class="fa fa-arrow-left"></i>
+                </button>
+            {/if}
             <div
                 class="grid gap-[1px] {headerPhotos.length > 1
                     ? 'grid-cols-[8fr_5fr]'
