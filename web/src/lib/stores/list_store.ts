@@ -11,7 +11,9 @@ let lists: List[] = []
 export const list: Writable<List | null> = writable(null)
 export const listTrail: Writable<Trail | null> = writable(null);
 
-export async function lists_index(filter?: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function lists_index(filter?: ListFilter, page: number = 1, perPage: number = 5, 
+    f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch,
+    e: string = "trails,trails.waypoints,trails.category,list_share_via_list") {
     const filterText = filter ? buildFilterText(filter) : ""
 
     const r = await f('/api/v1/list?' + new URLSearchParams({
@@ -19,7 +21,7 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
         perPage: perPage.toString(),
         page: page.toString(),
         filter: filterText,
-        expand: "trails,trails.waypoints,trails.category,list_share_via_list"
+        expand: e
     }), {
         method: 'GET',
     })
@@ -92,9 +94,11 @@ export async function lists_search_filter(filter: ListFilter, page: number = 1, 
 
 }
 
-export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch
+    , e: string = "trails,trails.waypoints,trails.category,list_share_via_list") {
+    
     const r = await f(`/api/v1/list/${id}?` + new URLSearchParams({
-        expand: "trails,trails.waypoints,trails.category,list_share_via_list"
+        expand: e
     }), {
         method: 'GET',
     })
