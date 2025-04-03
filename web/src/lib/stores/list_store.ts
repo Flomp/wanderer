@@ -1,4 +1,4 @@
-import { List, type ListFilter } from "$lib/models/list";
+import { List, type ListFilter, ExpandType, ExpandTypeToString } from "$lib/models/list";
 import type { Trail } from "$lib/models/trail";
 import { pb } from "$lib/pocketbase";
 import { type ListResult } from "pocketbase";
@@ -13,7 +13,7 @@ export const listTrail: Writable<Trail | null> = writable(null);
 
 export async function lists_index(filter?: ListFilter, page: number = 1, perPage: number = 5, 
     f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch,
-    e: string = "trails,trails.waypoints,trails.category,list_share_via_list") {
+    e: ExpandType = ExpandType.All) {
     const filterText = filter ? buildFilterText(filter) : ""
 
     const r = await f('/api/v1/list?' + new URLSearchParams({
@@ -21,7 +21,7 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
         perPage: perPage.toString(),
         page: page.toString(),
         filter: filterText,
-        expand: e
+        expand: ExpandTypeToString(e),
     }), {
         method: 'GET',
     })
@@ -95,10 +95,10 @@ export async function lists_search_filter(filter: ListFilter, page: number = 1, 
 }
 
 export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch
-    , e: string = "trails,trails.waypoints,trails.category,list_share_via_list") {
+    , e: ExpandType = ExpandType.All) {
     
     const r = await f(`/api/v1/list/${id}?` + new URLSearchParams({
-        expand: e
+        expand: ExpandTypeToString(e)
     }), {
         method: 'GET',
     })
