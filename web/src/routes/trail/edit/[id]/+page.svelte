@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { PUBLIC_VALHALLA_URL } from "$env/static/public";
+    import { env } from "$env/dynamic/public";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";
@@ -933,7 +933,7 @@
                 ? $_("upload-new-file")
                 : $_("upload-file")}</Button
         >
-        {#if PUBLIC_VALHALLA_URL}
+        {#if env.PUBLIC_VALHALLA_URL}
             <div class="flex gap-4 items-center w-full">
                 <hr class="basis-full border-input-border" />
                 <span class="text-gray-500 uppercase">{$_("or")}</span>
