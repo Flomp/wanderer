@@ -40,7 +40,7 @@
             codeVerifier: provider.codeVerifier,
         })
             .then(() => {
-                goto("/");
+                window.location.href = "/";
             })
             .catch((e) => {
                 error = "oauth_error";
