@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"net/mail"
 
 	"github.com/pocketbase/dbx"
@@ -46,7 +45,10 @@ func getNotificationPermissions(app core.App, user string, notificationType Noti
 
 	settingsForType, exists := notificationPreferences[notificationType]
 	if !exists {
-		return nil, fmt.Errorf("notification type '%s' not found", notificationType)
+		return &NotificationSettings{
+			Web:   true,
+			Email: true,
+		}, nil
 	}
 
 	return &settingsForType, nil
