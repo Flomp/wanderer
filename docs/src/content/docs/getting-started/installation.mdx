@@ -143,6 +143,11 @@ npm run build
 
 This will create a directory `wanderer/web/build`. Verify that it is there.
 
+In case vitest is not installed please do so using
+```bash
+npm i -s vitest
+```
+
 ### Launch
 
 To launch our three services we will use a small bash script. This ensures that all necessary environment variables are set and the services are started in the correct order. All three services are executed as background tasks, but are being trapped so that terminating the bash script will also terminate all three services at once.
