@@ -1,3 +1,4 @@
+import { ExpandType } from "$lib/models/list";
 import { Trail } from "$lib/models/trail";
 import { pb } from "$lib/pocketbase";
 import { categories_index } from "$lib/stores/category_store";
@@ -10,8 +11,8 @@ export const load: Load = async ({ params, fetch }) => {
         return error(400, "Bad Request")
     }
     const categories = await categories_index(fetch)
-    const lists = await lists_index({ q: "", author: pb.authStore.record?.id ?? "" }, 1, -1, fetch)
-
+    const lists = await lists_index({ q: "", author: pb.authStore.record?.id ?? "" }, 1, -1, fetch, ExpandType.None)
+    
     let trail: Trail;
     if (params.id === "new") {
         trail = new Trail("", { category: categories[0] });

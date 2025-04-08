@@ -1,4 +1,4 @@
-import type { List, ListFilter } from "$lib/models/list";
+import { ExpandType, type List, type ListFilter } from "$lib/models/list";
 import { lists_index, lists_show } from "$lib/stores/list_store";
 import { APIError } from "$lib/util/api_util";
 import { error, type Load, type NumericRange } from "@sveltejs/kit";
@@ -17,7 +17,7 @@ export const load: Load = async ({ params, fetch, url }) => {
     let lists: ListResult<List>;
     if (url.searchParams.get("list")) {
         try {
-            const list = await lists_show(url.searchParams.get("list") ?? "", fetch)
+            const list = await lists_show(url.searchParams.get("list") ?? "", fetch, ExpandType.None)
 
             lists = { items: [list], page: 1, perPage: 1, totalItems: 1, totalPages: 1 }
         } catch (e) {
