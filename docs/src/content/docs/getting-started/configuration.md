@@ -32,7 +32,7 @@ Since we use an unmodified installation of meilisearch you can use all variables
 | --------------------- | -------------------------------------------------------------------- | ----------------------------------- |
 | ORIGIN                | Public IP or hostname (including the port) of your wanderer instance | http://localhost:3000               |
 | BODY_SIZE_LIMIT       | Maximum allowed upload size                                          | Infinity                            |
-| PUBLIC_POCKETBASE_URL | IP or hostname (including the port) of your wanderer instance        | http://db:8090                      |
+| PUBLIC_POCKETBASE_URL | IP or hostname (including the port) of your pocketbase instance      | http://db:8090                      |
 | PUBLIC_DISABLE_SIGNUP | Disables signup option for new users                                 | false                               |
 | PUBLIC_VALHALLA_URL   | Public IP or hostname (including the port) of a valhalla instance    | https://valhalla1.openstreetmap.de  |
 | PUBLIC_NOMINATIM_URL  | Public IP or hostname (including the port) of a nominatim instance   | https://nominatim.openstreetmap.org |
