@@ -23,6 +23,17 @@ wait
 
 This will bring up a `meilisearch` instance on `http://127.0.0.1:7700`, a `PocketBase` instance on `http://127.0.0.1:8090`, and a `vite` server for the wanderer frontend on `http://localhost:5173`.
 
+## Local development setup with process-compose (on macOS and Homebrew)
+
+If you are running macOS and have homebrew installed you can use the provided [process-compose](https://f1bonacc1.github.io/process-compose/) configuration to bring up the local development environment in one step.
+
+```sh
+process-compose up
+```
+
+This assumes that you have process-compose and Go installed. Meilisearch will be installed via homebrew, as part of the `process-compose.yml` configuration. The rest should work out of the box.
+
+
 ## Accessing the backend
 
 Sometimes it can be useful to edit data directly in the database. `PocketBase` offers a convenient web UI to do so. Simply head over to `http://127.0.0.1:8090/_/`. If you access the admin panel for the first time you will be asked to create an admin account. Afterwards, you can create, read, update, and delete data in the respective tables. To learn more about `PocketBase` you can head over to their extensive [documentation](https://pocketbase.io/docs).
