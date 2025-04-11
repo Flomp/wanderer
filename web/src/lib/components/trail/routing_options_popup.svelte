@@ -237,7 +237,7 @@
                     {formatSpeed(options.autoOptions.top_speed! / 3.6)}
                 </p>
                 <hr class="border-input-border my-3" />
-                <p class="text-sm font-medium">{$_("width")}</p>
+                <p class="text-sm font-medium">{$_("car")} {$_("width")}</p>
                 <Slider
                     minValue={1}
                     maxValue={10}
@@ -248,7 +248,7 @@
                     {options.autoOptions.width?.toFixed(1)}
                 </p>
                 <hr class="border-input-border my-3" />
-                <p class="text-sm font-medium">{$_("height")}</p>
+                <p class="text-sm font-medium">{$_("car")} {$_("height")}</p>
                 <Slider
                     minValue={1}
                     maxValue={10}
