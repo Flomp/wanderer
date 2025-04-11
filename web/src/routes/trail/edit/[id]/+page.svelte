@@ -305,22 +305,22 @@
                 page.data.settings?.privacy?.trails === "public",
             );
 
-            const log = new SummitLog(parseResult.trail.date as string, {
-                distance: $formData.distance,
-                elevation_gain: $formData.elevation_gain,
-                elevation_loss: $formData.elevation_loss,
-                duration: $formData.duration
-                    ? $formData.duration * 60
-                    : undefined,
-            });
+            // const log = new SummitLog(parseResult.trail.date as string, {
+            //     distance: $formData.distance,
+            //     elevation_gain: $formData.elevation_gain,
+            //     elevation_loss: $formData.elevation_loss,
+            //     duration: $formData.duration
+            //         ? $formData.duration * 60
+            //         : undefined,
+            // });
 
-            log.expand!.gpx_data = gpxData;
-            const blob = new Blob([gpxData], { type: selectedFile.type });
-            log._gpx = new File([blob], selectedFile.name, {
-                type: selectedFile.type,
-            });
+            // log.expand!.gpx_data = gpxData;
+            // const blob = new Blob([gpxData], { type: selectedFile.type });
+            // log._gpx = new File([blob], selectedFile.name, {
+            //     type: selectedFile.type,
+            // });
 
-            $formData.expand!.summit_logs?.push(log);
+            // $formData.expand!.summit_logs?.push(log);
 
             if (parseResult.gpx.rte?.length && !parseResult.gpx.trk) {
                 parseResult.gpx.trk = [
