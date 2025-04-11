@@ -1084,7 +1084,7 @@
             ></Select>
         </div>
 
-        <Toggle name="public" label={$_("public")}></Toggle>
+        <Toggle name="public" label={$formData.public ? $_("public") : $_("private")} icon={$formData.public ? "globe" : "lock"}></Toggle>
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">
             {$_("waypoints", { values: { n: 2 } })}

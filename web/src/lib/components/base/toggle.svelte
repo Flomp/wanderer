@@ -1,6 +1,7 @@
 <script lang="ts">
     interface Props {
         name?: string;
+        icon?: string;
         value?: boolean;
         label?: string;
         error?: string;
@@ -10,6 +11,7 @@
 
     let {
         name = "",
+        icon = "",
         value = $bindable(false),
         label = "",
         error = "",
@@ -23,7 +25,10 @@
 </script>
 
 <div>
-    <label class="relative my-2 inline-flex items-center" class:cursor-pointer={!disabled}>
+    <label
+        class="relative my-2 inline-flex items-center"
+        class:cursor-pointer={!disabled}
+    >
         <input
             {name}
             bind:checked={value}
@@ -38,6 +43,9 @@
         ></div>
         {#if label}
             <span class="ms-3 text-sm font-medium">{label}</span>
+            {#if icon.length}
+                <i class="fa fa-{icon} ml-2"></i>
+            {/if}
         {/if}
     </label>
 
