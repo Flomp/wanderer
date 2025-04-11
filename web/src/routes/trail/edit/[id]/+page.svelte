@@ -171,8 +171,7 @@
                     (p) => !p.startsWith("data:image/svg+xml;base64"),
                 );
 
-                if (!form.photos?.length &&
-                !photoFiles.length) {
+                if (!form.photos?.length && !photoFiles.length) {
                     const canvas = document.querySelector(
                         "#map .maplibregl-canvas",
                     ) as HTMLCanvasElement;
@@ -1084,7 +1083,11 @@
             ></Select>
         </div>
 
-        <Toggle name="public" label={$formData.public ? $_("public") : $_("private")} icon={$formData.public ? "globe" : "lock"}></Toggle>
+        <Toggle
+            name="public"
+            label={$formData.public ? $_("public") : $_("private")}
+            icon={$formData.public ? "globe" : "lock"}
+        ></Toggle>
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">
             {$_("waypoints", { values: { n: 2 } })}
