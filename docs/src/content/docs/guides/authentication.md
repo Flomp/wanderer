@@ -56,7 +56,7 @@ In any case, once you have successfully created your OAuth app you will receive 
 ### Enable a provider in PocketBase
 ![Pocketbase OAuth](../../../assets/guides/pocketbase_oauth.png)
 
-In the PocketBase admin panel navigate to `Settings -> Auth providers`. Click the gear icon next to your provider, fill in the Client ID and Client Secret from the step before and save your changes.
+In the PocketBase admin panel navigate to the `users` table. Click the gear icon at the top to open the table's settings and navigate to `Options`. In the tab `OAuth2`, add your provider and fill in the Client ID and Client Secret from the step before and save your changes.
 
 ### Login using OAuth
 ![wanderer OAuth](../../../assets/guides/wanderer_oauth.png)
