@@ -213,6 +213,26 @@ func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user st
 }
 
 func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *filesystem.File, user string, wpIds []string) error {
+	var summitLogRecord *core.Record
+	if detailedTour.Type == "tour_recorded" {
+		collection, err := app.FindCollectionByNameOrId("summit_logs")
+		if err != nil {
+			return err
+		}
+
+		summitLogRecord = core.NewRecord(collection)
+		summitLogRecord.Load(map[string]any{
+			"distance":       detailedTour.Distance,
+			"elevation_gain": detailedTour.ElevationUp,
+			"elevation_loss": detailedTour.ElevationDown,
+			"duration":       detailedTour.Duration / 60,
+			"date":           detailedTour.Date,
+			"author":         user,
+		})
+		if err := app.Save(summitLogRecord); err != nil {
+			return err
+		}
+	}
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
@@ -274,6 +294,9 @@ func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *fi
 		"author":            user,
 	})
 
+	if summitLogRecord != nil {
+		record.Set("summit_logs", summitLogRecord.Id)
+	}
 	if photos != nil {
 		record.Set("photos", photos)
 	}
