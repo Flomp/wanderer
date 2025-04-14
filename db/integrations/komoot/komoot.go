@@ -374,6 +374,9 @@ func fetchRoutePhotos(tour *DetailedKomootTour) ([]*filesystem.File, error) {
 		if err != nil {
 			return nil, err
 		}
+		if strings.HasSuffix(photo.Name, ".gif") {
+			continue
+		}
 		photos[i] = photo
 
 		//TODO: komoot photos can have location data. Maybe we should create a waypoint for those photos?
@@ -390,6 +393,9 @@ func fetchWaypointPhotos(wp Item) ([]*filesystem.File, error) {
 		photo, err := fetchPhoto(img.Src, "", "")
 		if err != nil {
 			return nil, err
+		}
+		if strings.HasSuffix(photo.Name, ".gif") {
+			continue
 		}
 		photos[i] = photo
 	}
