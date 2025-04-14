@@ -1,5 +1,5 @@
 import type { SummitLog } from "$lib/models/summit_log";
-import { Trail, type TrailFilter, type TrailFilterValues, type TrailSearchResult } from "$lib/models/trail";
+import { defaultTrailSearchAttributes, Trail, type TrailFilter, type TrailFilterValues, type TrailSearchResult } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { deepEqual } from "$lib/util/deep_util";
@@ -65,6 +65,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
             q: filter.q,
             options: {
                 filter: filterText,
+                attributesToRetrieve: defaultTrailSearchAttributes,
                 sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
                 hitsPerPage: 12,
                 page: page
@@ -89,7 +90,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
 }
 
-export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, page: number = 1, loadGPX: boolean = true) {
+export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, page: number = 1, includePolyline: boolean = true) {
 
     let filterText: string = "";
 
@@ -106,6 +107,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
                     `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
                     filterText
                 ],
+                attributesToRetrieve: [...defaultTrailSearchAttributes, ...(includePolyline ? ["polyline"] : [])],
                 hitsPerPage: 500,
                 page: page
             }
@@ -118,7 +120,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
         return { trails: [], ...result }
     }
 
-    const resultTrails: Trail[] = await searchResultToTrailList(result.hits, loadGPX)
+    const resultTrails: Trail[] = await searchResultToTrailList(result.hits)
 
     trails = page > 1 ? trails.concat(resultTrails) : resultTrails
 
@@ -444,7 +446,7 @@ export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f:
     return gpxData
 }
 
-async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: boolean = false): Promise<Trail[]> {
+async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<Trail[]> {
     const trails: Trail[] = []
     for (const h of hits) {
         const t: Trail & RecordModel = {
@@ -472,6 +474,7 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: b
             lon: h._geo.lng,
             location: h.location,
             gpx: h.gpx,
+            polyline: h.polyline,
             thumbnail: 0,
             expand: {
                 author: {
@@ -489,10 +492,6 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: b
             }
         }
 
-        if (loadGPX) {
-            const gpxData: string = await fetchGPX(t);
-            t.expand!.gpx_data = gpxData;
-        }
 
         trails.push(t)
     }

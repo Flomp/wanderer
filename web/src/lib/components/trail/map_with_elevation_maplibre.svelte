@@ -12,6 +12,7 @@
         createPopupFromTrail,
         FontawesomeMarker,
     } from "$lib/util/maplibre_util";
+    import { polylineToGeoJSON } from "$lib/util/polyline_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
@@ -182,8 +183,11 @@
         }
 
         const r: GeoJSON[] = [];
+        console.time("start decode")
         trails.forEach((t) => {
-            if (t.expand?.gpx_data) {
+            if (t.polyline) {
+                r.push(polylineToGeoJSON(t.polyline, 5));
+            } else if (t.expand?.gpx_data) {
                 r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
             } else if (t.lat !== null && t.lon !== null) {
                 r.push({
@@ -197,6 +201,8 @@
                 } as GeoJSON);
             }
         });
+        console.timeEnd("start decode")
+
         return r;
     }
 

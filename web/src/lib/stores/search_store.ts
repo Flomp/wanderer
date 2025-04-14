@@ -1,4 +1,5 @@
 import { env } from "$env/dynamic/public";
+import { defaultTrailSearchAttributes } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits, MultiSearchParams, MultiSearchResponse, MultiSearchResult, SearchParams, SearchResponse } from "meilisearch";
 
@@ -97,6 +98,7 @@ export async function searchTrails(q: string, options: SearchParams): Promise<Hi
         method: "POST",
         body: JSON.stringify({
             q,
+            attributesToRetrieve: defaultTrailSearchAttributes,
             options
         }),
     });
@@ -161,7 +163,7 @@ function getLocationDescription(address: Address) {
         description = `${address.city}, ` + description
     } else if (address.town) {
         description = `${address.town}, ` + description
-    }else if (address.hamlet) {
+    } else if (address.hamlet) {
         description = `${address.hamlet}, ` + description
     } else if (address.village) {
         description = `${address.village}, ` + description

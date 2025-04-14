@@ -1,3 +1,7 @@
+import type { GeoJSON } from "geojson";
+import { bbox } from "./geojson_util";
+
+
 function py2_round(value: number) {
     return Math.floor(Math.abs(value) + 0.5) * (value >= 0 ? 1 : -1);
 }
@@ -77,4 +81,34 @@ export function encodePolyline(coordinates: number[][], precision: number = 6) {
     }
 
     return output;
+};
+
+function flipped(coords: number[][]) {
+    var flipped = [];
+    for (var i = 0; i < coords.length; i++) {
+        var coord = coords[i].slice();
+        flipped.push([coord[1], coord[0]]);
+    }
+    return flipped;
+}
+
+export function polylineToGeoJSON(str: string, precision: number = 6) {
+    var coords = decodePolyline(str, precision);
+    const geojson = {
+        type: "FeatureCollection",
+        features: [
+            {
+                properties: {},
+                type: "Feature",
+                geometry: {
+                    type: "LineString",
+                    coordinates: flipped(coords),
+                },
+            }
+        ]
+
+    } as GeoJSON;
+    geojson.bbox = bbox(geojson)
+
+    return geojson
 };

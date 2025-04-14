@@ -1,15 +1,19 @@
 package util
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/twpayne/go-gpx"
+	"github.com/twpayne/go-polyline"
 )
 
-func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares bool) map[string]interface{} {
+func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, includeShares bool) map[string]interface{} {
 	photos := r.GetStringSlice("photos")
 	thumbnail := ""
 	if len(photos) > 0 {
@@ -25,6 +29,11 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 
 	for i, v := range tagRecords {
 		tags[i] = v.GetString("name")
+	}
+
+	polyline, err := getPolyline(app, r)
+	if err != nil {
+		return nil
 	}
 
 	document := map[string]interface{}{
@@ -48,6 +57,7 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 		"thumbnail":      thumbnail,
 		"gpx":            r.GetString("gpx"),
 		"tags":           tags,
+		"polyline":       polyline,
 		"_geo": map[string]float64{
 			"lat": r.GetFloat("lat"),
 			"lng": r.GetFloat("lon"),
@@ -59,6 +69,44 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 	}
 
 	return document
+}
+
+func getPolyline(app core.App, r *core.Record) (string, error) {
+	gpxPath := r.GetString("gpx")
+	if len(gpxPath) == 0 {
+		return "", nil
+	}
+	avatarKey := r.BaseFilesPath() + "/" + gpxPath
+	fsys, err := app.NewFilesystem()
+	if err != nil {
+		return "", err
+	}
+	defer fsys.Close()
+
+	gpxFile, err := fsys.GetFile(avatarKey)
+	if err != nil {
+		return "", err
+	}
+	defer gpxFile.Close()
+
+	content := new(bytes.Buffer)
+	_, err = io.Copy(content, gpxFile)
+	if err != nil {
+		return "", err
+	}
+	gpxData, err := gpx.Read(content)
+	if err != nil {
+		return "", err
+	}
+	coordinates := make([][]float64, 4)
+	for _, trk := range gpxData.Trk {
+		for _, seg := range trk.TrkSeg {
+			for _, pt := range seg.TrkPt {
+				coordinates = append(coordinates, []float64{pt.Lat, pt.Lon})
+			}
+		}
+	}
+	return string(polyline.EncodeCoords(coordinates)), nil
 }
 
 func documentFromListRecord(r *core.Record, includeShares bool) map[string]interface{} {
@@ -85,7 +133,7 @@ func IndexTrail(app core.App, r *core.Record, author *core.Record, client meilis
 		return fmt.Errorf("failed to expand: %v", errs)
 	}
 
-	documents := []map[string]interface{}{documentFromTrailRecord(r, author, true)}
+	documents := []map[string]interface{}{documentFromTrailRecord(app, r, author, true)}
 
 	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
 		return err
@@ -100,7 +148,7 @@ func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meili
 		return fmt.Errorf("failed to expand: %v", errs)
 	}
 
-	documents := documentFromTrailRecord(r, author, false)
+	documents := documentFromTrailRecord(app, r, author, false)
 
 	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {
 		return err
