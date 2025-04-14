@@ -47,7 +47,10 @@ func SyncKomoot(app core.App) error {
 
 		decryptedPassword, err := security.Decrypt(komootIntegration.Password, encryptionKey)
 		if err != nil {
-			return err
+			warning := fmt.Sprintf("unable to decrypt password: %v\n", err)
+			fmt.Print(warning)
+			app.Logger().Warn(warning)
+			continue
 		}
 
 		err = k.Login(komootIntegration.Email, string(decryptedPassword))
