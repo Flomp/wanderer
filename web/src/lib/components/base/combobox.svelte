@@ -63,6 +63,9 @@
             for (let i = 0; i < dropdownMenu.children.length; i++) {
                 const li = dropdownMenu.children[i];
                 const textNode = li.getElementsByTagName("p")[0];
+                if(!textNode) {
+                    return
+                }
                 textNode.innerHTML = items[i].text;
 
                 const text = textNode.innerText.replace(

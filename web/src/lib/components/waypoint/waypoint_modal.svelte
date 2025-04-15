@@ -88,7 +88,7 @@
                 setFields("lon", convertDMSToDD(lon, lonDir));
             } else {
                 show_toast({
-                    text: "No GPS data in image",
+                    text: $_('no-gps-data-in-image'),
                     icon: "close",
                     type: "error",
                 });

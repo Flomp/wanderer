@@ -45,7 +45,7 @@
         setRoute,
     } from "$lib/stores/valhalla_store";
     import { waypoint } from "$lib/stores/waypoint_store";
-    import { getFileURL } from "$lib/util/file_util";
+    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -65,6 +65,7 @@
     } from "$lib/components/base/search.svelte";
     import RoutingOptionsPopup from "$lib/components/trail/routing_options_popup.svelte";
     import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
+    import { convertDMSToDD } from "$lib/models/gpx/utils.js";
     import { Tag } from "$lib/models/tag.js";
     import {
         searchLocationReverse,
@@ -77,6 +78,7 @@
         createAnchorMarker,
         createEditTrailMapPopup,
     } from "$lib/util/maplibre_util";
+    import EXIF from "$lib/vendor/exif-js/exif.js";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
@@ -899,6 +901,53 @@
         const result = await tags_index(q);
         tagItems = result.items.map((t) => ({ text: t.name, value: t }));
     }
+
+    function openPhotoBrowser() {
+        document.getElementById("waypoint-photo-input")!.click();
+    }
+
+    async function handleWaypointPhotoSelection() {
+        const files = (
+            document.getElementById("waypoint-photo-input") as HTMLInputElement
+        ).files;
+
+        if (!files) {
+            return;
+        }
+
+        for (const file of files) {
+            const coords = await new Promise<number[]>((resolve) => {
+                EXIF.getData(file, function (p) {
+                    const lat = EXIF.getTag(p, "GPSLatitude");
+                    const latDir = EXIF.getTag(p, "GPSLatitudeRef");
+                    const lon = EXIF.getTag(p, "GPSLongitude");
+                    const lonDir = EXIF.getTag(p, "GPSLongitudeRef");
+
+                    if (lat && lon) {
+                        resolve([
+                            convertDMSToDD(lat, latDir),
+                            convertDMSToDD(lon, lonDir),
+                        ]);
+                    } else {
+                        resolve([]);
+                    }
+                });
+            });
+            if (coords.length) {
+                const wp: Waypoint = new Waypoint(coords[0], coords[1], {
+                    icon: "image",
+                });
+                wp._photos = [file];
+                saveWaypoint(wp);
+            } else {
+                show_toast({
+                    type: "warning",
+                    icon: "warning",
+                    text: `${file.name}: ${$_("no-gps-data-in-image")}`,
+                }, 10000);
+            }
+        }
+    }
 </script>
 
 <svelte:head>
@@ -1113,6 +1162,20 @@
             onclick={() => beforeWaypointModalOpen()}
             ><i class="fa fa-plus mr-2"></i>{$_("add-waypoint")}</button
         >
+        <button
+            class="btn-secondary"
+            type="button"
+            onclick={() => openPhotoBrowser()}
+            ><i class="fa fa-image mr-2"></i>{$_("from-photos")}</button
+        >
+        <input
+            type="file"
+            id="waypoint-photo-input"
+            accept="image/*"
+            multiple={true}
+            style="display: none;"
+            onchange={() => handleWaypointPhotoSelection()}
+        />
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">{$_("photos")}</h3>
         <PhotoPicker
