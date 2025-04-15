@@ -183,7 +183,6 @@
         }
 
         const r: GeoJSON[] = [];
-        console.time("start decode")
         trails.forEach((t) => {
             if (t.polyline) {
                 r.push(polylineToGeoJSON(t.polyline, 5));
@@ -201,7 +200,6 @@
                 } as GeoJSON);
             }
         });
-        console.timeEnd("start decode")
 
         return r;
     }
