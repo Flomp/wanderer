@@ -230,7 +230,9 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    model = await r.json();
+    const modelWithFiles: Trail = await r.json();
+
+    model.photos = modelWithFiles.photos;
 
     return model;
 
