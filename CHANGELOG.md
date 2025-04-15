@@ -1,3 +1,18 @@
+# v0.16.3
+## Features
+- Adds option to add waypoints directly by uploading photos with EXIF data
+- Performance improvemtents when loading acitivities
+- Major performance improvements when displaying multiple tracks on the map
+- Adds ENV variables to configure pocketbase SMTP settings
+
+## Bug fixes
+- Fixes untranslated trail difficulty in table view
+- Fixes wrong file extension when exporting trails on mobile
+- Completed tours synced from komoot are now also marked as completed in wanderer
+  
+## Docs
+- Updates ENV variables section to reflect changes mentioned above
+
 # v0.16.2
 ## Features
 - Adds various settings for route calculations
