@@ -76,5 +76,7 @@ To set up password reset emails you will need to access the PocketBase backend. 
 
 Next in the pocketbase admin panel go to Settings -> Mail settings an enable "Use SMTP mail server". Enter the details of your SMTP server and send a test email to ensure your configuration is correct. On the same page you can also adjust the email template of the password reset email.
 
+Alternatively, you can set these options via the respective [environment variables](/getting-started/configuration/#pocketbase).
+
 ### Request password reset
-Once the SMTP access is configured users can click the "Forgot password" link in the login form. After requesting the reset the user will receive an email with a unique link to reset their password.
+Once the SMTP access is configured, users can click the "Forgot password" link in the login form. After requesting the reset the user will receive an email with a unique link to reset their password.
