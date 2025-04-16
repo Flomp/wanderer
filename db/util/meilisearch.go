@@ -13,7 +13,7 @@ import (
 	"github.com/twpayne/go-polyline"
 )
 
-func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, includeShares bool) map[string]interface{} {
+func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, includeShares bool) (map[string]interface{}, error) {
 	photos := r.GetStringSlice("photos")
 	thumbnail := ""
 	if len(photos) > 0 {
@@ -33,7 +33,7 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 
 	polyline, err := getPolyline(app, r)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	document := map[string]interface{}{
@@ -68,7 +68,7 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		document["shares"] = []string{}
 	}
 
-	return document
+	return document, nil
 }
 
 func getPolyline(app core.App, r *core.Record) (string, error) {
@@ -132,8 +132,11 @@ func IndexTrail(app core.App, r *core.Record, author *core.Record, client meilis
 	if len(errs) > 0 {
 		return fmt.Errorf("failed to expand: %v", errs)
 	}
-
-	documents := []map[string]interface{}{documentFromTrailRecord(app, r, author, true)}
+	doc, err := documentFromTrailRecord(app, r, author, true)
+	if err != nil {
+		return err
+	}
+	documents := []map[string]interface{}{doc}
 
 	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
 		return err
@@ -148,7 +151,11 @@ func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meili
 		return fmt.Errorf("failed to expand: %v", errs)
 	}
 
-	documents := documentFromTrailRecord(app, r, author, false)
+	doc, err := documentFromTrailRecord(app, r, author, true)
+	if err != nil {
+		return err
+	}
+	documents := []map[string]interface{}{doc}
 
 	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {
 		return err

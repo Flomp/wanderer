@@ -858,7 +858,8 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 			return err
 		}
 		if err := util.IndexTrail(app, trail, author, client); err != nil {
-			return err
+			app.Logger().Warn(fmt.Sprintf("Unable to index trail '%s': %v", trail.GetString("name"), err))
+			continue
 		}
 
 		shares, err := app.FindAllRecords("trail_share",
@@ -874,7 +875,8 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 		err = util.UpdateTrailShares(trail.Id, userIds, client)
 
 		if err != nil {
-			return err
+			app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
+			continue
 		}
 	}
 	return nil
