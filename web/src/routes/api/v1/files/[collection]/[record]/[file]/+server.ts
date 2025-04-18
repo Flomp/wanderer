@@ -1,4 +1,3 @@
-import { pb } from "$lib/pocketbase";
 import { error, type RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
 
@@ -21,7 +20,7 @@ export async function GET(event: RequestEvent) {
     parts.push(encodeURIComponent(safeParams.data.record));
     parts.push(encodeURIComponent(safeParams.data.file));
 
-    let fileURL = pb.buildURL(parts.join("/"));
+    let fileURL = event.locals.pb.buildURL(parts.join("/"));
 
     try {
         const r = await event.fetch(fileURL)

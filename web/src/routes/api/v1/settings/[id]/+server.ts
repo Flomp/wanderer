@@ -1,8 +1,7 @@
 import { SettingsCreateSchema } from '$lib/models/api/settings_schema';
 import type { Settings } from "$lib/models/settings";
-import { pb } from "$lib/pocketbase";
 import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { json, type RequestEvent } from "@sveltejs/kit";
 
 
 export async function GET(event: RequestEvent) {

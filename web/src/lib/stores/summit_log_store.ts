@@ -1,9 +1,8 @@
 import { SummitLog, type SummitLogFilter } from "$lib/models/summit_log";
-import { pb } from "$lib/pocketbase";
-import { type ListResult } from "pocketbase";
-import { writable, type Writable } from "svelte/store";
-import { fetchGPX } from "./trail_store";
 import { APIError } from "$lib/util/api_util";
+import { type AuthRecord, type ListResult } from "pocketbase";
+import { get, writable, type Writable } from "svelte/store";
+import { currentUser } from "./user_store";
 
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
 export const summitLogs: Writable<SummitLog[]> = writable([]);
@@ -46,8 +45,13 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
     return fetchedSummitLogs;
 }
 
-export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    summitLog.author = pb.authStore.record!.id
+export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+    user ??= get(currentUser)
+    if (!user) {
+        throw Error("Unauthenticated")
+    }
+
+    summitLog.author = user.id
 
     let r = await f('/api/v1/summit-log', {
         method: 'PUT',
@@ -102,7 +106,12 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
 }
 
 export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: SummitLog) {
-    newSummitLog.author = pb.authStore.record!.id
+    const user = get(currentUser)
+    if (!user) {
+        throw Error("Unauthenticated")
+    }
+
+    newSummitLog.author = user.id
 
     let r = await fetch('/api/v1/summit-log/' + newSummitLog.id, {
         method: 'POST',

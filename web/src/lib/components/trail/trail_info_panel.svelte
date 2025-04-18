@@ -23,7 +23,6 @@
     import { browser } from "$app/environment";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
-    import { pb } from "$lib/pocketbase";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
     import * as M from "maplibre-gl";
@@ -31,6 +30,7 @@
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import Button from "../base/button.svelte";
+    import Chip from "../base/chip.svelte";
     import SkeletonNotificationCard from "../base/skeleton_notification_card.svelte";
     import Textarea from "../base/textarea.svelte";
     import CommentCard from "../comment/comment_card.svelte";
@@ -42,7 +42,6 @@
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
     import TrailTimeline from "./trail_timeline.svelte";
-    import Chip from "../base/chip.svelte";
 
     interface Props {
         initTrail: Trail;
@@ -63,7 +62,7 @@
     const tabs = [
         $_("summit-book"),
         $_("photos"),
-        ...(pb.authStore.record ? [$_("comment", { values: { n: 2 } })] : []),
+        ...($currentUser ? [$_("comment", { values: { n: 2 } })] : []),
     ];
 
     const trailIsShared =
@@ -234,13 +233,13 @@
                         {/each}
                     </div>
                 {/if}
-                {#if (trail.public || trailIsShared) && pb.authStore.record}
+                {#if (trail.public || trailIsShared) && $currentUser}
                     <div
                         class="flex {trail.public && trailIsShared
                             ? 'w-16'
                             : 'w-8'} h-8 rounded-full items-center"
                     >
-                        {#if trail.public && pb.authStore.record}
+                        {#if trail.public && $currentUser}
                             <span
                                 class:tooltip={mode != "map"}
                                 class:mr-3={trail.public && trailIsShared}

@@ -9,6 +9,7 @@
             "tileSize": 256
         }
     },
+    "glyphs": "https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf",
     "layers": [
         {
             "id": "osm-tiles",

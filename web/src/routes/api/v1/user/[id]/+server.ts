@@ -1,9 +1,8 @@
 import { RecordIdSchema } from '$lib/models/api/base_schema';
 import { UserUpdateSchema } from '$lib/models/api/user_schema';
 import type { User } from '$lib/models/user';
-import { pb } from '$lib/pocketbase';
 import { Collection, handleError, remove, show } from '$lib/util/api_util';
-import { error, json, type RequestEvent } from '@sveltejs/kit'
+import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
     try {
@@ -23,13 +22,13 @@ export async function POST(event: RequestEvent) {
 
         const safeData = UserUpdateSchema.parse(data);
 
-        if (safeData.email && safeData.email != pb.authStore.record!.email) {
-            const r = await pb.collection('users').requestEmailChange(safeData.email);
-            pb.authStore.record!.email = safeData.email;
+        if (safeData.email && safeData.email != event.locals.pb.authStore.record!.email) {
+            const r = await event.locals.pb.collection('users').requestEmailChange(safeData.email);
+            event.locals.pb.authStore.record!.email = safeData.email;
         }
-        const r = await pb.collection('users').update<User>(safeParams.id, safeData)
+        const r = await event.locals.pb.collection('users').update<User>(safeParams.id, safeData)
         if (safeData.password) {
-            const r = await pb.collection('users').authWithPassword(safeData.email ?? safeData.username!, safeData.password);
+            const r = await event.locals.pb.collection('users').authWithPassword(safeData.email ?? safeData.username!, safeData.password);
             return json(r.record)
         } else {
             return json(r);

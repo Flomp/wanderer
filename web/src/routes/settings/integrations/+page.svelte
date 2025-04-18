@@ -5,11 +5,9 @@
     import StravaSettingsModal from "$lib/components/settings/integrations/strava_settings_modal.svelte";
     import {
         Integration,
-        type BaseIntegration,
         type KomootIntegration,
-        type StravaIntegration,
+        type StravaIntegration
     } from "$lib/models/integration.js";
-    import { pb } from "$lib/pocketbase.js";
     import {
         integrations_create,
         integrations_update,

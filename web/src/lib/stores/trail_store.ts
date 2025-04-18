@@ -1,18 +1,18 @@
 import type { SummitLog } from "$lib/models/summit_log";
+import type { Tag } from "$lib/models/tag";
 import { defaultTrailSearchAttributes, Trail, type TrailFilter, type TrailFilterValues, type TrailSearchResult } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
-import { pb } from "$lib/pocketbase";
+import { APIError } from "$lib/util/api_util";
 import { deepEqual } from "$lib/util/deep_util";
 import { getFileURL } from "$lib/util/file_util";
 import * as M from "maplibre-gl";
 import type { Hits } from "meilisearch";
-import { type ListResult, type RecordModel } from "pocketbase";
-import { writable, type Writable } from "svelte/store";
+import { type AuthRecord, type ListResult, type RecordModel } from "pocketbase";
+import { get, writable, type Writable } from "svelte/store";
 import { summit_logs_create, summit_logs_delete, summit_logs_update } from "./summit_log_store";
-import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
-import { APIError } from "$lib/util/api_util";
 import { tags_create } from "./tag_store";
-import type { Tag } from "$lib/models/tag";
+import { currentUser } from "./user_store";
+import { waypoints_create, waypoints_delete, waypoints_update } from "./waypoint_store";
 
 let trails: Trail[] = []
 export const trail: Writable<Trail> = writable(new Trail(""));
@@ -57,7 +57,9 @@ export async function trails_recommend(size: number, f: (url: RequestInfo | URL,
 }
 
 export async function trails_search_filter(filter: TrailFilter, page: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    let filterText: string = buildFilterText(filter, true);
+    const user = get(currentUser)
+
+    let filterText: string = buildFilterText(user, filter, true);
 
     let r = await f("/api/v1/search/trails", {
         method: "POST",
@@ -91,11 +93,12 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 }
 
 export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, page: number = 1, includePolyline: boolean = true) {
+    const user = get(currentUser)
 
     let filterText: string = "";
 
     if (filter) {
-        filterText = buildFilterText(filter, false);
+        filterText = buildFilterText(user, filter, false);
     }
 
     let r = await fetch("/api/v1/search/trails", {
@@ -172,7 +175,11 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     return response as Trail;
 }
 
-export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+    user ??= get(currentUser)
+    if (!user) {
+        throw Error("Unauthenticated")
+    }
 
     for (const waypoint of trail.expand?.waypoints ?? []) {
         const model = await waypoints_create({
@@ -194,7 +201,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         }
     }
 
-    trail.author = pb.authStore.record!.id
+    trail.author = user.id
 
     let r = await f(`/api/v1/trail?` + new URLSearchParams({
         expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
@@ -500,7 +507,7 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<T
     return trails
 }
 
-function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
+function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: boolean): string {
     let filterText: string = "";
 
     filterText += `distance >= ${Math.floor(filter.distanceMin)} AND elevation_gain >= ${Math.floor(filter.elevationGainMin)} AND elevation_loss >= ${Math.floor(filter.elevationLossMin)}`
@@ -530,17 +537,17 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == pb.authStore.record?.id) {
-                filterText += ` OR author = ${pb.authStore.record?.id}`
+            if (!filter.author?.length || filter.author == user?.id) {
+                filterText += ` OR author = ${user?.id}`
             }
             filterText += ")"
         }
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${pb.authStore.record?.id}`
+                filterText += ` OR shares = ${user?.id}`
             } else {
-                filterText += ` AND NOT shares = ${pb.authStore.record?.id}`
+                filterText += ` AND NOT shares = ${user?.id}`
 
             }
         }

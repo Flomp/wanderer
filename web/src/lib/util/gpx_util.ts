@@ -15,6 +15,7 @@ import type { Feature, FeatureCollection, GeoJSON, GeoJsonProperties, Position }
 import * as xmldom from 'xmldom';
 import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 import JSZip from "jszip";
+import type { AuthRecord } from "pocketbase";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string) {
@@ -66,7 +67,7 @@ export async function gpx2trail(gpxString: string, fallbackName?: string) {
     return { gpx: gpx, trail: trail }
 }
 
-export async function trail2gpx(trail: Trail) {
+export async function trail2gpx(trail: Trail, user?: AuthRecord) {
     if (!trail.expand?.gpx_data) {
         throw Error("Trail has no GPX data")
     }
@@ -81,7 +82,7 @@ export async function trail2gpx(trail: Trail) {
         desc: trail.description ?? "",
         time: trail.date ? new Date(trail.date) : new Date(),
         keywords: `${trail.category ?? ""}, ${trail.location ?? ""}`,
-        author: { name: trail.author ?? "", email: get(currentUser)?.email ?? "" }
+        author: { name: trail.author ?? "", email: user?.email ?? "" }
     }
 
     if (!gpx.wpt) {

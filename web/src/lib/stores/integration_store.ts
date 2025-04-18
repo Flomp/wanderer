@@ -1,8 +1,8 @@
 import { Integration } from "$lib/models/integration";
-import { pb } from "$lib/pocketbase";
 import { APIError } from "$lib/util/api_util";
 import { type ListResult } from "pocketbase";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
+import { currentUser } from "./user_store";
 
 export const integrations: Writable<Integration[]> = writable([])
 
@@ -25,11 +25,12 @@ export async function integrations_index(f: (url: RequestInfo | URL, config?: Re
 }
 
 export async function integrations_create(integration: Integration) {
-    if (!pb.authStore.record) {
-        throw new Error("Unauthenticated");
+    const user = get(currentUser)
+    if (!user) {
+        throw Error("Unauthenticated")
     }
 
-    integration.user = pb.authStore.record!.id;
+    integration.user = user.id;
 
     let r = await fetch('/api/v1/integration', {
         method: 'PUT',

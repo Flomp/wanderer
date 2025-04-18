@@ -1,13 +1,12 @@
 import GPX from "$lib/models/gpx/gpx";
 import { haversineDistance } from "$lib/models/gpx/utils";
-import { SummitLog } from "$lib/models/summit_log";
 import type { Trail } from "$lib/models/trail";
-import { pb } from "$lib/pocketbase";
-import { fetchGPX, trails_create } from "$lib/stores/trail_store";
+import { trails_create } from "$lib/stores/trail_store";
 import { handleError } from "$lib/util/api_util";
 import { fromFile, gpx2trail } from "$lib/util/gpx_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";
+import type PocketBase from 'pocketbase';
 
 export async function PUT(event: RequestEvent) {
     try {
@@ -31,7 +30,7 @@ export async function PUT(event: RequestEvent) {
         if (!ignoreDuplicates) {
             let duplicate: Trail | null = null;
             try {
-                duplicate = await findDuplicate(trail)
+                duplicate = await findDuplicate(event.locals.pb, trail)
             } catch (e: any) {
                 throw new ClientResponseError({ status: 500, response: { message: "Error checking for duplicates" } })
             }
@@ -54,7 +53,7 @@ export async function PUT(event: RequestEvent) {
 
 
         try {
-            trail = await trails_create(trail, [], gpxFile, event.fetch);
+            trail = await trails_create(trail, [], gpxFile, event.fetch, event.locals.user);
         } catch (e: any) {
             console.error(e)
             throw handleError(e)
@@ -66,7 +65,7 @@ export async function PUT(event: RequestEvent) {
     }
 }
 
-async function findDuplicate(t1: Trail) {
+async function findDuplicate(pb: PocketBase, t1: Trail) {
     const trails: Trail[] = await pb.collection('trails').getFullList({ requestKey: null });
 
     const distanceThreshold = 100;

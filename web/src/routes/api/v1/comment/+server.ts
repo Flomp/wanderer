@@ -1,6 +1,5 @@
 import { CommentCreateSchema } from '$lib/models/api/comment_schema';
 import type { Comment } from '$lib/models/comment';
-import { pb } from '$lib/pocketbase';
 import { Collection, create, handleError, list } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 
@@ -10,7 +9,7 @@ export async function GET(event: RequestEvent) {
         for (const comment of r.items) {
             if (!comment.expand?.author) {
                 comment.expand = {
-                    author: await pb.collection('users_anonymous').getOne(comment.author)
+                    author: await event.locals.pb.collection('users_anonymous').getOne(comment.author)
                 }
             }
         }
