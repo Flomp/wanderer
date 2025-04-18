@@ -10,18 +10,22 @@
     import { goto } from "$app/navigation";
     import { getFileURL } from "$lib/util/file_util";
     import ShareInfo from "../share_info.svelte";
-
+    
     interface Props {
         tableHeader: SelectItem[];
         trails?: Trail[] | null;
+        selection: Set<Trail> | undefined;
         filter?: TrailFilter | null;
         onsort?: (value: any) => void
+        onselect?: (value: any) => void
     }
 
-    let { tableHeader, trails = null, filter = null, onsort }: Props = $props();
+    let { tableHeader, trails = null, selection, filter = null, onsort, onselect }: Props = $props();
 
     function getColumnWidth(columnValue: string): string {
         switch (columnValue) {
+            case "select":
+                return "w-[2%]";
             case "name":
                 return "w-[25%]";
             case "distance":
@@ -37,6 +41,51 @@
                 return "";
         }
     }
+
+    function setSelectedTrail(e: Event, trail: Trail) {
+        e.stopPropagation()
+
+        if (trail !== undefined) {
+            if (onselect !== undefined) {
+                onselect(trail)
+            }
+            else {
+                console.error("undefined event handler")
+            }   
+        }
+    }
+
+    function setSelectedAllTrails(e: Event) {
+        onselect?.(undefined)
+    }
+
+    function viewTrail(trail: Trail) {
+        goto(`/trail/view/${trail.id}`)
+    }
+
+    function isSelected(trail: Trail): boolean {
+        if (selection === undefined) {
+            return false;
+        }
+        
+        if (trail !== undefined) {
+            for (const strail of selection) {
+                if (strail !== undefined && strail.id === trail.id)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    function allSelected(): boolean {
+        if (selection === undefined || trails === undefined || trails === null) {
+            return false;
+        }
+
+        return selection.size === trails.length;
+    }
+
 </script>
 
 <div
@@ -45,6 +94,19 @@
     <table class="w-full">
         <thead>
             <tr class="bg-secondary-hover">
+                <th
+                    class="p-4 text-left text-sm font-medium {getColumnWidth("select")}"
+                >
+                    <div class="flex items-center">
+                        <input
+                            id="trail-selected"
+                            type="checkbox"
+                            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                            onclick={setSelectedAllTrails}
+                            checked={allSelected()}
+                        />
+                    </div>
+                </th>
                 {#each tableHeader as column}
                     <th
                         class="p-4 text-left text-sm font-medium {getColumnWidth(
@@ -71,8 +133,19 @@
                 {#each trails as trail}
                     <tr
                         class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
-                        onclick={() => goto(`/trail/view/${trail.id}`)}
+                        onclick={() => viewTrail(trail)}
                     >
+                        <td class="p-4 text-sm">
+                            <div class="flex items-center">
+                                <input
+                                    id="trail-selected"
+                                    type="checkbox"
+                                    class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                                    checked={isSelected(trail)}
+                                    onclick={(e: Event) => setSelectedTrail(e, trail)}
+                                />
+                            </div>
+                        </td>
                         <td
                             class="flex justify-between items-center text-sm relative"
                         >
