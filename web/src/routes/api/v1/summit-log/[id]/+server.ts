@@ -1,6 +1,5 @@
 import { SummitLogUpdateSchema } from "$lib/models/api/summit_log_schema";
 import type { SummitLog } from "$lib/models/summit_log";
-import { pb } from "$lib/pocketbase";
 import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
 
@@ -12,7 +11,7 @@ export async function GET(event: RequestEvent) {
         if (!r.expand) {
             r.expand = {} as any
         }
-        r.expand!.author = await pb.collection("users_anonymous").getOne(r.author!);
+        r.expand!.author = await event.locals.pb.collection("users_anonymous").getOne(r.author!);
 
         return json(r)
     } catch (e: any) {

@@ -1,12 +1,11 @@
 <script lang="ts">
     import type { List } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
-    import type { User, UserAnonymous } from "$lib/models/user";
-    import { pb } from "$lib/pocketbase";
-    import { users_show } from "$lib/stores/user_store";
+    import type { UserAnonymous } from "$lib/models/user";
+    import { currentUser, users_show } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
-    import { fly, slide } from "svelte/transition";
+    import { fly } from "svelte/transition";
 
     interface Props {
         subject: Trail | List;
@@ -16,12 +15,15 @@
 
     let { subject, large = false, type }: Props = $props();
 
-    const shareData = type == "trail" ? (subject as Trail).expand?.trail_share_via_trail : (subject as List).expand?.list_share_via_list
+    const shareData =
+        type == "trail"
+            ? (subject as Trail).expand?.trail_share_via_trail
+            : (subject as List).expand?.list_share_via_list;
 
     let showInfo: boolean = $state(false);
     let loading: boolean = $state(false);
     let infoLoaded: boolean = $state(false);
-    let subjectIsOwned: boolean = subject.author == pb.authStore.record?.id;
+    let subjectIsOwned: boolean = subject.author == $currentUser?.id;
     let author: UserAnonymous | undefined = $state();
 
     async function fetchInfo() {
@@ -57,8 +59,9 @@
     {#if showInfo}
         <ul
             class="menu absolute z-10 top-8 bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden p-3 space-y-3 text-content -translate-x-3/4"
-            in:fly={{y: -10, duration: 150}} out:fly={{y: -10, duration: 150}}
-            >
+            in:fly={{ y: -10, duration: 150 }}
+            out:fly={{ y: -10, duration: 150 }}
+        >
             {#if loading}
                 <div class="spinner spinner-dark"></div>
             {:else if infoLoaded && shareData}

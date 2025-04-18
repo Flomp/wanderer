@@ -1,7 +1,6 @@
 import { env } from "$env/dynamic/public";
 import { env as private_env } from "$env/dynamic/private";
 
-import { pb } from "$lib/pocketbase";
 import { error, json, type RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
 import { handleError } from "$lib/util/api_util";
@@ -10,7 +9,7 @@ const redirectURL = private_env.ORIGIN + "/login/redirect"
 
 export async function GET(event: RequestEvent) {
     try {
-        const r = await pb.collection('users').listAuthMethods();
+        const r = await event.locals.pb.collection('users').listAuthMethods();
 
         for (const provider of r.oauth2.providers) {
             const imageURL = `${env.PUBLIC_POCKETBASE_URL}/_/images/oauth2/${provider.name}.svg`
@@ -33,7 +32,7 @@ export async function POST(event: RequestEvent) {
             codeVerifier: z.string()
         }).parse(data)
 
-        const r = await pb.collection('users').authWithOAuth2Code(
+        const r = await event.locals.pb.collection('users').authWithOAuth2Code(
             safeData.name,
             safeData.code,
             safeData.codeVerifier,

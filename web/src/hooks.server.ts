@@ -2,7 +2,7 @@ import { env } from '$env/dynamic/private'
 import { env as envPub } from '$env/dynamic/public'
 import type { Settings } from '$lib/models/settings'
 
-import { pb } from '$lib/pocketbase'
+import PocketBase from 'pocketbase'
 import { isRouteProtected } from '$lib/util/authorization_util'
 import { json, redirect, text, type Handle } from '@sveltejs/kit'
 import { sequence } from '@sveltejs/kit/hooks'
@@ -49,6 +49,7 @@ function isFormContentType(request: Request) {
 
 
 const auth: Handle = async ({ event, resolve }) => {
+  const pb = new PocketBase(envPub.PUBLIC_POCKETBASE_URL)
   // load the store data from the request cookie string
   pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '')
 
@@ -80,8 +81,7 @@ const auth: Handle = async ({ event, resolve }) => {
     meiliApiKey = pb.authStore.record.token
     settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.record.id}"`, { requestKey: null })
   } else {
-    const r = await event.fetch(pb.buildURL("/public/search/token"));
-    const response = await r.json();
+    const response = await pb.send("/public/search/token", { method: "GET", fetch: event.fetch });
     meiliApiKey = response.token;
   }
   const ms = new MeiliSearch({ host: env.MEILI_URL, apiKey: meiliApiKey });
@@ -103,7 +103,7 @@ const auth: Handle = async ({ event, resolve }) => {
   const response = await resolve(event)
 
   // send back the default 'pb_auth' cookie to the client with the latest store state
-  const secure = event.url.protocol === "https:" 
+  const secure = event.url.protocol === "https:"
 
   response.headers.set(
     'set-cookie',

@@ -8,6 +8,7 @@
     import { show_toast } from "$lib/stores/toast_store.svelte";
     import { fetchGPX, trails_index, trails_upload } from "$lib/stores/trail_store";
     import { processUploadQueue, uploadStore, type Upload } from "$lib/stores/upload_store.svelte";
+    import { currentUser } from "$lib/stores/user_store";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
@@ -78,7 +79,7 @@
                 }
                 trail.expand!.gpx_data = gpxData;
                 const trailFolder = zip.folder(`${trail.name}`);
-                let fileData: string = await trail2gpx(trail);
+                let fileData: string = await trail2gpx(trail, $currentUser);
                 if (exportSettings.fileFormat == "json") {
                     fileData = JSON.stringify(
                         gpx(

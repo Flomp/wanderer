@@ -1,8 +1,8 @@
 import type { User, UserAnonymous } from "$lib/models/user";
-import { pb } from "$lib/pocketbase";
+import { getPb } from "$lib/pocketbase";
 import { APIError } from "$lib/util/api_util";
 import { type AuthMethodsList } from "pocketbase";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
 
 export const currentUser: Writable<User | null> = writable<User | null>()
 
@@ -24,8 +24,10 @@ export async function users_create(user: User) {
 }
 
 export async function users_search(q: string, includeSelf: boolean = true) {
+    const user = get(currentUser)
+
     let r = await fetch('/api/v1/user/anonymous?' + new URLSearchParams({
-        "filter": `username~"${q}"${includeSelf ? '' : `&&id!="${pb.authStore.record?.id}"`}`,
+        "filter": `username~"${q}"${includeSelf ? '' : `&&id!="${user?.id}"`}`,
     }), {
         method: 'GET',
     })
@@ -69,6 +71,8 @@ export async function users_auth_methods(f: (url: RequestInfo | URL, config?: Re
 
 
 export async function login(user: User) {
+    const pb = getPb();
+
     const r = await fetch('/api/v1/auth/login', {
         method: 'POST',
         body: JSON.stringify(user),
@@ -83,6 +87,8 @@ export async function login(user: User) {
 }
 
 export async function oauth_login(data: { name: string, code: string, codeVerifier: string }) {
+    const pb = getPb();
+
     const r = await fetch('/api/v1/auth/oauth', {
         method: 'POST',
         body: JSON.stringify(data)
@@ -98,6 +104,8 @@ export async function oauth_login(data: { name: string, code: string, codeVerifi
 
 
 export async function logout() {
+    const pb = getPb();
+
     pb.authStore.clear();
 }
 

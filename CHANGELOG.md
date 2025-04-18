@@ -1,3 +1,19 @@
+# v0.16.4
+## Security
+> [!CAUTION]
+Fixes a critical vulnerability where, in rare cases, registered users could temporarily inherit another user's session. This was caused by an incorrectly scoped PocketBase instance being shared across concurrent requests on the server.
+
+Impact:
+  - Affects all versions prior to v0.16.4
+  - Risk of temporary user session mix-up during concurrent requests
+
+Fix:
+  - Authentication is now correctly isolated per request
+  - Session handling is fully secured on both client and server
+
+Action Required:
+  - Please update to v0.16.4 immediately and restart your wanderer instance to apply the fix
+
 # v0.16.3
 ## Features
 - Adds option to add waypoints directly by uploading photos with EXIF data

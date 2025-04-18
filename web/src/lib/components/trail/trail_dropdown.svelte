@@ -9,18 +9,17 @@
     } from "$lib/stores/list_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
     import { trails_delete } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
+    import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
+    import JSZip from "jszip";
     import { _ } from "svelte-i18n";
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import ConfirmModal from "../confirm_modal.svelte";
     import ListSelectModal from "../list/list_select_modal.svelte";
     import TrailExportModal from "./trail_export_modal.svelte";
-    import JSZip from "jszip";
-    import { getFileURL, saveAs } from "$lib/util/file_util";
     import TrailShareModal from "./trail_share_modal.svelte";
-    import { currentUser } from "$lib/stores/user_store";
-    import { pb } from "$lib/pocketbase";
 
     interface Props {
         trail: Trail;
@@ -62,10 +61,10 @@
               ]
             : []),
         { text: $_("print"), value: "print", icon: "print" },
-        ...(trail.author != pb.authStore.record?.id
+        ...(trail.author != $currentUser?.id
             ? []
             : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
-        ...(trail.author != pb.authStore.record?.id
+        ...(trail.author != $currentUser?.id
             ? []
             : [{ text: $_("share"), value: "share", icon: "share" }]),
         ...(allowEdit
@@ -118,7 +117,7 @@
         summitLog: boolean;
     }) {
         try {
-            let fileData: string = await trail2gpx(trail);
+            let fileData: string = await trail2gpx(trail, $currentUser);
             if (exportSettings.fileFormat == "json") {
                 fileData = JSON.stringify(
                     gpx(

@@ -1,20 +1,25 @@
 <script lang="ts">
     import { afterNavigate, goto } from "$app/navigation";
+    import { page } from "$app/state";
     import LogoText from "$lib/components/logo/logo_text.svelte";
-    import { pb } from "$lib/pocketbase";
     import { theme, toggleTheme } from "$lib/stores/theme_store";
     import { currentUser, logout } from "$lib/stores/user_store";
     import { getFileURL } from "$lib/util/file_util";
+    import type { AuthRecord } from "pocketbase";
     import { _ } from "svelte-i18n";
     import { backInOut, cubicOut } from "svelte/easing";
+    import { Tween } from "svelte/motion";
     import Drawer from "./base/drawer.svelte";
     import Dropdown from "./base/dropdown.svelte";
     import LogoTextLight from "./logo/logo_text_light.svelte";
     import NotificationDropdown from "./notification/notification_dropdown.svelte";
-    import { browser } from "$app/environment";
-    import { page } from "$app/state";
-    import { Tween } from "svelte/motion";
     import UrlImportModal from "./settings/url_import_modal.svelte";
+
+    interface Props {
+        user: AuthRecord;
+    }
+
+    let { user }: Props = $props();
 
     let navBarItems = [
         { text: "Home", value: "/" },
@@ -107,8 +112,6 @@
             urlImportModal.openModal();
         }
     }
-
-    let user = $derived(browser ? $currentUser : pb.authStore.record);
 </script>
 
 <Drawer bind:open={drawerOpen}>

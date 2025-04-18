@@ -1,9 +1,7 @@
-import { pb } from "$lib/pocketbase";
-import { integrations_index, integrations_update } from "$lib/stores/integration_store";
-import { error, redirect, type RequestEvent, type ServerLoad } from "@sveltejs/kit";
+import { error, redirect, type ServerLoad } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";
 
-export const load: ServerLoad = async ({ url, fetch }) => {
+export const load: ServerLoad = async ({ url, fetch, locals }) => {
     const oauthError = url.searchParams.get('error');
     if (oauthError) {
         // user cancelled
@@ -22,7 +20,7 @@ export const load: ServerLoad = async ({ url, fetch }) => {
     }
 
     try {
-        await pb.send("/integration/strava/token", {
+        await locals.pb.send("/integration/strava/token", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

@@ -2,8 +2,8 @@
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
-    import { pb } from "$lib/pocketbase";
     import { theme } from "$lib/stores/theme_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -12,7 +12,6 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
-    import Chip from "../base/chip.svelte";
 
     interface Props {
         trail: Trail;
@@ -55,7 +54,7 @@
             <h4 class="font-semibold text-lg">
                 {trail.name}
             </h4>
-            {#if trail.public && pb.authStore.record}
+            {#if trail.public && $currentUser}
                 <span class="tooltip ml-3" data-title={$_("public")}>
                     <i class="fa fa-globe"></i>
                 </span>
