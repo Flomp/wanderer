@@ -53,7 +53,7 @@ export async function PUT(event: RequestEvent) {
 
 
         try {
-            trail = await trails_create(trail, [], gpxFile, event.fetch);
+            trail = await trails_create(trail, [], gpxFile, event.fetch, event.locals.user);
         } catch (e: any) {
             console.error(e)
             throw handleError(e)

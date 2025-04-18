@@ -175,8 +175,8 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
     return response as Trail;
 }
 
-export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const user = get(currentUser)
+export async function trails_create(trail: Trail, photos: File[], gpx: File | Blob | null, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+    user ??= get(currentUser)
     if (!user) {
         throw Error("Unauthenticated")
     }

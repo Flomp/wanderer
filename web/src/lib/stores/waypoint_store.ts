@@ -2,11 +2,12 @@ import { Waypoint } from "$lib/models/waypoint";
 import { APIError } from "$lib/util/api_util";
 import { get, writable, type Writable } from "svelte/store";
 import { currentUser } from "./user_store";
+import type { AuthRecord } from "pocketbase";
 
 export const waypoint: Writable<Waypoint> = writable(new Waypoint(0, 0));
 
-export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const user = get(currentUser)
+export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+    user ??= get(currentUser)
     if (!user) {
         throw Error("Unauthenticated")
     }

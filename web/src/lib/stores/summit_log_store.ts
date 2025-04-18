@@ -1,6 +1,6 @@
 import { SummitLog, type SummitLogFilter } from "$lib/models/summit_log";
 import { APIError } from "$lib/util/api_util";
-import { type ListResult } from "pocketbase";
+import { type AuthRecord, type ListResult } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
 import { currentUser } from "./user_store";
 
@@ -45,8 +45,8 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
     return fetchedSummitLogs;
 }
 
-export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const user = get(currentUser)
+export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+    user ??= get(currentUser)
     if (!user) {
         throw Error("Unauthenticated")
     }

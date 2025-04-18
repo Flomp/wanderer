@@ -117,7 +117,7 @@
         summitLog: boolean;
     }) {
         try {
-            let fileData: string = await trail2gpx(trail);
+            let fileData: string = await trail2gpx(trail, $currentUser);
             if (exportSettings.fileFormat == "json") {
                 fileData = JSON.stringify(
                     gpx(
