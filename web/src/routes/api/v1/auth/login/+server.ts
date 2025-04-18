@@ -1,6 +1,5 @@
-import { pb } from "$lib/pocketbase";
 import { handleError } from "$lib/util/api_util";
-import { error, json, type RequestEvent } from "@sveltejs/kit";
+import { json, type RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
 
 export async function POST(event: RequestEvent) {
@@ -13,7 +12,7 @@ export async function POST(event: RequestEvent) {
         }).refine(d => d.email !== undefined || d.username !== undefined).parse(data);
 
 
-        const r = await pb.collection('users').authWithPassword(safeData.email ?? safeData.username!, data.password);
+        const r = await event.locals.pb.collection('users').authWithPassword(safeData.email ?? safeData.username!, data.password);
         return json(r);
     } catch (e: any) {
         throw handleError(e);

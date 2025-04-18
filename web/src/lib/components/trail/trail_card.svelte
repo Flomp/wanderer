@@ -1,12 +1,10 @@
 <script lang="ts">
-    import { createBubbler } from "svelte/legacy";
 
-    const bubble = createBubbler();
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
-    import { pb } from "$lib/pocketbase";
     import { theme } from "$lib/stores/theme_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -14,7 +12,6 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
-    import ShareInfo from "../share_info.svelte";
     import type { MouseEventHandler } from "svelte/elements";
     import Chip from "../base/chip.svelte";
 
@@ -75,13 +72,13 @@
             />
         {/if}
     </div>
-    {#if (trail.public || trailIsShared) && pb.authStore.record}
+    {#if (trail.public || trailIsShared) && $currentUser}
         <div
             class="flex absolute top-4 right-4 {trail.public && trailIsShared
                 ? 'w-14'
                 : 'w-8'} h-8 rounded-full items-center justify-center bg-background text-content"
         >
-            {#if trail.public && pb.authStore.record}
+            {#if trail.public && $currentUser}
                 <span
                     class="tooltip"
                     class:mr-2={trail.public && trailIsShared}

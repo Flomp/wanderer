@@ -1,4 +1,3 @@
-import { pb } from "$lib/pocketbase";
 import { Collection } from "$lib/util/api_util";
 import { error, type ServerLoad } from "@sveltejs/kit";
 import { ClientResponseError } from "pocketbase";
@@ -9,7 +8,7 @@ export const load: ServerLoad = async ({ params, locals, url, fetch }) => {
     }
 
     try {
-        await pb.collection(Collection.users).confirmVerification(params.token)
+        await locals.pb.collection(Collection.users).confirmVerification(params.token)
     } catch (e) {
         if (e instanceof ClientResponseError) {
             error(400, e.message);

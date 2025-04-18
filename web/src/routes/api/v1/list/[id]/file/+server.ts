@@ -1,4 +1,3 @@
-import { pb } from "$lib/pocketbase";
 import { Collection, handleError, upload } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 import type { List } from "postcss/lib/list";

@@ -1,6 +1,5 @@
 import { error, type NumericRange, type RequestEvent } from "@sveltejs/kit";
 import { ClientResponseError, type ListResult } from "pocketbase";
-import { pb } from "$lib/pocketbase";
 import { ZodError, type ZodSchema } from "zod";
 import { RecordListOptionsSchema, RecordIdSchema, RecordOptionsSchema } from "$lib/models/api/base_schema";
 
@@ -46,7 +45,7 @@ export async function list<T>(event: RequestEvent, collection: Collection) {
 
     let r: ListResult<T>;
     if ((safeSearchParams.perPage ?? 0) < 0) {
-        const activities: T[] = await pb.collection(Collection[collection])
+        const activities: T[] = await event.locals.pb.collection(Collection[collection])
             .getFullList<T>(safeSearchParams)
         r = {
             items: activities,
@@ -56,7 +55,7 @@ export async function list<T>(event: RequestEvent, collection: Collection) {
             totalPages: 1
         }
     } else {
-        r = await pb.collection(Collection[collection])
+        r = await event.locals.pb.collection(Collection[collection])
             .getList<T>(safeSearchParams.page, safeSearchParams.perPage, { ...safeSearchParams })
     }
     return r
@@ -69,7 +68,7 @@ export async function show<T>(event: RequestEvent, collection: Collection) {
     const searchParams = Object.fromEntries(event.url.searchParams);
     const safeSearchParams = RecordOptionsSchema.parse(searchParams);
 
-    const r = await pb.collection(collection.toString())
+    const r = await event.locals.pb.collection(collection.toString())
         .getOne<T>(safeParams.id, safeSearchParams)
 
     return r
@@ -82,7 +81,7 @@ export async function create<T>(event: RequestEvent, schema: ZodSchema, collecti
     const data = await event.request.json();
     const safeData = schema.parse(data);
 
-    const r = await pb.collection(Collection[collection]).create<T>(safeData, {...safeSearchParams, requestKey: null})
+    const r = await event.locals.pb.collection(Collection[collection]).create<T>(safeData, {...safeSearchParams, requestKey: null})
 
     return r
 }
@@ -97,7 +96,7 @@ export async function update<T>(event: RequestEvent, schema: ZodSchema, collecti
     const data = await event.request.json();
     const safeData = schema.parse(data);
 
-    const r = await pb.collection(Collection[collection]).update<T>(safeParams.id, safeData, safeSearchParams)
+    const r = await event.locals.pb.collection(Collection[collection]).update<T>(safeParams.id, safeData, safeSearchParams)
 
     return r
 }
@@ -108,7 +107,7 @@ export async function upload<T>(event: RequestEvent, collection: Collection) {
 
     const data = await event.request.formData();
 
-    const r = await pb.collection(Collection[collection]).update<T>(safeParams.id, data)
+    const r = await event.locals.pb.collection(Collection[collection]).update<T>(safeParams.id, data)
 
     return r
 }
@@ -117,7 +116,7 @@ export async function remove(event: RequestEvent, collection: Collection) {
     const params = event.params
     const safeParams = RecordIdSchema.parse(params);
 
-    const r = await pb.collection(Collection[collection]).delete(safeParams.id)
+    const r = await event.locals.pb.collection(Collection[collection]).delete(safeParams.id)
 
     return { 'acknowledged': r }
 }

@@ -1,5 +1,4 @@
 import type { UserAnonymous } from '$lib/models/user';
-import { pb } from '$lib/pocketbase';
 import { Collection, handleError, list } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 

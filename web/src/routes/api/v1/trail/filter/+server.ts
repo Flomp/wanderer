@@ -1,10 +1,9 @@
 import { type TrailFilterValues } from '$lib/models/trail';
-import { pb } from '$lib/pocketbase';
 import { handleError } from '$lib/util/api_util';
-import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
-    if (!pb.authStore.record) {
+    if (!event.locals.pb.authStore.record) {
         return json({
             min_distance: 0,
             max_distance: 20000,
@@ -15,7 +14,7 @@ export async function GET(event: RequestEvent) {
         });
     }
     try {
-        const r = await pb.collection('trails_filter').getOne<TrailFilterValues>(pb.authStore.record!.id)
+        const r = await event.locals.pb.collection('trails_filter').getOne<TrailFilterValues>(event.locals.pb.authStore.record!.id)
         return json(r)
     } catch (e: any) {
         throw handleError(e);

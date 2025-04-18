@@ -1,16 +1,15 @@
 import { ListShareCreateSchema } from '$lib/models/api/list_share_schema';
 import type { ListShare } from '$lib/models/list_share';
 import type { User } from '$lib/models/user';
-import { pb } from '$lib/pocketbase';
 import { Collection, create, handleError, list } from '$lib/util/api_util';
-import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
     try {
         const r = await list<ListShare>(event, Collection.list_share);
 
         for (const share of r.items) {
-            const anonymous_user = await pb.collection('users_anonymous').getOne<User>(share.user)
+            const anonymous_user = await event.locals.pb.collection('users_anonymous').getOne<User>(share.user)
             share.expand = {
                 user: anonymous_user
             }

@@ -15,11 +15,14 @@
     import "../css/app.css";
     import "../css/components.css";
     import "../css/theme.css";
+    import type { LayoutData } from "./$types";
+
     interface Props {
+        data: LayoutData;
         children?: Snippet;
     }
 
-    let { children }: Props = $props();
+    let { data, children }: Props = $props();
 
     beforeNavigate((n) => {
         if (!$currentUser && isRouteProtected(n.to?.url?.pathname ?? "")) {
@@ -80,7 +83,7 @@
     </div>
 {/if}
 
-<NavBar></NavBar>
+<NavBar user={data.user}></NavBar>
 <PageLoadingBar class="text-content"></PageLoadingBar>
 <Toast></Toast>
 <UploadDialog></UploadDialog>

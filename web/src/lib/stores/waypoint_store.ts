@@ -1,13 +1,17 @@
 import { Waypoint } from "$lib/models/waypoint";
-import { pb } from "$lib/pocketbase";
 import { APIError } from "$lib/util/api_util";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
+import { currentUser } from "./user_store";
 
 export const waypoint: Writable<Waypoint> = writable(new Waypoint(0, 0));
 
 export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const user = get(currentUser)
+    if (!user) {
+        throw Error("Unauthenticated")
+    }
 
-    waypoint.author = pb.authStore.record!.id
+    waypoint.author = user.id
 
     let r = await f('/api/v1/waypoint', {
         method: 'PUT',
@@ -45,7 +49,11 @@ export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo 
 }
 
 export async function waypoints_update(oldWaypoint: Waypoint, newWaypoint: Waypoint) {
-    newWaypoint.author = pb.authStore.record!.id
+    const user = get(currentUser)
+    if (!user) {
+        throw Error("Unauthenticated")
+    }
+    newWaypoint.author = user.id
 
     let r = await fetch('/api/v1/waypoint/' + newWaypoint.id, {
         method: 'POST',

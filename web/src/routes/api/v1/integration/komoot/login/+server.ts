@@ -1,10 +1,9 @@
-import { pb } from "$lib/pocketbase";
 import { handleError } from "$lib/util/api_util";
-import { json } from "@sveltejs/kit";
+import { json, type RequestEvent } from "@sveltejs/kit";
 
-export async function GET() {
+export async function GET(event: RequestEvent) {
     try {
-        const r = await pb.send("/integration/komoot/login", {
+        const r = await event.locals.pb.send("/integration/komoot/login", {
             method: "GET",
         });
         return json(r);
