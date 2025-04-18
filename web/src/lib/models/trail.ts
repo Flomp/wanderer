@@ -27,6 +27,7 @@ class Trail {
     tags: string[];
     waypoints: string[];
     summit_logs: string[];
+    polyline?: string;
     expand?: {
         tags?: Tag[]
         category?: Category;
@@ -106,6 +107,7 @@ interface TrailFilter {
     author?: string;
     public?: boolean;
     shared?: boolean;
+    private?: boolean;
     near: {
         lat?: number,
         lon?: number,
@@ -165,6 +167,7 @@ interface TrailSearchResult {
     created: number;
     public: boolean;
     thumbnail: string;
+    polyline?: string;
     shares?: string[];
     tags?: string[]
     gpx: string;
@@ -173,6 +176,29 @@ interface TrailSearchResult {
         lng: number
     };
 }
+
+export const defaultTrailSearchAttributes = [
+    "id",
+    "author",
+    "author_name",
+    "author_avatar",
+    "name",
+    "description",
+    "location",
+    "distance",
+    "elevation_gain",
+    "elevation_loss",
+    "duration",
+    "difficulty",
+    "category",
+    "completed",
+    "date",
+    "created",
+    "public",
+    "thumbnail",
+    "gpx",
+    "tags",
+    "_geo",]
 
 
 export { Trail };

@@ -1,5 +1,5 @@
 import type { SummitLog } from "$lib/models/summit_log";
-import { Trail, type TrailFilter, type TrailFilterValues, type TrailSearchResult } from "$lib/models/trail";
+import { defaultTrailSearchAttributes, Trail, type TrailFilter, type TrailFilterValues, type TrailSearchResult } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import { pb } from "$lib/pocketbase";
 import { deepEqual } from "$lib/util/deep_util";
@@ -65,6 +65,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
             q: filter.q,
             options: {
                 filter: filterText,
+                attributesToRetrieve: defaultTrailSearchAttributes,
                 sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
                 hitsPerPage: 12,
                 page: page
@@ -89,7 +90,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
 }
 
-export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, page: number = 1, loadGPX: boolean = true) {
+export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, page: number = 1, includePolyline: boolean = true) {
 
     let filterText: string = "";
 
@@ -106,6 +107,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
                     `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
                     filterText
                 ],
+                attributesToRetrieve: [...defaultTrailSearchAttributes, ...(includePolyline ? ["polyline"] : [])],
                 hitsPerPage: 500,
                 page: page
             }
@@ -118,7 +120,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
         return { trails: [], ...result }
     }
 
-    const resultTrails: Trail[] = await searchResultToTrailList(result.hits, loadGPX)
+    const resultTrails: Trail[] = await searchResultToTrailList(result.hits)
 
     trails = page > 1 ? trails.concat(resultTrails) : resultTrails
 
@@ -227,6 +229,10 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
+
+    const modelWithFiles: Trail = await r.json();
+
+    model.photos = modelWithFiles.photos;
 
     return model;
 
@@ -442,7 +448,7 @@ export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f:
     return gpxData
 }
 
-async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: boolean = false): Promise<Trail[]> {
+async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<Trail[]> {
     const trails: Trail[] = []
     for (const h of hits) {
         const t: Trail & RecordModel = {
@@ -470,6 +476,7 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: b
             lon: h._geo.lng,
             location: h.location,
             gpx: h.gpx,
+            polyline: h.polyline,
             thumbnail: 0,
             expand: {
                 author: {
@@ -487,10 +494,6 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>, loadGPX: b
             }
         }
 
-        if (loadGPX) {
-            const gpxData: string = await fetchGPX(t);
-            t.expand!.gpx_data = gpxData;
-        }
 
         trails.push(t)
     }
@@ -522,12 +525,44 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
         filterText += ` AND author = ${filter.author}`
     }
 
+    if (filter.public !== undefined || filter.private !== undefined || filter.shared !== undefined) {
+        filterText += " AND ("
+
+         const showPublic = filter.public === undefined || filter.public === true;
+         const showPrivate = filter.private === undefined || filter.private === true;
+         const showShared = filter.shared !== undefined && filter.shared === true;
+
+        if (showPublic === true) {
+            filterText += "(public = TRUE";
+            if (showPrivate === true && (!filter.author?.length || filter.author == pb.authStore.record?.id)) {
+                filterText += ` OR author = ${pb.authStore.record?.id}`;
+            }
+            filterText += ")";
+        }
+        else if (!filter.author?.length || filter.author == pb.authStore.record?.id) {
+            filterText += "public = FALSE";
+            filterText += ` AND author = ${pb.authStore.record?.id}`;
+        }
+
+        if (filter.shared !== undefined) {
+            if (filter.shared === true) {
+                filterText += ` OR shares = ${pb.authStore.record?.id}`
+            } else {
+                filterText += ` AND NOT shares = ${pb.authStore.record?.id}`
+
+            }
+        }
+        
+        filterText += ")";
+    }
+
+    /*
     if (filter.public !== undefined || filter.shared !== undefined) {
         filterText += " AND ("
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == pb.authStore.record?.id) {
+            if (filter.private != undefined && (!filter.author?.length || filter.author == pb.authStore.record?.id)) {
                 filterText += ` OR author = ${pb.authStore.record?.id}`
             }
             filterText += ")"
@@ -543,6 +578,7 @@ function buildFilterText(filter: TrailFilter, includeGeo: boolean): string {
         }
         filterText += ")"
     }
+*/
 
     if (filter.startDate) {
         filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`
