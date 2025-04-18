@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { PUBLIC_VALHALLA_URL } from "$env/static/public";
+    import { env } from "$env/dynamic/public";
     import Button from "$lib/components/base/button.svelte";
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";
@@ -45,7 +45,7 @@
         setRoute,
     } from "$lib/stores/valhalla_store";
     import { waypoint } from "$lib/stores/waypoint_store";
-    import { getFileURL } from "$lib/util/file_util";
+    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -65,6 +65,7 @@
     } from "$lib/components/base/search.svelte";
     import RoutingOptionsPopup from "$lib/components/trail/routing_options_popup.svelte";
     import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
+    import { convertDMSToDD } from "$lib/models/gpx/utils.js";
     import { Tag } from "$lib/models/tag.js";
     import {
         searchLocationReverse,
@@ -77,6 +78,7 @@
         createAnchorMarker,
         createEditTrailMapPopup,
     } from "$lib/util/maplibre_util";
+    import EXIF from "$lib/vendor/exif-js/exif.js";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
@@ -171,8 +173,7 @@
                     (p) => !p.startsWith("data:image/svg+xml;base64"),
                 );
 
-                if (!form.photos?.length &&
-                !photoFiles.length) {
+                if (!form.photos?.length && !photoFiles.length) {
                     const canvas = document.querySelector(
                         "#map .maplibregl-canvas",
                     ) as HTMLCanvasElement;
@@ -305,22 +306,22 @@
                 page.data.settings?.privacy?.trails === "public",
             );
 
-            const log = new SummitLog(parseResult.trail.date as string, {
-                distance: $formData.distance,
-                elevation_gain: $formData.elevation_gain,
-                elevation_loss: $formData.elevation_loss,
-                duration: $formData.duration
-                    ? $formData.duration * 60
-                    : undefined,
-            });
+            // const log = new SummitLog(parseResult.trail.date as string, {
+            //     distance: $formData.distance,
+            //     elevation_gain: $formData.elevation_gain,
+            //     elevation_loss: $formData.elevation_loss,
+            //     duration: $formData.duration
+            //         ? $formData.duration * 60
+            //         : undefined,
+            // });
 
-            log.expand!.gpx_data = gpxData;
-            const blob = new Blob([gpxData], { type: selectedFile.type });
-            log._gpx = new File([blob], selectedFile.name, {
-                type: selectedFile.type,
-            });
+            // log.expand!.gpx_data = gpxData;
+            // const blob = new Blob([gpxData], { type: selectedFile.type });
+            // log._gpx = new File([blob], selectedFile.name, {
+            //     type: selectedFile.type,
+            // });
 
-            $formData.expand!.summit_logs?.push(log);
+            // $formData.expand!.summit_logs?.push(log);
 
             if (parseResult.gpx.rte?.length && !parseResult.gpx.trk) {
                 parseResult.gpx.trk = [
@@ -900,6 +901,53 @@
         const result = await tags_index(q);
         tagItems = result.items.map((t) => ({ text: t.name, value: t }));
     }
+
+    function openPhotoBrowser() {
+        document.getElementById("waypoint-photo-input")!.click();
+    }
+
+    async function handleWaypointPhotoSelection() {
+        const files = (
+            document.getElementById("waypoint-photo-input") as HTMLInputElement
+        ).files;
+
+        if (!files) {
+            return;
+        }
+
+        for (const file of files) {
+            const coords = await new Promise<number[]>((resolve) => {
+                EXIF.getData(file, function (p) {
+                    const lat = EXIF.getTag(p, "GPSLatitude");
+                    const latDir = EXIF.getTag(p, "GPSLatitudeRef");
+                    const lon = EXIF.getTag(p, "GPSLongitude");
+                    const lonDir = EXIF.getTag(p, "GPSLongitudeRef");
+
+                    if (lat && lon) {
+                        resolve([
+                            convertDMSToDD(lat, latDir),
+                            convertDMSToDD(lon, lonDir),
+                        ]);
+                    } else {
+                        resolve([]);
+                    }
+                });
+            });
+            if (coords.length) {
+                const wp: Waypoint = new Waypoint(coords[0], coords[1], {
+                    icon: "image",
+                });
+                wp._photos = [file];
+                saveWaypoint(wp);
+            } else {
+                show_toast({
+                    type: "warning",
+                    icon: "warning",
+                    text: `${file.name}: ${$_("no-gps-data-in-image")}`,
+                }, 10000);
+            }
+        }
+    }
 </script>
 
 <svelte:head>
@@ -933,7 +981,7 @@
                 ? $_("upload-new-file")
                 : $_("upload-file")}</Button
         >
-        {#if PUBLIC_VALHALLA_URL}
+        {#if env.PUBLIC_VALHALLA_URL}
             <div class="flex gap-4 items-center w-full">
                 <hr class="basis-full border-input-border" />
                 <span class="text-gray-500 uppercase">{$_("or")}</span>
@@ -1084,7 +1132,11 @@
             ></Select>
         </div>
 
-        <Toggle name="public" label={$_("public")}></Toggle>
+        <Toggle
+            name="public"
+            label={$formData.public ? $_("public") : $_("private")}
+            icon={$formData.public ? "globe" : "lock"}
+        ></Toggle>
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">
             {$_("waypoints", { values: { n: 2 } })}
@@ -1110,6 +1162,20 @@
             onclick={() => beforeWaypointModalOpen()}
             ><i class="fa fa-plus mr-2"></i>{$_("add-waypoint")}</button
         >
+        <button
+            class="btn-secondary"
+            type="button"
+            onclick={() => openPhotoBrowser()}
+            ><i class="fa fa-image mr-2"></i>{$_("from-photos")}</button
+        >
+        <input
+            type="file"
+            id="waypoint-photo-input"
+            accept="image/*"
+            multiple={true}
+            style="display: none;"
+            onchange={() => handleWaypointPhotoSelection()}
+        />
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">{$_("photos")}</h3>
         <PhotoPicker

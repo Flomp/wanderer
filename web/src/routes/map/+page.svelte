@@ -11,10 +11,11 @@
     import TrailCard from "$lib/components/trail/trail_card.svelte";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import type { Settings } from "$lib/models/settings";
-    import type {
-        Trail,
-        TrailBoundingBox,
-        TrailFilter,
+    import {
+    defaultTrailSearchAttributes,
+        type Trail,
+        type TrailBoundingBox,
+        type TrailFilter,
     } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
     import {
@@ -67,6 +68,7 @@
             queries: [
                 {
                     indexUid: "trails",
+                    attributesToRetrieve: defaultTrailSearchAttributes,
                     q: q,
                     limit: 3,
                 },

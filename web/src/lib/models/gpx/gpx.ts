@@ -171,7 +171,7 @@ export default class GPX {
   }
 
   static parse(gpxString: string): Promise<GPX | Error> {
-    const sanitizedGPX = gpxString.replace(/\sxmlns=""/g, '');
+    const sanitizedGPX = gpxString.replace(/\sxmlns=""/g, '').replace(/<!--[\s\S]*?-->/g, '');
 
     return new Promise<GPX | Error>((resolve, reject) => xml2js.parseString(sanitizedGPX, {
       explicitArray: false,

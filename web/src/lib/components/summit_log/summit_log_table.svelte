@@ -9,6 +9,7 @@
     import * as M from "maplibre-gl";
     import { _ } from "svelte-i18n";
     import MapWithElevationMaplibre from "../trail/map_with_elevation_maplibre.svelte";
+    import { fetchGPX } from "$lib/stores/trail_store";
 
     interface Props {
         summitLogs?: SummitLog[];
@@ -41,10 +42,14 @@
 
     async function openMap(log: SummitLog) {
         if (!log.expand?.gpx_data) {
-            return;
+            const gpxData: string = await fetchGPX(log as any, fetch);
+            log.expand = {
+                ...(log.expand ?? {}),
+                gpx_data: gpxData,
+            };
         }
 
-        trail = (await gpx2trail(log.expand.gpx_data)).trail;
+        trail = (await gpx2trail(log.expand.gpx_data!)).trail;
         trail.id = log.id;
         trail.expand!.gpx_data = log.expand.gpx_data;
 
@@ -124,10 +129,7 @@
     {#snippet content()}
         <div id="summit-log-table-map" class="h-[32rem]">
             {#if trail}
-                <MapWithElevationMaplibre
-                    trails={[trail]}
-                    bind:map
-                    showTerrain
+                <MapWithElevationMaplibre trails={[trail]} bind:map showTerrain
                 ></MapWithElevationMaplibre>
             {/if}
         </div>

@@ -14,6 +14,7 @@
             class="fa fa-{t.icon} p-3 mr-2 rounded-lg"
             class:success-toast={t.type == "success"}
             class:error-toast={t.type == "error"}
+            class:warning-toast={t.type == "warning"}
         ></i>
         <p class="mr-4">
             {t.text}
@@ -37,5 +38,9 @@
     .error-toast {
         color: #ef4444;
         background-color: #fecaca;
+    }
+    .warning-toast {
+        color: #ffb900;
+        background-color: #fef3c6;
     }
 </style>

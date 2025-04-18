@@ -56,7 +56,7 @@ In any case, once you have successfully created your OAuth app you will receive 
 ### Enable a provider in PocketBase
 ![Pocketbase OAuth](../../../assets/guides/pocketbase_oauth.png)
 
-In the PocketBase admin panel navigate to `Settings -> Auth providers`. Click the gear icon next to your provider, fill in the Client ID and Client Secret from the step before and save your changes.
+In the PocketBase admin panel navigate to the `users` table. Click the gear icon at the top to open the table's settings and navigate to `Options`. In the tab `OAuth2`, add your provider and fill in the Client ID and Client Secret from the step before and save your changes.
 
 ### Login using OAuth
 ![wanderer OAuth](../../../assets/guides/wanderer_oauth.png)
@@ -76,5 +76,7 @@ To set up password reset emails you will need to access the PocketBase backend. 
 
 Next in the pocketbase admin panel go to Settings -> Mail settings an enable "Use SMTP mail server". Enter the details of your SMTP server and send a test email to ensure your configuration is correct. On the same page you can also adjust the email template of the password reset email.
 
+Alternatively, you can set these options via the respective [environment variables](/getting-started/configuration/#pocketbase).
+
 ### Request password reset
-Once the SMTP access is configured users can click the "Forgot password" link in the login form. After requesting the reset the user will receive an email with a unique link to reset their password.
+Once the SMTP access is configured, users can click the "Forgot password" link in the login form. After requesting the reset the user will receive an email with a unique link to reset their password.

@@ -192,7 +192,7 @@
             </p>
         </td>
     {/if}
-    {#if showRoute && log.expand?.gpx_data}
+    {#if showRoute && log.gpx}
         <td>
             <button
                 aria-label="Open route"

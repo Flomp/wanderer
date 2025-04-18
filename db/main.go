@@ -19,6 +19,7 @@ import (
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
+	"github.com/spf13/cast"
 
 	"pocketbase/integrations/komoot"
 	"pocketbase/integrations/strava"
@@ -30,7 +31,7 @@ import (
 const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
 
 // verifySettings checks if the required environment variables are set.
-// If they are not set, it logs an error and exits the program.
+// If they are not set, it logs a warning.
 func verifySettings(app core.App) {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 
@@ -106,6 +107,8 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 
 	app.OnRecordRequestEmailChangeRequest("users").BindFunc(changeUserEmailHandler())
 	app.OnServe().BindFunc(onBeforeServeHandler(client))
+
+	app.OnBootstrap().BindFunc(onBootstrapHandler())
 }
 
 func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
@@ -586,6 +589,38 @@ func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.Serve
 
 }
 
+func onBootstrapHandler() func(se *core.BootstrapEvent) error {
+	return func(e *core.BootstrapEvent) error {
+		if err := e.Next(); err != nil {
+			return err
+		}
+
+		if v := os.Getenv("POCKETBASE_SMTP_SENDER_ADRESS"); v != "" {
+			e.App.Settings().Meta.SenderAddress = v
+		}
+		if v := os.Getenv("POCKETBASE_SMTP_SENDER_NAME"); v != "" {
+			e.App.Settings().Meta.SenderName = v
+		}
+		if v := os.Getenv("POCKETBASE_SMTP_ENABLED"); v != "" {
+			e.App.Settings().SMTP.Enabled = cast.ToBool(v)
+		}
+		if v := os.Getenv("POCKETBASE_SMTP_HOST"); v != "" {
+			e.App.Settings().SMTP.Host = v
+		}
+		if v := os.Getenv("POCKETBASE_SMTP_PORT"); v != "" {
+			e.App.Settings().SMTP.Port = cast.ToInt(v)
+		}
+		if v := os.Getenv("POCKETBASE_SMTP_USERNAME"); v != "" {
+			e.App.Settings().SMTP.Username = v
+		}
+		if v := os.Getenv("POCKETBASE_SMTP_PASSWORD"); v != "" {
+			e.App.Settings().SMTP.Password = v
+		}
+
+		return e.App.Save(e.App.Settings())
+	}
+}
+
 func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.GET("/public/search/token", func(e *core.RequestEvent) error {
 		searchRules := map[string]interface{}{
@@ -823,7 +858,8 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 			return err
 		}
 		if err := util.IndexTrail(app, trail, author, client); err != nil {
-			return err
+			app.Logger().Warn(fmt.Sprintf("Unable to index trail '%s': %v", trail.GetString("name"), err))
+			continue
 		}
 
 		shares, err := app.FindAllRecords("trail_share",
@@ -839,7 +875,8 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 		err = util.UpdateTrailShares(trail.Id, userIds, client)
 
 		if err != nil {
-			return err
+			app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
+			continue
 		}
 	}
 	return nil

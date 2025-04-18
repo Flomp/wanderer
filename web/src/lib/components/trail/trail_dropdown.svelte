@@ -121,12 +121,20 @@
             let fileData: string = await trail2gpx(trail);
             if (exportSettings.fileFormat == "json") {
                 fileData = JSON.stringify(
-                    gpx(new DOMParser().parseFromString(fileData, "application/gpx+xml" as any)),
+                    gpx(
+                        new DOMParser().parseFromString(
+                            fileData,
+                            "application/gpx+xml" as any,
+                        ),
+                    ),
                 );
             }
             if (!exportSettings.photos && !exportSettings.summitLog) {
                 const blob = new Blob([fileData], {
-                    type: "text/plain",
+                    type:
+                        exportSettings.fileFormat == "json"
+                            ? "application/json"
+                            : "application/gpx+xml",
                 });
                 saveAs(blob, `${trail.name}.${exportSettings.fileFormat}`);
             } else {

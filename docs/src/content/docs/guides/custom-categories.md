@@ -12,7 +12,7 @@ To create backend access navigate to your docker-compose.yaml file and type:
 ```
 docker compose exec -it db /pocketbase superuser upsert email@example.com myverysecurepassword
 ```
-Now, you will have access with the User" email@example.com and the Password "myverysecurepassword" to all tables in the backend and can modify the underlying data directly.
+Now, you will have access with the user "email@example.com" and the password "myverysecurepassword" to all tables in the backend and can modify the underlying data directly.
 
 ## Modifying categories
 

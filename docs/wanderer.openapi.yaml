@@ -13143,7 +13143,7 @@ paths:
                   enum:
                     - easy
                     - moderate
-                    - hard
+                    - difficult
                   description: Difficulty of the trail
                 distance:
                   type: number
@@ -13780,7 +13780,7 @@ paths:
                   enum:
                     - easy
                     - moderate
-                    - hard
+                    - difficult
                   description: Difficulty of the trail
                 distance:
                   type: number

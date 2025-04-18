@@ -25,6 +25,13 @@ Since we use an unmodified installation of meilisearch you can use all variables
 | ----------------------------- | ----------------------------------------------------------------------------------- | --------- |
 | POCKETBASE_ENCRYPTION_KEY     | Valid 32 character AES key. Used to encrypt secrets                                 |           |
 | POCKETBASE_CRON_SYNC_SCHEDULE | Valid cron expression. Sets how often trails are synced from 3rd party integrations | 0 2 * * * |
+| POCKETBASE_SMTP_ENABLED       | Enables or disables SMTP functionality. Accepted values are true or false           | false     |
+| POCKETBASE_SMTP_SENDER_ADRESS | The email address used as the "From" address in outgoing emails                     |           |
+| POCKETBASE_SMTP_SENDER_NAME   | The display name shown as the sender in outgoing emails                             |           |
+| POCKETBASE_SMTP_HOST          | The hostname or IP address of the SMTP server                                       |           |
+| POCKETBASE_SMTP_PORT          | The port number used to connect to the SMTP server                                  |           |
+| POCKETBASE_SMTP_USERNAME      | The username used to authenticate with the SMTP server                              |           |
+| POCKETBASE_SMTP_PASSWORD      | The password used to authenticate with the SMTP server                              |           |
 
 ## Frontend
 
@@ -32,7 +39,7 @@ Since we use an unmodified installation of meilisearch you can use all variables
 | --------------------- | -------------------------------------------------------------------- | ----------------------------------- |
 | ORIGIN                | Public IP or hostname (including the port) of your wanderer instance | http://localhost:3000               |
 | BODY_SIZE_LIMIT       | Maximum allowed upload size                                          | Infinity                            |
-| PUBLIC_POCKETBASE_URL | IP or hostname (including the port) of your wanderer instance        | http://db:8090                      |
+| PUBLIC_POCKETBASE_URL | IP or hostname (including the port) of your pocketbase instance      | http://db:8090                      |
 | PUBLIC_DISABLE_SIGNUP | Disables signup option for new users                                 | false                               |
 | PUBLIC_VALHALLA_URL   | Public IP or hostname (including the port) of a valhalla instance    | https://valhalla1.openstreetmap.de  |
 | PUBLIC_NOMINATIM_URL  | Public IP or hostname (including the port) of a nominatim instance   | https://nominatim.openstreetmap.org |

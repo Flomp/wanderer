@@ -40,17 +40,17 @@ export async function PUT(event: RequestEvent) {
             }
         }
 
-        const log = new SummitLog(trail.date as string, {
-            distance: trail.distance,
-            elevation_gain: trail.elevation_gain,
-            elevation_loss: trail.elevation_loss,
-            duration: trail.duration ? trail.duration * 60 : undefined,
-        })
-        log.expand!.gpx_data = gpxData;
-        const fileName = (data.get("name") as string | null)?.length ? data.get("name") as string : "file"
-        log._gpx = new File([gpxFile], fileName);
+        // const log = new SummitLog(trail.date as string, {
+        //     distance: trail.distance,
+        //     elevation_gain: trail.elevation_gain,
+        //     elevation_loss: trail.elevation_loss,
+        //     duration: trail.duration ? trail.duration * 60 : undefined,
+        // })
+        // log.expand!.gpx_data = gpxData;
+        // const fileName = (data.get("name") as string | null)?.length ? data.get("name") as string : "file"
+        // log._gpx = new File([gpxFile], fileName);
 
-        trail.expand!.summit_logs?.push(log);
+        // trail.expand!.summit_logs?.push(log);
 
 
         try {
