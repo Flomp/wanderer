@@ -23,11 +23,13 @@
     import { pb } from "$lib/pocketbase";
 
     interface Props {
-        trail: Trail;
-        mode: "overview" | "map" | "list";
+        trail?: Trail;
+        trails?: Set<Trail> | undefined;
+        mode: "overview" | "map" | "list" | "trails";
+        onconfirm?: () => void;
     }
 
-    let { trail, mode }: Props = $props();
+    let { trail, trails, mode, onconfirm }: Props = $props();
 
     let confirmModal: ConfirmModal;
     let listSelectModal: ListSelectModal;
@@ -36,23 +38,33 @@
 
     let lists: List[] = $state([]);
 
-    const allowEdit =
+    const allowEdit = 
+        trails === undefined &&
+        trail !== undefined && (
         trail.author == $currentUser?.id ||
         trail.expand?.trail_share_via_trail?.some(
             (s) => s.permission == "edit",
-        );
+        ));
 
     const dropdownItems: DropdownItem[] = [
-        mode == "overview"
-            ? { text: $_("show-on-map"), value: "show", icon: "map" }
-            : {
-                  text: $_("show-in-overview"),
-                  value: "show",
-                  icon: "table-columns",
-              },
-
-        { text: $_("directions"), value: "direction", icon: "car" },
-        ...(trail.gpx
+        ...(mode != "trails"
+            ? [
+                mode == "overview"
+                ? { text: $_("show-on-map"), value: "show", icon: "map" }
+                : {
+                    text: $_("show-in-overview"),
+                    value: "show",
+                    icon: "table-columns",
+                },
+            ]
+            : []
+            ),
+        ...(mode != "trails"
+            ? [
+                { text: $_("directions"), value: "direction", icon: "car" }
+            ] : []
+            ),
+        ...(mode != "trails" && trail !== undefined && trail.gpx
             ? [
                   {
                       text: $_("export"),
@@ -61,28 +73,53 @@
                   },
               ]
             : []),
-        { text: $_("print"), value: "print", icon: "print" },
-        ...(trail.author != pb.authStore.record?.id
+        ...(mode != "trails"
+            ? [
+                { text: $_("print"), value: "print", icon: "print" },
+              ]
+            : []),
+        ...(trail !== undefined && trail.author != pb.authStore.record?.id
             ? []
             : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
-        ...(trail.author != pb.authStore.record?.id
+        ...(mode == "trails" || (trail !== undefined && trail.author != pb.authStore.record?.id)
             ? []
             : [{ text: $_("share"), value: "share", icon: "share" }]),
         ...(allowEdit
             ? [{ text: $_("edit"), value: "edit", icon: "pen" }]
             : []),
-        ...(trail.author == $currentUser?.id
+        ...(allowDelete()
             ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
             : []),
     ];
 
+
+    function allowDelete(): boolean {
+        if (mode === "trails") {
+            return true;
+        }
+        else {
+            return allowDeleteTrail(trail);
+        }
+    }
+
+    function allowDeleteTrail(dTrail?: Trail): boolean {
+        if (dTrail !== undefined) {
+            return dTrail.author == $currentUser?.id;
+        }
+        else {
+            return false;
+        }
+    }
+
     async function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "show") {
-            goto(
-                mode == "overview"
-                    ? `/map/trail/${trail.id!}`
-                    : `/trail/view/${trail.id!}`,
-            );
+            if (trail !== undefined) {
+                goto(
+                    mode == "overview"
+                        ? `/map/trail/${trail.id!}`
+                        : `/trail/view/${trail.id!}`,
+                );
+            }
         } else if (item.value == "list") {
             lists = (
                 await lists_index(
@@ -93,32 +130,53 @@
             ).items;
             listSelectModal.openModal();
         } else if (item.value == "direction") {
-            window
-                .open(
-                    `https://www.google.com/maps/dir/Current+Location/${trail.lat},${trail.lon}`,
-                    "_blank",
-                )
-                ?.focus();
+            if (trail !== undefined) {
+                window
+                    .open(
+                        `https://www.google.com/maps/dir/Current+Location/${trail.lat},${trail.lon}`,
+                        "_blank",
+                    )
+                    ?.focus();
+            }
         } else if (item.value == "print") {
-            goto(`/map/trail/${trail.id}/print`);
+            if (trail !== undefined) {
+                goto(`/map/trail/${trail.id}/print`);
+            }
         } else if (item.value == "share") {
             trailShareModal.openModal();
         } else if (item.value == "download") {
             trailExportModal.openModal();
         } else if (item.value == "edit") {
-            goto(`/trail/edit/${trail.id}`);
+            if (trail !== undefined) {
+                goto(`/trail/edit/${trail.id}`);
+            }
         } else if (item.value == "delete") {
             confirmModal.openModal();
         }
     }
 
-    async function exportTrail(exportSettings: {
+    async function exportTrails(exportSettings: {
         fileFormat: "gpx" | "json";
         photos: boolean;
         summitLog: boolean;
     }) {
+        if (trails !== undefined && trails.size > 0) {
+            for (const cTrail of trails) {
+                await doExportTrail(exportSettings, cTrail);
+            }
+        }
+        else if (trail !== undefined) {
+            await doExportTrail(exportSettings, trail);
+        }
+    }
+
+    async function doExportTrail(exportSettings: {
+        fileFormat: "gpx" | "json";
+        photos: boolean;
+        summitLog: boolean;
+    }, eTrail: Trail) {
         try {
-            let fileData: string = await trail2gpx(trail);
+            let fileData: string = await trail2gpx(eTrail);
             if (exportSettings.fileFormat == "json") {
                 fileData = JSON.stringify(
                     gpx(
@@ -136,17 +194,17 @@
                             ? "application/json"
                             : "application/gpx+xml",
                 });
-                saveAs(blob, `${trail.name}.${exportSettings.fileFormat}`);
+                saveAs(blob, `${eTrail.name}.${exportSettings.fileFormat}`);
             } else {
                 const zip = new JSZip();
                 zip.file(
-                    `${trail.name}.${exportSettings.fileFormat}`,
+                    `${eTrail.name}.${exportSettings.fileFormat}`,
                     fileData,
                 );
                 if (exportSettings.photos) {
                     const photoFolder = zip.folder($_("photos"));
-                    for (const photo of trail.photos) {
-                        const photoURL = getFileURL(trail, photo);
+                    for (const photo of eTrail.photos) {
+                        const photoURL = getFileURL(eTrail, photo);
                         const photoBlob = await fetch(photoURL).then(
                             (response) => response.blob(),
                         );
@@ -156,16 +214,16 @@
                 }
                 if (exportSettings.summitLog) {
                     let summitLogString = "";
-                    for (const summitLog of trail.expand?.summit_logs ?? []) {
+                    for (const summitLog of eTrail.expand?.summit_logs ?? []) {
                         summitLogString += `${summitLog.date},${summitLog.text}\n`;
                     }
                     zip.file(
-                        `${trail.name} - ${$_("summit-book")}.csv`,
+                        `${eTrail.name} - ${$_("summit-book")}.csv`,
                         summitLogString,
                     );
                 }
                 const blob = await zip.generateAsync({ type: "blob" });
-                saveAs(blob, `${trail.name}.zip`);
+                saveAs(blob, `${eTrail.name}.zip`);
             }
         } catch (e) {
             console.error(e);
@@ -177,28 +235,59 @@
         }
     }
 
-    async function deleteTrail() {
-        await trails_delete(trail);
-        setTimeout(() => {
-            goto("/trails");
-        }, 500);
+    async function deleteTrails() {
+        if (trails !== undefined && trails.size > 0) {
+            for (const dTrail of trails) {
+                await doDeleteTrail(dTrail);
+            }
+
+            onconfirm?.();
+        }
+        else if (trail !== undefined) {
+            await doDeleteTrail(trail);
+
+            setTimeout(() => {
+                goto("/trails");
+            }, 500);
+        }
+    }
+
+    async function doDeleteTrail(dTrail: Trail) {
+        if (!allowDeleteTrail(dTrail)) return;
+
+        await trails_delete(dTrail);
     }
 
     async function handleListSelection(list: List) {
         try {
-            if (list.trails?.includes(trail.id!)) {
-                await lists_remove_trail(list, trail);
+            let deleted = false;
+            let multiple = false;
+
+            if (trails !== undefined && trails.size > 0) {
+                multiple = true;
+                for (const lTrail of trails) {
+                    if (await doHandleListSelection(list, lTrail)) {
+                        deleted = true;
+                    }
+                }
+            }
+            else if (trail !== undefined)
+            {
+                deleted = await doHandleListSelection(list, trail);
+            }
+
+            if (deleted) {
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: `${$_("removed-trail-from")} "${list.name}"`,
+                    text: multiple ? `${$_("removed-trails-from")} "${list.name}"` : `${$_("removed-trail-from")} "${list.name}"`,
                 });
-            } else {
-                await lists_add_trail(list, trail);
+            }
+            else {
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: `${$_("added-trail-to")} "${list.name}"`,
+                    text: multiple ? `${$_("added-trails-to")} "${list.name}"` : `${$_("added-trail-to")} "${list.name}"`,
                 });
             }
         } catch (e) {
@@ -210,6 +299,17 @@
                 text: "Error adding trail to list.",
             });
         }
+    }
+
+    async function doHandleListSelection(list: List, lTrail: Trail): Promise<boolean> {
+        if (list.trails?.includes(lTrail.id!)) {
+            await lists_remove_trail(list, lTrail);
+            return true;
+        } else {
+            await lists_add_trail(list, lTrail);
+        }
+
+        return false;
     }
 </script>
 
@@ -228,7 +328,7 @@
 <ConfirmModal
     text={$_("delete-trail-confirm")}
     bind:this={confirmModal}
-    onconfirm={deleteTrail}
+    onconfirm={deleteTrails}
 ></ConfirmModal>
 <ListSelectModal
     {lists}
@@ -237,6 +337,6 @@
 ></ListSelectModal>
 <TrailExportModal
     bind:this={trailExportModal}
-    onexport={(settings) => exportTrail(settings)}
+    onexport={(settings) => exportTrails(settings)}
 ></TrailExportModal>
 <TrailShareModal {trail} bind:this={trailShareModal}></TrailShareModal>

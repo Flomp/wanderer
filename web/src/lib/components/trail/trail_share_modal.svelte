@@ -17,7 +17,7 @@
     import UserSearch from "../user_search.svelte";
 
     interface Props {
-        trail: Trail;
+        trail?: Trail;
         onsave?: () => void;
     }
 
@@ -55,6 +55,8 @@
     }
 
     async function shareTrail(item: SelectItem) {
+        if (trail === undefined) return;
+
         const share = new TrailShare(item.value.id, trail.id!, "view");
         await trail_share_create(share);
         fetchShares();
@@ -74,6 +76,8 @@
     }
 
     async function fetchShares() {
+        if (trail === undefined) return;
+
         sharesLoading = true;
         await trail_share_index({ trail: trail.id! });
         sharesLoading = false;

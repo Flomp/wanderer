@@ -10,14 +10,15 @@
     import SkeletonCard from "../base/skeleton_card.svelte";
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
     import { onMount } from "svelte";
-
+    import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
+    
     interface Props {
         filter?: TrailFilter | null;
         trails: Trail[];
         pagination?: { page: number; totalPages: number };
         loading?: boolean;
         fullWidthCards?: boolean;
-        onupdate?: (filter: TrailFilter | null) => void;
+        onupdate?: (filter: TrailFilter | null, selection: Set<Trail> | undefined) => void;
         onpagination?: (page: number) => void;
     }
 
@@ -41,6 +42,8 @@
     ];
 
     let selectedDisplayOption = $state(displayOptions[0].value);
+
+    let selection: Set<Trail> | undefined = $state();
 
     const sortOptions: SelectItem[] = [
         { text: $_("name"), value: "name" },
@@ -70,7 +73,7 @@
                 (storedSortOrder as typeof filter.sortOrder | null) ??
                 filter.sortOrder;
         }
-        onupdate?.(filter);
+        onupdate?.(filter, selection);
     });
 
     function setDisplayOption() {
@@ -82,7 +85,7 @@
             return;
         }
         localStorage.setItem("sort", filter.sort);
-        onupdate?.(filter);
+        onupdate?.(filter, selection);
     }
 
     function setSortOrder() {
@@ -95,7 +98,7 @@
             filter.sortOrder = "+";
         }
         localStorage.setItem("sort_order", filter.sortOrder);
-        onupdate?.(filter);
+        onupdate?.(filter, selection);
     }
 
     function handleSortUpdate(sort: any) {        
@@ -109,6 +112,64 @@
             filter.sortOrder = "+";
             setSort();
         }
+    }
+
+    function handleSelectionUpdate(sTrail: Trail) {
+        if (sTrail === undefined) {
+            let addTrails = false;
+            if (selection === undefined) {
+                selection = new Set<Trail>();
+                addTrails = true;
+            }
+            else { 
+                addTrails = selection.size === 0 || selection.size !== trails.length;
+                selection.clear();
+            }
+
+            if (addTrails) {
+                trails.forEach((value: Trail) => selectTrail(value));
+            }
+        }
+        else {
+            selectTrail(sTrail);
+        }
+
+        onupdate?.(filter, selection);
+    }
+
+    function selectTrail(trail: Trail) {
+        if (trail !== undefined) {
+            if (selection === undefined) selection = new Set<Trail>();
+
+            let exists = false;
+            for (const sTrail of selection) {
+                if (sTrail !== undefined && sTrail.id === trail.id) {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (exists) {
+                let newSelection = new Set<Trail>();
+                for (const sTrail of selection) {
+                    if (sTrail !== undefined && sTrail.id === trail.id)
+                        continue;
+
+                    newSelection.add(sTrail);
+                }
+                
+                selection = newSelection;
+            }
+            else {
+                selection.add(trail);
+            }
+        }
+    }
+
+    function handleTrailsEditDone() {
+        setTimeout(() => {
+            onupdate?.(filter, selection);
+            }, 500);
     }
 </script>
 
@@ -140,6 +201,8 @@
                             ><i class="fa fa-arrow-up"></i></button
                         >
                     </div>
+                {:else if selection !== undefined && selection.size > 0}
+                    <TrailDropdown trail={undefined} trails={selection} mode="trails" onconfirm={handleTrailsEditDone}></TrailDropdown>
                 {/if}
             </div>
         {/if}
@@ -157,7 +220,7 @@
     <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
         {#if loading}
             {#if selectedDisplayOption === "table"}
-                <TrailTable trails={null} tableHeader={sortOptions}
+                <TrailTable trails={null} selection={new Set<Trail>} tableHeader={sortOptions}
                 ></TrailTable>
             {:else}
                 {#each { length: 12 } as _, index}
@@ -179,11 +242,13 @@
             {#if selectedDisplayOption === "table"}
                 <TrailTable
                     {trails}
+                    {selection}
                     tableHeader={sortOptions.filter(
                         (option) => option.value !== "elevation_loss",
                     )}
                     {filter}
                     onsort={handleSortUpdate}
+                    onselect={handleSelectionUpdate}
                 ></TrailTable>
             {:else}
                 {#each trails as trail}
