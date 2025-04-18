@@ -17,6 +17,11 @@
     import type { SelectItem } from "../base/select.svelte";
     import Slider from "../base/slider.svelte";
     import UserSearch from "../user_search.svelte";
+    import { pb } from "$lib/pocketbase";
+    import { searchLocations } from "$lib/stores/search_store";
+    import { getIconForLocation } from "$lib/util/icon_util";
+    import { tags_index } from "$lib/stores/tag_store";
+    import Combobox, { type ComboboxItem } from "../base/combobox.svelte";
     import { currentUser } from "$lib/stores/user_store";
 
     interface Props {
@@ -44,10 +49,16 @@
         })),
     );
 
-    const radioGroupItems: RadioItem[] = [
+    const radioGroupCompletenessItems: RadioItem[] = [
         { text: $_("completed"), value: "completed" },
         { text: $_("not-completed"), value: "not_completed" },
         { text: $_("no-preference"), value: "no_preference" },
+    ];
+
+    const radioGroupVisibiltyItems: RadioItem[] = [
+        { text: $_("private"), value: "private" },
+        { text: $_("public"), value: "public" },
+        { text: $_("both"), value: "both" },
     ];
 
     const difficultyItems: SelectItem[] = [
@@ -82,11 +93,6 @@
         update();
     }
 
-    function setPublicFilter(e: Event) {
-        filter.public = (e.target as HTMLInputElement).checked;
-        update();
-    }
-
     function setSharedFilter(e: Event) {
         filter.shared = (e.target as HTMLInputElement).checked;
         update();
@@ -105,6 +111,29 @@
                 break;
             default:
                 filter.completed = undefined;
+                break;
+        }
+
+        update();
+    }
+
+    function setVisibiltyFilter(item: RadioItem) {
+        switch (item.value) {
+            case "private":
+                filter.public = false;
+                filter.private = true;
+                break;
+            case "public":
+                filter.public = true;
+                filter.private = false;
+                break;
+            case "both":
+                filter.public = true;
+                filter.private = true;
+                break;
+            default:
+                filter.public = true;
+                filter.private = true;
                 break;
         }
 
@@ -149,6 +178,21 @@
     function setFilterTags(tags: ComboboxItem[]) {
         filter.tags = tags.map((t) => t.text);
         update();
+    }
+
+    function getVisibiltyStatus(): number {
+        const isPublic = filter.public !== undefined && filter.public === true;
+        const isPrivate = filter.private !== undefined && filter.private === true;
+
+        if (isPublic === true && isPrivate === true) {
+            return 2
+        }
+        else if (isPublic === true) {
+            return 1
+        }
+        else {
+            return 0
+        }
     }
 </script>
 
@@ -207,18 +251,17 @@
                     clearAfterSelect={false}
                     label={$_("author")}
                 ></UserSearch>
-                <div class="flex items-center my-4">
-                    <input
-                        id="public-checkbox"
-                        type="checkbox"
-                        checked={filter.public}
-                        class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-                        onchange={setPublicFilter}
-                    />
-                    <label for="public-checkbox" class="ms-2 text-sm"
-                        >{$_("public")}</label
-                    >
-                </div>
+
+                <hr class="my-4 border-separator" />
+                
+                <p class="text-sm font-medium pb-4">{$_("visibilty-status")}</p>
+                <RadioGroup
+                    name="visibilty"
+                    items={radioGroupVisibiltyItems}
+                    selected={getVisibiltyStatus()}
+                    onchange={(item) => setVisibiltyFilter(item)}
+                ></RadioGroup>
+                
                 <div class="flex items-center my-4">
                     <input
                         id="shared-checkbox"
@@ -231,6 +274,7 @@
                         >{$_("shared")}</label
                     >
                 </div>
+
                 <hr class="my-4 border-separator" />
             {/if}
             <MultiSelect
@@ -339,8 +383,8 @@
             <p class="text-sm font-medium pb-4">{$_("completion-status")}</p>
             <RadioGroup
                 name="completed"
-                items={radioGroupItems}
-                selected={2}
+                items={radioGroupCompletenessItems}
+                selected={filter.completed === undefined ? 2 : (filter.completed === true ? 0 : 1)}
                 onchange={(item) => setCompletedFilter(item)}
             ></RadioGroup>
         </div>

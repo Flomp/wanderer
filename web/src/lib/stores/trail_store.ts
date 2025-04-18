@@ -532,6 +532,38 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
         filterText += ` AND author = ${filter.author}`
     }
 
+    if (filter.public !== undefined || filter.private !== undefined || filter.shared !== undefined) {
+        filterText += " AND ("
+
+         const showPublic = filter.public === undefined || filter.public === true;
+         const showPrivate = filter.private === undefined || filter.private === true;
+         const showShared = filter.shared !== undefined && filter.shared === true;
+
+        if (showPublic === true) {
+            filterText += "(public = TRUE";
+            if (showPrivate === true && (!filter.author?.length || filter.author == user?.id)) {
+                filterText += ` OR author = ${user?.id}`;
+            }
+            filterText += ")";
+        }
+        else if (!filter.author?.length || filter.author == user?.id) {
+            filterText += "public = FALSE";
+            filterText += ` AND author = ${user?.id}`;
+        }
+
+        if (filter.shared !== undefined) {
+            if (filter.shared === true) {
+                filterText += ` OR shares = ${user?.id}`
+            } else {
+                filterText += ` AND NOT shares = ${user?.id}`
+
+            }
+        }
+        
+        filterText += ")";
+    }
+
+    /*
     if (filter.public !== undefined || filter.shared !== undefined) {
         filterText += " AND ("
         if (filter.public !== undefined) {
@@ -553,6 +585,7 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
         }
         filterText += ")"
     }
+*/
 
     if (filter.startDate) {
         filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`
