@@ -1,5 +1,5 @@
-## v0.16.4
-### Security
+# v0.16.4
+## Security
 > [!CAUTION]
 Fixes a critical vulnerability where, in rare cases, registered users could temporarily inherit another user's session. This was caused by an incorrectly scoped PocketBase instance being shared across concurrent requests on the server.
 
