@@ -185,7 +185,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         const model = await waypoints_create({
             ...waypoint,
             marker: undefined,
-        }, f);
+        }, f, user);
         trail.waypoints.push(model.id!);
     }
     for (const summitLog of trail.expand?.summit_logs ?? []) {
