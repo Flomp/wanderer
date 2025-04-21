@@ -279,7 +279,11 @@
             maxY = Math.max(maxY, yMax);
         }
 
-        return new M.LngLatBounds([minX, minY, maxX, maxY]);
+        if(minX < Infinity && minY < Infinity && maxX > -Infinity && maxY > -Infinity) {
+            return new M.LngLatBounds([minX, minY, maxX, maxY]);
+        } else {
+            return new M.LngLatBounds([0, 0, 0, 0]);
+        }
     }
 
     function flyToBounds() {
