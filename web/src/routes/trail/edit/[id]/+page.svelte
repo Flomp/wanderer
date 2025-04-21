@@ -41,6 +41,7 @@
         deleteFromRoute,
         editRoute,
         insertIntoRoute,
+        normalizeRouteTime,
         route,
         setRoute,
     } from "$lib/stores/valhalla_store";
@@ -603,6 +604,7 @@
             );
             insertIntoRoute(routeWaypoints);
             updateTrailWithRouteData();
+            normalizeRouteTime()
         } catch (e) {
             console.error(e);
             show_toast({
@@ -766,6 +768,7 @@
             if ($formData.expand?.gpx_data) {
                 updateTrailWithRouteData();
             }
+            normalizeRouteTime()
         } catch (e) {
             console.error(e);
             show_toast({
@@ -827,6 +830,7 @@
 
             editRoute(data.segment, previousRouteSegment);
             insertIntoRoute(nextRouteSegment, data.segment + 1);
+            normalizeRouteTime()
             updateTrailWithRouteData();
         } catch (e) {
             console.error(e);
@@ -940,11 +944,14 @@
                 wp._photos = [file];
                 saveWaypoint(wp);
             } else {
-                show_toast({
-                    type: "warning",
-                    icon: "warning",
-                    text: `${file.name}: ${$_("no-gps-data-in-image")}`,
-                }, 10000);
+                show_toast(
+                    {
+                        type: "warning",
+                        icon: "warning",
+                        text: `${file.name}: ${$_("no-gps-data-in-image")}`,
+                    },
+                    10000,
+                );
             }
         }
     }

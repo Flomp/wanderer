@@ -648,7 +648,7 @@ export class ElevationProfile {
                                 if (this.settings.tooltipDisplaySpeed && this.speed.length) {
                                     tooltipInfo.push(`Speed: ${this.speed[
                                         tooltipItem.dataIndex
-                                    ].toFixed(2)} ${distanceUnit}/h`
+                                    ]?.toFixed(2)} ${distanceUnit}/h`
                                     );
                                 }
 
