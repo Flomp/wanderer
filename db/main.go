@@ -660,6 +660,13 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		if err != nil {
 			return err
 		}
+		for _, t := range trails {
+			errs := e.App.ExpandRecord(t, []string{"tags"}, nil)
+			if len(errs) > 0 {
+				return err
+			}
+		}
+
 		if len(trails) < size {
 			size = len(trails)
 		}
