@@ -225,7 +225,7 @@ func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *fi
 			"distance":       detailedTour.Distance,
 			"elevation_gain": detailedTour.ElevationUp,
 			"elevation_loss": detailedTour.ElevationDown,
-			"duration":       detailedTour.Duration / 60,
+			"duration":       detailedTour.Duration,
 			"date":           detailedTour.Date,
 			"author":         user,
 		})
