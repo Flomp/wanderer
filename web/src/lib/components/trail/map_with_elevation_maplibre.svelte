@@ -5,6 +5,7 @@
     import type { Trail } from "$lib/models/trail";
     import type { Waypoint } from "$lib/models/waypoint";
     import { theme } from "$lib/stores/theme_store";
+    import { fetchGPX } from "$lib/stores/trail_store";
     import { findStartAndEndPoints } from "$lib/util/geojson_util";
     import { toGeoJson } from "$lib/util/gpx_util";
     import {
@@ -17,12 +18,8 @@
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
     import { StyleSwitcherControl } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
-    import type {
-        Feature,
-        FeatureCollection,
-        GeoJSON,
-        Geometry,
-    } from "geojson";
+    import { T } from "@threlte/core";
+    import type { Feature, FeatureCollection, GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
     import { onDestroy, onMount, untrack } from "svelte";
@@ -46,7 +43,7 @@
         elevationProfileContainer?: string | HTMLDivElement | undefined;
         mapOptions?: Partial<M.MapOptions> | undefined;
         activeTrail?: number | null;
-        minZoom?: number;
+        clusterTrails?: boolean;
         onsegmentdragend?: (data: {
             segment: number;
             event: M.MapMouseEvent;
@@ -57,6 +54,10 @@
         onmoveend?: (map: M.Map) => void;
         onzoom?: (map: M.Map) => void;
         onclick?: (event: M.MapMouseEvent & Object) => void;
+        onUnclusteredClick?: (
+            event: M.MapMouseEvent & Object,
+            trail: Trail,
+        ) => void;
         oninit?: (map: M.Map) => void;
     }
 
@@ -76,7 +77,7 @@
         elevationProfileContainer = undefined,
         mapOptions = undefined,
         activeTrail = $bindable(0),
-        minZoom = 0,
+        clusterTrails = false,
         onmarkerdragend,
         onsegmentdragend,
         onselect,
@@ -85,6 +86,7 @@
         onmoveend,
         onzoom,
         onclick,
+        onUnclusteredClick,
         oninit,
     }: Props = $props();
 
@@ -99,6 +101,7 @@
             endMarker: M.Marker | null;
             source: M.GeoJSONSource | null;
             layer: M.LineLayerSpecification | null;
+            highlighted: boolean;
             listener: {
                 onEnter: ((e: M.MapMouseEvent) => void) | null;
                 onLeave: ((e: M.MapMouseEvent) => void) | null;
@@ -130,7 +133,9 @@
         "#DE7DC5",
     ];
 
-    let data = $derived(getData(trails));
+    let clusterPopup: M.Popup | null = null;
+
+    let [data, clusterData] = $derived(getData(trails));
     $effect(() => {
         if (data && map) {
             untrack(() => initMap(map?.loaded() ?? false));
@@ -182,27 +187,21 @@
         });
     });
 
-    function getData(trails: Trail[]) {
-        if (!trails.length) {
-            return [];
-        }
+    function getData(trails: Trail[]): [GeoJSON[], FeatureCollection] {
+        let cD: FeatureCollection = { type: "FeatureCollection", features: [] };
+        let r: GeoJSON[] = [];
 
-        let r: GeoJSON[] =
-            (map?.getZoom() ?? 0) > minZoom
-                ? []
-                : [{ type: "FeatureCollection", features: [] }];
         trails.forEach((t) => {
-            if ((map?.getZoom() ?? 0) > minZoom) {
-                if (t.polyline) {
-                    r.push(polylineToGeoJSON(t.polyline, 5));
-                } else if (t.expand?.gpx_data) {
-                    r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
-                }
-            } else if (t.lat !== null && t.lon !== null) {
-                (r[0] as FeatureCollection).features.push({
+            if (t.expand?.gpx_data) {
+                r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
+            }
+            if (clusterTrails && t.lat !== null && t.lon !== null) {
+                cD.features.push({
                     id: t.id,
                     type: "Feature",
-                    properties: {},
+                    properties: {
+                        trail: t.id,
+                    },
                     geometry: {
                         type: "Point",
                         coordinates: [t.lon ?? 0, t.lat ?? 0],
@@ -211,7 +210,7 @@
             }
         });
 
-        return r;
+        return [r, cD];
     }
 
     function initMap(mapLoaded: boolean) {
@@ -226,13 +225,12 @@
             epc?.hideProfile();
         }
 
-        if ((map?.getZoom() ?? 0) > minZoom) {
-            trails.forEach((t, i) => {
-                const layerId = t.id!;
-                addTrailLayer(t, layerId, i, data[i]);
-            });
-        } else {
-            addClusterLayer(data[0] as FeatureCollection);
+        trails.forEach((t, i) => {
+            const layerId = t.id!;
+            addTrailLayer(t, layerId, i, data[i]);
+        });
+        if (clusterTrails) {
+            addClusterLayer(clusterData);
         }
 
         Object.keys(layers).forEach((layerId) => {
@@ -279,7 +277,12 @@
             maxY = Math.max(maxY, yMax);
         }
 
-        if(minX < Infinity && minY < Infinity && maxX > -Infinity && maxY > -Infinity) {
+        if (
+            minX < Infinity &&
+            minY < Infinity &&
+            maxX > -Infinity &&
+            maxY > -Infinity
+        ) {
             return new M.LngLatBounds([minX, minY, maxX, maxY]);
         } else {
             return new M.LngLatBounds([0, 0, 0, 0]);
@@ -342,6 +345,7 @@
                 endMarker: null,
                 source: null,
                 layer: null,
+                highlighted: false,
                 listener: {
                     onMouseUp: null,
                     onMouseDown: null,
@@ -384,7 +388,6 @@
                 id: id,
                 type: "line",
                 source: id,
-                minzoom: minZoom,
                 paint: {
                     "line-color": trailColors[index % trailColors.length],
                     "line-width": 5,
@@ -407,7 +410,7 @@
             map.on("mousedown", id, layers[id].listener.onMouseDown);
         }
 
-        if (!drawing) {
+        if (!drawing && !clusterTrails) {
             addStartEndMarkers(trail, id, geojson);
         }
     }
@@ -421,7 +424,6 @@
                 type: "geojson",
                 data: geojson,
                 cluster: true,
-                clusterMaxZoom: minZoom - 1,
                 clusterRadius: 50,
             });
         } else {
@@ -438,11 +440,17 @@
                     "circle-radius": [
                         "step",
                         ["get", "point_count"],
+                        10,
+                        10,
+                        15,
                         20,
+                        20,
+                        50,
+                        25,
                         100,
                         30,
-                        750,
-                        40,
+                        200,
+                        35,
                     ],
                     "circle-stroke-width": 3,
                     "circle-stroke-color": "#fff",
@@ -461,7 +469,6 @@
                     "text-size": 12,
                 },
             });
-
             map.addLayer({
                 id: "unclustered-point",
                 type: "circle",
@@ -472,6 +479,34 @@
                     "circle-radius": 7,
                     "circle-stroke-width": 2,
                     "circle-stroke-color": "#fff",
+                },
+            });
+        }
+    }
+
+    function addClusterHighlightLayer(geojson: GeoJSON) {
+        if (!geojson || !map || !map.style) {
+            return;
+        }
+        if (!map.getSource("cluster-highlight")) {
+            map.addSource("cluster-highlight", {
+                type: "geojson",
+                data: geojson,
+            });
+        } else {
+            (map.getSource("cluster-highlight") as M.GeoJSONSource).setData(
+                geojson,
+            );
+        }
+
+        if (!map.getLayer("cluster-highlight")) {
+            map.addLayer({
+                id: "cluster-highlight",
+                type: "line",
+                source: "cluster-highlight",
+                paint: {
+                    "line-color": trailColors[0],
+                    "line-width": 5,
                 },
             });
         }
@@ -534,7 +569,7 @@
                     "interpolate",
                     ["exponential", 1.5],
                     ["zoom"],
-                    minZoom,
+                    0,
                     80,
                     18,
                     200,
@@ -544,7 +579,7 @@
                     "interpolate",
                     ["exponential", 1.5],
                     ["zoom"],
-                    minZoom,
+                    0,
                     0.5,
                     18,
                     0.8,
@@ -588,6 +623,34 @@
             map?.setPaintProperty(id, "line-width", 5);
         }
         // map?.setPaintProperty(id, "line-color", "#648ad5");
+    }
+
+    export async function highlightCluster(trail: Trail) {
+        if (!map || !map.style) {
+            return;
+        }
+        clusterPopup = createPopupFromTrail(trail);
+        clusterPopup.setLngLat([trail.lon!, trail.lat!]).addTo(map);
+
+        const geojson = await fetchGPX(trail);
+
+        addClusterHighlightLayer(toGeoJson(geojson));
+
+        clusterPopup.on("close", () => {
+            unHighlightCluster(false);
+        });
+    }
+
+    export async function unHighlightCluster(closePopup: boolean = true) {
+        if (!map || !map.style) {
+            return;
+        }
+        if (map?.getLayer("cluster-highlight")) {
+            map?.removeLayer("cluster-highlight");
+        }
+        if (closePopup) {
+            clusterPopup?.remove();
+        }
     }
 
     function adjustTrailFocus(activeTrail: number | null) {
@@ -658,7 +721,7 @@
         }
         map.getCanvas().style.cursor = "inherit";
 
-        if (activeTrail !== null && trails[activeTrail]) {
+        if (activeTrail !== null && trails[activeTrail] && !clusterTrails) {
             addStartEndMarkers(
                 trails[activeTrail],
                 trails[activeTrail].id,
@@ -710,7 +773,7 @@
         layers[id].endMarker.setLngLat(
             startEndPoint[startEndPoint.length - 1] as M.LngLatLike,
         );
-        if (map.getZoom() > minZoom) {
+        if (!clusterTrails) {
             layers[id].endMarker.addTo(map);
         }
 
@@ -725,16 +788,6 @@
         }
         layers[id].startMarker?.remove();
         layers[id].endMarker?.remove();
-    }
-
-    export function togglePopup(id: string, currentState?: boolean) {
-        if (
-            currentState !== undefined &&
-            layers[id]?.startMarker?.getPopup().isOpen() != currentState
-        ) {
-            return;
-        }
-        layers[id]?.startMarker?.togglePopup();
     }
 
     function showWaypoints() {
@@ -1014,17 +1067,6 @@
         });
 
         map.on("zoom", (e) => {
-            const zoom = e.target.getZoom();
-            Object.values(layers).forEach((l) => {
-                if (zoom > minZoom && map && !drawing) {
-                    l.startMarker?.addTo(map);
-                    l.endMarker?.addTo(map);
-                } else {
-                    l.startMarker?.remove();
-                    l.endMarker?.remove();
-                }
-            });
-
             onzoom?.(e.target);
         });
 
@@ -1033,6 +1075,51 @@
                 return;
             }
             onclick?.(e);
+        });
+
+        map.on("click", "clusters", async (e) => {
+            if (!map) {
+                return;
+            }
+            const features = map.queryRenderedFeatures(e.point, {
+                layers: ["clusters"],
+            });
+            const clusterId = features[0].properties.cluster_id;
+            const zoom = await (
+                map.getSource("trails") as M.GeoJSONSource
+            ).getClusterExpansionZoom(clusterId);
+            map.flyTo({
+                center: (features[0].geometry as any).coordinates,
+                zoom,
+            });
+        });
+
+        map.on(
+            "click",
+            "unclustered-point",
+            async (e: M.MapMouseEvent & Object) => {
+                const trail = trails.find(
+                    (t) => t.id == (e as any).features[0].properties.trail,
+                );
+                if (!trail || !map) {
+                    return;
+                }
+                highlightCluster(trail);
+            },
+        );
+
+        map.on("mouseenter", "clusters", () => {
+            map!.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "clusters", () => {
+            map!.getCanvas().style.cursor = "";
+        });
+
+        map.on("mouseenter", "unclustered-point", () => {
+            map!.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "unclustered-point", () => {
+            map!.getCanvas().style.cursor = "";
         });
 
         map.on("load", () => {

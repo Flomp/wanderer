@@ -66,7 +66,7 @@ export function splitMultiLineStringToLineStrings(geojson: GeoJsonObject): Featu
                         ...feature.properties,
                         coordinateProperties: {
                             ...feature.properties.coordinateProperties,
-                            times: feature.properties.coordinateProperties.times[lineIndex]
+                            times: feature.properties.coordinateProperties?.times?.[lineIndex]
                         },
                         featureId: features.length,
                         segmentId: lineIndex,
