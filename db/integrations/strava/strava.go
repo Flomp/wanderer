@@ -101,7 +101,7 @@ func SyncStrava(app core.App) error {
 					warning := fmt.Sprintf("error fetching routes from strava: %v\n", err)
 					fmt.Print(warning)
 					app.Logger().Warn(warning)
-					continue
+					break
 				}
 				hasNewRoutes, err = syncTrailsWithRoutes(app, r.AccessToken, userId, routes)
 				if err != nil {
@@ -122,7 +122,7 @@ func SyncStrava(app core.App) error {
 					warning := fmt.Sprintf("error fetching activities from strava: %v", err)
 					fmt.Print(warning)
 					app.Logger().Warn(warning)
-					continue
+					break
 				}
 				hasNewActivities, err = syncTrailsWithActivities(app, r.AccessToken, userId, activities)
 				if err != nil {
