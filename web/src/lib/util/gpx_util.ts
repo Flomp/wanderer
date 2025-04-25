@@ -1,10 +1,8 @@
 import GPX from "$lib/models/gpx/gpx";
 import { Trail } from "$lib/models/trail";
 import { Waypoint } from "$lib/models/waypoint";
-import { currentUser } from "$lib/stores/user_store";
 import { gpx, kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON";
 import cryptoRandomString from "crypto-random-string";
-import { get } from "svelte/store";
 //@ts-ignore
 import { browser } from "$app/environment";
 import Track from "$lib/models/gpx/track";
@@ -12,19 +10,20 @@ import TrackSegment from "$lib/models/gpx/track-segment";
 import GPXWaypoint from "$lib/models/gpx/waypoint";
 import EasyFit from "$lib/vendor/easy-fit/easy-fit";
 import type { Feature, FeatureCollection, GeoJSON, GeoJsonProperties, Position } from 'geojson';
-import * as xmldom from 'xmldom';
-import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 import JSZip from "jszip";
 import type { AuthRecord } from "pocketbase";
+import * as xmldom from 'xmldom';
+import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 
 
-export async function gpx2trail(gpxString: string, fallbackName?: string) {
+export async function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const gpx = await GPX.parse(gpxString);
 
     if (gpx instanceof Error) {
         throw gpx;
     }
+    await gpx.correctElevation(f)
 
     const trail = new Trail("");
 
