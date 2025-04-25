@@ -101,7 +101,7 @@
   "empty-activities": "{username} has no activity yet",
   "empty-bio": "{username} has not added a bio yet",
   "empty-lists": "{username} has no public lists",
-  "enable-auto-routing": "",
+  "enable-auto-routing": "Enable auto-routing",
   "english": "Inglês",
   "entry": "Entrada",
   "error-creating-user": "Erro ao criar utilizador",
