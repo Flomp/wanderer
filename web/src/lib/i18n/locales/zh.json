@@ -101,7 +101,7 @@
   "empty-activities": "{username} has no activity yet",
   "empty-bio": "{username} has not added a bio yet",
   "empty-lists": "{username} has no public lists",
-  "enable-auto-routing": "",
+  "enable-auto-routing": "Enable auto-routing",
   "english": "英语",
   "entry": "日程",
   "error-creating-user": "创建用户错误",
