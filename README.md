@@ -48,7 +48,7 @@ You can also run wanderer on bare-metal. Check out the [documentation](https://w
 
 ## Support wanderer
 
-If you like wanderer and would like to give something back you can donate over [here](https://www.buymeacoffee.com/wanderertrails).
+If you like wanderer and would like to give something back you can donate over [here](https://www.buymeacoffee.com/wanderertrails). If you prefer to support the development with a regular contribution you can donate via [Liberapay](https://liberapay.com/Flomp/).
 
 ## Documentation
 
