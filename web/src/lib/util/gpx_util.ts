@@ -23,7 +23,11 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, f: (ur
     if (gpx instanceof Error) {
         throw gpx;
     }
-    await gpx.correctElevation(f)
+    try {
+        await gpx.correctElevation(f)
+    } catch(e) {
+        console.warn("Unable to correct elevation: " + e)
+    }
 
     const trail = new Trail("");
 
