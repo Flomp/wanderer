@@ -56,9 +56,7 @@
     let markers: M.Marker[] = $state([]);
     let showMap: boolean = true;
 
-    let selectedList: List | null = $state(
-        page.url.searchParams.get("list") ? data.lists.items[0] : null,
-    );
+    let selectedList: List | null = $state(null);
     let selectedTrail: Trail | null = $state(null);
 
     let loading: boolean = $state(false);
@@ -71,7 +69,7 @@
 
     let selectedTrailIndex = $derived(
         selectedTrail
-            ? (selectedList?.expand?.trails?.indexOf(selectedTrail) ?? null)
+            ? ((selectedList as List | null)?.expand?.trails?.indexOf(selectedTrail) ?? null)
             : null,
     );
 
@@ -80,9 +78,9 @@
     );
 
     onMount(() => {
-        if (page.url.searchParams.get("list") && selectedList) {
-            setCurrentList(selectedList);
-
+        if (page.url.searchParams.get("list")) {
+            
+            setCurrentList(data.lists.items[0]);
             // only the requested list has been loaded at this point
             // load all lists the next time the user presses the back button
             loadAllListsOnNextBack = true;
@@ -260,12 +258,12 @@
                 ><i class="fa fa-sliders"></i></button
             >
             {#if $currentUser}
-            <a
-                aria-label="New list"
-                class="btn-primary tooltip"
-                data-title={$_("new-list")}
-                href="/lists/edit/new"><i class="fa fa-plus"></i></a
-            >
+                <a
+                    aria-label="New list"
+                    class="btn-primary tooltip"
+                    data-title={$_("new-list")}
+                    href="/lists/edit/new"><i class="fa fa-plus"></i></a
+                >
             {/if}
         </div>
         {#if filterExpanded}

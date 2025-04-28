@@ -24,7 +24,7 @@ export function bbox(
             result[3] = coord[1];
         }
     });
-    
+
     return result;
 }
 
@@ -52,9 +52,9 @@ export function findStartAndEndPoints(geojson: GeoJsonObject): Position[] {
 
 export function splitMultiLineStringToLineStrings(geojson: GeoJsonObject): FeatureCollection {
     const features: Feature[] = [];
-
     (geojson as any).features.forEach((feature: any) => {
         if (feature.geometry.type === "MultiLineString") {
+
             feature.geometry.coordinates.forEach((lineString: any, lineIndex: number) => {
                 features.push({
                     type: "Feature",
@@ -64,6 +64,10 @@ export function splitMultiLineStringToLineStrings(geojson: GeoJsonObject): Featu
                     },
                     properties: {
                         ...feature.properties,
+                        coordinateProperties: {
+                            ...feature.properties.coordinateProperties,
+                            times: feature.properties.coordinateProperties?.times?.[lineIndex]
+                        },
                         featureId: features.length,
                         segmentId: lineIndex,
                     },

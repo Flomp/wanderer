@@ -197,6 +197,7 @@ export const defaultTrailSearchAttributes = [
     "thumbnail",
     "gpx",
     "tags",
+    "shares",
     "_geo",]
 
 

@@ -12,7 +12,7 @@
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import type { Settings } from "$lib/models/settings";
     import {
-    defaultTrailSearchAttributes,
+        defaultTrailSearchAttributes,
         type Trail,
         type TrailBoundingBox,
         type TrailFilter,
@@ -24,11 +24,12 @@
         type LocationSearchResult,
         type TrailSearchResult,
     } from "$lib/stores/search_store";
-    import { trails_search_bounding_box } from "$lib/stores/trail_store";
+    import {
+        trails_search_bounding_box
+    } from "$lib/stores/trail_store";
     import { getIconForLocation } from "$lib/util/icon_util";
     import type { Snapshot } from "@sveltejs/kit";
     import * as M from "maplibre-gl";
-    import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
 
@@ -45,7 +46,7 @@
     const maxBoundingBox: TrailBoundingBox = page.data.boundingBox;
     const settings: Settings = page.data.settings;
 
-    const MIN_ZOOM = 6;
+    const MIN_ZOOM = 100;
 
     let loading: boolean = $state(true);
     let loadingNextPage: boolean = false;
@@ -57,7 +58,7 @@
 
     export const snapshot: Snapshot<TrailFilter> = {
         capture: () => filter,
-        restore: (value) => {            
+        restore: (value) => {
             filter = value;
             handleFilterUpdate();
         },
@@ -140,11 +141,11 @@
     }
 
     function handleTrailCardMouseEnter(trail: Trail) {
-        mapWithElevation?.togglePopup(trail.id!, false);
+        mapWithElevation?.highlightCluster(trail);
     }
 
     function handleTrailCardMouseLeave(trail: Trail) {
-        mapWithElevation?.togglePopup(trail.id!, true);
+        mapWithElevation?.unHighlightCluster();
     }
 
     async function handleFilterUpdate() {
@@ -356,7 +357,7 @@
             showInfoPopup={true}
             activeTrail={-1}
             fitBounds="off"
-            minZoom={MIN_ZOOM}
+            clusterTrails={true}
             bind:map
             bind:this={mapWithElevation}
         ></MapWithElevationMaplibre>

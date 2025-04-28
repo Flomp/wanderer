@@ -1,3 +1,16 @@
+# v0.16.5
+
+## Features
+- Further performance improvements when showing large amount of trails on the map
+- Elevations are now recalculated when importing trails leading to improved elevation gain/loss calculation
+
+## Bug fixes
+- Tags are now properly displayed for trails on the front page
+- Direct links to a list now properly load the trails in the list
+- Fixes bug that caused trails with waypoints being rejected by the upload API
+- Fixes duration for summit logs imported from komoot
+- Fixes performance issues when loading trails with summit logs or waypoints
+  
 # v0.16.4
 ## Security
 > [!CAUTION]

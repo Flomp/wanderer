@@ -1,7 +1,4 @@
 <script lang="ts">
-    import { createBubbler } from "svelte/legacy";
-
-    const bubble = createBubbler();
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
@@ -149,7 +146,13 @@
                     {trail.expand.author.username}
                 </p>
             {/if}
-            {#if trail.tags?.length}
+            {#if trail.expand?.tags?.length}
+                <div class="flex flex-wrap gap-1 mb-3">
+                    {#each trail.expand?.tags ?? [] as t}
+                        <Chip text={t.name} closable={false} primary={false}></Chip>
+                    {/each}
+                </div>
+            {:else if trail.tags?.length}
                 <div class="flex flex-wrap gap-1 mb-3">
                     {#each trail.tags ?? [] as t}
                         <Chip text={t} closable={false} primary={false}></Chip>

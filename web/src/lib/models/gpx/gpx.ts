@@ -7,6 +7,9 @@ import Waypoint from './waypoint';
 import GpxMetricsComputation from './gpx-metrics-computation';
 //@ts-ignore
 import geohash from "ngeohash"
+import { encodePolyline } from '$lib/util/polyline_util';
+import { APIError } from '$lib/util/api_util';
+import type { ValhallaHeightResponse } from '../valhalla';
 
 const defaultAttributes = {
   version: '1.1',
@@ -97,7 +100,7 @@ export default class GPX {
     let totalLat = 0
     let totalLon = 0
 
-    const metrics = new GpxMetricsComputation(5, 10);
+    const metrics = new GpxMetricsComputation(5, 5);
 
     let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
 
@@ -155,19 +158,40 @@ export default class GPX {
     return hashes.sort().join('').slice(0, 10);
   }
 
-  isSimilar(other: GPX, distanceThreshold = 50): boolean {
-    const f1 = this.features;
-    const f2 = other.features;
-    const centroidDistance = haversineDistance(f1.centroid.lat, f1.centroid.lon, f2.centroid.lat, f2.centroid.lon);
-    const boundingBoxOverlap =
-      f1.boundingBox.minLat <= f2.boundingBox.maxLat && f1.boundingBox.maxLat >= f2.boundingBox.minLat &&
-      f1.boundingBox.minLon <= f2.boundingBox.maxLon && f1.boundingBox.maxLon >= f2.boundingBox.minLon;
+  async correctElevation(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    let coordinates: number[][] = []
+    for (const track of this.trk ?? []) {
+      for (const segment of track.trkseg ?? []) {
+        if (!segment.trkpt) {
+          continue
+        }
+        coordinates = coordinates.concat(segment.trkpt.map(pt => [pt.$.lat ?? 0, pt.$.lon ?? 0]))
+      }
+    }
 
-    const lengthDifference = Math.abs(f1.distance - f2.distance);
-    const hashSimilarity = f1.hash === f2.hash;
+    const shape = encodePolyline(coordinates);
+    const r2 = await f("/api/v1/valhalla/height", { method: "POST", body: JSON.stringify({ encoded_polyline: shape }) })
 
-    return centroidDistance < distanceThreshold || boundingBoxOverlap || (lengthDifference < 100 && hashSimilarity);
+    if (!r2.ok) {
+      const response = await r2.json();
+      throw new APIError(r2.status, response.message, response.detail)
+    }
 
+    const heightResponse: ValhallaHeightResponse = await r2.json()
+
+    let heightIndex = 0;
+    for (const track of this.trk ?? []) {
+      for (const segment of track.trkseg ?? []) {
+        if (!segment.trkpt) {
+          continue
+        }
+        segment.trkpt.forEach((pt) => {
+          pt.ele = heightResponse.height[heightIndex]
+          heightIndex++;
+        })
+      }
+    }
+    this.features = this.getTotals()
   }
 
   static parse(gpxString: string): Promise<GPX | Error> {
@@ -182,7 +206,7 @@ export default class GPX {
         return str;
       }
       ]
-    }, (err, xml) => {
+    }, async (err, xml) => {
       if (err) {
         reject(err);
       }

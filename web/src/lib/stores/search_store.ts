@@ -32,6 +32,7 @@ export type TrailSearchResult = {
     location: string;
     name: string;
     public: boolean;
+    polyline?: string;
 }
 
 export type ListSearchResult = {

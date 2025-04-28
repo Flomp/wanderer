@@ -93,11 +93,29 @@ export async function editRoute(index: number, waypoints: Waypoint[]) {
         segment.trkpt = waypoints
     }
     route.features = route.getTotals();
-
 }
 
 export function deleteFromRoute(index: number) {
     route.trk?.at(0)?.trkseg?.splice(index, 1);
     route.features = route.getTotals();
+}
 
+export function normalizeRouteTime() {
+    let currentTime = new Date();
+
+    for (const seg of route.trk?.at(0)?.trkseg ?? []) {
+
+        if (!seg.trkpt?.length) {
+            continue
+        }
+        const baseTime = seg.trkpt[0].time?.getTime() ?? 0;
+        for (let i = 0; i < seg.trkpt.length; i++) {
+            const wp = seg.trkpt![i];
+            const offset = (wp.time?.getTime() ?? 0) - baseTime;
+            const adjustedTime = new Date(currentTime.getTime() + offset);
+
+            wp.time = adjustedTime            
+        }
+        currentTime = new Date(seg.trkpt[seg.trkpt.length - 1].time!.getTime());
+    }    
 }
