@@ -1,10 +1,12 @@
 <script lang="ts">
+    import { createBubbler } from "svelte/legacy";
 
+    const bubble = createBubbler();
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
+    import { pb } from "$lib/pocketbase";
     import { theme } from "$lib/stores/theme_store";
-    import { currentUser } from "$lib/stores/user_store";
     import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -12,22 +14,30 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
+    import ShareInfo from "../share_info.svelte";
     import type { MouseEventHandler } from "svelte/elements";
     import Chip from "../base/chip.svelte";
 
     interface Props {
         trail: Trail;
         fullWidth?: boolean;
+        selected: boolean;
+        hovered: boolean;
         onmouseenter?: MouseEventHandler<HTMLDivElement>;
         onmouseleave?: MouseEventHandler<HTMLDivElement>;
+        onTrailSelect?: () => void;
     }
 
     let {
         trail,
         fullWidth = false,
+        selected = false,
+        hovered = false,
         onmouseenter,
         onmouseleave,
+        onTrailSelect,
     }: Props = $props();
+
 
     let thumbnail = $derived(
         trail.photos.length
@@ -40,6 +50,12 @@
     let trailIsShared = $derived(
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0,
     );
+
+    function handleInputClick(e: Event) {
+        e.stopPropagation();
+        onTrailSelect?.();
+        hovered = true;
+    }
 </script>
 
 <div
@@ -72,13 +88,24 @@
             />
         {/if}
     </div>
-    {#if (trail.public || trailIsShared) && $currentUser}
+    {#if hovered || selected}
+    <div class="flex absolute top-4 left-4 w-8 h-8 rounded-full items-center justify-center bg-background text-content">
+        <input
+            id="trail-selected"
+            type="checkbox"
+            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+            bind:checked={selected}
+            onclick={(e) => handleInputClick(e)}
+        />
+    </div>
+    {/if}
+    {#if (trail.public || trailIsShared) && pb.authStore.record}
         <div
             class="flex absolute top-4 right-4 {trail.public && trailIsShared
                 ? 'w-14'
                 : 'w-8'} h-8 rounded-full items-center justify-center bg-background text-content"
         >
-            {#if trail.public && $currentUser}
+            {#if trail.public && pb.authStore.record}
                 <span
                     class="tooltip"
                     class:mr-2={trail.public && trailIsShared}

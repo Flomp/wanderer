@@ -44,6 +44,7 @@
     let selectedDisplayOption = $state(displayOptions[0].value);
 
     let selection: Set<Trail> | undefined = $state();
+    let hoveredTrail: Trail | undefined = $state();
 
     const sortOptions: SelectItem[] = [
         { text: $_("name"), value: "name" },
@@ -114,6 +115,39 @@
         }
     }
 
+    function isHovered(trail: Trail): boolean {
+        if (trail === undefined) {
+            return false;
+        }
+
+        if (hoveredTrail === undefined) {
+            return false;
+        }
+
+        return hoveredTrail.id === trail.id;
+    }
+
+    function isSelected(trail: Trail): boolean {
+        if (trail === undefined) {
+            return false;
+        }
+        else {
+            if (selection === undefined) {
+                return false;
+            }
+            else {
+                for (const sTrail of selection) {
+                if (sTrail !== undefined && sTrail.id === trail.id) {
+                    return true;
+                }
+            }
+            }
+
+        }
+
+        return false;
+    }
+
     function handleSelectionUpdate(sTrail: Trail) {
         if (sTrail === undefined) {
             let addTrails = false;
@@ -134,7 +168,16 @@
             selectTrail(sTrail);
         }
 
-        onupdate?.(filter, selection);
+        //onupdate?.(filter, selection);
+    }
+
+    function handleHoverUpdate(hTrail: Trail) {
+        if (hTrail === undefined) {
+            return;
+        }
+
+        if (hoveredTrail === undefined) hoveredTrail = hTrail;
+        else hoveredTrail = undefined;
     }
 
     function selectTrail(trail: Trail) {
@@ -171,6 +214,17 @@
             onupdate?.(filter, selection);
             }, 500);
     }
+
+    function handleMouseEnter(trail: Trail) {
+        handleHoverUpdate(trail);
+    }
+    function handleMouseLeave(trail: Trail) {
+        handleHoverUpdate(trail);
+    }
+    function handeTrailSelect(trail: Trail) {
+        handleSelectionUpdate(trail);
+        //hoveredTrail = undefined;
+    }
 </script>
 
 <div class="min-w-0">
@@ -183,7 +237,11 @@
             ></Pagination>
         </div>
         {#if filter}
+            {#if selection !== undefined && selection.size > 0}
+                <TrailDropdown trail={undefined} trails={selection} mode="trails" onconfirm={handleTrailsEditDone}></TrailDropdown>
+            {/if}
             <div class="shrink-0">
+                
                 {#if selectedDisplayOption !== "table"}
                     <p class="text-sm text-gray-500 pb-2">{$_("sort")}</p>
                     <div class="flex items-center gap-2">
@@ -201,8 +259,6 @@
                             ><i class="fa fa-arrow-up"></i></button
                         >
                     </div>
-                {:else if selection !== undefined && selection.size > 0}
-                    <TrailDropdown trail={undefined} trails={selection} mode="trails" onconfirm={handleTrailsEditDone}></TrailDropdown>
                 {/if}
             </div>
         {/if}
@@ -258,7 +314,10 @@
                         href="/trail/view/{trail.id}"
                     >
                         {#if selectedDisplayOption === "cards"}
-                            <TrailCard fullWidth={fullWidthCards} {trail}
+                            <TrailCard 
+                            fullWidth={fullWidthCards} {trail} selected={isSelected(trail)} hovered={isHovered(trail)}
+                            onmouseenter={(e) => handleMouseEnter(trail)} onmouseleave={(e) => handleMouseLeave(trail)}
+                            onTrailSelect={() => handeTrailSelect(trail)}
                             ></TrailCard>
                         {:else}
                             <TrailListItem {trail}></TrailListItem>
