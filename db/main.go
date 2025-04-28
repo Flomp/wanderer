@@ -1,7 +1,11 @@
 package main
 
 import (
+	crypto_rand "crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -137,6 +141,10 @@ func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 		if err != nil {
 			return err
 		}
+		err = createUserKeyPair(e.App, e.Record.Id)
+		if err != nil {
+			return err
+		}
 		return e.Next()
 	}
 }
@@ -152,6 +160,53 @@ func createDefaultUserSettings(app core.App, userId string) error {
 	settings.Set("mapFocus", "trails")
 	settings.Set("user", userId)
 	return app.Save(settings)
+}
+
+func createUserKeyPair(app core.App, userId string) error {
+	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+	if len(encryptionKey) == 0 {
+		return fmt.Errorf("POCKETBASE_ENCRYPTION_KEY not set")
+	}
+
+	collection, err := app.FindCollectionByNameOrId("activitypub")
+	if err != nil {
+		return err
+	}
+	priv, pub, err := generateKeyPair()
+	if err != nil {
+		return err
+	}
+	privEncrypted, err := security.Encrypt(x509.MarshalPKCS1PrivateKey(priv), encryptionKey)
+	if err != nil {
+		return err
+	}
+	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return err
+	}
+
+	record := core.NewRecord(collection)
+
+	pemBlock := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubBytes,
+	})
+
+	record.Set("public_key", string(pemBlock))
+	record.Set("private_key", privEncrypted)
+	record.Set("user", userId)
+
+	return app.Save(record)
+}
+
+func generateKeyPair() (*rsa.PrivateKey, *rsa.PublicKey, error) {
+	priv, err := rsa.GenerateKey(crypto_rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pub := &priv.PublicKey
+	return priv, pub, nil
 }
 
 func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
