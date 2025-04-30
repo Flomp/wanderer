@@ -39,6 +39,15 @@
     let trailIsShared = $derived(
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0,
     );
+
+    // expand and collapse the tags
+    let tags = trail.expand?.tags ?? [];
+    // svelte-ignore non_reactive_update
+    let expandedTags = false;
+
+    function toggleExpandTags() {
+        expandedTags = !expandedTags;
+    }
 </script>
 
 <div
@@ -122,10 +131,23 @@
                 </p>
             {/if}
             {#if trail.expand?.tags?.length}
-                <div class="flex flex-wrap gap-1 mb-3">
-                    {#each trail.expand?.tags ?? [] as t}
+                <div class="flex flex-wrap gap-1 mb-3 items-center">
+                    {#each (expandedTags ? tags : tags.slice(0, 2)) as t}
                         <Chip text={t.name} closable={false} primary={false}></Chip>
                     {/each}
+
+                    {#if tags.length > 2}
+                        <button
+                            onclick={toggleExpandTags}
+                            class="text-sm text-blue-600 hover:underline focus:outline-none"
+                        >
+                            {#if expandedTags}
+                                Show less
+                            {:else}
+                                +{tags.length - 2} more
+                            {/if}
+                        </button>
+                    {/if}
                 </div>
             {:else if trail.tags?.length}
                 <div class="flex flex-wrap gap-1 mb-3">
