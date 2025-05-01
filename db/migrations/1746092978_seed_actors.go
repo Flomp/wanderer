@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
@@ -47,6 +48,11 @@ func init() {
 				return err
 			}
 
+			settings, err := app.FindFirstRecordByData("settings", "user", u.Id)
+			if err != nil {
+				return err
+			}
+
 			record := core.NewRecord(collection)
 
 			pemBlock := pem.EncodeToMemory(&pem.Block{
@@ -67,15 +73,20 @@ func init() {
 			domain := strings.TrimPrefix(url.Hostname(), "www.")
 
 			record.Set("username", u.GetString("username"))
-			record.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, u.Id, u.GetString("avatar")))
-			record.Set("IRI", id)
 			record.Set("domain", domain)
+			record.Set("summary", settings.GetString("bio"))
+			record.Set("published", u.GetDateTime("created"))
+			record.Set("IRI", id)
+			record.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, u.Id, u.GetString("avatar")))
 			record.Set("inbox", id+"/inbox")
 			record.Set("outbox", id+"/outbox")
+			record.Set("followers", id+"/followers")
+			record.Set("following", id+"/following")
 			record.Set("isLocal", true)
 			record.Set("public_key", string(pemBlock))
 			record.Set("private_key", privEncrypted)
 			record.Set("user", u.Id)
+			record.Set("last_fetched", time.Now())
 
 			app.Save(record)
 

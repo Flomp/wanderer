@@ -34,7 +34,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        activities = await activities_index(data.user.id, pagination.page);
+        activities = await activities_index(data.profile.acct, pagination.page);
     }
 </script>
 
@@ -48,22 +48,22 @@
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">
             {$_("about")}
-            {data.user.username}
-            {#if data.isOwnProfile && data.settings.bio?.length}
+            {data.profile.username}
+            {#if data.isOwnProfile && data.profile.bio.length}
                 <a aria-label="Edit bio" class="ml-4" href="/settings/profile"
                     ><i class="fa fa-pen text-base"></i></a
                 >
             {/if}
         </h4>
-        {#if data.settings.bio?.length}
-            <p class="whitespace-pre-wrap text-sm">{data.settings.bio}</p>
+        {#if data.profile.bio.length}
+            <p class="whitespace-pre-wrap text-sm">{data.profile.bio}</p>
         {:else if data.isOwnProfile}
             <a class="btn-primary inline-block" href="/settings/profile"
                 >+ {$_("add-bio")}</a
             >
         {:else}
             <p class="w-full text-center text-gray-500 text-sm">
-                {$_("empty-bio", { values: { username: data.user.username } })}
+                {$_("empty-bio", { values: { username: data.profile.username } })}
             </p>
         {/if}
     </div>
@@ -79,7 +79,7 @@
             {:else if !data.lists.length}
                 <p class="w-full text-center text-gray-500 text-sm">
                     {$_("empty-lists", {
-                        values: { username: data.user.username },
+                        values: { username: data.profile.username },
                     })}
                 </p>
             {/if}
@@ -119,7 +119,7 @@
         {:else if !activities.items.length}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-activities", {
-                    values: { username: data.user.username },
+                    values: { username: data.profile.username },
                 })}
             </p>
         {/if}
@@ -135,7 +135,7 @@
                     );
                 }}
             >
-                <ActivityCard {activity} user={data.user}></ActivityCard>
+                <!-- <ActivityCard {activity} user={data.user}></ActivityCard> -->
             </div>
         {/each}
     </div>

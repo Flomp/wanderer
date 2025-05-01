@@ -1,26 +1,22 @@
 import { follows_a_b, follows_counts } from "$lib/stores/follow_store";
+import { profile_show } from "$lib/stores/profile_store";
 import { users_show } from "$lib/stores/user_store";
 import { APIError } from "$lib/util/api_util";
 import { error, type NumericRange, type ServerLoad } from "@sveltejs/kit";
 
 export const load: ServerLoad = async ({ params, locals, fetch }) => {
 
-    if (!params.id) {
+    if (!params.username) {
         error(404, "Not found")
     }
 
     try {
-        const user = await users_show(params.id, fetch);
-        if (user.private && locals.user.id != params.id) {
-            error(401, {
-                message: "Profile is private"
-            })
-        }
+        const profile = await profile_show(params.username, fetch);
+       
         const isOwnProfile = params.id === locals.user?.id;
 
-        const follow = await follows_a_b(locals.user?.id, params.id, fetch) ?? null
-        const followCounts = await follows_counts(params.id, fetch)
-        return { ...followCounts, user, isOwnProfile, follow: follow }
+        const follow = await follows_a_b(locals.user?.id, params.username, fetch) ?? null
+        return {profile, isOwnProfile, follow: follow }
 
     } catch (e) {
         if (e instanceof APIError) {

@@ -1,4 +1,5 @@
 import type { Follow } from "$lib/models/follow";
+import type { User } from "$lib/models/user";
 import { APIError } from "$lib/util/api_util";
 import { type ListResult } from "pocketbase";
 
@@ -60,10 +61,10 @@ export async function follows_counts(id: string, f: (url: RequestInfo | URL, con
     return response;
 }
 
-export async function follows_create(follow: Follow) {
+export async function follows_create(follower: string, followee: string) {
     let r = await fetch('/api/v1/follow', {
         method: 'PUT',
-        body: JSON.stringify(follow),
+        body: JSON.stringify({follower, followee}),
     })
 
     if (!r.ok) {

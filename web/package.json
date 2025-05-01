@@ -40,6 +40,7 @@
     "@types/chart.js": "^2.9.41",
     "@types/three": "^0.161.2",
     "@types/xmldom": "^0.1.34",
+    "activitypub-types": "^1.1.0",
     "canvg": "^4.0.1",
     "chart.js": "^4.4.6",
     "chartjs-plugin-crosshair": "^2.0.0",

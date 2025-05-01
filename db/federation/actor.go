@@ -25,7 +25,7 @@ func actor(e *core.RequestEvent) error {
 
 	username = strings.TrimPrefix(username, "@")
 
-	user, err := e.App.FindFirstRecordByData("users", "username", username)
+	user, err := e.App.FindFirstRecordByData("users_anonymous", "username", username)
 	if err != nil {
 		return err
 	}

@@ -1,10 +1,9 @@
-import type { ActivityPubActor } from "./activitypub_actor";
+import type { Actor } from "./activitypub/actor";
 import type { Category } from "./category";
 import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
 import type { Tag } from "./tag";
 import type { TrailShare } from "./trail_share";
-import type { UserAnonymous } from "./user";
 import type { Waypoint } from "./waypoint";
 
 class Trail {
@@ -34,7 +33,7 @@ class Trail {
         category?: Category;
         waypoints?: Waypoint[]
         summit_logs?: SummitLog[]
-        author?: ActivityPubActor
+        author?: Actor
         comments_via_trail?: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]
@@ -204,4 +203,5 @@ export const defaultTrailSearchAttributes = [
 
 export { Trail };
 
-export type { TrailBoundingBox, TrailFilter, TrailFilterValues, TrailSearchResult };
+    export type { TrailBoundingBox, TrailFilter, TrailFilterValues, TrailSearchResult };
+

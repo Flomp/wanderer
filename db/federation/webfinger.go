@@ -43,6 +43,10 @@ func webfinger(e *core.RequestEvent) error {
 	hostname := strings.TrimPrefix(url.Hostname(), "www.")
 
 	parts := strings.Split(strings.TrimPrefix(resource, "acct:"), "@")
+	if len(parts) != 2 {
+		return e.BadRequestError("Bad request", nil)
+	}
+
 	username := parts[0]
 	domain := parts[1]
 
