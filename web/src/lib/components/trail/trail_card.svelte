@@ -111,10 +111,7 @@
                     {$_("by")}
                     <img
                         class="rounded-full w-5 aspect-square mx-1 inline"
-                        src={getFileURL(
-                            trail.expand.author,
-                            trail.expand.author.avatar,
-                        ) ||
+                        src={trail.expand.author.icon ||
                             `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
@@ -124,7 +121,8 @@
             {#if trail.expand?.tags?.length}
                 <div class="flex flex-wrap gap-1 mb-3">
                     {#each trail.expand?.tags ?? [] as t}
-                        <Chip text={t.name} closable={false} primary={false}></Chip>
+                        <Chip text={t.name} closable={false} primary={false}
+                        ></Chip>
                     {/each}
                 </div>
             {:else if trail.tags?.length}

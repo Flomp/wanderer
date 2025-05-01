@@ -11,7 +11,7 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
 
     try {
         const user = await users_show(params.id, fetch);
-        if(user.private && locals.user.id != params.id) {
+        if (user.private && locals.user.id != params.id) {
             error(401, {
                 message: "Profile is private"
             })
@@ -20,7 +20,7 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
 
         const follow = await follows_a_b(locals.user?.id, params.id, fetch) ?? null
         const followCounts = await follows_counts(params.id, fetch)
-        return { user, isOwnProfile, ...followCounts, follow: follow }
+        return { ...followCounts, user, isOwnProfile, follow: follow }
 
     } catch (e) {
         if (e instanceof APIError) {

@@ -283,22 +283,15 @@
                             {$_("by")}
                             <img
                                 class="rounded-full w-8 aspect-square mx-1 inline"
-                                src={getFileURL(
-                                    trail.expand.author,
-                                    trail.expand.author.avatar,
-                                ) ||
+                                src={trail.expand.author.icon ||
                                     `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            {#if !trail.expand.author.private}
-                                <a
-                                    class="underline"
-                                    href="/profile/{trail.expand.author.id}"
-                                    >{trail.expand.author.username}</a
-                                >
-                            {:else}
-                                <span>{trail.expand.author.username}</span>
-                            {/if}
+                            <a
+                                class="underline"
+                                href="/profile/@{trail.expand.author.username}"
+                                >{trail.expand.author.username}</a
+                            >
                         </p>
                     {/if}
                     <div class="flex flex-wrap gap-x-8 gap-y-2 mt-2 mr-8">
@@ -314,7 +307,7 @@
                         </h3>
                     </div>
                 </div>
-                {#if ($currentUser && $currentUser.id == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
+                {#if ($currentUser && $currentUser.id == trail.expand?.author?.user) || trail.expand?.trail_share_via_trail?.length || trail.public}
                     <TrailDropdown {trail} {mode}></TrailDropdown>
                 {/if}
             </div>

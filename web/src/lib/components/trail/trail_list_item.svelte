@@ -78,10 +78,7 @@
                 {$_("by")}
                 <img
                     class="rounded-full w-5 aspect-square mx-1 inline"
-                    src={getFileURL(
-                        trail.expand.author,
-                        trail.expand.author.avatar,
-                    ) ||
+                    src={trail.expand.author.icon ||
                         `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />

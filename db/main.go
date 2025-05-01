@@ -10,6 +10,7 @@ import (
 	"log"
 	"math/rand/v2"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/spf13/cast"
 
+	"pocketbase/federation"
 	"pocketbase/integrations/komoot"
 	"pocketbase/integrations/strava"
 
@@ -63,6 +65,8 @@ func main() {
 
 	registerMigrations(app)
 	setupEventHandlers(app, client)
+
+	federation.Setup(app)
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
@@ -141,7 +145,7 @@ func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 		if err != nil {
 			return err
 		}
-		err = createUserKeyPair(e.App, e.Record.Id)
+		err = createUserKeyPair(e.App, e.Record)
 		if err != nil {
 			return err
 		}
@@ -162,13 +166,13 @@ func createDefaultUserSettings(app core.App, userId string) error {
 	return app.Save(settings)
 }
 
-func createUserKeyPair(app core.App, userId string) error {
+func createUserKeyPair(app core.App, u *core.Record) error {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 	if len(encryptionKey) == 0 {
 		return fmt.Errorf("POCKETBASE_ENCRYPTION_KEY not set")
 	}
 
-	collection, err := app.FindCollectionByNameOrId("activitypub")
+	collection, err := app.FindCollectionByNameOrId("activitypub_actors")
 	if err != nil {
 		return err
 	}
@@ -192,9 +196,27 @@ func createUserKeyPair(app core.App, userId string) error {
 		Bytes: pubBytes,
 	})
 
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN environment variable not set")
+	}
+	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, u.GetString("username"))
+
+	url, err := url.Parse(origin)
+	if err != nil {
+		return err
+	}
+	domain := strings.TrimPrefix(url.Hostname(), "www.")
+
+	record.Set("username", u.GetString("username"))
+	record.Set("IRI", id)
+	record.Set("domain", domain)
+	record.Set("inbox", id+"/inbox")
+	record.Set("outbox", id+"/outbox")
+	record.Set("isLocal", true)
 	record.Set("public_key", string(pemBlock))
 	record.Set("private_key", privEncrypted)
-	record.Set("user", userId)
+	record.Set("user", u.Id)
 
 	return app.Save(record)
 }
@@ -212,7 +234,7 @@ func generateKeyPair() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
@@ -242,7 +264,7 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
@@ -915,7 +937,7 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 		return err
 	}
 	for _, trail := range trails {
-		author, err := app.FindRecordById("users", trail.GetString(("author")))
+		author, err := app.FindRecordById("activitypub_actors", trail.GetString(("author")))
 		if err != nil {
 			return err
 		}

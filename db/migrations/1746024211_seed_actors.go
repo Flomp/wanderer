@@ -6,7 +6,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
@@ -27,7 +30,7 @@ func init() {
 		}
 
 		for _, u := range users {
-			collection, err := app.FindCollectionByNameOrId("activitypub")
+			collection, err := app.FindCollectionByNameOrId("activitypub_actors")
 			if err != nil {
 				return err
 			}
@@ -51,6 +54,25 @@ func init() {
 				Bytes: pubBytes,
 			})
 
+			origin := os.Getenv("ORIGIN")
+			if origin == "" {
+				return fmt.Errorf("ORIGIN environment variable not set")
+			}
+			id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, u.GetString("username"))
+
+			url, err := url.Parse(origin)
+			if err != nil {
+				return err
+			}
+			domain := strings.TrimPrefix(url.Hostname(), "www.")
+
+			record.Set("username", u.GetString("username"))
+			record.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, u.Id, u.GetString("avatar")))
+			record.Set("IRI", id)
+			record.Set("domain", domain)
+			record.Set("inbox", id+"/inbox")
+			record.Set("outbox", id+"/outbox")
+			record.Set("isLocal", true)
 			record.Set("public_key", string(pemBlock))
 			record.Set("private_key", privEncrypted)
 			record.Set("user", u.Id)

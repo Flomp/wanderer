@@ -35,8 +35,10 @@
 
     let lists: List[] = $state([]);
 
+    const isOwned: boolean = trail.expand?.author?.user == $currentUser?.id;
+
     const allowEdit =
-        trail.author == $currentUser?.id ||
+        isOwned ||
         trail.expand?.trail_share_via_trail?.some(
             (s) => s.permission == "edit",
         );
@@ -61,16 +63,16 @@
               ]
             : []),
         { text: $_("print"), value: "print", icon: "print" },
-        ...(trail.author != $currentUser?.id
-            ? []
-            : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
-        ...(trail.author != $currentUser?.id
-            ? []
-            : [{ text: $_("share"), value: "share", icon: "share" }]),
+        ...(isOwned
+            ? [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]
+            : []),
+        ...(isOwned
+            ? [{ text: $_("share"), value: "share", icon: "share" }]
+            : []),
         ...(allowEdit
             ? [{ text: $_("edit"), value: "edit", icon: "pen" }]
             : []),
-        ...(trail.author == $currentUser?.id
+        ...(isOwned
             ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
             : []),
     ];

@@ -12,7 +12,7 @@ export async function GET(event: RequestEvent) {
             if (!r.expand) {
                 r.expand = {} as any
             }
-            r.expand!.author = await event.locals.pb.collection("users_anonymous").getOne(r.author!);
+            r.expand!.author = await event.locals.pb.collection("activitypub_actors").getOne(r.author!);
         }
 
         // remove time from dates

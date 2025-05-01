@@ -38,9 +38,9 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 
 	document := map[string]interface{}{
 		"id":             r.Id,
-		"author":         r.GetString("author"),
+		"author":         r.GetString("user"),
 		"author_name":    author.GetString("username"),
-		"author_avatar":  author.GetString("avatar"),
+		"author_avatar":  author.GetString("icon"),
 		"name":           r.GetString("name"),
 		"description":    r.GetString("description"),
 		"location":       r.GetString("location"),

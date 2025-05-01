@@ -1,3 +1,4 @@
+import type { ActivityPubActor } from "./activitypub_actor";
 import type { Category } from "./category";
 import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
@@ -33,7 +34,7 @@ class Trail {
         category?: Category;
         waypoints?: Waypoint[]
         summit_logs?: SummitLog[]
-        author?: UserAnonymous
+        author?: ActivityPubActor
         comments_via_trail?: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]

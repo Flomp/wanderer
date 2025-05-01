@@ -85,10 +85,7 @@
                                         <img
                                             title={`${trail.public ? $_("public") + " " : ""}${$_("by")} ${trail.expand.author.username}`}
                                             class="rounded-full w-5 aspect-square mx-1 inline"
-                                            src={getFileURL(
-                                                trail.expand.author,
-                                                trail.expand.author.avatar,
-                                            ) ||
+                                            src={trail.expand.author.icon ||
                                                 `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                             alt="avatar"
                                         />

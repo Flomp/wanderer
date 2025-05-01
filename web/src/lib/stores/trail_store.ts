@@ -487,10 +487,10 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<T
             thumbnail: 0,
             expand: {
                 author: {
-                    collectionId: "users",
+                    collectionId: "activitypub_actors",
                     private: false,
                     id: h.author,
-                    avatar: h.author_avatar,
+                    icon: h.author_avatar,
                     username: h.author_name
                 } as any,
                 trail_share_via_trail: h.shares?.map(s => ({

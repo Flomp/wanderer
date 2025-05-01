@@ -14,7 +14,7 @@ export async function GET(event: RequestEvent) {
     }
     try {
         const user: UserAnonymous = await event.locals.pb.collection('users_anonymous').getFirstListItem(`username="${username}"`);
-        const keys: { public_key: string, private_key: string } = await event.locals.pb.collection('activitypub').getFirstListItem(`user="${user.id}"`);
+        const key: { public_key: string } = await event.locals.pb.send(`/public/user/${user.username}/key`, { method: "GET", fetch: event.fetch })
 
         // Signature verification step would go here (see below)
         // Check if the signature matches the one in the incoming request

@@ -16,7 +16,8 @@ func init() {
 
 		// update collection data
 		if err := json.Unmarshal([]byte(`{
-			"listRule": "@request.auth.id = user"
+			"listRule": "",
+			"viewRule": ""
 		}`), &collection); err != nil {
 			return err
 		}
@@ -30,7 +31,8 @@ func init() {
 
 		// update collection data
 		if err := json.Unmarshal([]byte(`{
-			"listRule": null
+			"listRule": null,
+			"viewRule": null
 		}`), &collection); err != nil {
 			return err
 		}

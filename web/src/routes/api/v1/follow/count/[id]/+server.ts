@@ -3,7 +3,8 @@ import { json, type RequestEvent } from "@sveltejs/kit";
 
 export async function GET(event: RequestEvent) {
     try {
-        const r = await show(event, Collection.follow_counts)
+        const r = await event.locals.pb.collection(Collection.follow_counts)
+            .getFirstListItem(`user = '${event.params.id}'`)
         return json(r)
     } catch (e: any) {
         throw handleError(e)
