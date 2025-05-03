@@ -1,13 +1,14 @@
 import type { User } from "../user";
 
 export interface Actor {
+    id?: string;
     username: string;
     domain?: string;
     summary?: string;
     published?: string;
     followerCount?: number,
     followingCount?: number,
-    IRI: string;
+    iri: string;
     inbox: string;
     outbox?: string;
     icon?: string;

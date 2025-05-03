@@ -39,14 +39,23 @@ func init() {
 			if err != nil {
 				return err
 			}
-			privEncrypted, err := security.Encrypt(x509.MarshalPKCS1PrivateKey(priv), encryptionKey)
+			privBytes, err := x509.MarshalPKIXPublicKey(priv)
 			if err != nil {
 				return err
 			}
+			privEncrypted, err := security.Encrypt(privBytes, encryptionKey)
+			if err != nil {
+				return err
+			}
+
 			pubBytes, err := x509.MarshalPKIXPublicKey(pub)
 			if err != nil {
 				return err
 			}
+			pubPem := pem.EncodeToMemory(&pem.Block{
+				Type:  "PUBLIC KEY",
+				Bytes: pubBytes,
+			})
 
 			settings, err := app.FindFirstRecordByData("settings", "user", u.Id)
 			if err != nil {
@@ -54,11 +63,6 @@ func init() {
 			}
 
 			record := core.NewRecord(collection)
-
-			pemBlock := pem.EncodeToMemory(&pem.Block{
-				Type:  "PUBLIC KEY",
-				Bytes: pubBytes,
-			})
 
 			origin := os.Getenv("ORIGIN")
 			if origin == "" {
@@ -83,7 +87,7 @@ func init() {
 			record.Set("followers", id+"/followers")
 			record.Set("following", id+"/following")
 			record.Set("isLocal", true)
-			record.Set("public_key", string(pemBlock))
+			record.Set("public_key", string(pubPem))
 			record.Set("private_key", privEncrypted)
 			record.Set("user", u.Id)
 			record.Set("last_fetched", time.Now())

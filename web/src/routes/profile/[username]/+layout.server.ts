@@ -1,3 +1,4 @@
+import type { Actor } from "$lib/models/activitypub/actor";
 import { follows_a_b, follows_counts } from "$lib/stores/follow_store";
 import { profile_show } from "$lib/stores/profile_store";
 import { users_show } from "$lib/stores/user_store";
@@ -12,11 +13,12 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
 
     try {
         const profile = await profile_show(params.username, fetch);
-       
-        const isOwnProfile = params.id === locals.user?.id;
+        const actor: Actor = await locals.pb.collection("activitypub_actors").getFirstListItem(`user = '${locals.user.id}'`)
 
-        const follow = await follows_a_b(locals.user?.id, params.username, fetch) ?? null
-        return {profile, isOwnProfile, follow: follow }
+        const isOwnProfile = profile.id === actor.id;
+
+        const follow = await follows_a_b(actor.id!, profile.id, fetch) ?? null
+        return { profile, isOwnProfile, follow: follow }
 
     } catch (e) {
         if (e instanceof APIError) {

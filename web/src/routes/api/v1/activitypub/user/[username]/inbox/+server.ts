@@ -1,38 +1,68 @@
-// src/routes/inbox/+server.ts
-import type { UserAnonymous } from '$lib/models/user';
-import { error, json } from '@sveltejs/kit';
-import type { RequestEvent } from './$types';
+import { env } from '$env/dynamic/private';
+import type { Actor } from '$lib/models/activitypub/actor';
+import type { UserAnonymous } from "$lib/models/user";
+import { actorFromRemote, splitUsername } from '$lib/util/activitypub_util';
+import { handleError } from '$lib/util/api_util';
+import { error, type RequestEvent } from '@sveltejs/kit';
+import type { APActivity } from 'activitypub-types';
 import { ClientResponseError } from 'pocketbase';
 
-export async function GET(event: RequestEvent) {
-    const activity = await event.request.json();
+export async function POST(event: RequestEvent) {
 
-    let { username } = event.params;
-
-    if (username?.startsWith('@')) {
-        username = username.substring(1)
-    }
     try {
-        const user: UserAnonymous = await event.locals.pb.collection('users_anonymous').getFirstListItem(`username="${username}"`);
-        const key: { public_key: string } = await event.locals.pb.send(`/public/user/${user.username}/key`, { method: "GET", fetch: event.fetch })
-
-        // Signature verification step would go here (see below)
-        // Check if the signature matches the one in the incoming request
-
-        // For simplicity, we accept the activity without verification here
-        console.log("Received Activity:", activity);
-
-        // Process the activity (e.g., save to DB, follow user, create post)
-        // For example, if it's a follow activity:
-        if (activity.type === 'Follow') {
-            // Handle following logic here (e.g., add to "followers" list)
+        let fullUsername = event.params.username;
+        if (!fullUsername) {
+            return error(400, "Bad request");
         }
 
-        return new Response(null, { status: 202 }); // Accepted
+        fullUsername = fullUsername.replace(/^@/, "");
+
+        const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
+
+        const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getFirstListItem(`username='${username}'`)
+        const object: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user='${user.id}'`)
+
+        const activity: APActivity = await event.request.json()
+
+        if (!activity.actor) {
+            return error(400, "Bad request")
+        }
+
+        let actor: Actor;
+        try {
+            actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`iri='${activity.actor.toString()}'`);
+        } catch (e) {
+            if (e instanceof ClientResponseError && e.status == 404) {
+                // we have not seen this actor before:
+                // discover its data via webfinger and save them to our db
+                actor = (await actorFromRemote(domain, username, event.fetch)).actor
+                await event.locals.pb.collection("activitypub_actors").create(actor);
+            }
+            throw e
+        }
+
+        const success = await event.locals.pb.send("/activitypub/signature/verify", {
+            method: "POST", fetch: event.fetch,
+            headers: {
+                'X-Forwarded-Path': event.url.pathname,
+                signature: event.request.headers.get("signature")!,
+                date: event.request.headers.get("date")!,
+                digest: event.request.headers.get("digest")!
+            },
+            body: {
+                publicKey: actor.public_key
+            }
+        })
+
+        if (!success) {
+            return error(400, "Invalid header signature")
+        }
+
+        return;
     } catch (e) {
-        if (e instanceof ClientResponseError) {
-            return error(e.status, { message: e.message });
-        }
-        throw e;
+        throw handleError(e)
     }
-};
+
+
+}
+

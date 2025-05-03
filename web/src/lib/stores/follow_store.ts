@@ -61,10 +61,10 @@ export async function follows_counts(id: string, f: (url: RequestInfo | URL, con
     return response;
 }
 
-export async function follows_create(follower: string, followee: string) {
+export async function follows_create(followee: string) {
     let r = await fetch('/api/v1/follow', {
         method: 'PUT',
-        body: JSON.stringify({follower, followee}),
+        body: JSON.stringify({followee}),
     })
 
     if (!r.ok) {

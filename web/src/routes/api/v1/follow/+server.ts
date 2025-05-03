@@ -26,10 +26,12 @@ export async function PUT(event: RequestEvent) {
         const data = await event.request.json();
         const safeData = FollowCreateSchema.parse(data);
 
-        const followerActor = event.locals.pb.collection("activitypub_actors").getFirstListItem(`user = '${event.locals.user.id}'`)
-        const followeeActor = event.locals.pb.collection("activitypub_actors").getFirstListItem(`user = '${safeData.followee}'`)
+        const followerActor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user = '${event.locals.user.id}'`)
+        const followeeActor: Actor = await event.locals.pb.collection("activitypub_actors").getOne(safeData.followee);
 
-        return json(r);
+        const follow = await event.locals.pb.collection("follows").create({ follower: followerActor.id, followee: followeeActor.id, status: "pending" })
+
+        return json(follow);
     } catch (e) {
         throw handleError(e)
     }

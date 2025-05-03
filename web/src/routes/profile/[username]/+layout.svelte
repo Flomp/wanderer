@@ -45,7 +45,7 @@
         if (data.follow) {
             await follows_delete(data.follow);
         } else {
-            await follows_create($currentUser.id, data.profile.acct);
+            await follows_create(data.profile.id);
         }
         await invalidateAll();
         followLoading = false;
@@ -57,7 +57,7 @@
 >
     <div class="border border-input-border rounded-xl md:sticky top-8 md:ml-6">
         {#if data.profile}
-            <div class="flex items-center gap-x-6 px-6 mt-6 mb-4">
+            <div class="flex items-center gap-x-6 px-6 mt-6">
                 <img
                     class="rounded-full w-16 aspect-square overflow-hidden"
                     src={data.profile.icon ||
@@ -114,8 +114,14 @@
                         icon={data.follow ? "check" : ""}
                         onclick={() => follow()}
                     >
-                        {data.follow ? $_("following") : $_("follow")}</Button
-                    >
+                        {#if data.follow}
+                            {data.follow.status == "accepted"
+                                ? $_("following")
+                                : $_("follow-request-pending")}
+                        {:else}
+                            {$_("follow")}
+                        {/if}
+                    </Button>
                 </div>
             {/if}
         </div>

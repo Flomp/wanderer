@@ -1,6 +1,7 @@
 import type { DateTime } from "activitypub-types";
 
 export interface Profile {
+    id: string;
     username: string;
     acct: string;
     bio: string;

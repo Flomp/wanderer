@@ -66,8 +66,6 @@ func main() {
 	registerMigrations(app)
 	setupEventHandlers(app, client)
 
-	federation.Setup(app)
-
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -461,24 +459,27 @@ func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 
 func createFollowHandler() func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
-		record := e.Record
-		if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
-		}
-		follower := record.ExpandedOne("follower")
+		// record := e.Record
+		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
+		// 	return fmt.Errorf("failed to expand: %v", errs)
+		// }
+		// follower := record.ExpandedOne("follower")
 
-		notification := util.Notification{
-			Type: util.NewFollower,
-			Metadata: map[string]string{
-				"follower": follower.GetString("username"),
-			},
-			Seen:   false,
-			Author: record.GetString("follower"),
-		}
-		err := util.SendNotification(e.App, notification, record.GetString("followee"))
-		if err != nil {
-			return err
-		}
+		// notification := util.Notification{
+		// 	Type: util.NewFollower,
+		// 	Metadata: map[string]string{
+		// 		"follower": follower.GetString("username"),
+		// 	},
+		// 	Seen:   false,
+		// 	Author: record.GetString("follower"),
+		// }
+		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
+		// if err != nil {
+		// 	return err
+		// }
+
+		federation.FollowCreate(e.App, e.Record)
+
 		return e.Next()
 	}
 }
@@ -868,6 +869,20 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		}
 
 		return e.JSON(http.StatusOK, nil)
+	})
+	se.Router.POST("/activitypub/signature/verify", func(e *core.RequestEvent) error {
+		data := struct {
+			PublicKey string `json:"publicKey"`
+		}{}
+		if err := e.BindBody(&data); err != nil {
+			return e.BadRequestError("Failed to read request data", err)
+		}
+		authenticated, err := federation.VerifySignature(e.Request, data.PublicKey)
+
+		if err != nil {
+			return err
+		}
+		return e.JSON(http.StatusOK, map[string]bool{"authenticated": authenticated})
 	})
 }
 
