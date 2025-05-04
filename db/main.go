@@ -103,6 +103,7 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterDeleteSuccess("list_share").BindFunc(deleteListShareHandler(client))
 
 	app.OnRecordAfterCreateSuccess("follows").BindFunc(createFollowHandler())
+	app.OnRecordAfterDeleteSuccess("follows").BindFunc(deleteFollowHandler())
 	app.OnRecordAfterCreateSuccess("comments").BindFunc(createCommentHandler())
 
 	app.OnRecordsListRequest("integrations").BindFunc(listIntegrationHandler())
@@ -478,7 +479,34 @@ func createFollowHandler() func(e *core.RecordEvent) error {
 		// 	return err
 		// }
 
-		federation.FollowCreate(e.App, e.Record)
+		federation.CreateFollowActivity(e.App, e.Record)
+
+		return e.Next()
+	}
+}
+
+func deleteFollowHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		// record := e.Record
+		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
+		// 	return fmt.Errorf("failed to expand: %v", errs)
+		// }
+		// follower := record.ExpandedOne("follower")
+
+		// notification := util.Notification{
+		// 	Type: util.NewFollower,
+		// 	Metadata: map[string]string{
+		// 		"follower": follower.GetString("username"),
+		// 	},
+		// 	Seen:   false,
+		// 	Author: record.GetString("follower"),
+		// }
+		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
+		// if err != nil {
+		// 	return err
+		// }
+
+		federation.CreateUnfollowActivity(e.App, e.Record)
 
 		return e.Next()
 	}
@@ -870,20 +898,7 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 
 		return e.JSON(http.StatusOK, nil)
 	})
-	se.Router.POST("/activitypub/signature/verify", func(e *core.RequestEvent) error {
-		data := struct {
-			PublicKey string `json:"publicKey"`
-		}{}
-		if err := e.BindBody(&data); err != nil {
-			return e.BadRequestError("Failed to read request data", err)
-		}
-		authenticated, err := federation.VerifySignature(e.Request, data.PublicKey)
-
-		if err != nil {
-			return err
-		}
-		return e.JSON(http.StatusOK, map[string]bool{"authenticated": authenticated})
-	})
+	se.Router.POST("/activitypub/activity/process", federation.ProcessActivity)
 }
 
 func registerCronJobs(app core.App) {

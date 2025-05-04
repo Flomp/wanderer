@@ -41,7 +41,7 @@ export async function POST(event: RequestEvent) {
             throw e
         }
 
-        const success = await event.locals.pb.send("/activitypub/signature/verify", {
+        const success = await event.locals.pb.send("/activitypub/activity/process", {
             method: "POST", fetch: event.fetch,
             headers: {
                 'X-Forwarded-Path': event.url.pathname,
@@ -49,9 +49,7 @@ export async function POST(event: RequestEvent) {
                 date: event.request.headers.get("date")!,
                 digest: event.request.headers.get("digest")!
             },
-            body: {
-                publicKey: actor.public_key
-            }
+            body: activity
         })
 
         if (!success) {

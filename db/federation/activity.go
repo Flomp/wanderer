@@ -91,7 +91,35 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 	return nil
 }
 
-func VerifySignature(req *http.Request, publicKeyPem string) (bool, error) {
+func ProcessActivity(e *core.RequestEvent) error {
+	var activity pub.Activity
+	if err := e.BindBody(&activity); err != nil {
+		return e.BadRequestError("Failed to read request data", err)
+	}
+
+	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor)
+	if err != nil {
+		return err
+	}
+
+	verified, err := verifySignature(e.Request, actor.GetString("public_key"))
+	if err != nil || !verified {
+		return e.UnauthorizedError("Invalid http signature", err)
+	}
+
+	switch activity.Type {
+	case pub.FollowType:
+		ProcessFollowActivity(e.App, actor, activity)
+	case pub.AcceptType:
+		ProcessAcceptActivity(e.App, actor, activity)
+	case pub.UndoType:
+		ProcessUnfollowActivity(e.App, actor, activity)
+	}
+
+	return e.JSON(http.StatusOK, nil)
+}
+
+func verifySignature(req *http.Request, publicKeyPem string) (bool, error) {
 	block, _ := pem.Decode([]byte(publicKeyPem))
 	if block == nil || block.Type != "PUBLIC KEY" {
 		return false, fmt.Errorf("could not decode publicKeyPem to PUBLIC KEY pem block type")
