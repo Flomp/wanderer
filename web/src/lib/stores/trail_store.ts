@@ -201,7 +201,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         }
     }
 
-    trail.author = user.id
+    trail.author = user.actor
 
     let r = await f(`/api/v1/trail?` + new URLSearchParams({
         expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
@@ -537,8 +537,8 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == user?.id) {
-                filterText += ` OR author = ${user?.id}`
+            if (!filter.author?.length || filter.author == user?.actor) {
+                filterText += ` OR author = ${user?.actor}`
             }
             filterText += ")"
         }

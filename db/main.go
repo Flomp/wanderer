@@ -122,12 +122,17 @@ func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 	return func(e *core.RecordEvent) error {
 		userId := e.Record.Id
 
+		actor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", userId)
+		if err != nil {
+			return err
+		}
+
 		searchRules := map[string]interface{}{
 			"lists": map[string]string{
-				"filter": "public = true OR author = " + userId + " OR shares = " + userId,
+				"filter": "public = true OR author = " + actor.Id + " OR shares = " + userId,
 			},
 			"trails": map[string]string{
-				"filter": "public = true OR author = " + userId + " OR shares = " + userId,
+				"filter": "public = true OR author = " + actor.Id + " OR shares = " + userId,
 			},
 		}
 
@@ -256,6 +261,9 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 				return err
 			}
 		}
+
+		federation.CreateTrailCreateActivity(e.App, e.Record)
+
 		return e.Next()
 	}
 }

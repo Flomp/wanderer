@@ -30,6 +30,9 @@ export async function GET(event: RequestEvent) {
 
         return json(profile)
     } catch (e) {
+        if (domain === new URL(env.ORIGIN).hostname) {
+            return error(404, { message: "Not found" })
+        }
         // actor does not exist yet
     }
 

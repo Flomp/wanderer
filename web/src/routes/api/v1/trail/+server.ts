@@ -24,7 +24,7 @@ export async function GET(event: RequestEvent) {
 }
 
 export async function PUT(event: RequestEvent) {
-    try {
+    try {        
         const r = await create<Trail>(event, TrailCreateSchema, Collection.trails)
         enrichRecord(r);
         return json(r);
