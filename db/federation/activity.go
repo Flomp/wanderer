@@ -13,6 +13,7 @@ import (
 	"time"
 
 	pub "github.com/go-ap/activitypub"
+	"github.com/valyala/fastjson"
 
 	"github.com/go-ap/jsonld"
 	"github.com/go-fed/httpsig"
@@ -92,6 +93,27 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 }
 
 func ProcessActivity(e *core.RequestEvent) error {
+	pub.ItemTyperFunc = func(typ pub.ActivityVocabularyType) (pub.Item, error) {
+		if typ == TrailType {
+			return TrailNew(), nil
+		}
+		return pub.GetItemByType(typ)
+	}
+	pub.JSONItemUnmarshal = func(typ pub.ActivityVocabularyType, v *fastjson.Value, i pub.Item) error {
+		if typ == TrailType {
+			return OnTrail(i, func(t *Trail) error {
+				return JSONLoadTrail(v, t)
+			})
+		}
+		return nil
+	}
+	pub.IsNotEmpty = func(i pub.Item) bool {
+		if i.GetType() == TrailType {
+			return true
+		}
+
+		return pub.NotEmpty(i)
+	}
 	var activity pub.Activity
 	if err := e.BindBody(&activity); err != nil {
 		return e.BadRequestError("Failed to read request data", err)
@@ -114,8 +136,9 @@ func ProcessActivity(e *core.RequestEvent) error {
 		ProcessAcceptActivity(e.App, actor, activity)
 	case pub.UndoType:
 		ProcessUnfollowActivity(e.App, actor, activity)
+	case pub.CreateType:
+		ProcessCreateActivity(e.App, actor, activity)
 	}
-
 	return e.JSON(http.StatusOK, nil)
 }
 

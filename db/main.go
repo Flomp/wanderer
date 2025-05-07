@@ -262,7 +262,10 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			}
 		}
 
-		federation.CreateTrailCreateActivity(e.App, e.Record)
+		err = federation.CreateTrailCreateActivity(e.App, e.Record)
+		if err != nil {
+			return err
+		}
 
 		return e.Next()
 	}

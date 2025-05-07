@@ -92,7 +92,9 @@ const auth: Handle = async ({ event, resolve }) => {
   event.locals.ms = ms
   event.locals.pb = pb
   event.locals.user = pb.authStore.record
-  event.locals.user.actor = actor?.id
+  if(event.locals.user) {
+    event.locals.user.actor = actor?.id
+  }
   event.locals.settings = settings
 
   const lang = settings?.language ?? event.request.headers.get('accept-language')?.split(',')[0]

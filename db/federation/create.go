@@ -2,7 +2,9 @@ package federation
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"time"
 
 	pub "github.com/go-ap/activitypub"
@@ -22,6 +24,27 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 	if err != nil {
 		return err
 	}
+	errs := app.ExpandRecord(trail, []string{"tags"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand tags: %v", errs)
+	}
+	errs = app.ExpandRecord(trail, []string{"category"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand category: %v", errs)
+	}
+
+	tagRecords := trail.ExpandedAll("tags")
+	tags := pub.ItemCollection{}
+
+	for _, v := range tagRecords {
+		tags.Append(pub.IRI(v.GetString("name")))
+	}
+
+	category := ""
+	categoryRecord := trail.ExpandedOne("category")
+	if categoryRecord != nil {
+		category = categoryRecord.GetString("name")
+	}
 
 	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
 	if err != nil {
@@ -34,10 +57,37 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 	to := "https://www.w3.org/ns/activitystreams#Public"
 	cc := trailAuthor.GetString("iri") + "/followers"
 
-	trailObject := pub.ObjectNew("Trail")
+	photos := trail.GetStringSlice("photos")
+	thumbnail := ""
+	if len(photos) > 0 {
+		thumbnail = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[trail.GetInt("thumbnail")])
+	}
+	gpx := ""
+	if trail.GetString("gpx") != "" {
+		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, trail.GetString("gpx"))
+	}
+
+	attachments := pub.ItemCollection{}
+	if thumbnail != "" {
+		attachments.Append(pub.Document{
+			Type:      pub.DocumentType,
+			MediaType: "image/jpeg",
+			URL:       pub.IRI(thumbnail),
+		})
+	}
+	if gpx != "" {
+		attachments.Append(pub.Document{
+			Type:      pub.DocumentType,
+			MediaType: "application/xml+gpx",
+			URL:       pub.IRI(gpx),
+		})
+	}
+
+	trailObject := TrailNew()
 	trailObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("name")))
 	trailObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("description")))
 	trailObject.Location = pub.Place{
+		Type:      pub.PlaceType,
 		Name:      pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("location"))),
 		Latitude:  trail.GetFloat("lat"),
 		Longitude: trail.GetFloat("lon"),
@@ -46,6 +96,18 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 	trailObject.Published = trail.GetDateTime("created").Time()
 	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
 	trailObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/%s", origin, trail.Id))
+
+	trailObject.Distance = trail.GetFloat("distance")
+	trailObject.ElevationGain = trail.GetFloat("elevation_gain")
+	trailObject.ElevationLoss = trail.GetFloat("elevation_loss")
+	trailObject.Duration = trail.GetFloat("duration")
+	trailObject.Difficulty = trail.GetString("difficulty")
+	trailObject.Category = category
+	trailObject.Date = trail.GetDateTime("date").Time()
+	trailObject.Attachment = attachments
+	trailObject.Gpx = gpx
+	trailObject.Thumbnail = thumbnail
+	trailObject.Tag = tags
 
 	activity := pub.CreateNew(pub.IRI(id), trailObject)
 	activity.Actor = pub.IRI(trailAuthor.GetString("iri"))
@@ -78,8 +140,55 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 		if err != nil {
 			return err
 		}
-		recipients = append(recipients, follower.GetString("iri"))
+		recipients = append(recipients, follower.GetString("iri")+"/inbox")
 	}
 
 	return PostActivity(app, trailAuthor, activity, recipients)
+}
+
+func ProcessCreateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
+
+	// for now we only process "Trail" activities
+	if activity.Object.GetType() != "Trail" {
+		return nil
+	}
+
+	// no need to do anything if the actor is local
+	// if actor.GetBool("isLocal") {
+	// 	return nil
+	// }
+
+	trailObject, err := ToTrail(activity.Object)
+	if err != nil {
+		return err
+	}
+
+	trailUrl, err := url.Parse(trailObject.ID.String())
+	if err != nil {
+		return err
+	}
+
+	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if err != nil {
+		return err
+	}
+	record := core.NewRecord(collection)
+	record.Set("id", path.Base(trailUrl.Path))
+	record.Set("name", trailObject.Name.String())
+	record.Set("description", trailObject.Content.String())
+	record.Set("location", trailObject.Location.(*pub.Place).Name)
+	record.Set("lat", trailObject.Location.(*pub.Place).Latitude)
+	record.Set("lon", trailObject.Location.(*pub.Place).Longitude)
+	record.Set("distance", trailObject.Distance)
+	record.Set("elevation_gain", trailObject.ElevationGain)
+	record.Set("elevation_loss", trailObject.ElevationLoss)
+	record.Set("duration", trailObject.Duration)
+	record.Set("difficulty", trailObject.Difficulty)
+	record.Set("category", trailObject.Category)
+	record.Set("gpx", trailObject.Gpx)
+	record.Set("thumbnail", 0)
+	record.Set("photos", trailObject.Thumbnail)
+	record.Set("tags", trailObject.Tag)
+
+	return nil
 }

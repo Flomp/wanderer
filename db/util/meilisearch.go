@@ -31,12 +31,18 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		tags[i] = v.GetString("name")
 	}
 
+	category := ""
+	trailCategory := r.ExpandedOne("category")
+	if trailCategory != nil {
+		category = trailCategory.GetString("name")
+	}
+
 	polyline, err := getPolyline(app, r)
 	if err != nil {
 		return nil, err
 	}
 
-	document := map[string]interface{}{
+	document := map[string]any{
 		"id":             r.Id,
 		"author":         author.Id,
 		"author_name":    author.GetString("username"),
@@ -49,7 +55,7 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		"elevation_loss": r.GetFloat("elevation_loss"),
 		"duration":       r.GetFloat("duration"),
 		"difficulty":     r.Get("difficulty"),
-		"category":       r.Get("category"),
+		"category":       category,
 		"completed":      len(r.GetStringSlice("summit_logs")) > 0,
 		"date":           r.GetDateTime("date").Time().Unix(),
 		"created":        r.GetDateTime("created").Time().Unix(),
@@ -130,7 +136,11 @@ func documentFromListRecord(r *core.Record, includeShares bool) map[string]inter
 func IndexTrail(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
 	errs := app.ExpandRecord(r, []string{"tags"}, nil)
 	if len(errs) > 0 {
-		return fmt.Errorf("failed to expand: %v", errs)
+		return fmt.Errorf("failed to expand tags: %v", errs)
+	}
+	errs = app.ExpandRecord(r, []string{"category"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand category: %v", errs)
 	}
 	doc, err := documentFromTrailRecord(app, r, author, true)
 	if err != nil {
@@ -148,7 +158,11 @@ func IndexTrail(app core.App, r *core.Record, author *core.Record, client meilis
 func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
 	errs := app.ExpandRecord(r, []string{"tags"}, nil)
 	if len(errs) > 0 {
-		return fmt.Errorf("failed to expand: %v", errs)
+		return fmt.Errorf("failed to expand tags: %v", errs)
+	}
+	errs = app.ExpandRecord(r, []string{"category"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand category: %v", errs)
 	}
 
 	doc, err := documentFromTrailRecord(app, r, author, true)

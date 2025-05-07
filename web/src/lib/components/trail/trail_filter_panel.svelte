@@ -39,7 +39,7 @@
 
     let categorySelectItems = $derived(
         categories.map((c) => ({
-            value: c.id,
+            value: c.name,
             text: c.name,
         })),
     );

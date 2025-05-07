@@ -3,7 +3,7 @@ import type { Actor } from '$lib/models/activitypub/actor';
 import type { UserAnonymous } from "$lib/models/user";
 import { actorFromRemote, splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
-import { error, type RequestEvent } from '@sveltejs/kit';
+import { json, type RequestEvent } from '@sveltejs/kit';
 import type { APActivity } from 'activitypub-types';
 import { ClientResponseError } from 'pocketbase';
 
@@ -12,7 +12,8 @@ export async function POST(event: RequestEvent) {
     try {
         let fullUsername = event.params.username;
         if (!fullUsername) {
-            return error(400, "Bad request");
+            return json("Bad request", { status: 400 });
+
         }
 
         fullUsername = fullUsername.replace(/^@/, "");
@@ -25,7 +26,7 @@ export async function POST(event: RequestEvent) {
         const activity: APActivity = await event.request.json()
 
         if (!activity.actor) {
-            return error(400, "Bad request")
+            return json("Bad request", { status: 400 });
         }
 
         let actor: Actor;
@@ -52,11 +53,11 @@ export async function POST(event: RequestEvent) {
             body: activity
         })
 
-        if (!success) {
-            return error(400, "Invalid header signature")
+        if (success === false) {
+            return json("Invalid header signature", { status: 400 });
         }
 
-        return;
+        return json("", { status: 200 });
     } catch (e) {
         throw handleError(e)
     }

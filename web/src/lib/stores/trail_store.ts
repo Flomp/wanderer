@@ -203,32 +203,27 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
 
     trail.author = user.actor
 
-    let r = await f(`/api/v1/trail?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
-    }), {
-        method: 'PUT',
-        body: JSON.stringify({ ...trail }),
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-
-    let model: Trail = await r.json();
-
     const formData = new FormData()
+
+    Object.entries(trail).forEach(([key, value]) => {
+        if (typeof value === 'object' || value == undefined) {
+            return;
+        }
+        formData.append(key, value);
+    });
+
     if (gpx) {
-        formData.append("gpx", gpx);
+        formData.set("gpx", gpx);
     }
 
     for (const photo of photos) {
-        formData.append("photos", photo)
+        formData.set("photos", photo)
     }
 
-    r = await f(`/api/v1/trail/${model.id!}/file`, {
-        method: 'POST',
+    let r = await f(`/api/v1/trail/form?` + new URLSearchParams({
+        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
+    }), {
+        method: 'PUT',
         body: formData,
     })
 
@@ -237,9 +232,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const modelWithFiles: Trail = await r.json();
-
-    model.photos = modelWithFiles.photos;
+    let model: Trail = await r.json();
 
     return model;
 
