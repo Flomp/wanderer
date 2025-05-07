@@ -17,10 +17,10 @@
         selection: Set<Trail> | undefined;
         filter?: TrailFilter | null;
         onsort?: (value: any) => void
-        onselect?: (value: any) => void
+        onTrailSelect?: (value: any) => void
     }
 
-    let { tableHeader, trails = null, selection, filter = null, onsort, onselect }: Props = $props();
+    let { tableHeader, trails = null, selection, filter = null, onsort, onTrailSelect: onselect }: Props = $props();
 
     function getColumnWidth(columnValue: string): string {
         switch (columnValue) {
@@ -138,7 +138,6 @@
                         <td class="p-4 text-sm">
                             <div class="flex items-center">
                                 <input
-                                    id="trail-selected"
                                     type="checkbox"
                                     class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
                                     checked={isSelected(trail)}

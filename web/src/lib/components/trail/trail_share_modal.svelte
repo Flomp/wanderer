@@ -58,7 +58,7 @@
         if (trail === undefined) return;
 
         const share = new TrailShare(item.value.id, trail.id!, "view");
-        await trail_share_create(share);
+            await trail_share_create(share);
         fetchShares();
     }
 
