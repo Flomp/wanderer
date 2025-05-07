@@ -2,8 +2,8 @@
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import type { Trail } from "$lib/models/trail";
-    import { currentUser } from "$lib/stores/user_store";
     import { theme } from "$lib/stores/theme_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
@@ -11,7 +11,6 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
-    import ShareInfo from "../share_info.svelte";
     import type { MouseEventHandler } from "svelte/elements";
     import Chip from "../base/chip.svelte";
 

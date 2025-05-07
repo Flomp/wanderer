@@ -20,7 +20,6 @@
     import ListSelectModal from "../list/list_select_modal.svelte";
     import TrailExportModal from "./trail_export_modal.svelte";
     import TrailShareModal from "./trail_share_modal.svelte";
-    import { any } from "zod";
 
     interface Props {
         trails?: Set<Trail> | undefined;
@@ -45,26 +44,6 @@
                 (s) => s.permission == "edit",
             )
         )!;
-    }
-
-    function isMultiselectMode() : boolean { 
-        return trails !== undefined && trails.size > 1;
-    }
-        
-    function hasTrail() : boolean {
-        return trails !== undefined && trails.size > 0 && [...trails][0] !== undefined;
-    }
-        
-    function canExport() : boolean {
-        return !isMultiselectMode() && hasTrail() && trail()!.expand?.gpx_data != undefined && trail()!.expand!.gpx_data!.length > 0;
-    }
-        
-    function trailId() : string | undefined {
-        return trail()?.id;
-    }
-
-    function trail() : Trail | undefined {
-        return hasTrail() ? [...trails!][0] : undefined;
     }
 
     function dropdownItems(): DropdownItem[] {
@@ -113,6 +92,26 @@
                     ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
                     : []),
             ];
+    }
+
+    function isMultiselectMode() : boolean { 
+        return trails !== undefined && trails.size > 1;
+    }
+        
+    function hasTrail() : boolean {
+        return trails !== undefined && trails.size > 0 && [...trails][0] !== undefined;
+    }
+        
+    function canExport() : boolean {
+        return !isMultiselectMode() && hasTrail() && trail()!.expand?.gpx_data != undefined && trail()!.expand!.gpx_data!.length > 0;
+    }
+        
+    function trailId() : string | undefined {
+        return trail()?.id;
+    }
+
+    function trail() : Trail | undefined {
+        return hasTrail() ? [...trails!][0] : undefined;
     }
 
     function isFromCurrentUser(uTrail?: Trail) : boolean {
