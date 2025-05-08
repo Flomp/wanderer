@@ -2,12 +2,14 @@ package federation
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"path"
 	"time"
 
+	"pocketbase/models"
+	"pocketbase/util"
+
 	pub "github.com/go-ap/activitypub"
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -83,7 +85,7 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 		})
 	}
 
-	trailObject := TrailNew()
+	trailObject := models.TrailNew()
 	trailObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("name")))
 	trailObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("description")))
 	trailObject.Location = pub.Place{
@@ -95,7 +97,7 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 	trailObject.AttributedTo = pub.IRI(trailAuthor.GetString("iri"))
 	trailObject.Published = trail.GetDateTime("created").Time()
 	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
-	trailObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/%s", origin, trail.Id))
+	trailObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id))
 
 	trailObject.Distance = trail.GetFloat("distance")
 	trailObject.ElevationGain = trail.GetFloat("elevation_gain")
@@ -158,37 +160,26 @@ func ProcessCreateActivity(app core.App, actor *core.Record, activity pub.Activi
 	// 	return nil
 	// }
 
-	trailObject, err := ToTrail(activity.Object)
+	client := meilisearch.New(
+		os.Getenv("MEILI_URL"),
+		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
+	)
+
+	trailObject, err := models.ToTrail(activity.Object)
 	if err != nil {
 		return err
 	}
 
-	trailUrl, err := url.Parse(trailObject.ID.String())
+	doc, err := util.DocumentFromActivity(app, trailObject, actor)
 	if err != nil {
 		return err
 	}
+	documents := []map[string]interface{}{doc}
 
-	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
-	if err != nil {
+	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
 		return err
 	}
-	record := core.NewRecord(collection)
-	record.Set("id", path.Base(trailUrl.Path))
-	record.Set("name", trailObject.Name.String())
-	record.Set("description", trailObject.Content.String())
-	record.Set("location", trailObject.Location.(*pub.Place).Name)
-	record.Set("lat", trailObject.Location.(*pub.Place).Latitude)
-	record.Set("lon", trailObject.Location.(*pub.Place).Longitude)
-	record.Set("distance", trailObject.Distance)
-	record.Set("elevation_gain", trailObject.ElevationGain)
-	record.Set("elevation_loss", trailObject.ElevationLoss)
-	record.Set("duration", trailObject.Duration)
-	record.Set("difficulty", trailObject.Difficulty)
-	record.Set("category", trailObject.Category)
-	record.Set("gpx", trailObject.Gpx)
-	record.Set("thumbnail", 0)
-	record.Set("photos", trailObject.Thumbnail)
-	record.Set("tags", trailObject.Tag)
 
 	return nil
+
 }

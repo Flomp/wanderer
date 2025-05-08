@@ -45,6 +45,7 @@
 
     interface Props {
         initTrail: Trail;
+        domain: string;
         mode?: "overview" | "map" | "list";
         markers?: M.Marker[];
         activeTab?: number;
@@ -52,6 +53,7 @@
 
     let {
         initTrail,
+        domain,
         mode = "map",
         markers = [],
         activeTab = 0,
@@ -100,7 +102,7 @@
     }
 
     async function toggleMapFullScreen() {
-        goto(`/map/trail/${trail.id!}`);
+        goto(`/map/trail/${domain}/${trail.id!}`);
     }
 
     async function fetchComments() {
@@ -308,7 +310,7 @@
                     </div>
                 </div>
                 {#if ($currentUser && $currentUser.id == trail.expand?.author?.user) || trail.expand?.trail_share_via_trail?.length || trail.public}
-                    <TrailDropdown {trail} {mode}></TrailDropdown>
+                    <TrailDropdown {trail} {mode} {domain}></TrailDropdown>
                 {/if}
             </div>
         </section>
@@ -421,6 +423,7 @@
                 {#if activeTab == 0}
                     <div class="overflow-x-auto">
                         <SummitLogTable
+                            {domain}
                             summitLogs={trail.expand?.summit_logs}
                             showAuthor
                             showRoute

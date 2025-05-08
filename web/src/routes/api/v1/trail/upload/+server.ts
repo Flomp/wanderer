@@ -1,12 +1,13 @@
 import GPX from "$lib/models/gpx/gpx";
 import { haversineDistance } from "$lib/models/gpx/utils";
-import type { Trail } from "$lib/models/trail";
+import type { Trail, TrailSearchResult } from "$lib/models/trail";
 import { trails_create } from "$lib/stores/trail_store";
 import { handleError } from "$lib/util/api_util";
 import { fromFile, gpx2trail } from "$lib/util/gpx_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
+import type MeiliSearch from "meilisearch";
+import type { Hits } from "meilisearch";
 import { ClientResponseError } from "pocketbase";
-import type PocketBase from 'pocketbase';
 
 export async function PUT(event: RequestEvent) {
     try {
@@ -28,14 +29,14 @@ export async function PUT(event: RequestEvent) {
 
         const ignoreDuplicates = data.get("ignoreDuplicates") === "true"
         if (!ignoreDuplicates) {
-            let duplicate: Trail | null = null;
+            let duplicate: TrailSearchResult | null = null;
             try {
-                duplicate = await findDuplicate(event.locals.pb, trail)
+                duplicate = await findDuplicate(event.locals.ms, trail)
             } catch (e: any) {
                 throw new ClientResponseError({ status: 500, response: { message: "Error checking for duplicates" } })
             }
             if (duplicate !== null) {
-                throw new ClientResponseError({ status: 400, response: { message: `Duplicate trail`, id: duplicate.id, name: duplicate.name }, })
+                throw new ClientResponseError({ status: 400, response: { message: `Duplicate trail`, id: duplicate.id, name: duplicate.name, domain: `${duplicate.author_name}${duplicate.domain ? '@' + duplicate.domain : ''}` }, })
             }
         }
 
@@ -65,8 +66,10 @@ export async function PUT(event: RequestEvent) {
     }
 }
 
-async function findDuplicate(pb: PocketBase, t1: Trail) {
-    const trails: Trail[] = await pb.collection('trails').getFullList({ requestKey: null });
+async function findDuplicate(ms: MeiliSearch, t1: Trail) {
+    const response = await ms.index("trails").search("", {});
+
+    const trails: TrailSearchResult[] = response.hits as Hits<TrailSearchResult>
 
     const distanceThreshold = 100;
     const elevationThreshhold = 50;
@@ -76,7 +79,7 @@ async function findDuplicate(pb: PocketBase, t1: Trail) {
         const lengthDifference = Math.abs((t1.distance ?? 0) - (t2.distance ?? 0));
         const elevationGainDifference = Math.abs((t1.elevation_gain ?? 0) - (t2.elevation_gain ?? 0));
         const elevationLossDifference = Math.abs((t1.elevation_loss ?? 0) - (t2.elevation_loss ?? 0));
-        const startpointDifference = haversineDistance(t1.lat ?? 0, t1.lon ?? 0, t2.lat ?? 0, t2.lon ?? 0)
+        const startpointDifference = haversineDistance(t1.lat ?? 0, t1.lon ?? 0, t2._geo.lat ?? 0, t2._geo.lng ?? 0)
 
         if (lengthDifference < lengthThreshhold && elevationGainDifference < elevationThreshhold && elevationLossDifference < elevationThreshhold && startpointDifference < distanceThreshold) {
             return t2

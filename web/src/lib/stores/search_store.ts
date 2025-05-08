@@ -32,6 +32,7 @@ export type TrailSearchResult = {
     location: string;
     name: string;
     public: boolean;
+    domain?: string;
     polyline?: string;
 }
 

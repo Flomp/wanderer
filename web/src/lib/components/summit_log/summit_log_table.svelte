@@ -13,6 +13,7 @@
 
     interface Props {
         summitLogs?: SummitLog[];
+        domain: string;
         showCategory?: boolean;
         showTrail?: boolean;
         showAuthor?: boolean;
@@ -22,6 +23,7 @@
 
     let {
         summitLogs = [],
+        domain,
         showCategory = false,
         showTrail = false,
         showAuthor = false,
@@ -104,6 +106,7 @@
         {#each summitLogs as log, i}
             <SummitLogTableRow
                 {log}
+                {domain}
                 onopen={(log) => openMap(log)}
                 ontext={(log) => openText(log)}
                 {showCategory}

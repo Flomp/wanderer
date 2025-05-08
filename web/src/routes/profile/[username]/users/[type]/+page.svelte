@@ -1,11 +1,9 @@
 <script lang="ts">
     import { page } from "$app/state";
-    import { follows_index } from "$lib/stores/follow_store.js";
-    import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
     let { data } = $props();
 
-    let follows = $state(data.follows);
+    let follows = $derived(data.follows);
 
     let loading: boolean = false;
 
@@ -35,10 +33,10 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        follows = await follows_index(
-            { followee: page.params.id },
-            pagination.page,
-        );
+        // follows = await follows_index(
+        //     { followee: page.params.id },
+        //     pagination.page,
+        // );
     }
 </script>
 
@@ -47,43 +45,21 @@
     <h1 class="text-3xl font-semibold mb-4">{$_(page.params.type)}</h1>
     <ul class="space-y-4">
         {#each follows.items as follow}
-            {#if !follow.expand?.[key].private}
-                <a href="/profile/{follow.expand?.[key].id}">
-                    <li
-                        class="flex items-center gap-x-4 hover:bg-menu-item-background-hover p-4"
-                    >
-                        <img
-                            class="rounded-full w-10 aspect-square overflow-hidden"
-                            src={getFileURL(
-                                follow.expand?.[key] ?? {},
-                                follow.expand?.[key].avatar,
-                            ) ||
-                                `https://api.dicebear.com/7.x/initials/svg?seed=${data.user.username}&backgroundType=gradientLinear`}
-                            alt="avatar"
-                        />
-                        <p class="text-lg font-medium">
-                            {follow.expand?.[key].username}
-                        </p>
-                    </li>
-                </a>
-            {:else}
+            <a href="/profile/@{follow.expand?.[key].username}{follow.expand?.[key].isLocal ? '' : '@' + follow.expand?.[key].username}">
                 <li
                     class="flex items-center gap-x-4 hover:bg-menu-item-background-hover p-4"
                 >
                     <img
                         class="rounded-full w-10 aspect-square overflow-hidden"
-                        src={getFileURL(
-                            follow.expand?.[key] ?? {},
-                            follow.expand?.[key].avatar,
-                        ) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${data.user.username}&backgroundType=gradientLinear`}
+                        src={follow.expand?.[key].icon ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${follow.expand?.[key].username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
                     <p class="text-lg font-medium">
                         {follow.expand?.[key].username}
                     </p>
                 </li>
-            {/if}
+            </a>
         {/each}
     </ul>
 </div>

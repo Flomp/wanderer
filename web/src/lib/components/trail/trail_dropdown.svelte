@@ -23,10 +23,11 @@
 
     interface Props {
         trail: Trail;
+        domain: string;
         mode: "overview" | "map" | "list";
     }
 
-    let { trail, mode }: Props = $props();
+    let { trail, domain, mode }: Props = $props();
 
     let confirmModal: ConfirmModal;
     let listSelectModal: ListSelectModal;
@@ -81,8 +82,8 @@
         if (item.value == "show") {
             goto(
                 mode == "overview"
-                    ? `/map/trail/${trail.id!}`
-                    : `/trail/view/${trail.id!}`,
+                    ? `/map/trail/${domain}/${trail.id!}`
+                    : `/trail/view/${domain}/${trail.id!}`,
             );
         } else if (item.value == "list") {
             lists = (
@@ -101,7 +102,7 @@
                 )
                 ?.focus();
         } else if (item.value == "print") {
-            goto(`/map/trail/${trail.id}/print`);
+            goto(`/map/trail/${domain}/${trail.id}/print`);
         } else if (item.value == "share") {
             trailShareModal.openModal();
         } else if (item.value == "download") {

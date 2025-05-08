@@ -50,9 +50,9 @@ export async function trails_recommend(size: number, f: (url: RequestInfo | URL,
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
-    const response: Trail[] = await r.json()
+    const response: Hits<TrailSearchResult> = await r.json()
 
-    return response;
+    return searchResultToTrailList(response);
 
 }
 
@@ -132,8 +132,9 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 
 }
 
-export async function trails_show(id: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const r = await f(`/api/v1/trail/${id}?` + new URLSearchParams({
+export async function trails_show(id: string, domain?: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+
+    const r = await f(`${domain ? ('https://' + domain) : ''}/api/v1/trail/${id}?` + new URLSearchParams({
         expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
     }), {
         method: 'GET',
@@ -455,7 +456,7 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<T
             collectionId: "trails",
             collectionName: "trails",
             updated: new Date(h.created * 1000).toISOString(),
-            author: h.author,
+            author: h.author_name,
             name: h.name,
             photos: h.thumbnail ? [h.thumbnail] : [],
             public: h.public,
@@ -477,6 +478,7 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<T
             location: h.location,
             gpx: h.gpx,
             polyline: h.polyline,
+            domain: h.domain,
             thumbnail: 0,
             expand: {
                 author: {
@@ -497,6 +499,8 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<T
 
         trails.push(t)
     }
+    console.log(trails);
+
     return trails
 }
 

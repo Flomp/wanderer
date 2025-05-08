@@ -1,11 +1,10 @@
 import type { Actor } from '$lib/models/activitypub/actor';
 import type { WebfingerResponse } from '$lib/models/activitypub/webfinger_response';
-import { type RequestEvent } from '@sveltejs/kit';
 import { type APActor, type APImage, type APOrderedCollection } from 'activitypub-types';
 import { ClientResponseError } from 'pocketbase';
 
 
-export function splitUsername(username: string, localDomain: string) {
+export function splitUsername(username: string, localDomain?: string) {
     const cleaned = username.replace(/^@/, "").trim();
 
     if (!cleaned.includes("@")) {

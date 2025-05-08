@@ -392,6 +392,7 @@
         <div class=" overflow-x-auto">
             <SummitLogTable
                 summitLogs={$summitLogs}
+                domain={page.params.username}
                 showCategory
                 showTrail
                 showRoute

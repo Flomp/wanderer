@@ -98,7 +98,7 @@
         onupdate?.(filter);
     }
 
-    function handleSortUpdate(sort: any) {        
+    function handleSortUpdate(sort: any) {
         if (!filter) {
             return;
         }
@@ -190,7 +190,9 @@
                     <a
                         class="max-w-full flex-1"
                         class:basis-full={selectedDisplayOption === "list"}
-                        href="/trail/view/{trail.id}"
+                        href="/trail/view/@{trail.author}{trail.domain
+                            ? `@${trail.domain}`
+                            : ''}/{trail.id}"
                     >
                         {#if selectedDisplayOption === "cards"}
                             <TrailCard fullWidth={fullWidthCards} {trail}

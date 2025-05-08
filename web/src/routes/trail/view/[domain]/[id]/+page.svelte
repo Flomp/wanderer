@@ -1,8 +1,8 @@
 <script lang="ts">
+    import { page } from "$app/state";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import { trail } from "$lib/stores/trail_store";
     import { _ } from "svelte-i18n";
-    import { page } from "$app/state";
 
     let { data } = $props();
 </script>
@@ -12,6 +12,7 @@
         activeTab={parseInt(page.url.searchParams.get("t") ?? "0")}
         initTrail={data.trail}
         mode="overview"
+        domain={page.params.domain}
     ></TrailInfoPanel>
 {/if}
 <svelte:head>

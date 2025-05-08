@@ -177,7 +177,7 @@
     }
 
     async function handleSearchClick(item: SearchItem) {
-        const trail = await trails_show(item.value, true);
+        const trail = await trails_show(item.value, undefined, true);
         $formData.trails?.push(trail.id!);
         $formData.expand = {
             trails: [...($formData.expand?.trails ?? []), trail],

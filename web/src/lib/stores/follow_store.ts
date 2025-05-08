@@ -1,13 +1,21 @@
 import type { Follow } from "$lib/models/follow";
 import type { User } from "$lib/models/user";
+import { splitUsername } from "$lib/util/activitypub_util";
 import { APIError } from "$lib/util/api_util";
 import { type ListResult } from "pocketbase";
 
 let follows: Follow[] = [];
 
-export async function follows_index(data: { follower?: string, followee?: string }, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function follows_index(data: { username: string, type: "follower" | "followee" }, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+
+    const [user, domain] = splitUsername(data.username)
+    let filter = `${data.type}.username='${user}'`
+    if(domain) {
+        filter += `&&${data.type}.domain='${domain}'`
+    }
+
     const r = await f('/api/v1/follow?' + new URLSearchParams({
-        filter: data.follower ? `follower='${data.follower}'` : data.followee ? `followee='${data.followee}'` : '',
+        filter: filter,
         page: page.toString(),
         perPage: perPage.toString(),
         requestKey: "page"
@@ -64,7 +72,7 @@ export async function follows_counts(id: string, f: (url: RequestInfo | URL, con
 export async function follows_create(followee: string) {
     let r = await fetch('/api/v1/follow', {
         method: 'PUT',
-        body: JSON.stringify({followee}),
+        body: JSON.stringify({ followee }),
     })
 
     if (!r.ok) {

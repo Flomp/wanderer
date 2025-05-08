@@ -71,7 +71,9 @@
                 {#each trails as trail}
                     <tr
                         class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
-                        onclick={() => goto(`/trail/view/${trail.id}`)}
+                        onclick={() => goto(`/trail/view/@${trail.author}${trail.domain
+                            ? `@${trail.domain}`
+                            : ''}/${trail.id}`)}
                     >
                         <td
                             class="flex justify-between items-center text-sm relative"

@@ -28,6 +28,7 @@ class Trail {
     waypoints: string[];
     summit_logs: string[];
     polyline?: string;
+    domain?: string;
     expand?: {
         tags?: Tag[]
         category?: Category;
@@ -169,6 +170,7 @@ interface TrailSearchResult {
     polyline?: string;
     shares?: string[];
     tags?: string[]
+    domain?: string;
     gpx: string;
     _geo: {
         lat: number,
@@ -195,6 +197,7 @@ export const defaultTrailSearchAttributes = [
     "created",
     "public",
     "thumbnail",
+    "domain",
     "gpx",
     "tags",
     "shares",

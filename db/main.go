@@ -8,11 +8,9 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
-	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -753,46 +751,6 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 			return err
 		}
 		return e.JSON(http.StatusOK, map[string]string{"token": token})
-	})
-	se.Router.GET("/trail/recommend", func(e *core.RequestEvent) error {
-		qSize := e.Request.URL.Query().Get("size")
-		size, err := strconv.Atoi(qSize)
-		if err != nil {
-			size = 4
-		}
-
-		userId := ""
-		if e.Auth != nil {
-			userId = e.Auth.Id
-		}
-
-		trails, err := e.App.FindRecordsByFilter(
-			"trails",
-			"author = {:userId} || public = true || ({:userId} != '' && trail_share_via_trail.user ?= {:userId})",
-			"",
-			-1,
-			0,
-			dbx.Params{"userId": userId},
-		)
-		if err != nil {
-			return err
-		}
-		for _, t := range trails {
-			errs := e.App.ExpandRecord(t, []string{"tags"}, nil)
-			if len(errs) > 0 {
-				return err
-			}
-		}
-
-		if len(trails) < size {
-			size = len(trails)
-		}
-		rand.Shuffle(len(trails), func(i, j int) {
-			trails[i], trails[j] = trails[j], trails[i]
-		})
-		randomTrails := trails[:size]
-		return e.JSON(http.StatusOK, randomTrails)
-
 	})
 
 	se.Router.POST("/integration/strava/token", func(e *core.RequestEvent) error {

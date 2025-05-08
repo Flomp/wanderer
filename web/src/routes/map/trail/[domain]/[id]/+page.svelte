@@ -1,10 +1,11 @@
 <script lang="ts">
+    import { page } from "$app/state";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import * as M from "maplibre-gl";
     import "photoswipe/style.css";
     import { _ } from "svelte-i18n";
-
+    
     let { data } = $props();
 
     const trail = $state(data.trail);
@@ -18,7 +19,7 @@
 
 <main class="grid grid-cols-1 md:grid-cols-[458px_1fr] gap-x-1 gap-y-4">
     <div id="panel" class="hidden md:block">
-        <TrailInfoPanel initTrail={trail} {markers}></TrailInfoPanel>
+        <TrailInfoPanel domain={page.params.domain} initTrail={trail} {markers}></TrailInfoPanel>
     </div>
     <div id="trail-details">
         <MapWithElevationMaplibre

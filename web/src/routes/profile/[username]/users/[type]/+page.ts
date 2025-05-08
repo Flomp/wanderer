@@ -6,6 +6,10 @@ export const load: Load = async ({ params, fetch }) => {
         throw error(400, "Missing or wrong type");
     }
 
-    const follows = await follows_index({ [params.type == "followers" ? "followee" : "follower"]: params.id }, 1, 10, fetch)
+    const follows = await follows_index({ type: params.type == "followers" ? "followee" : "follower", username: params.username! },
+        1, 10, fetch)
+
+    console.log(follows);
+
     return { follows }
 };

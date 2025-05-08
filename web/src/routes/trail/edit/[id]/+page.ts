@@ -20,7 +20,7 @@ export const load: Load = async ({ params, fetch }) => {
     if (params.id === "new") {
         trail = new Trail("", { category: categories[0] });
     } else {
-        trail = await trails_show(params.id, true, fetch);
+        trail = await trails_show(params.id, undefined, true, fetch);
     }
 
     return { trail: trail, lists: lists }

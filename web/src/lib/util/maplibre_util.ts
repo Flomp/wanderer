@@ -174,7 +174,9 @@ export function createPopupFromTrail(trail: Trail) {
     const popup = new M.Popup({ maxWidth: "420px" });
     // Create a container element for the popup content
     const linkElement = document.createElement("a");
-    linkElement.href = `/map/trail/${trail.id}`; // Set href safely
+    linkElement.href = `/map/trail/@${trail.author}${trail.domain
+        ? `@${trail.domain}`
+        : ''}/${trail.id}`; // Set href safely
     linkElement.setAttribute("data-sveltekit-preload-data", "off");
 
     // Create a list item element

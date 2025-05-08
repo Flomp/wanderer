@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"pocketbase/models"
 	"strings"
 	"time"
 
@@ -94,21 +95,21 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 
 func ProcessActivity(e *core.RequestEvent) error {
 	pub.ItemTyperFunc = func(typ pub.ActivityVocabularyType) (pub.Item, error) {
-		if typ == TrailType {
-			return TrailNew(), nil
+		if typ == models.TrailType {
+			return models.TrailNew(), nil
 		}
 		return pub.GetItemByType(typ)
 	}
 	pub.JSONItemUnmarshal = func(typ pub.ActivityVocabularyType, v *fastjson.Value, i pub.Item) error {
-		if typ == TrailType {
-			return OnTrail(i, func(t *Trail) error {
-				return JSONLoadTrail(v, t)
+		if typ == models.TrailType {
+			return models.OnTrail(i, func(t *models.Trail) error {
+				return models.JSONLoadTrail(v, t)
 			})
 		}
 		return nil
 	}
 	pub.IsNotEmpty = func(i pub.Item) bool {
-		if i.GetType() == TrailType {
+		if i.GetType() == models.TrailType {
 			return true
 		}
 

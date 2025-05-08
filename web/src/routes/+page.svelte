@@ -51,7 +51,7 @@
         const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
             text: t.name,
             description: `Trail ${t.location.length ? ", " + t.location : ""}`,
-            value: t.id,
+            value: `@${t.author}${t.domain ? `@${t.domain}` : ""}/${t.id}`,
             icon: "route",
         }));
         const listItems = r[1].hits.map((t: ListSearchResult) => ({
@@ -130,7 +130,12 @@
             />
         {:else}
             {#each data.trails as trail}
-                <a class="w-full md:max-w-72" href="/trail/view/{trail.id}">
+                <a
+                    class="w-full md:max-w-72"
+                    href="/trail/view/@{trail.author}{trail.domain
+                        ? '@' + trail.domain
+                        : ''}/{trail.id}"
+                >
                     <TrailCard {trail} fullWidth></TrailCard></a
                 >
             {/each}

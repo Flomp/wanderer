@@ -1,8 +1,7 @@
 import type { Actor } from '$lib/models/activitypub/actor';
 import { FollowCreateSchema } from '$lib/models/api/follow_schema';
 import type { Follow } from '$lib/models/follow';
-import type { UserAnonymous } from '$lib/models/user';
-import { Collection, create, handleError, list } from '$lib/util/api_util';
+import { Collection, handleError, list } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {

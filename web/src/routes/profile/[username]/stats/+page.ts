@@ -5,7 +5,7 @@ import { error, type Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch }) => {
 
-    if(!params.id) {
+    if(!params.username) {
         error(404, "Not found")
     }
 
@@ -23,7 +23,7 @@ export const load: Load = async ({ params, fetch }) => {
         endDate: lastDay.toISOString().slice(0, 10),
         category: []
     }
-    const logs = await summit_logs_index(params.id, filter, fetch);
+    const logs = await summit_logs_index(params.username, filter, fetch);
 
     return { filter }
 };

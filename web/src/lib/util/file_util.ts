@@ -3,8 +3,22 @@ export function getFileURL(record: { [key: string]: any; }, filename?: string) {
     if (!filename) {
         return "";
     }
+    if (isURL(filename)) {
+        return filename;
+    }
 
     return `/api/v1/files/${record.collectionId}/${record.id}/${filename}`
+}
+
+function isURL(value: string) {
+    let url
+    try {
+        url = new URL(value);
+    } catch (_) {
+        return false;
+    }
+
+    return url.protocol === "http:" || url.protocol === "https:";
 }
 
 export function readAsDataURLAsync(file: File) {
@@ -19,7 +33,7 @@ export function readAsDataURLAsync(file: File) {
 }
 
 export function isVideoURL(url: string) {
-    if(url.startsWith("data")) {
+    if (url.startsWith("data")) {
         return url.startsWith("data:video")
     }
     return url.includes("mp4") || url.includes("ogg") || url.includes("webm")
