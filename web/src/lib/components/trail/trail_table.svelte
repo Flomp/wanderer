@@ -89,7 +89,7 @@
 </script>
 
 <div
-    class="table-container w-full border border-input-border rounded-xl overflow-x-scroll overflow-y-clip"
+    class="table-container w-full border border-input-border rounded-xl overflow-x-auto overflow-y-clip"
 >
     <table class="w-full">
         <thead>
