@@ -2,6 +2,7 @@
     import { type Snippet } from "svelte";
 
     import type { List } from "$lib/models/list";
+    import type { Trail } from "$lib/models/trail";
     import { trail } from "$lib/stores/trail_store";
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
@@ -12,11 +13,12 @@
 
     interface Props {
         lists: List[];
+        trails?: Set<Trail> | undefined;
         children?: Snippet<[any]>;
         onchange?: (list: List) => void
     }
 
-    let { lists, children, onchange }: Props = $props();
+    let { lists, trails, children, onchange }: Props = $props();
 
     let modal: Modal;
 
@@ -27,6 +29,20 @@
     function handleSelect(list: List) {
         onchange?.(list);
         modal.closeModal!();
+    }
+
+    function listContainsAllTrails(list: List) : boolean {
+        if (trails === undefined) {
+            return listContainsCurrentTrail(list) ?? false;
+        } else if (list.trails !== undefined) {
+            for (const lTrail of trails) {
+                if (!list.trails!.includes(lTrail.id!)) return false;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     function listContainsCurrentTrail(list: List) {
@@ -66,7 +82,7 @@
                     <h5 class="text-md font-semibold">{list.name}</h5>
 
                     <i
-                        class="fa fa-{listContainsCurrentTrail(list)
+                        class="fa fa-{listContainsAllTrails(list)
                             ? 'minus'
                             : 'plus'} rounded-full border border-input-border p-2"
                     ></i>

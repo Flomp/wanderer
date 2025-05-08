@@ -17,16 +17,23 @@
     interface Props {
         trail: Trail;
         fullWidth?: boolean;
+        selected: boolean;
+        hovered: boolean;
         onmouseenter?: MouseEventHandler<HTMLDivElement>;
         onmouseleave?: MouseEventHandler<HTMLDivElement>;
+        onTrailSelect?: () => void;
     }
 
     let {
         trail,
         fullWidth = false,
+        selected = false,
+        hovered = false,
         onmouseenter,
         onmouseleave,
+        onTrailSelect,
     }: Props = $props();
+
 
     let thumbnail = $derived(
         trail.photos.length
@@ -39,6 +46,12 @@
     let trailIsShared = $derived(
         (trail.expand?.trail_share_via_trail?.length ?? 0) > 0,
     );
+
+    function handleInputClick(e: Event) {
+        e.stopPropagation();
+        onTrailSelect?.();
+        hovered = true;
+    }
 </script>
 
 <div
@@ -71,6 +84,17 @@
             />
         {/if}
     </div>
+    {#if hovered || selected}
+    <div class="flex absolute top-4 left-4 w-8 h-8 rounded-full items-center justify-center bg-background text-content">
+        <input
+            id="trail-selected"
+            type="checkbox"
+            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+            bind:checked={selected}
+            onclick={(e) => handleInputClick(e)}
+        />
+    </div>
+    {/if}
     {#if (trail.public || trailIsShared) && $currentUser}
         <div
             class="flex absolute top-4 right-4 {trail.public && trailIsShared

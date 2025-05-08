@@ -315,7 +315,7 @@
                     </div>
                 </div>
                 {#if ($currentUser && $currentUser.id == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
-                    <TrailDropdown {trail} {mode}></TrailDropdown>
+                    <TrailDropdown trails={new Set<Trail>([trail])} {mode}></TrailDropdown>
                 {/if}
             </div>
         </section>
