@@ -323,7 +323,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
 
     if (photos) {
         for (const photo of photos) {
-            formData.append("photos", photo)
+            formData.append("photos+", photo)
         }
     }
 
