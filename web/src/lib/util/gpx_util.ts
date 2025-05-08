@@ -14,6 +14,7 @@ import JSZip from "jszip";
 import type { AuthRecord } from "pocketbase";
 import * as xmldom from 'xmldom';
 import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
+import { trails_show } from "$lib/stores/trail_store";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -71,10 +72,21 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, f: (ur
 }
 
 export async function trail2gpx(trail: Trail, user?: AuthRecord) {
+    let gpxTrail = trail;
+
     if (!trail.expand?.gpx_data) {
-        throw Error("Trail has no GPX data")
+        // no gpx_data -> empty trail?
+        // or just not expanded? -> expand now
+        const response = await trails_show(trail.id!, true);
+
+        if (!response.expand?.gpx_data) {
+            throw Error("Trail has no GPX data")
+        } else {
+            gpxTrail = response;
+        }
     }
-    const gpx = await GPX.parse(trail.expand.gpx_data) as GPX;
+    
+    const gpx = await GPX.parse(gpxTrail.expand!.gpx_data!) as GPX;
 
     if (gpx instanceof Error) {
         throw gpx;
@@ -92,7 +104,7 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
         gpx.wpt = [];
     }
 
-    for (const wp of trail.expand.waypoints ?? []) {
+    for (const wp of gpxTrail.expand!.waypoints ?? []) {
         const gpxWpt = gpx.wpt.find((w) => w.$.lat == wp.lat && w.$.lon == wp.lon)
         if (!gpxWpt) {
             gpx.wpt.push({

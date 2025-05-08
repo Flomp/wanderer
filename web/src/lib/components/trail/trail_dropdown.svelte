@@ -101,9 +101,19 @@
     function hasTrail() : boolean {
         return trails !== undefined && trails.size > 0 && [...trails][0] !== undefined;
     }
+
+    function hasGpx() : boolean {
+        if (!hasTrail()) return false;
+
+        for (const gTrail of trails!) {
+            if (gTrail.gpx) return true;
+        }
+
+        return false;
+    }
         
     function canExport() : boolean {
-        return !isMultiselectMode() && hasTrail() && trail()!.expand?.gpx_data != undefined && trail()!.expand!.gpx_data!.length > 0;
+        return hasGpx();
     }
         
     function trailId() : string | undefined {
