@@ -287,6 +287,10 @@
         await trails_delete(dTrail);
     }
 
+    async function handleShareUpdate() {
+        onconfirm?.();
+    }
+
     async function handleListSelection(list: List) {
         try {
             let deleted = false;
@@ -364,4 +368,4 @@
     bind:this={trailExportModal}
     onexport={(settings) => exportTrails(settings)}
 ></TrailExportModal>
-<TrailShareModal trail={trail()} bind:this={trailShareModal}></TrailShareModal>
+<TrailShareModal trail={trail()} onsave={handleShareUpdate} bind:this={trailShareModal}></TrailShareModal>
