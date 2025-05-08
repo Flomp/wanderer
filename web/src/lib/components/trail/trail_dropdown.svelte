@@ -120,6 +120,10 @@
         return trail()?.id;
     }
 
+    function getTrails() : Set<Trail> | undefined {
+        return trails;
+    }
+
     function trail() : Trail | undefined {
         return hasTrail() ? [...trails!][0] : undefined;
     }
@@ -330,12 +334,27 @@
         }
     }
 
-    async function doHandleListSelection(list: List, lTrail: Trail): Promise<boolean> {
+    async function doHandleListSelection(list: List, lTrail: Trail): Promise<boolean> {        
         if (list.trails?.includes(lTrail.id!)) {
-            await lists_remove_trail(list, lTrail);
-            return true;
+            if (listContainsAllTrails(list)) {
+                await lists_remove_trail(list, lTrail);
+                return true;
+            }
         } else {
             await lists_add_trail(list, lTrail);
+        }
+
+        return false;
+    }
+    function listContainsAllTrails(list: List) : boolean {
+        if (trails === undefined) {
+            return false;
+        } else if (list.trails !== undefined) {
+            for (const lTrail of trails) {
+                if (!list.trails!.includes(lTrail.id!)) return false;
+            }
+
+            return true;
         }
 
         return false;
@@ -360,7 +379,8 @@
     onconfirm={deleteTrails}
 ></ConfirmModal>
 <ListSelectModal
-    {lists}
+    lists={lists}
+    trails={getTrails()}
     bind:this={listSelectModal}
     onchange={(list) => handleListSelection(list)}
 ></ListSelectModal>
