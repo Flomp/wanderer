@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
-import type { Activity } from '$lib/models/activitypub/activity';
 import type { Actor } from '$lib/models/activitypub/actor';
+import type { Follow } from '$lib/models/follow';
 import type { UserAnonymous } from "$lib/models/user";
 import { splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
@@ -27,11 +27,11 @@ export async function GET(event: RequestEvent) {
 
         const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getFirstListItem(`username='${username}'`)
         const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user='${user.id}'`)
-        const activities: ListResult<Activity> = await event.locals.pb.collection("activitypub_activities").getList(intPage, 10, { sort: "-created", filter: `actor='${actor.iri}'` })
+        const followers: ListResult<Follow> = await event.locals.pb.collection("follows").getList(intPage, 10, { sort: "-created", filter: `followee='${actor.id}'`, expand: "follower" })
 
         const id = actor.iri;
 
-        const hasNextPage = intPage * 10 < activities.totalItems;
+        const hasNextPage = intPage * 10 < followers.totalItems;
 
         const outbox: APRoot<APOrderedCollectionPage> = {
             "@context": [
@@ -42,15 +42,8 @@ export async function GET(event: RequestEvent) {
             ...(intPage > 1 ? { prev: `${id}/outbox?page=${intPage - 1}` } : {}),
             ...(hasNextPage ? { next: `${id}/outbox?page=${intPage + 1}` } : {}),
             partOf: id + "/outbox",
-            totalItems: activities.totalItems,
-            orderedItems: activities.items.map<APActivity>(a => ({
-                id: a.iri,
-                actor: a.actor,
-                to: a.to,
-                cc: a.cc,
-                published: a.published,
-                object: a.object
-            }))
+            totalItems: followers.totalItems,
+            orderedItems: followers.items.map<string>(f => f.expand!.follower.iri)
         }
 
         const headers = new Headers()

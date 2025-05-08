@@ -57,7 +57,10 @@ export async function POST(event: RequestEvent) {
             return json("Invalid header signature", { status: 400 });
         }
 
-        return json("", { status: 200 });
+        const headers = new Headers()
+        headers.append("Content-Type", "application/activity+json")
+
+        return json("", { status: 200, headers });
     } catch (e) {
         throw handleError(e)
     }

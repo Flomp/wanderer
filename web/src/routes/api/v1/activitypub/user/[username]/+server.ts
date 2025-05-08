@@ -3,7 +3,7 @@ import type { Actor } from '$lib/models/activitypub/actor';
 import { splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
-import { type APActor } from 'activitypub-types';
+import { type APActor, type APRoot } from 'activitypub-types';
 import type { UserAnonymous } from "$lib/models/user";
 
 
@@ -25,7 +25,10 @@ export async function GET(event: RequestEvent) {
 
         const id = `${env.ORIGIN}/api/v1/activitypub/user/${username}`
 
-        const r: APActor & { publicKey: { id: string, owner: string, publicKeyPem: string } } = {
+        const r: APRoot<APActor & { publicKey: { id: string, owner: string, publicKeyPem: string } }> = {
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+            ],
             id: id,
             type: "Person",
             inbox: id + '/inbox',
@@ -35,7 +38,7 @@ export async function GET(event: RequestEvent) {
             preferredUsername: user.username,
             followers: id + '/followers',
             following: id + '/following',
-            url: id,
+            url: `${env.ORIGIN}/profile/@${username}`,
             published: user.created,
             icon: {
                 type: "Image",
@@ -48,8 +51,10 @@ export async function GET(event: RequestEvent) {
             }
 
         }
+        const headers = new Headers()
+        headers.append("Content-Type", "application/activity+json")
 
-        return json(r);
+        return json(r, { headers });
     } catch (e) {
         throw handleError(e)
     }

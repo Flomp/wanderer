@@ -19,6 +19,7 @@ export class APIError extends Error {
 
 export enum Collection {
     users = "users",
+    activitypub_activities = "activitypub_activities",
     categories = "categories",
     comments = "comments",
     follows = "follows",
