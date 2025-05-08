@@ -30,6 +30,8 @@ import (
 
 	_ "pocketbase/migrations"
 	"pocketbase/util"
+
+	pub "github.com/go-ap/activitypub"
 )
 
 const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
@@ -260,7 +262,7 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			}
 		}
 
-		err = federation.CreateTrailCreateActivity(e.App, e.Record)
+		err = federation.CreateTrailActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -280,6 +282,11 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		if err != nil {
 			return err
 		}
+
+		err = federation.CreateTrailActivity(e.App, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
 		return e.Next()
 	}
 }
@@ -296,6 +303,11 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		_, err = client.WaitForTask(task.TaskUID, interval)
 		if err != nil {
 			log.Fatalf("Error waiting for task completion: %v", err)
+		}
+
+		err = federation.CreateDeleteActivity(e.App, e.Record)
+		if err != nil {
+			return err
 		}
 
 		return e.Next()

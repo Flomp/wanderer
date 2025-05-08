@@ -15,8 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 )
 
-// create outgoing follow activity
-func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
+func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocabularyType) error {
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -98,6 +97,7 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 	trailObject.Published = trail.GetDateTime("created").Time()
 	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
 	trailObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id))
+	trailObject.TrailId = trail.Id
 
 	trailObject.Distance = trail.GetFloat("distance")
 	trailObject.ElevationGain = trail.GetFloat("elevation_gain")
@@ -115,13 +115,14 @@ func CreateTrailCreateActivity(app core.App, trail *core.Record) error {
 	activity.Actor = pub.IRI(trailAuthor.GetString("iri"))
 	activity.To = pub.ItemCollection{pub.IRI(to)}
 	activity.CC = pub.ItemCollection{pub.IRI(cc)}
+	activity.Published = time.Now()
 
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
 	record.Set("iri", id)
 	record.Set("to", to)
 	record.Set("cc", cc)
-	record.Set("type", string(pub.CreateType))
+	record.Set("type", string(typ))
 	record.Set("object", trailObject)
 	record.Set("actor", trailAuthor.GetString("iri"))
 	record.Set("published", time.Now())

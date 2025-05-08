@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/url"
-	"path"
 	"pocketbase/models"
 	"strings"
 
@@ -83,11 +82,6 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 }
 
 func DocumentFromActivity(app core.App, t *models.Trail, author *core.Record) (map[string]interface{}, error) {
-	trailUrl, err := url.Parse(t.ID.String())
-	if err != nil {
-		return nil, err
-	}
-
 	tags, err := t.Tag.MarshalJSON()
 	if err != nil {
 		return nil, err
@@ -100,7 +94,7 @@ func DocumentFromActivity(app core.App, t *models.Trail, author *core.Record) (m
 	domain := strings.TrimPrefix(url.Hostname(), "www.")
 
 	document := map[string]any{
-		"id":             path.Base(trailUrl.Path),
+		"id":             t.TrailId,
 		"author":         author.Id,
 		"author_name":    author.GetString("username"),
 		"author_avatar":  author.GetString("icon"),

@@ -16,6 +16,7 @@ const (
 type Trail struct {
 	pub.Object
 
+	TrailId       string    `jsonld:"trail_id,omitempty"`
 	Distance      float64   `jsonld:"distance,omitempty"`
 	ElevationGain float64   `jsonld:"elevation_gain,omitempty"`
 	ElevationLoss float64   `jsonld:"elevation_loss,omitempty"`
@@ -41,6 +42,7 @@ func (r Trail) MarshalJSON() ([]byte, error) {
 	}
 
 	b = b[:len(b)-1]
+	pub.JSONWriteStringProp(&b, "trail_id", r.TrailId)
 	pub.JSONWriteFloatProp(&b, "distance", r.Distance)
 	pub.JSONWriteFloatProp(&b, "elevation_gain", r.ElevationGain)
 	pub.JSONWriteFloatProp(&b, "elevation_loss", r.ElevationLoss)
@@ -56,6 +58,7 @@ func (r Trail) MarshalJSON() ([]byte, error) {
 }
 
 func JSONLoadTrail(val *fastjson.Value, r *Trail) error {
+	r.TrailId = pub.JSONGetString(val, "trail_id")
 	r.Distance = pub.JSONGetFloat(val, "distance")
 	r.ElevationGain = pub.JSONGetFloat(val, "elevation_gain")
 	r.ElevationLoss = pub.JSONGetFloat(val, "elevation_loss")

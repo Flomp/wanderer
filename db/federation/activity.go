@@ -137,8 +137,12 @@ func ProcessActivity(e *core.RequestEvent) error {
 		ProcessAcceptActivity(e.App, actor, activity)
 	case pub.UndoType:
 		ProcessUnfollowActivity(e.App, actor, activity)
+	case pub.UpdateType:
+		fallthrough
 	case pub.CreateType:
 		ProcessCreateActivity(e.App, actor, activity)
+	case pub.DeleteType:
+		ProcessDeleteActivity(e.App, actor, activity)
 	}
 	return e.JSON(http.StatusOK, nil)
 }
