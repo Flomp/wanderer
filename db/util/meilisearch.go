@@ -115,6 +115,7 @@ func DocumentFromActivity(app core.App, t *models.Trail, author *core.Record) (m
 		"gpx":            t.Gpx,
 		"tags":           tags,
 		"domain":         domain,
+		"url":            t.ID,
 		"_geo": map[string]float64{
 			"lat": t.Location.(*pub.Place).Latitude,
 			"lng": t.Location.(*pub.Place).Longitude,

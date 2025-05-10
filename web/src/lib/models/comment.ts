@@ -1,4 +1,4 @@
-import type { UserAnonymous } from "./user";
+import type { Actor } from "./activitypub/actor";
 
 export class Comment {
     id?: string;
@@ -9,7 +9,7 @@ export class Comment {
     created?: string;
     updated?: string;
     expand?: {
-        author: UserAnonymous
+        author: Actor
     }
 
     constructor(text: string, rating: number, author: string, trail: string) {

@@ -92,6 +92,10 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("trails").BindFunc(updateTrailHandler(client))
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(deleteTrailHandler(client))
 
+	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler(client))
+	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler(client))
+	app.OnRecordDeleteRequest("comments").BindFunc(deleteCommentHandler())
+
 	app.OnRecordAfterCreateSuccess("trail_share").BindFunc(createTrailShareHandler(client))
 	app.OnRecordAfterDeleteSuccess("trail_share").BindFunc(deleteTrailShareHandler(client))
 
@@ -104,7 +108,6 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 
 	app.OnRecordAfterCreateSuccess("follows").BindFunc(createFollowHandler())
 	app.OnRecordAfterDeleteSuccess("follows").BindFunc(deleteFollowHandler())
-	app.OnRecordAfterCreateSuccess("comments").BindFunc(createCommentHandler())
 
 	app.OnRecordsListRequest("integrations").BindFunc(listIntegrationHandler())
 	app.OnRecordCreate("integrations").BindFunc(createIntegrationHandler())
@@ -305,11 +308,60 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			log.Fatalf("Error waiting for task completion: %v", err)
 		}
 
-		err = federation.CreateDeleteActivity(e.App, e.Record)
+		err = federation.CreateTrailDeleteActivity(e.App, e.Record)
 		if err != nil {
 			return err
 		}
 
+		return e.Next()
+	}
+}
+
+func createCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+
+		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err == nil {
+			// this is a local trail
+			// just proceed as normal
+			return e.Next()
+		}
+
+		// this is a remote trail
+		err = federation.CreateCommentActivity(e.App, client, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+	}
+}
+
+func updateCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		// _, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		// if err == nil {
+		// 	return e.Next()
+		// }
+
+		err := federation.CreateCommentActivity(e.App, client, e.Record, pub.UpdateType)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+	}
+}
+
+func deleteCommentHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err == nil {
+			return e.Next()
+		}
+
+		err = federation.CreateCommentDeleteActivity(e.App, e.Record)
+		if err != nil {
+			return err
+		}
 		return e.Next()
 	}
 }
@@ -529,35 +581,6 @@ func deleteFollowHandler() func(e *core.RecordEvent) error {
 
 		federation.CreateUnfollowActivity(e.App, e.Record)
 
-		return e.Next()
-	}
-}
-
-func createCommentHandler() func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
-		record := e.Record
-
-		if errs := e.App.ExpandRecord(record, []string{"trail", "author"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
-		}
-		commentAuthor := record.ExpandedOne("author")
-		commentTrail := record.ExpandedOne("trail")
-
-		notification := util.Notification{
-			Type: util.TrailComment,
-			Metadata: map[string]string{
-				"id":      commentTrail.Id,
-				"author":  commentAuthor.GetString("username"),
-				"trail":   commentTrail.GetString("name"),
-				"comment": record.GetString("text"),
-			},
-			Seen:   false,
-			Author: record.GetString("author"),
-		}
-		err := util.SendNotification(e.App, notification, commentTrail.GetString("author"))
-		if err != nil {
-			return err
-		}
 		return e.Next()
 	}
 }

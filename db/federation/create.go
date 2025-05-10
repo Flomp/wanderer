@@ -2,7 +2,9 @@ package federation
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"pocketbase/models"
@@ -111,7 +113,7 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	trailObject.Thumbnail = thumbnail
 	trailObject.Tag = tags
 
-	activity := pub.CreateNew(pub.IRI(id), trailObject)
+	activity := pub.ActivityNew(pub.IRI(id), typ, trailObject)
 	activity.Actor = pub.IRI(trailAuthor.GetString("iri"))
 	activity.To = pub.ItemCollection{pub.IRI(to)}
 	activity.CC = pub.ItemCollection{pub.IRI(cc)}
@@ -151,16 +153,28 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 
 func ProcessCreateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
 
-	// for now we only process "Trail" activities
-	if activity.Object.GetType() != "Trail" {
-		return nil
-	}
-
 	// no need to do anything if the actor is local
 	// if actor.GetBool("isLocal") {
 	// 	return nil
 	// }
 
+	var err error
+	switch activity.Object.GetType() {
+	case models.TrailType:
+		err = processCreateTrailActivity(activity, app, actor)
+	case pub.NoteType:
+		err = processCreateCommentActivity(activity, app, actor)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func processCreateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
 	client := meilisearch.New(
 		os.Getenv("MEILI_URL"),
 		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
@@ -180,7 +194,132 @@ func ProcessCreateActivity(app core.App, actor *core.Record, activity pub.Activi
 	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
 		return err
 	}
+	return nil
+}
+
+func processCreateCommentActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+
+	commentObject, err := pub.ToObject(activity.Object)
+	if err != nil {
+		return err
+	}
+
+	if commentObject.InReplyTo == nil {
+		return fmt.Errorf("error processing comment: InReplyTo empty")
+	}
+
+	trailUrl, err := url.Parse(commentObject.InReplyTo.GetLink().String())
+	if err != nil {
+		return err
+	}
+	trailId := path.Base(trailUrl.Path)
+
+	recordId := commentObject.ID.String()[len(commentObject.ID.String())-15:]
+
+	var record *core.Record
+	if activity.Type == pub.CreateType {
+		collection, err := app.FindCollectionByNameOrId("comments")
+		if err != nil {
+			return err
+		}
+
+		record := core.NewRecord(collection)
+		record.Set("id", recordId)
+	} else if activity.Type == pub.UpdateType {
+		record, err = app.FindRecordById("comments", recordId)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("activity must be of type 'Create' or 'Update")
+	}
+
+	record.Set("text", commentObject.Content.First().Value)
+	record.Set("author", actor.Id)
+	record.Set("trail", trailId)
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comment *core.Record, typ pub.ActivityVocabularyType) error {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
+
+	// author of the comment
+	commentAuthor, err := app.FindRecordById("activitypub_actors", comment.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	// trail that the comment was left on
+	commentTrail := struct {
+		Domain string `json:"domain"`
+		Author string `json:"author"`
+		URL    string `json:"url"`
+	}{}
+	err = client.Index("trails").GetDocument(comment.GetString("trail"), &meilisearch.DocumentQuery{
+		Fields: []string{"domain", "author", "url"},
+	}, &commentTrail)
+	if err != nil {
+		return err
+	}
+
+	// author of the trail that the comment was left on
+	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", commentTrail.Author)
+	if err != nil {
+		return err
+	}
+
+	commentRecordId := comment.Id
+	if commentRecordId == "" {
+		commentRecordId = security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+	}
+	activityRecordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+
+	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
+	to := commentTrailAuthor.GetString("iri")
+
+	author := commentAuthor.GetString("iri")
+
+	commentObject := pub.ObjectNew(pub.NoteType)
+	commentObject.ID = pub.IRI(fmt.Sprintf("%s#comment-%s", author, commentRecordId))
+	commentObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, comment.GetString("text")))
+	commentObject.Published = comment.GetDateTime("created").Time()
+	commentObject.AttributedTo = pub.IRI(author)
+	commentObject.InReplyTo = pub.IRI(commentTrail.URL)
+
+	activity := pub.ActivityNew(pub.IRI(id), typ, commentObject)
+	activity.Actor = pub.IRI(author)
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.Published = time.Now()
+	activity.Object = commentObject
+
+	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if err != nil {
+		return err
+	}
+
+	record := core.NewRecord(collection)
+	record.Set("id", activityRecordId)
+	record.Set("iri", id)
+	record.Set("to", to)
+	record.Set("type", string(typ))
+	record.Set("object", commentObject)
+	record.Set("actor", author)
+	record.Set("published", time.Now())
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+
+	return PostActivity(app, commentAuthor, activity, []string{to + "/inbox"})
 
 }

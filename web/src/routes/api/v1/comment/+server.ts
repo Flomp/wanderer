@@ -6,13 +6,6 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 export async function GET(event: RequestEvent) {
     try {
         const r = await list<Comment>(event, Collection.comments);
-        for (const comment of r.items) {
-            if (!comment.expand?.author) {
-                comment.expand = {
-                    author: await event.locals.pb.collection('users_anonymous').getOne(comment.author)
-                }
-            }
-        }
         return json(r)
     } catch (e) {
         throw handleError(e)

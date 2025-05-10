@@ -10,6 +10,7 @@ export const comments: Writable<Comment[]> = writable([])
 export async function comments_index(trail: Trail) {
     let r = await fetch('/api/v1/comment?' + new URLSearchParams({
         filter: `trail="${trail.id}"`,
+        expand: "author",
         sort: "-created"
     }), {
         method: 'GET',
@@ -33,9 +34,11 @@ export async function comments_create(comment: Comment) {
         throw Error("Unauthenticated")
     }
 
-    comment.author = user.authStore.record!.id;
+    comment.author = user.actor
 
-    let r = await fetch('/api/v1/comment', {
+    let r = await fetch('/api/v1/comment?' + new URLSearchParams({
+        expand: "author",
+    }), {
         method: 'PUT',
         body: JSON.stringify(comment),
     })

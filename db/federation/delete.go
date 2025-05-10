@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	pub "github.com/go-ap/activitypub"
@@ -14,7 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 )
 
-func CreateDeleteActivity(app core.App, r *core.Record) error {
+func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -81,6 +82,24 @@ func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activi
 	// 	return nil
 	// }
 
+	object := activity.Object.GetID().String()
+
+	var err error
+	switch {
+	case strings.Contains(object, "trail"):
+		err = processDeleteTrailActivity(activity)
+	case strings.Contains(object, "comment"):
+		err = processDeleteCommentActivity(app, actor, activity)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func processDeleteTrailActivity(activity pub.Activity) error {
 	client := meilisearch.New(
 		os.Getenv("MEILI_URL"),
 		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
@@ -95,6 +114,69 @@ func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activi
 	if err != nil {
 		return err
 	}
-
 	return nil
+}
+
+func processDeleteCommentActivity(app core.App, actor *core.Record, activity pub.Activity) error {
+	object := activity.Object.GetID().String()
+
+	commentId := object[len(object)-15:]
+	comment, err := app.FindRecordById("comments", commentId)
+	if err != nil {
+		return err
+	}
+
+	if comment.GetString("author") != actor.Id {
+		return fmt.Errorf("actor is not comment author")
+	}
+
+	err = app.Delete(comment)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateCommentDeleteActivity(app core.App, r *core.Record) error {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
+
+	author, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if err != nil {
+		return err
+	}
+
+	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+
+	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
+	to := author.GetString("iri")
+	object := fmt.Sprintf("%s#comment-%s", to, r.Id)
+
+	record := core.NewRecord(collection)
+	record.Set("id", recordId)
+	record.Set("iri", id)
+	record.Set("type", string(pub.DeleteType))
+	record.Set("to", to)
+	record.Set("object", object)
+	record.Set("actor", author.GetString("iri"))
+	record.Set("published", time.Now())
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+
+	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
+	activity.Actor = pub.IRI(author.GetString("iri"))
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.Published = time.Now()
+
+	return PostActivity(app, author, activity, []string{to + "/inbox"})
 }

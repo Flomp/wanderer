@@ -122,10 +122,7 @@
         try {
             const c = await comments_create(newComment);
             newComment.text = "";
-            c.expand = {
-                author: { ...$currentUser!, private: false },
-            };
-
+           
             const newCommentList = [c, ...$comments];
             comments.set(newCommentList);
         } catch (e) {
@@ -517,7 +514,7 @@
                                         <CommentCard
                                             {comment}
                                             mode={comment.author ==
-                                            $currentUser?.id
+                                            $currentUser?.actor
                                                 ? "edit"
                                                 : "show"}
                                             ondelete={deleteComment}

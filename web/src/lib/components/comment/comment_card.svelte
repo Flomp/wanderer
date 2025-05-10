@@ -1,16 +1,15 @@
 <script lang="ts">
     import type { Comment } from "$lib/models/comment";
-    import { getFileURL } from "$lib/util/file_util";
-    import TextField from "../base/text_field.svelte";
-    import { fade } from "svelte/transition";
     import { formatTimeSince } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
+    import { fade } from "svelte/transition";
+    import TextField from "../base/text_field.svelte";
 
     interface Props {
         comment: Comment;
         mode?: "show" | "edit";
-        ondelete?: (comment: Comment) => void
-        onedit?: (data: {comment: Comment, text: string}) => void
+        ondelete?: (comment: Comment) => void;
+        onedit?: (data: { comment: Comment; text: string }) => void;
     }
 
     let { comment, mode = "show", ondelete, onedit }: Props = $props();
@@ -24,15 +23,15 @@
     });
 
     let avatarSrc = $derived(
-        comment.expand?.author.avatar
-            ? getFileURL(comment.expand.author, comment.expand.author.avatar)
+        comment.expand?.author.icon
+            ? comment.expand?.author.icon
             : `https://api.dicebear.com/7.x/initials/svg?seed=${comment.expand?.author.username ?? ""}&backgroundType=gradientLinear`,
     );
 
     let timeSince = $derived(formatTimeSince(new Date(comment.created ?? "")));
 
     function deleteComment() {
-        ondelete?.(comment)
+        ondelete?.(comment);
     }
 
     function toggleEdit() {
@@ -48,38 +47,27 @@
     in:fade={{ duration: 150 }}
     out:fade={{ duration: 150 }}
 >
-    {#if comment.expand?.author.private}
+    <a
+        href="/profile/{comment.expand?.author.id}"
+        class="text-sm font-semibold shrink-0"
+    >
         <img
-            class="rounded-full w-10 aspect-square shrink-0"
+            class="rounded-full w-10 aspect-square"
             src={avatarSrc}
             alt="avatar"
         />
-    {:else}
-        <a
-            href="/profile/{comment.expand?.author.id}"
-            class="text-sm font-semibold shrink-0"
-        >
-            <img
-                class="rounded-full w-10 aspect-square"
-                src={avatarSrc}
-                alt="avatar"
-            />
-        </a>
-    {/if}
+    </a>
     <div>
         <div class="flex items-center">
             <p class="">
-                {#if comment.expand?.author.private}
-                    <span class="text-sm font-semibold"
-                        >{comment.expand?.author.username}</span
-                    >
-                {:else}
-                    <a
-                        href="/profile/{comment.expand?.author.id}"
-                        class="text-sm font-semibold"
-                        >{comment.expand?.author.username}</a
-                    >
-                {/if}
+                <a
+                    href="/profile/@{comment.expand?.author.username}{comment
+                        .expand?.author.isLocal
+                        ? ''
+                        : '@' + comment.expand?.author.domain}"
+                    class="text-sm font-semibold"
+                    >{comment.expand?.author.username}</a
+                >
                 <span class="text-xs text-gray-500 ml-2"
                     >{$_(`n-${timeSince.unit}-ago`, {
                         values: { n: timeSince.value },
