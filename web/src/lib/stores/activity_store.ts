@@ -1,17 +1,18 @@
-import type { Activity } from "$lib/models/activity";
+import type { Activity } from "$lib/models/activitypub/activity";
 import { APIError } from "$lib/util/api_util";
-import { type ListResult } from "pocketbase";
+import type { APOrderedCollectionPage } from "activitypub-types";
 
 let activities: Activity[] = [];
 
-export async function activities_index(author: string, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const r = await f('/api/v1/activity?' + new URLSearchParams({
+export async function activities_index(outbox: string, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+
+    const r = await f("/api/v1/activity?" + new URLSearchParams({
         "perPage": perPage.toString(),
         page: page.toString(),
-        filter: `author="${author}"`,
-        sort: "-created"
+        filter: `type='Create'&&object.type='Trail'`,
     }), {
-        method: 'GET',
+        body: JSON.stringify({outbox}),
+        method: 'POST',
     })
 
     if (!r.ok) {
@@ -19,9 +20,9 @@ export async function activities_index(author: string, page: number = 1, perPage
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const fetchedActivities: ListResult<Activity> = await r.json();
+    const fetchedActivities: APOrderedCollectionPage = await r.json();
 
-    const result = page > 1 ? [...activities, ...fetchedActivities.items] : fetchedActivities.items
+    const result = page > 1 ? [...activities, ...(fetchedActivities.orderedItems as Activity[]) ?? []] : fetchedActivities.orderedItems as Activity[]
 
     activities = result;
 

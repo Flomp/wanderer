@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import type { Activity } from '$lib/models/activitypub/activity';
 import type { Actor } from '$lib/models/activitypub/actor';
+import { RecordListOptionsSchema } from '$lib/models/api/base_schema';
 import type { UserAnonymous } from "$lib/models/user";
 import { splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
@@ -12,26 +13,27 @@ import type { ListResult } from 'pocketbase';
 export async function GET(event: RequestEvent) {
 
     try {
-        const page = event.url.searchParams.get("page") ?? "1"
+        const safeSearchParams = RecordListOptionsSchema.parse(Object.fromEntries(event.url.searchParams));
 
-        const intPage = parseInt(page);
+        const page = safeSearchParams.page ?? 1
 
         let fullUsername = event.params.username;
         if (!fullUsername) {
             return error(400, "Bad request");
         }
 
-        fullUsername = fullUsername.replace(/^@/, "");
-
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
+
 
         const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getFirstListItem(`username='${username}'`)
         const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user='${user.id}'`)
-        const activities: ListResult<Activity> = await event.locals.pb.collection("activitypub_activities").getList(intPage, 10, { sort: "-created", filter: `actor='${actor.iri}'` })
+
+        const filter = `actor='${actor.iri}'${safeSearchParams.filter ? '&&' + safeSearchParams.filter : ''}`
+        const activities: ListResult<Activity> = await event.locals.pb.collection("activitypub_activities").getList(page, safeSearchParams.perPage, { sort: safeSearchParams.sort ?? "-created", filter })
 
         const id = actor.iri;
 
-        const hasNextPage = intPage * 10 < activities.totalItems;
+        const hasNextPage = page * 10 < activities.totalItems;
 
         const outbox: APRoot<APOrderedCollectionPage> = {
             "@context": [
@@ -39,8 +41,8 @@ export async function GET(event: RequestEvent) {
             ],
             type: "OrderedCollectionPage",
             first: id + "/outbox?page=1",
-            ...(intPage > 1 ? { prev: `${id}/outbox?page=${intPage - 1}` } : {}),
-            ...(hasNextPage ? { next: `${id}/outbox?page=${intPage + 1}` } : {}),
+            ...(page > 1 ? { prev: `${id}/outbox?page=${page - 1}` } : {}),
+            ...(hasNextPage ? { next: `${id}/outbox?page=${page + 1}` } : {}),
             partOf: id + "/outbox",
             totalItems: activities.totalItems,
             orderedItems: activities.items.map<APActivity>(a => ({

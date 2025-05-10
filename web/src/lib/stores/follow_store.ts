@@ -1,5 +1,4 @@
 import type { Follow } from "$lib/models/follow";
-import type { User } from "$lib/models/user";
 import { splitUsername } from "$lib/util/activitypub_util";
 import { APIError } from "$lib/util/api_util";
 import { type ListResult } from "pocketbase";

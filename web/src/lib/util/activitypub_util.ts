@@ -45,24 +45,27 @@ async function fetchRemoteActor(domain?: string, username?: string, f: (url: Req
     let followers: APOrderedCollection | undefined;
     let following: APOrderedCollection | undefined;
 
-    const webfingerURI = `https://${domain}/.well-known/webfinger?resource=acct:${username}@${domain}`;
-    const webfingerRequest = await f(webfingerURI, { method: "GET" });
+    let actorURI = `/api/v1/activitypub/user/${username}`
+    if (domain) {
+        const webfingerURI = `https://${domain}/.well-known/webfinger?resource=acct:${username}@${domain}`;
+        const webfingerRequest = await f(webfingerURI, { method: "GET" });
 
-    if (!webfingerRequest.ok) {
-        const errorResponse = await webfingerRequest.json();
-        throw new ClientResponseError({ status: 500, response: errorResponse });
+        if (!webfingerRequest.ok) {
+            const errorResponse = await webfingerRequest.json();
+            throw new ClientResponseError({ status: 500, response: errorResponse });
+        }
+
+        const webfinger: WebfingerResponse = await webfingerRequest.json();
+        actorURI = webfinger.links.find(l => l.rel == "self")?.href ?? actorURI;
     }
 
-    const webfinger: WebfingerResponse = await webfingerRequest.json();
 
-    const actorURI = webfinger.links.find(l => l.rel == "self");
     if (!actorURI) {
         throw new ClientResponseError({ status: 500, response: { message: "webfinger response contains no actor URI" } });
-
     }
     const headers = new Headers();
     headers.append("Accept", "application/ld+json");
-    const actorRequest = await f(actorURI.href, { method: "GET", headers: headers });
+    const actorRequest = await f(actorURI, { method: "GET", headers: headers });
 
     if (!actorRequest.ok) {
         const errorResponse = await actorRequest.json();
@@ -73,7 +76,7 @@ async function fetchRemoteActor(domain?: string, username?: string, f: (url: Req
     if (apActor.followers) {
         const followersRequest = await f(apActor.followers.toString(), { method: "GET", headers: headers });
         if (!followersRequest.ok) {
-            const errorResponse = await webfingerRequest.json();
+            const errorResponse = await followersRequest.json();
             throw new ClientResponseError({ status: 500, response: errorResponse });
         }
         followers = await followersRequest.json();
@@ -82,7 +85,7 @@ async function fetchRemoteActor(domain?: string, username?: string, f: (url: Req
     if (apActor.following) {
         const followingRequest = await f(apActor.following.toString(), { method: "GET", headers: headers });
         if (!followingRequest.ok) {
-            const errorResponse = await webfingerRequest.json();
+            const errorResponse = await followingRequest.json();
             throw new ClientResponseError({ status: 500, response: errorResponse });
         }
         following = await followingRequest.json();

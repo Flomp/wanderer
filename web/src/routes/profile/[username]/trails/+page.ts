@@ -1,14 +1,16 @@
 import type { TrailFilter } from "$lib/models/trail";
-import { trails_index, trails_search_filter } from "$lib/stores/trail_store";
+import { trails_search_filter } from "$lib/stores/trail_store";
 import { type Load } from "@sveltejs/kit";
 
-export const load: Load = async ({ params, fetch }) => {
+export const load: Load = async ({ params, fetch, parent }) => {
+    const { actor } = await parent()
+
     const filter: TrailFilter = {
         q: "",
         category: [],
         tags: [],
         difficulty: ["easy", "moderate", "difficult"],
-        author: params.id,
+        author: actor.id,
         public: true,
         shared: true,
         near: {

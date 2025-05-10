@@ -1,7 +1,6 @@
 import type { Actor } from "$lib/models/activitypub/actor";
-import { follows_a_b, follows_counts } from "$lib/stores/follow_store";
+import { follows_a_b } from "$lib/stores/follow_store";
 import { profile_show } from "$lib/stores/profile_store";
-import { users_show } from "$lib/stores/user_store";
 import { APIError } from "$lib/util/api_util";
 import { error, type NumericRange, type ServerLoad } from "@sveltejs/kit";
 
@@ -12,13 +11,12 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
     }
 
     try {
-        const profile = await profile_show(params.username, fetch);
-        const actor: Actor = await locals.pb.collection("activitypub_actors").getFirstListItem(`user = '${locals.user.id}'`)
+        const { actor, profile } = await profile_show(params.username, fetch);
 
-        const isOwnProfile = profile.id === actor.id;
+        const isOwnProfile = profile.id === locals.user.actor;
 
-        const follow = await follows_a_b(actor.id!, profile.id, fetch) ?? null
-        return { profile, isOwnProfile, follow: follow }
+        const follow = await follows_a_b(locals.user.actor!, profile.id, fetch) ?? null
+        return { profile, isOwnProfile, follow: follow, actor }
 
     } catch (e) {
         if (e instanceof APIError) {

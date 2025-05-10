@@ -15,8 +15,8 @@
     let loading: boolean = false;
 
     let pagination = $derived({
-        page: data.activities.page,
-        totalPages: data.activities.totalPages,
+        page: 1,
+        totalPages: data.activities.totalItems,
     });
 
     async function onListScroll(e: Event) {
@@ -63,7 +63,9 @@
             >
         {:else}
             <p class="w-full text-center text-gray-500 text-sm">
-                {$_("empty-bio", { values: { username: data.profile.username } })}
+                {$_("empty-bio", {
+                    values: { username: data.profile.username },
+                })}
             </p>
         {/if}
     </div>
@@ -112,11 +114,11 @@
     </div>
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">Timeline</h4>
-        {#if !activities.items.length && data.isOwnProfile}
+        {#if !activities.items?.length && data.isOwnProfile}
             <a class="btn-primary inline-block" href="/trails/edit/new"
                 >+ {$_("new-trail")}</a
             >
-        {:else if !activities.items.length}
+        {:else if !activities.items?.length}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-activities", {
                     values: { username: data.profile.username },
@@ -128,14 +130,10 @@
                 role="presentation"
                 class="cursor-pointer"
                 onclick={() => {
-                    goto(
-                        activity.type == "trail"
-                            ? `/trail/view/${activity.id}`
-                            : `/trail/view/${activity.trail_id}?t=3`,
-                    );
+                    goto(activity.object.url);
                 }}
             >
-                <!-- <ActivityCard {activity} user={data.user}></ActivityCard> -->
+                <ActivityCard {activity} user={data.actor}></ActivityCard>
             </div>
         {/each}
     </div>

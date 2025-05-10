@@ -8,7 +8,7 @@ export interface Activity {
     cc: string[];
     bto: string[];
     bcc: string[];
-    object: string;
+    object: any;
     actor: string;
     published: string;
 }
