@@ -1,8 +1,6 @@
 package migrations
 
 import (
-	"encoding/json"
-
 	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
 )
@@ -14,13 +12,8 @@ func init() {
 			return err
 		}
 
-		// update collection data
-		if err := json.Unmarshal([]byte(`{
-			"deleteRule": "@request.auth.id = author.user",
-			"updateRule": "@request.auth.id = author.user"
-		}`), &collection); err != nil {
-			return err
-		}
+		// remove field
+		collection.Fields.RemoveById("7lwo1mxx")
 
 		return app.Save(collection)
 	}, func(app core.App) error {
@@ -29,11 +22,20 @@ func init() {
 			return err
 		}
 
-		// update collection data
-		if err := json.Unmarshal([]byte(`{
-			"deleteRule": "@request.auth.id = author",
-			"updateRule": "@request.auth.id = author"
-		}`), &collection); err != nil {
+		// add field
+		if err := collection.Fields.AddMarshaledJSONAt(6, []byte(`{
+			"cascadeDelete": true,
+			"collectionId": "_pb_users_auth_",
+			"hidden": false,
+			"id": "7lwo1mxx",
+			"maxSelect": 1,
+			"minSelect": 0,
+			"name": "user",
+			"presentable": false,
+			"required": false,
+			"system": false,
+			"type": "relation"
+		}`)); err != nil {
 			return err
 		}
 

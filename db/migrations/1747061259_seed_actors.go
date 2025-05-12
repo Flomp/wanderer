@@ -39,10 +39,8 @@ func init() {
 			if err != nil {
 				return err
 			}
-			privBytes, err := x509.MarshalPKIXPublicKey(priv)
-			if err != nil {
-				return err
-			}
+			privBytes := x509.MarshalPKCS1PrivateKey(priv)
+
 			privEncrypted, err := security.Encrypt(privBytes, encryptionKey)
 			if err != nil {
 				return err
@@ -80,7 +78,7 @@ func init() {
 			record.Set("domain", domain)
 			record.Set("summary", settings.GetString("bio"))
 			record.Set("published", u.GetDateTime("created"))
-			record.Set("IRI", id)
+			record.Set("iri", id)
 			record.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, u.Id, u.GetString("avatar")))
 			record.Set("inbox", id+"/inbox")
 			record.Set("outbox", id+"/outbox")
@@ -92,7 +90,10 @@ func init() {
 			record.Set("user", u.Id)
 			record.Set("last_fetched", time.Now())
 
-			app.Save(record)
+			err = app.Save(record)
+			if err != nil {
+				return err
+			}
 
 		}
 

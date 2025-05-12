@@ -13,7 +13,7 @@ func init() {
 		}
 
 		for _, c := range comments {
-			actor, err := app.FindFirstRecordByData("activitypub_actors", "user", c.GetString("author"))
+			actor, err := app.FindFirstRecordByData("activitypub_actors", "user", c.GetString("user"))
 			if err != nil {
 				continue
 			}

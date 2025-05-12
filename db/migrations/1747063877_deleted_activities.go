@@ -11,7 +11,7 @@ func init() {
 	m.Register(func(app core.App) error {
 		collection, err := app.FindCollectionByNameOrId("t9lphichi5xwyeu")
 		if err != nil {
-			return err
+			return nil
 		}
 
 		return app.Delete(collection)
