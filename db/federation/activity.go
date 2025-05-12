@@ -97,6 +97,8 @@ func ProcessActivity(e *core.RequestEvent) error {
 	pub.ItemTyperFunc = func(typ pub.ActivityVocabularyType) (pub.Item, error) {
 		if typ == models.TrailType {
 			return models.TrailNew(), nil
+		} else if typ == models.SummitLogType {
+			return models.SummitLogNew(), nil
 		}
 		return pub.GetItemByType(typ)
 	}
@@ -105,11 +107,15 @@ func ProcessActivity(e *core.RequestEvent) error {
 			return models.OnTrail(i, func(t *models.Trail) error {
 				return models.JSONLoadTrail(v, t)
 			})
+		} else if typ == models.SummitLogType {
+			return models.OnSummitLog(i, func(s *models.SummitLog) error {
+				return models.JSONLoadSummitLog(v, s)
+			})
 		}
 		return nil
 	}
 	pub.IsNotEmpty = func(i pub.Item) bool {
-		if i.GetType() == models.TrailType {
+		if i.GetType() == models.TrailType || i.GetType() == models.SummitLogType {
 			return true
 		}
 
@@ -140,7 +146,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 	case pub.UpdateType:
 		fallthrough
 	case pub.CreateType:
-		ProcessCreateActivity(e.App, actor, activity)
+		ProcessCreateOrUpdateActivity(e.App, actor, activity)
 	case pub.DeleteType:
 		ProcessDeleteActivity(e.App, actor, activity)
 	}

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import ActivityCard from "$lib/components/profile/activity_card.svelte";
@@ -34,7 +35,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        activities = await activities_index(data.profile.acct, pagination.page);
+        activities = await activities_index(data.actor.iri + '/outbox', pagination.page);
     }
 </script>
 
@@ -127,11 +128,14 @@
         {/if}
         {#each activities.items as activity}
             <div
+                class="py-1 cursor-pointer"
                 role="presentation"
-                class="cursor-pointer"
-                onclick={() => {
-                    goto(activity.object.url);
-                }}
+                onclick={() =>
+                    goto(
+                        `/trail/view/${page.params.username}/${
+                            activity.object.trail_id
+                        }`,
+                    )}
             >
                 <ActivityCard {activity} user={data.actor}></ActivityCard>
             </div>

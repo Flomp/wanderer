@@ -17,15 +17,15 @@
 
     let fullDescription: boolean = $state(false);
 
+    if(!(activity.object.attachment instanceof Array)) {
+        activity.object.attachment = [activity.object.attachment]
+    }
     const photos = activity.object.attachment?.filter(
         (a: any) => a.mediaType.startsWith("image") ?? [],
-    );
-
-    console.log(photos);
-    
+    );    
 </script>
 
-<div class="activity-card p-6 space-y-6 rounded-xl border border-input-border">
+<div class="activity-card p-6 rounded-xl border border-input-border">
     <div class="flex gap-x-4 items-start">
         <img
             class="rounded-full w-10 aspect-square overflow-hidden"
@@ -50,7 +50,7 @@
         </div>
     </div>
     <h3 class="text-2xl font-semibold !mt-2">{activity.object.name}</h3>
-    <div class="flex flex-wrap mt-1 gap-x-4 gap-y-2 text-sm text-gray-500">
+    <div class="flex flex-wrap mt-1 mb-4 gap-x-4 gap-y-2 text-sm text-gray-500">
         <span
             ><i class="fa fa-left-right mr-2"></i>{formatDistance(
                 activity.object.distance,
@@ -99,7 +99,7 @@
         </div>
     {/if}
     {#if activity.object.content?.length}
-        <p class="text-sm whitespace-pre-wrap">
+        <p class="text-sm whitespace-pre-wrap mt-4">
             {!fullDescription
                 ? activity.object.content.substring(0, 100)
                 : activity.object.content}

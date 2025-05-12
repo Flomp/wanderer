@@ -133,7 +133,7 @@
     {#if showCategory}
         <td>
             {$_(
-                log.expand?.trails_via_summit_logs?.at(0)?.expand?.category
+                log.expand?.trail?.expand?.category
                     ?.name ?? "-",
             )}
         </td>
@@ -143,8 +143,7 @@
             <a
                 aria-label="Go to trail"
                 class="btn-icon aspect-square"
-                href="/trail/view/{domain}/{log.expand?.trails_via_summit_logs?.at(0)
-                    ?.id ?? ''}"
+                href="/trail/view/{domain}/{log.expand?.trail?.id ?? ''}"
                 ><i class="fa fa-arrow-up-right-from-square px-[3px]"></i></a
             >
         </td>
@@ -168,29 +167,19 @@
                 class="tooltip flex justify-center"
                 data-title={log.expand.author.username}
             >
-                {#if !log.expand.author.private}
-                    <a href="/profile/{log.expand.author.id}">
-                        <img
-                            class="rounded-full w-7 aspect-square"
-                            src={getFileURL(
-                                log.expand?.author,
-                                log.expand?.author.avatar,
-                            ) ||
-                                `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand?.author.username}&backgroundType=gradientLinear`}
-                            alt="avatar"
-                        />
-                    </a>
-                {:else}
+                <a
+                    href="/profile/@{log.expand.author.username}{log.expand
+                        .author.isLocal
+                        ? ''
+                        : '@' + log.expand.author.domain}"
+                >
                     <img
                         class="rounded-full w-7 aspect-square"
-                        src={getFileURL(
-                            log.expand?.author,
-                            log.expand?.author.avatar,
-                        ) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand?.author.username}&backgroundType=gradientLinear`}
+                        src={log.expand.author.icon ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                {/if}
+                </a>
             </p>
         </td>
     {/if}

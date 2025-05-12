@@ -76,11 +76,133 @@ func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
 	return PostActivity(app, author, activity, recipients)
 }
 
+func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager, r *core.Record) error {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
+
+	author, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	commentTrail := struct {
+		Domain string `json:"domain"`
+		Author string `json:"author"`
+		URL    string `json:"url"`
+	}{}
+	err = client.Index("trails").GetDocument(r.GetString("trail"), &meilisearch.DocumentQuery{
+		Fields: []string{"domain", "author", "url"},
+	}, &commentTrail)
+	if err != nil {
+		return err
+	}
+
+	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if err != nil {
+		return err
+	}
+
+	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+
+	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
+	to := commentTrailAuthor.GetString("iri")
+	object := fmt.Sprintf("%s#comment-%s", to, r.Id)
+
+	record := core.NewRecord(collection)
+	record.Set("id", recordId)
+	record.Set("iri", id)
+	record.Set("type", string(pub.DeleteType))
+	record.Set("to", to)
+	record.Set("object", object)
+	record.Set("actor", author.GetString("iri"))
+	record.Set("published", time.Now())
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+
+	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
+	activity.Actor = pub.IRI(author.GetString("iri"))
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.Published = time.Now()
+
+	return PostActivity(app, author, activity, []string{to + "/inbox"})
+}
+
+func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManager, r *core.Record) error {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
+
+	author, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	summitLogTrail := struct {
+		Domain string `json:"domain"`
+		Author string `json:"author"`
+		URL    string `json:"url"`
+	}{}
+	err = client.Index("trails").GetDocument(r.GetString("trail"), &meilisearch.DocumentQuery{
+		Fields: []string{"domain", "author", "url"},
+	}, &summitLogTrail)
+	if err != nil {
+		return err
+	}
+
+	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if err != nil {
+		return err
+	}
+
+	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+
+	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
+	to := commentTrailAuthor.GetString("iri")
+	object := fmt.Sprintf("%s#summit-log-%s", to, r.Id)
+
+	record := core.NewRecord(collection)
+	record.Set("id", recordId)
+	record.Set("iri", id)
+	record.Set("type", string(pub.DeleteType))
+	record.Set("to", to)
+	record.Set("object", object)
+	record.Set("actor", author.GetString("iri"))
+	record.Set("published", time.Now())
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+
+	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
+	activity.Actor = pub.IRI(author.GetString("iri"))
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.Published = time.Now()
+
+	return PostActivity(app, author, activity, []string{to + "/inbox"})
+}
+
 func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activity) error {
 	// no need to do anything if the actor is local
-	// if actor.GetBool("isLocal") {
-	// 	return nil
-	// }
+	if actor.GetBool("isLocal") {
+		return nil
+	}
 
 	object := activity.Object.GetID().String()
 
@@ -90,6 +212,8 @@ func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activi
 		err = processDeleteTrailActivity(activity)
 	case strings.Contains(object, "comment"):
 		err = processDeleteCommentActivity(app, actor, activity)
+	case strings.Contains(object, "summit-log"):
+		err = processDeleteSummitLogActivity(app, actor, activity)
 	}
 
 	if err != nil {
@@ -137,46 +261,22 @@ func processDeleteCommentActivity(app core.App, actor *core.Record, activity pub
 	return nil
 }
 
-func CreateCommentDeleteActivity(app core.App, r *core.Record) error {
-	origin := os.Getenv("ORIGIN")
-	if origin == "" {
-		return fmt.Errorf("ORIGIN not set")
-	}
+func processDeleteSummitLogActivity(app core.App, actor *core.Record, activity pub.Activity) error {
+	object := activity.Object.GetID().String()
 
-	author, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	summitLogId := object[len(object)-15:]
+	summitLog, err := app.FindRecordById("summit_logs", summitLogId)
 	if err != nil {
 		return err
 	}
 
-	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if summitLog.GetString("author") != actor.Id {
+		return fmt.Errorf("actor is not summit log author")
+	}
+
+	err = app.Delete(summitLog)
 	if err != nil {
 		return err
 	}
-
-	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
-
-	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
-	to := author.GetString("iri")
-	object := fmt.Sprintf("%s#comment-%s", to, r.Id)
-
-	record := core.NewRecord(collection)
-	record.Set("id", recordId)
-	record.Set("iri", id)
-	record.Set("type", string(pub.DeleteType))
-	record.Set("to", to)
-	record.Set("object", object)
-	record.Set("actor", author.GetString("iri"))
-	record.Set("published", time.Now())
-
-	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
-	activity.Actor = pub.IRI(author.GetString("iri"))
-	activity.To = pub.ItemCollection{pub.IRI(to)}
-	activity.Published = time.Now()
-
-	return PostActivity(app, author, activity, []string{to + "/inbox"})
+	return nil
 }

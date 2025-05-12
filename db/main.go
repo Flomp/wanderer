@@ -92,9 +92,13 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("trails").BindFunc(updateTrailHandler(client))
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(deleteTrailHandler(client))
 
+	app.OnRecordAfterCreateSuccess("summit_logs").BindFunc(createSummitLogHandler(client))
+	app.OnRecordAfterUpdateSuccess("summit_logs").BindFunc(updateSummitLogHandler(client))
+	app.OnRecordAfterDeleteSuccess("summit_logs").BindFunc(deleteSummitLogHandler(client))
+
 	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler(client))
 	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler(client))
-	app.OnRecordDeleteRequest("comments").BindFunc(deleteCommentHandler())
+	app.OnRecordDeleteRequest("comments").BindFunc(deleteCommentHandler(client))
 
 	app.OnRecordAfterCreateSuccess("trail_share").BindFunc(createTrailShareHandler(client))
 	app.OnRecordAfterDeleteSuccess("trail_share").BindFunc(deleteTrailShareHandler(client))
@@ -286,7 +290,7 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
-		err = federation.CreateTrailActivity(e.App, e.Record, pub.CreateType)
+		err = federation.CreateTrailActivity(e.App, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -317,6 +321,55 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 	}
 }
 
+func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err == nil {
+			// this is a local trail
+			// just proceed as normal
+			return e.Next()
+		}
+
+		err = federation.CreateSummitLogActivity(e.App, client, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+
+		return e.Next()
+	}
+}
+
+func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err == nil {
+			// this is a local trail
+			// just proceed as normal
+			return e.Next()
+		}
+		err = federation.CreateSummitLogActivity(e.App, client, e.Record, pub.UpdateType)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+	}
+}
+
+func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err == nil {
+			return e.Next()
+		}
+
+		err = federation.CreateSummitLogDeleteActivity(e.App, client, e.Record)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+	}
+}
+
 func createCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
@@ -338,12 +391,12 @@ func createCommentHandler(client meilisearch.ServiceManager) func(e *core.Record
 
 func updateCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		// _, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		// if err == nil {
-		// 	return e.Next()
-		// }
+		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err == nil {
+			return e.Next()
+		}
 
-		err := federation.CreateCommentActivity(e.App, client, e.Record, pub.UpdateType)
+		err = federation.CreateCommentActivity(e.App, client, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -351,14 +404,14 @@ func updateCommentHandler(client meilisearch.ServiceManager) func(e *core.Record
 	}
 }
 
-func deleteCommentHandler() func(e *core.RecordRequestEvent) error {
+func deleteCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
 		if err == nil {
 			return e.Next()
 		}
 
-		err = federation.CreateCommentDeleteActivity(e.App, e.Record)
+		err = federation.CreateCommentDeleteActivity(e.App, client, e.Record)
 		if err != nil {
 			return err
 		}

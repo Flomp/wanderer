@@ -35,7 +35,7 @@ export async function PUT(event: RequestEvent) {
 
 function enrichRecord(r: Trail) {
     r.date = r.date?.substring(0, 10) ?? "";
-    for (const log of r.expand?.summit_logs ?? []) {
+    for (const log of r.expand?.summit_logs_via_trail ?? []) {
         log.date = log.date.substring(0, 10);
     }
 }

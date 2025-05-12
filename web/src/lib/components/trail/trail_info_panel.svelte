@@ -122,7 +122,7 @@
         try {
             const c = await comments_create(newComment);
             newComment.text = "";
-           
+
             const newCommentList = [c, ...$comments];
             comments.set(newCommentList);
         } catch (e) {
@@ -286,9 +286,7 @@
                                     `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <a
-                                class="underline"
-                                href="/profile/@{trail.expand.author.username}"
+                            <a class="underline" href="/profile/{domain}"
                                 >{trail.expand.author.username}</a
                             >
                         </p>
@@ -421,7 +419,7 @@
                     <div class="overflow-x-auto">
                         <SummitLogTable
                             {domain}
-                            summitLogs={trail.expand?.summit_logs}
+                            summitLogs={trail.expand?.summit_logs_via_trail}
                             showAuthor
                             showRoute
                             showPhotos

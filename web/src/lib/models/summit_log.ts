@@ -1,5 +1,5 @@
+import type { Actor } from "./activitypub/actor";
 import type { Trail } from "./trail";
-import type { UserAnonymous } from "./user";
 
 class SummitLog {
   id?: string;
@@ -14,11 +14,12 @@ class SummitLog {
   elevation_loss?: number
   duration?: number
   author: string;
+  trail?: string;
 
   expand?: {
     gpx_data?: string;
-    trails_via_summit_logs?: Trail[];
-    author?: UserAnonymous
+    trail?: Trail;
+    author?: Actor
   }
 
   constructor(date: string, params?: { id?: string, text?: string, distance?: number, elevation_loss?: number, elevation_gain?: number, duration?: number, photos?: string[] }) {

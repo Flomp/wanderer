@@ -49,3 +49,26 @@ export function saveAs(data: Blob, fileName: string) {
     a.click();
     window.URL.revokeObjectURL(url);
 };
+
+function buildFormData(formData: FormData, data: any, parentKey?: string, exclude?: string[]) {
+    if (data && typeof data === 'object' && !(data instanceof Date) && !(data instanceof File) && !(data instanceof Blob)) {
+        Object.keys(data).forEach(key => {
+            if (exclude?.includes(key)) {
+                return;
+            }
+            buildFormData(formData, data[key], parentKey ? `${parentKey}` : key);
+        });
+    } else {
+        const value = data == null ? '' : data;
+
+        formData.append(parentKey!, value);
+    }
+}
+
+export function objectToFormData(data: Object, exclude?: string[]) {
+    const formData = new FormData();
+
+    buildFormData(formData, data, undefined, exclude);
+
+    return formData;
+}

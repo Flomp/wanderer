@@ -65,17 +65,20 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	if len(photos) > 0 {
 		thumbnail = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[trail.GetInt("thumbnail")])
 	}
+
 	gpx := ""
 	if trail.GetString("gpx") != "" {
 		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, trail.GetString("gpx"))
 	}
 
 	attachments := pub.ItemCollection{}
-	if thumbnail != "" {
+	for i := range min(len(photos), 3) {
+		iri := fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[i])
+
 		attachments.Append(pub.Document{
 			Type:      pub.DocumentType,
 			MediaType: "image/jpeg",
-			URL:       pub.IRI(thumbnail),
+			URL:       pub.IRI(iri),
 		})
 	}
 	if gpx != "" {
@@ -122,8 +125,8 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
 	record.Set("iri", id)
-	record.Set("to", to)
-	record.Set("cc", cc)
+	record.Set("to", []string{to})
+	record.Set("cc", []string{cc})
 	record.Set("type", string(typ))
 	record.Set("object", trailObject)
 	record.Set("actor", trailAuthor.GetString("iri"))
@@ -149,101 +152,6 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	}
 
 	return PostActivity(app, trailAuthor, activity, recipients)
-}
-
-func ProcessCreateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
-
-	// no need to do anything if the actor is local
-	// if actor.GetBool("isLocal") {
-	// 	return nil
-	// }
-
-	var err error
-	switch activity.Object.GetType() {
-	case models.TrailType:
-		err = processCreateTrailActivity(activity, app, actor)
-	case pub.NoteType:
-		err = processCreateCommentActivity(activity, app, actor)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-
-}
-
-func processCreateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-	client := meilisearch.New(
-		os.Getenv("MEILI_URL"),
-		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
-	)
-
-	trailObject, err := models.ToTrail(activity.Object)
-	if err != nil {
-		return err
-	}
-
-	doc, err := util.DocumentFromActivity(app, trailObject, actor)
-	if err != nil {
-		return err
-	}
-	documents := []map[string]interface{}{doc}
-
-	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
-		return err
-	}
-	return nil
-}
-
-func processCreateCommentActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-
-	commentObject, err := pub.ToObject(activity.Object)
-	if err != nil {
-		return err
-	}
-
-	if commentObject.InReplyTo == nil {
-		return fmt.Errorf("error processing comment: InReplyTo empty")
-	}
-
-	trailUrl, err := url.Parse(commentObject.InReplyTo.GetLink().String())
-	if err != nil {
-		return err
-	}
-	trailId := path.Base(trailUrl.Path)
-
-	recordId := commentObject.ID.String()[len(commentObject.ID.String())-15:]
-
-	var record *core.Record
-	if activity.Type == pub.CreateType {
-		collection, err := app.FindCollectionByNameOrId("comments")
-		if err != nil {
-			return err
-		}
-
-		record := core.NewRecord(collection)
-		record.Set("id", recordId)
-	} else if activity.Type == pub.UpdateType {
-		record, err = app.FindRecordById("comments", recordId)
-		if err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("activity must be of type 'Create' or 'Update")
-	}
-
-	record.Set("text", commentObject.Content.First().Value)
-	record.Set("author", actor.Id)
-	record.Set("trail", trailId)
-
-	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comment *core.Record, typ pub.ActivityVocabularyType) error {
@@ -309,7 +217,7 @@ func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comm
 	record := core.NewRecord(collection)
 	record.Set("id", activityRecordId)
 	record.Set("iri", id)
-	record.Set("to", to)
+	record.Set("to", []string{to})
 	record.Set("type", string(typ))
 	record.Set("object", commentObject)
 	record.Set("actor", author)
@@ -322,4 +230,287 @@ func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comm
 
 	return PostActivity(app, commentAuthor, activity, []string{to + "/inbox"})
 
+}
+
+func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, summitLog *core.Record, typ pub.ActivityVocabularyType) error {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
+
+	summitLogAuthor, err := app.FindRecordById("activitypub_actors", summitLog.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	summitLogTrail := struct {
+		Domain string `json:"domain"`
+		Author string `json:"author"`
+		URL    string `json:"url"`
+	}{}
+	err = client.Index("trails").GetDocument(summitLog.GetString("trail"), &meilisearch.DocumentQuery{
+		Fields: []string{"domain", "author", "url"},
+	}, &summitLogTrail)
+	if err != nil {
+		return err
+	}
+
+	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", summitLogTrail.Author)
+	if err != nil {
+		return err
+	}
+
+	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if err != nil {
+		return err
+	}
+
+	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+
+	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
+	to := pub.ItemCollection{pub.IRI("https://www.w3.org/ns/activitystreams#Public")}
+	cc := pub.ItemCollection{pub.IRI(summitLogAuthor.GetString("iri") + "/followers")}
+
+	// someone else created the summit log on the trail -> inform the trail's author
+	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
+		to.Append(pub.IRI(summitLogTrailAuthor.GetString("iri")))
+	}
+
+	photos := summitLog.GetStringSlice("photos")
+	thumbnail := ""
+	if len(photos) > 0 {
+		thumbnail = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, summitLog.Id, photos[0])
+	}
+
+	gpx := ""
+	if summitLog.GetString("gpx") != "" {
+		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, summitLog.Id, summitLog.GetString("gpx"))
+	}
+
+	attachments := pub.ItemCollection{}
+	for i := range min(len(photos), 3) {
+		iri := fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, summitLog.Id, photos[i])
+
+		attachments.Append(pub.Document{
+			Type:      pub.DocumentType,
+			MediaType: "image/jpeg",
+			URL:       pub.IRI(iri),
+		})
+	}
+	if gpx != "" {
+		attachments.Append(pub.Document{
+			Type:      pub.DocumentType,
+			MediaType: "application/xml+gpx",
+			URL:       pub.IRI(gpx),
+		})
+	}
+
+	logObject := models.SummitLogNew()
+	logObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, summitLog.GetString("name")))
+	logObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, summitLog.GetString("text")))
+	logObject.AttributedTo = pub.IRI(summitLogAuthor.GetString("iri"))
+	logObject.Published = summitLog.GetDateTime("created").Time()
+	logObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/summit-log/%s", origin, summitLog.Id))
+	logObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, summitLogTrailAuthor.GetString("username"), summitLog.GetString("trail")))
+	logObject.SummitLogId = summitLog.Id
+	logObject.TrailId = summitLog.GetString("trail")
+
+	logObject.Distance = summitLog.GetFloat("distance")
+	logObject.ElevationGain = summitLog.GetFloat("elevation_gain")
+	logObject.ElevationLoss = summitLog.GetFloat("elevation_loss")
+	logObject.Duration = summitLog.GetFloat("duration")
+	logObject.Date = summitLog.GetDateTime("date").Time()
+	logObject.Attachment = attachments
+	logObject.Gpx = gpx
+	logObject.Thumbnail = thumbnail
+
+	activity := pub.ActivityNew(pub.IRI(id), typ, logObject)
+	activity.Actor = pub.IRI(summitLogAuthor.GetString("iri"))
+	activity.To = to
+	activity.CC = cc
+	activity.Published = time.Now()
+
+	record := core.NewRecord(collection)
+	record.Set("id", recordId)
+	record.Set("iri", id)
+	record.Set("to", to)
+	record.Set("cc", cc)
+	record.Set("type", string(typ))
+	record.Set("object", logObject)
+	record.Set("actor", summitLogAuthor.GetString("iri"))
+	record.Set("published", time.Now())
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+
+	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}", "", -1, 0, dbx.Params{"followee": summitLogAuthor.Id})
+	if err != nil {
+		return err
+	}
+
+	recipients := []string{}
+	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
+		recipients = append(recipients, summitLogTrailAuthor.GetString("iri"))
+	}
+	for _, f := range follows {
+		follower, err := app.FindRecordById("activitypub_actors", f.GetString("follower"))
+		if err != nil {
+			return err
+		}
+		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+	}
+
+	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
+		recipients = append(recipients, summitLogTrailAuthor.GetString("iri"))
+	}
+
+	return PostActivity(app, summitLogAuthor, activity, recipients)
+}
+
+func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
+
+	// no need to do anything if the actor is local
+	if actor.GetBool("isLocal") {
+		return nil
+	}
+
+	var err error
+	switch activity.Object.GetType() {
+	case models.TrailType:
+		err = processCreateOrUpdateTrailActivity(activity, app, actor)
+	case pub.NoteType:
+		err = processCreateOrUpdateCommentActivity(activity, app, actor)
+	case models.SummitLogType:
+		err = processCreateOrUpdateSummitLogActivity(activity, app, actor)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+	client := meilisearch.New(
+		os.Getenv("MEILI_URL"),
+		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
+	)
+
+	trailObject, err := models.ToTrail(activity.Object)
+	if err != nil {
+		return err
+	}
+
+	doc, err := util.DocumentFromActivity(app, trailObject, actor)
+	if err != nil {
+		return err
+	}
+	documents := []map[string]interface{}{doc}
+
+	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
+		return err
+	}
+	return nil
+}
+
+func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+
+	commentObject, err := pub.ToObject(activity.Object)
+	if err != nil {
+		return err
+	}
+
+	if commentObject.InReplyTo == nil {
+		return fmt.Errorf("error processing comment: InReplyTo empty")
+	}
+
+	trailUrl, err := url.Parse(commentObject.InReplyTo.GetLink().String())
+	if err != nil {
+		return err
+	}
+	trailId := path.Base(trailUrl.Path)
+
+	recordId := commentObject.ID.String()[len(commentObject.ID.String())-15:]
+
+	var record *core.Record
+	if activity.Type == pub.CreateType {
+		collection, err := app.FindCollectionByNameOrId("comments")
+		if err != nil {
+			return err
+		}
+
+		record := core.NewRecord(collection)
+		record.Set("id", recordId)
+	} else if activity.Type == pub.UpdateType {
+		record, err = app.FindRecordById("comments", recordId)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("activity must be of type 'Create' or 'Update")
+	}
+
+	record.Set("text", commentObject.Content.First().Value)
+	record.Set("author", actor.Id)
+	record.Set("trail", trailId)
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+	logObject, err := models.ToSummitLog(activity.Object)
+	if err != nil {
+		return err
+	}
+
+	_, err = app.FindRecordById("trails", logObject.TrailId)
+
+	// if the trail is not present on this instance just ignore it
+	if err != nil {
+		return nil
+	}
+
+	recordId := logObject.ID.String()[len(logObject.ID.String())-15:]
+
+	var record *core.Record
+	if activity.Type == pub.CreateType {
+		collection, err := app.FindCollectionByNameOrId("summit_logs")
+		if err != nil {
+			return err
+		}
+
+		record = core.NewRecord(collection)
+		record.Set("id", recordId)
+	} else if activity.Type == pub.UpdateType {
+		record, err = app.FindRecordById("summit_logs", recordId)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("activity must be of type 'Create' or 'Update")
+	}
+	record.Set("date", logObject.Date)
+	record.Set("text", logObject.Content)
+	record.Set("distance", logObject.Distance)
+	record.Set("duration", logObject.Duration)
+	record.Set("elevation_gain", logObject.ElevationGain)
+	record.Set("elevation_loss", logObject.ElevationLoss)
+	record.Set("author", actor.Id)
+	record.Set("trail", logObject.TrailId)
+
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

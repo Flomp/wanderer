@@ -1,16 +1,17 @@
-import type { Trail } from '$lib/models/trail';
-import { Collection, handleError, uploadCreate } from '$lib/util/api_util';
-import { json, type RequestEvent } from '@sveltejs/kit';
+import type { Trail } from "$lib/models/trail";
+import { Collection, handleError, uploadUpdate } from "$lib/util/api_util";
+import { json, type RequestEvent } from "@sveltejs/kit";
 
-export async function PUT(event: RequestEvent) {
+export async function POST(event: RequestEvent) {
     try {        
-        const r = await uploadCreate<Trail>(event, Collection.trails)
+        const r = await uploadUpdate<Trail>(event, Collection.trails)
         enrichRecord(r);
         return json(r);
     } catch (e) {
         throw handleError(e)
     }
 }
+
 
 function enrichRecord(r: Trail) {
     r.date = r.date?.substring(0, 10) ?? "";

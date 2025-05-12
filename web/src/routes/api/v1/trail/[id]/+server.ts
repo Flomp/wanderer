@@ -49,14 +49,7 @@ export async function DELETE(event: RequestEvent) {
 
 async function enrichRecord(pb: PocketBase, r: Trail) {
     r.date = r.date?.substring(0, 10) ?? "";
-    for (const log of r.expand?.summit_logs ?? []) {
+    for (const log of r.expand?.summit_logs_via_trail ?? []) {
         log.date = log.date.substring(0, 10);
-
-        if (!log.expand) {
-            log.expand = {} as any;
-        }
-        if (log.author) {
-            log.expand!.author = await pb.collection("users_anonymous").getOne(log.author);
-        }
     }
 }

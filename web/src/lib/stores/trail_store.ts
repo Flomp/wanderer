@@ -4,7 +4,7 @@ import { defaultTrailSearchAttributes, Trail, type TrailFilter, type TrailFilter
 import type { Waypoint } from "$lib/models/waypoint";
 import { APIError } from "$lib/util/api_util";
 import { deepEqual } from "$lib/util/deep_util";
-import { getFileURL } from "$lib/util/file_util";
+import { getFileURL, objectToFormData } from "$lib/util/file_util";
 import * as M from "maplibre-gl";
 import type { Hits } from "meilisearch";
 import { type AuthRecord, type ListResult, type RecordModel } from "pocketbase";
@@ -22,7 +22,7 @@ export const editTrail: Writable<Trail> = writable(new Trail(""));
 export async function trails_index(perPage: number = 21, random: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail?' + new URLSearchParams({
         "perPage": perPage.toString(),
-        expand: "category,waypoints,summit_logs,tags",
+        expand: "category,waypoints,summit_logs_via_trail,tags",
         sort: random ? "@random" : "",
     }), {
         method: 'GET',
@@ -135,7 +135,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 export async function trails_show(id: string, domain?: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const r = await f(`${domain ? ('https://' + domain) : ''}/api/v1/trail/${id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
+        expand: "category,waypoints,summit_logs_via_trail,summit_logs_via_trail.author,trail_share_via_trail,tags,author",
     }), {
         method: 'GET',
     })
@@ -189,10 +189,6 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         }, f, user);
         trail.waypoints.push(model.id!);
     }
-    for (const summitLog of trail.expand?.summit_logs ?? []) {
-        const model = await summit_logs_create(summitLog, f);
-        trail.summit_logs.push(model.id!);
-    }
     for (const tag of trail.expand?.tags ?? []) {
         if (!tag.id) {
             const model = await tags_create(tag)
@@ -204,14 +200,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
 
     trail.author = user.actor
 
-    const formData = new FormData()
-
-    Object.entries(trail).forEach(([key, value]) => {
-        if (typeof value === 'object' || value == undefined) {
-            return;
-        }
-        formData.append(key, value);
-    });
+    const formData = objectToFormData(trail)
 
     if (gpx) {
         formData.set("gpx", gpx);
@@ -222,7 +211,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
     }
 
     let r = await f(`/api/v1/trail/form?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
+        expand: "category,waypoints,summit_logs_via_trail,trail_share_via_trail,tags",
     }), {
         method: 'PUT',
         body: formData,
@@ -234,6 +223,11 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
     }
 
     let model: Trail = await r.json();
+
+    for (const summitLog of trail.expand?.summit_logs_via_trail ?? []) {
+        summitLog.trail = model.id!;
+        await summit_logs_create(summitLog, f);
+    }
 
     return model;
 
@@ -263,15 +257,15 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         const success = await waypoints_delete(deletedWaypoint);
     }
 
-    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand?.summit_logs ?? [], newTrail.expand?.summit_logs ?? []);
+    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand?.summit_logs_via_trail ?? [], newTrail.expand?.summit_logs_via_trail ?? []);
 
     for (const summitLog of summitLogUpdates.added) {
+        summitLog.trail = newTrail.id!
         const model = await summit_logs_create(summitLog);
-        newTrail.summit_logs.push(model.id!);
     }
 
     for (const updatedSummitLog of summitLogUpdates.updated) {
-        const oldSummitLog = oldTrail.expand?.summit_logs?.find(w => w.id == updatedSummitLog.id);
+        const oldSummitLog = oldTrail.expand?.summit_logs_via_trail?.find(w => w.id == updatedSummitLog.id);
 
         const model = await summit_logs_update(oldSummitLog!, updatedSummitLog);
     }
@@ -295,22 +289,8 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         newTrail.tags = newTrail.tags.filter(t => t != tag.id);
     }
 
-    let r = await fetch(`/api/v1/trail/${newTrail.id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
-    }), {
-        method: 'POST',
-        body: JSON.stringify({ ...newTrail, expand: undefined }),
-    })
+    const formData = objectToFormData(newTrail, ["expand"])
 
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-
-    let model: Trail = await r.json();
-
-    const formData = new FormData()
     if (gpx) {
         formData.append("gpx", gpx);
     }
@@ -321,14 +301,16 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         }
     }
 
-
     const deletedPhotos = oldTrail.photos.filter(oldPhoto => !newTrail.photos.find(newPhoto => newPhoto === oldPhoto));
 
     for (const deletedPhoto of deletedPhotos) {
         formData.append("photos-", deletedPhoto.replace(/^.*[\\/]/, ''));
     }
 
-    r = await fetch(`/api/v1/trail/${newTrail.id!}/file`, {
+
+    let r = await fetch(`/api/v1/trail/form/${newTrail.id}?` + new URLSearchParams({
+        expand: "category,waypoints,summit_logs_via_trail,trail_share_via_trail,tags",
+    }), {
         method: 'POST',
         body: formData,
     })
@@ -338,10 +320,8 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const response: Trail = await r.json();
 
-    model.photos = response.photos
-    model.gpx = response.gpx
+    let model: Trail = await r.json();
 
     trail.set(model);
 
@@ -355,8 +335,8 @@ export async function trails_delete(trail: Trail) {
             await waypoints_delete(waypoint);
         }
     }
-    if (trail.expand?.summit_logs) {
-        for (const summit_log of trail.expand.summit_logs) {
+    if (trail.expand?.summit_logs_via_trail) {
+        for (const summit_log of trail.expand.summit_logs_via_trail) {
             await summit_logs_delete(summit_log);
         }
     }

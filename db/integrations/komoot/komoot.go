@@ -33,6 +33,15 @@ func SyncKomoot(app core.App) error {
 		}
 
 		userId := i.GetString("user")
+		actor, err := app.FindFirstRecordByData("activitypub_actors", "user", userId)
+		if err != nil {
+			warning := fmt.Sprintf("no actor found for user: %s\n", userId)
+			fmt.Print(warning)
+			app.Logger().Warn(warning)
+			continue
+		}
+		actorId := actor.Id
+
 		komootString := i.GetString("komoot")
 		komootIntegration := KomootIntegration{
 			Planned:   true,
@@ -71,7 +80,7 @@ func SyncKomoot(app core.App) error {
 				continue
 			}
 
-			hasNewTours, err = syncTrailWithTours(app, k, komootIntegration, userId, tours)
+			hasNewTours, err = syncTrailWithTours(app, k, komootIntegration, userId, actorId, tours)
 			if err != nil {
 				warning := fmt.Sprintf("error syncing komoot tours with trails: %v\n", err)
 				fmt.Print(warning)
@@ -176,7 +185,7 @@ func (k *KomootApi) fetchDetailedTour(tour KomootTour) (*DetailedKomootTour, err
 	return data, nil
 }
 
-func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user string, tours []KomootTour) (bool, error) {
+func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user string, actor string, tours []KomootTour) (bool, error) {
 	hasNewTours := false
 	for _, tour := range tours {
 		trails, err := app.FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": strconv.Itoa(int(tour.ID))})
@@ -202,7 +211,7 @@ func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user st
 			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for tour '%s': %v", tour.Name, err))
 			continue
 		}
-		err = createTrailFromTour(app, detailedTour, gpx, user, wpIds)
+		err = createTrailFromTour(app, detailedTour, gpx, actor, wpIds)
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to create trail for tour '%s': %v", tour.Name, err))
 			continue
@@ -212,27 +221,9 @@ func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user st
 	return hasNewTours, nil
 }
 
-func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *filesystem.File, user string, wpIds []string) error {
-	var summitLogRecord *core.Record
-	if detailedTour.Type == "tour_recorded" {
-		collection, err := app.FindCollectionByNameOrId("summit_logs")
-		if err != nil {
-			return err
-		}
+func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *filesystem.File, actor string, wpIds []string) error {
+	trailid := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
-		summitLogRecord = core.NewRecord(collection)
-		summitLogRecord.Load(map[string]any{
-			"distance":       detailedTour.Distance,
-			"elevation_gain": detailedTour.ElevationUp,
-			"elevation_loss": detailedTour.ElevationDown,
-			"duration":       detailedTour.Duration,
-			"date":           detailedTour.Date,
-			"author":         user,
-		})
-		if err := app.Save(summitLogRecord); err != nil {
-			return err
-		}
-	}
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
@@ -277,6 +268,7 @@ func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *fi
 	}
 
 	record.Load(map[string]any{
+		"id":                trailid,
 		"name":              detailedTour.Name,
 		"public":            detailedTour.Status == "public",
 		"distance":          detailedTour.Distance,
@@ -291,12 +283,9 @@ func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *fi
 		"difficulty":        diffculty,
 		"category":          categoryId,
 		"waypoints":         wpIds,
-		"author":            user,
+		"author":            actor,
 	})
 
-	if summitLogRecord != nil {
-		record.Set("summit_logs", summitLogRecord.Id)
-	}
 	if photos != nil {
 		record.Set("photos", photos)
 	}
@@ -306,6 +295,27 @@ func createTrailFromTour(app core.App, detailedTour *DetailedKomootTour, gpx *fi
 
 	if err := app.Save(record); err != nil {
 		return err
+	}
+
+	if detailedTour.Type == "tour_recorded" {
+		collection, err := app.FindCollectionByNameOrId("summit_logs")
+		if err != nil {
+			return err
+		}
+
+		summitLogRecord := core.NewRecord(collection)
+		summitLogRecord.Load(map[string]any{
+			"distance":       detailedTour.Distance,
+			"elevation_gain": detailedTour.ElevationUp,
+			"elevation_loss": detailedTour.ElevationDown,
+			"duration":       detailedTour.Duration,
+			"date":           detailedTour.Date,
+			"author":         actor,
+			"trail":          trailid,
+		})
+		if err := app.Save(summitLogRecord); err != nil {
+			return err
+		}
 	}
 
 	return nil

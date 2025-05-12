@@ -26,14 +26,13 @@ class Trail {
     category?: string;
     tags: string[];
     waypoints: string[];
-    summit_logs: string[];
     polyline?: string;
     domain?: string;
     expand?: {
         tags?: Tag[]
         category?: Category;
         waypoints?: Waypoint[]
-        summit_logs?: SummitLog[]
+        summit_logs_via_trail?: SummitLog[]
         author?: Actor
         comments_via_trail?: Comment[]
         gpx_data?: string
@@ -84,13 +83,12 @@ class Trail {
         this.thumbnail = params?.thumbnail ?? 0;
         this.photos = params?.photos ?? [];
         this.waypoints = [];
-        this.summit_logs = [];
         this.tags = []
         this.gpx = params?.gpx;
         this.expand = {
             category: params?.category,
             waypoints: params?.waypoints ?? [],
-            summit_logs: params?.summit_logs ?? [],
+            summit_logs_via_trail: params?.summit_logs ?? [],
             comments_via_trail: params?.comments ?? [],
             trail_share_via_trail: params?.shares ?? []
         }

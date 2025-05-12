@@ -114,6 +114,21 @@ export async function uploadCreate<T>(event: RequestEvent, collection: Collectio
     return r
 }
 
+export async function uploadUpdate<T>(event: RequestEvent, collection: Collection) {
+    const searchParams = Object.fromEntries(event.url.searchParams);
+    const safeSearchParams = RecordOptionsSchema.parse(searchParams);
+
+    const data = await event.request.formData();
+    if(!data.has('id')) {
+        throw new Error("data has no id")
+    }
+
+
+    const r = await event.locals.pb.collection(Collection[collection]).update<T>(data.get('id')!.toString(), data, safeSearchParams)
+
+    return r
+}
+
 export async function upload<T>(event: RequestEvent, collection: Collection) {
     const params = event.params
     const safeParams = RecordIdSchema.parse(params);
