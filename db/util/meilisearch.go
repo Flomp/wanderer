@@ -100,7 +100,7 @@ func DocumentFromActivity(app core.App, t *models.Trail, author *core.Record) (m
 		"author_avatar":  author.GetString("icon"),
 		"name":           t.Name.String(),
 		"description":    t.Content.String(),
-		"location":       t.Location.(*pub.Place).Name,
+		"location":       t.Location.(*pub.Place).Name.String(),
 		"distance":       t.Distance,
 		"elevation_gain": t.ElevationGain,
 		"elevation_loss": t.ElevationLoss,
@@ -115,7 +115,7 @@ func DocumentFromActivity(app core.App, t *models.Trail, author *core.Record) (m
 		"gpx":            t.Gpx,
 		"tags":           tags,
 		"domain":         domain,
-		"url":            t.ID,
+		"url":            t.ID.String(),
 		"_geo": map[string]float64{
 			"lat": t.Location.(*pub.Place).Latitude,
 			"lng": t.Location.(*pub.Place).Longitude,

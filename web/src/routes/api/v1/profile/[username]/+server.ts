@@ -1,4 +1,3 @@
-import { env } from "$env/dynamic/private";
 import type { Profile } from '$lib/models/profile';
 import { actorFromRemote, splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';

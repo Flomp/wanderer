@@ -18,6 +18,11 @@ import (
 )
 
 func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocabularyType) error {
+	// prevents running this hook during migrations
+	if app.IsTransactional() {
+		return nil
+	}
+
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -155,6 +160,11 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 }
 
 func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comment *core.Record, typ pub.ActivityVocabularyType) error {
+	// prevents running this hook during migrations
+	if app.IsTransactional() {
+		return nil
+	}
+
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -233,6 +243,11 @@ func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comm
 }
 
 func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, summitLog *core.Record, typ pub.ActivityVocabularyType) error {
+	// prevents running this hook during migrations
+	if app.IsTransactional() {
+		return nil
+	}
+
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -395,26 +410,7 @@ func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pu
 }
 
 func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-	client := meilisearch.New(
-		os.Getenv("MEILI_URL"),
-		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
-	)
-
-	trailObject, err := models.ToTrail(activity.Object)
-	if err != nil {
-		return err
-	}
-
-	doc, err := util.DocumentFromActivity(app, trailObject, actor)
-	if err != nil {
-		return err
-	}
-	documents := []map[string]interface{}{doc}
-
-	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
-		return err
-	}
-	return nil
+	return util.IndexActivity(activity, app, actor)
 }
 
 func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, actor *core.Record) error {

@@ -47,6 +47,7 @@ async function fetchRemoteActor(domain?: string, username?: string, f: (url: Req
 
     let actorURI = `/api/v1/activitypub/user/${username}`
     if (domain) {
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
         const webfingerURI = `https://${domain}/.well-known/webfinger?resource=acct:${username}@${domain}`;
         const webfingerRequest = await f(webfingerURI, { method: "GET" });
 

@@ -48,6 +48,7 @@ export async function GET(event: RequestEvent) {
             orderedItems: activities.items.map<APActivity>(a => ({
                 id: a.iri,
                 actor: a.actor,
+                type: a.type,
                 to: a.to,
                 cc: a.cc,
                 published: a.published,

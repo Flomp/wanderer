@@ -42,7 +42,7 @@ export async function GET(event: RequestEvent) {
             published: user.created,
             icon: {
                 type: "Image",
-                url: `${env.ORIGIN}/api/v1/files/users/${user.id}/${user.avatar}`
+                url: user.avatar ? `${env.ORIGIN}/api/v1/files/users/${user.id}/${user.avatar}` : undefined
             },
             publicKey: {
                 id: id + '#main-key',

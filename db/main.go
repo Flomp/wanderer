@@ -1,15 +1,10 @@
 package main
 
 import (
-	crypto_rand "crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -129,7 +124,12 @@ func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 	return func(e *core.RecordEvent) error {
 		userId := e.Record.Id
 
-		actor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", userId)
+		err := createDefaultUserSettings(e.App, e.Record.Id)
+		if err != nil {
+			return err
+		}
+
+		actor, err := util.ActorFromUser(e.App, e.Record)
 		if err != nil {
 			return err
 		}
@@ -152,14 +152,6 @@ func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
-		err = createDefaultUserSettings(e.App, e.Record.Id)
-		if err != nil {
-			return err
-		}
-		err = createUserKeyPair(e.App, e.Record)
-		if err != nil {
-			return err
-		}
 		return e.Next()
 	}
 }
@@ -175,71 +167,6 @@ func createDefaultUserSettings(app core.App, userId string) error {
 	settings.Set("mapFocus", "trails")
 	settings.Set("user", userId)
 	return app.Save(settings)
-}
-
-func createUserKeyPair(app core.App, u *core.Record) error {
-	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
-	if len(encryptionKey) == 0 {
-		return fmt.Errorf("POCKETBASE_ENCRYPTION_KEY not set")
-	}
-
-	collection, err := app.FindCollectionByNameOrId("activitypub_actors")
-	if err != nil {
-		return err
-	}
-	priv, pub, err := generateKeyPair()
-	if err != nil {
-		return err
-	}
-	privEncrypted, err := security.Encrypt(x509.MarshalPKCS1PrivateKey(priv), encryptionKey)
-	if err != nil {
-		return err
-	}
-	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
-	if err != nil {
-		return err
-	}
-
-	record := core.NewRecord(collection)
-
-	pemBlock := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubBytes,
-	})
-
-	origin := os.Getenv("ORIGIN")
-	if origin == "" {
-		return fmt.Errorf("ORIGIN environment variable not set")
-	}
-	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, u.GetString("username"))
-
-	url, err := url.Parse(origin)
-	if err != nil {
-		return err
-	}
-	domain := strings.TrimPrefix(url.Hostname(), "www.")
-
-	record.Set("username", u.GetString("username"))
-	record.Set("IRI", id)
-	record.Set("domain", domain)
-	record.Set("inbox", id+"/inbox")
-	record.Set("outbox", id+"/outbox")
-	record.Set("isLocal", true)
-	record.Set("public_key", string(pemBlock))
-	record.Set("private_key", privEncrypted)
-	record.Set("user", u.Id)
-
-	return app.Save(record)
-}
-
-func generateKeyPair() (*rsa.PrivateKey, *rsa.PublicKey, error) {
-	priv, err := rsa.GenerateKey(crypto_rand.Reader, 2048)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pub := &priv.PublicKey
-	return priv, pub, nil
 }
 
 func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
@@ -323,14 +250,8 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 
 func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
-		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		if err == nil {
-			// this is a local trail
-			// just proceed as normal
-			return e.Next()
-		}
 
-		err = federation.CreateSummitLogActivity(e.App, client, e.Record, pub.CreateType)
+		err := federation.CreateSummitLogActivity(e.App, client, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -341,13 +262,8 @@ func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 
 func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
-		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		if err == nil {
-			// this is a local trail
-			// just proceed as normal
-			return e.Next()
-		}
-		err = federation.CreateSummitLogActivity(e.App, client, e.Record, pub.UpdateType)
+
+		err := federation.CreateSummitLogActivity(e.App, client, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -357,12 +273,7 @@ func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 
 func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
-		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		if err == nil {
-			return e.Next()
-		}
-
-		err = federation.CreateSummitLogDeleteActivity(e.App, client, e.Record)
+		err := federation.CreateSummitLogDeleteActivity(e.App, client, e.Record)
 		if err != nil {
 			return err
 		}
@@ -373,15 +284,8 @@ func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 func createCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
-		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		if err == nil {
-			// this is a local trail
-			// just proceed as normal
-			return e.Next()
-		}
-
 		// this is a remote trail
-		err = federation.CreateCommentActivity(e.App, client, e.Record, pub.CreateType)
+		err := federation.CreateCommentActivity(e.App, client, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -391,12 +295,8 @@ func createCommentHandler(client meilisearch.ServiceManager) func(e *core.Record
 
 func updateCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		if err == nil {
-			return e.Next()
-		}
 
-		err = federation.CreateCommentActivity(e.App, client, e.Record, pub.UpdateType)
+		err := federation.CreateCommentActivity(e.App, client, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -406,12 +306,8 @@ func updateCommentHandler(client meilisearch.ServiceManager) func(e *core.Record
 
 func deleteCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		_, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		if err == nil {
-			return e.Next()
-		}
 
-		err = federation.CreateCommentDeleteActivity(e.App, client, e.Record)
+		err := federation.CreateCommentDeleteActivity(e.App, client, e.Record)
 		if err != nil {
 			return err
 		}
@@ -786,6 +682,7 @@ func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.Serve
 		registerRoutes(se, client)
 		registerCronJobs(se.App)
 		bootstrapData(se.App, client)
+		util.AddCustomTypesToPub()
 
 		return se.Next()
 	}

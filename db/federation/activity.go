@@ -9,12 +9,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"pocketbase/models"
 	"strings"
 	"time"
 
 	pub "github.com/go-ap/activitypub"
-	"github.com/valyala/fastjson"
 
 	"github.com/go-ap/jsonld"
 	"github.com/go-fed/httpsig"
@@ -94,33 +92,6 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 }
 
 func ProcessActivity(e *core.RequestEvent) error {
-	pub.ItemTyperFunc = func(typ pub.ActivityVocabularyType) (pub.Item, error) {
-		if typ == models.TrailType {
-			return models.TrailNew(), nil
-		} else if typ == models.SummitLogType {
-			return models.SummitLogNew(), nil
-		}
-		return pub.GetItemByType(typ)
-	}
-	pub.JSONItemUnmarshal = func(typ pub.ActivityVocabularyType, v *fastjson.Value, i pub.Item) error {
-		if typ == models.TrailType {
-			return models.OnTrail(i, func(t *models.Trail) error {
-				return models.JSONLoadTrail(v, t)
-			})
-		} else if typ == models.SummitLogType {
-			return models.OnSummitLog(i, func(s *models.SummitLog) error {
-				return models.JSONLoadSummitLog(v, s)
-			})
-		}
-		return nil
-	}
-	pub.IsNotEmpty = func(i pub.Item) bool {
-		if i.GetType() == models.TrailType || i.GetType() == models.SummitLogType {
-			return true
-		}
-
-		return pub.NotEmpty(i)
-	}
 	var activity pub.Activity
 	if err := e.BindBody(&activity); err != nil {
 		return e.BadRequestError("Failed to read request data", err)

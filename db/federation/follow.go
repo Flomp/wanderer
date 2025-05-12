@@ -3,6 +3,7 @@ package federation
 import (
 	"fmt"
 	"os"
+	"pocketbase/util"
 	"time"
 
 	pub "github.com/go-ap/activitypub"
@@ -29,12 +30,6 @@ func CreateFollowActivity(app core.App, follow *core.Record) error {
 	followeeActor, err := app.FindRecordById("activitypub_actors", followee)
 	if err != nil {
 		return err
-	}
-
-	// this was a local follow
-	// we can stop here since we auto accept all incoming follow requests
-	if followeeActor.GetBool("isLocal") {
-		return nil
 	}
 
 	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
@@ -118,9 +113,8 @@ func ProcessFollowActivity(app core.App, actor *core.Record, activity pub.Activi
 	}
 
 	// send the accept activity back to the actor's inbox
-	acceptActivity := pub.AcceptNew(pub.IRI(id), activity.Actor.GetLink())
+	acceptActivity := pub.AcceptNew(pub.IRI(id), activity)
 	acceptActivity.Actor = activity.Object
-	acceptActivity.Object = activity
 
 	return PostActivity(app, object, acceptActivity, []string{actor.GetString("inbox")})
 }
@@ -140,6 +134,11 @@ func ProcessAcceptActivity(app core.App, actor *core.Record, activity pub.Activi
 	}
 	follow.Set("status", "accepted")
 	err = app.Save(follow)
+	if err != nil {
+		return err
+	}
+
+	err = util.SyncOutbox(app, actor)
 	if err != nil {
 		return err
 	}
@@ -164,12 +163,6 @@ func CreateUnfollowActivity(app core.App, follow *core.Record) error {
 	followeeActor, err := app.FindRecordById("activitypub_actors", followee)
 	if err != nil {
 		return err
-	}
-
-	// this was a local follow
-	// we don't need to notify anyone
-	if followeeActor.GetBool("isLocal") {
-		return nil
 	}
 
 	// find the original follow activity
@@ -209,6 +202,10 @@ func CreateUnfollowActivity(app core.App, follow *core.Record) error {
 }
 
 func ProcessUnfollowActivity(app core.App, actor *core.Record, activity pub.Activity) error {
+	// this was a local follow
+	if actor.GetBool("isLocal") {
+		return nil
+	}
 
 	followActivity := activity.Object.(*pub.Activity)
 

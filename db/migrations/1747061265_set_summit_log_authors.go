@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
 )
@@ -13,6 +14,17 @@ func init() {
 		}
 
 		for _, l := range logs {
+			if l.GetString("user") == "" {
+				trail, err := app.FindFirstRecordByFilter("trails", "summit_logs ?~ {:id}", dbx.Params{"id": l.Id})
+				if err != nil {
+					// orphaned
+					err = app.Delete(l)
+					if err != nil {
+						return err
+					}
+				}
+				l.Set("user", trail.GetString("user"))
+			}
 			actor, err := app.FindFirstRecordByData("activitypub_actors", "user", l.GetString("user"))
 			if err != nil {
 				return err

@@ -16,6 +16,11 @@ import (
 )
 
 func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
+	// prevents running this hook during migrations
+	if app.IsTransactional() {
+		return nil
+	}
+
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -77,6 +82,11 @@ func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
 }
 
 func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager, r *core.Record) error {
+	// prevents running this hook during migrations
+	if app.IsTransactional() {
+		return nil
+	}
+
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -138,6 +148,11 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 }
 
 func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManager, r *core.Record) error {
+	// prevents running this hook during migrations
+	if app.IsTransactional() {
+		return nil
+	}
+
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
