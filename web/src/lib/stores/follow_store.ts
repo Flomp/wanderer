@@ -53,21 +53,6 @@ export async function follows_a_b(a: string, b: string, f: (url: RequestInfo | U
     return response.items.at(0);
 }
 
-export async function follows_counts(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const r = await f('/api/v1/follow/count/' + id, {
-        method: 'GET',
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    const response: { followers: number, following: number } = await r.json();
-
-    return response;
-}
-
 export async function follows_create(followee: string) {
     let r = await fetch('/api/v1/follow', {
         method: 'PUT',
