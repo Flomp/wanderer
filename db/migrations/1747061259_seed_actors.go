@@ -79,7 +79,9 @@ func init() {
 			record.Set("summary", settings.GetString("bio"))
 			record.Set("published", u.GetDateTime("created"))
 			record.Set("iri", id)
-			record.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, u.Id, u.GetString("avatar")))
+			if u.GetString("avatar") != "" {
+				record.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, u.Id, u.GetString("avatar")))
+			}
 			record.Set("inbox", id+"/inbox")
 			record.Set("outbox", id+"/outbox")
 			record.Set("followers", id+"/followers")

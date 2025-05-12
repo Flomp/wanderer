@@ -949,7 +949,7 @@ func init() {
     {
         "id": "urytyc428mwlbqq",
         "listRule": null,
-        "viewRule": "@request.auth.id = id",
+        "viewRule": "@request.auth.id = user",
         "createRule": null,
         "updateRule": null,
         "deleteRule": null,
@@ -969,6 +969,19 @@ func init() {
                 "required": true,
                 "system": true,
                 "type": "text"
+            },
+            {
+                "cascadeDelete": true,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "_clone_7E6L",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "user",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
             },
             {
                 "hidden": false,
@@ -1013,7 +1026,7 @@ func init() {
         ],
         "indexes": [],
         "system": false,
-        "viewQuery": "SELECT \n    activitypub_actors.id, \n    COALESCE(MAX(trails.lat), 0) AS max_lat, \n    COALESCE(MAX(trails.lon), 0) AS max_lon, \n    COALESCE(MIN(trails.lat), 0) AS min_lat, \n    COALESCE(MIN(trails.lon), 0) AS min_lon \nFROM activitypub_actors \nLEFT JOIN trails \n    ON activitypub_actors.id = trails.author \n    OR trails.public = TRUE \n    OR EXISTS (\n        SELECT 1 \n        FROM trail_share \n        WHERE trail_share.trail = trails.id \n        AND trail_share.user = activitypub_actors.id\n    ) \nGROUP BY activitypub_actors.id;"
+        "viewQuery": "SELECT \n    activitypub_actors.id, activitypub_actors.user, \n    COALESCE(MAX(trails.lat), 0) AS max_lat, \n    COALESCE(MAX(trails.lon), 0) AS max_lon, \n    COALESCE(MIN(trails.lat), 0) AS min_lat, \n    COALESCE(MIN(trails.lon), 0) AS min_lon \nFROM activitypub_actors \nLEFT JOIN trails \n    ON activitypub_actors.id = trails.author \n    OR trails.public = TRUE \n    OR EXISTS (\n        SELECT 1 \n        FROM trail_share \n        WHERE trail_share.trail = trails.id \n        AND trail_share.user = activitypub_actors.id\n    ) \nGROUP BY activitypub_actors.id;"
     },
     {
         "id": "4wbv9tz5zjdrjh1",

@@ -12,7 +12,7 @@ export async function GET(event: RequestEvent) {
         });
     }
     try {
-        const r = await event.locals.pb.collection('trails_bounding_box').getOne<TrailBoundingBox>(event.locals.pb.authStore.record!.id)
+        const r = await event.locals.pb.collection('trails_bounding_box').getOne<TrailBoundingBox>(event.locals.user.actor!)
         return json(r)
     } catch (e: any) {
         throw handleError(e);
