@@ -9,7 +9,7 @@ export async function GET(event: RequestEvent) {
 
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 
@@ -18,6 +18,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<SummitLog>(event, SummitLogCreateSchema, Collection.summit_logs)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

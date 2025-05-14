@@ -147,7 +147,7 @@
                 alt="avatar"
             />
             {#if !list.expand.author.private}
-                <a class="underline" href="/profile/@{list.expand.author.username}"
+                <a class="underline" href="/profile/@{list.expand.author.username?.toLowerCase()}"
                     >{list.expand.author.username}</a
                 >
             {:else}

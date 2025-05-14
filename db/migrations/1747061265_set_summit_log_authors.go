@@ -18,10 +18,11 @@ func init() {
 				trail, err := app.FindFirstRecordByFilter("trails", "summit_logs ?~ {:id}", dbx.Params{"id": l.Id})
 				if err != nil {
 					// orphaned
-					err = app.Delete(l)
+					err = app.UnsafeWithoutHooks().Delete(l)
 					if err != nil {
 						return err
 					}
+					continue
 				}
 				l.Set("user", trail.GetString("user"))
 			}
@@ -30,7 +31,7 @@ func init() {
 				return err
 			}
 			l.Set("author", actor.Id)
-			err = app.Save(l)
+			err = app.UnsafeWithoutHooks().Save(l)
 			if err != nil {
 				return err
 			}

@@ -16,10 +16,6 @@ import (
 )
 
 func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
-	// prevents running this hook during migrations
-	if app.IsTransactional() {
-		return nil
-	}
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -64,7 +60,7 @@ func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
 	activity.CC = pub.ItemCollection{pub.IRI(cc)}
 	activity.Published = time.Now()
 
-	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}", "", -1, 0, dbx.Params{"followee": author.Id})
+	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}&&status='accepted'", "", -1, 0, dbx.Params{"followee": author.Id})
 	if err != nil {
 		return err
 	}
@@ -82,10 +78,6 @@ func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
 }
 
 func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager, r *core.Record) error {
-	// prevents running this hook during migrations
-	if app.IsTransactional() {
-		return nil
-	}
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -148,10 +140,6 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 }
 
 func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManager, r *core.Record) error {
-	// prevents running this hook during migrations
-	if app.IsTransactional() {
-		return nil
-	}
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {

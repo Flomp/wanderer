@@ -19,7 +19,7 @@ func init() {
 				continue
 			}
 			l.Set("trail", trail.Id)
-			err = app.Save(l)
+			err = app.UnsafeWithoutHooks().Save(l)
 			if err != nil {
 				return err
 			}

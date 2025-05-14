@@ -168,7 +168,7 @@
                 data-title={log.expand.author.username}
             >
                 <a
-                    href="/profile/@{log.expand.author.username}{log.expand
+                    href="/profile/@{log.expand.author.username?.toLowerCase()}{log.expand
                         .author.isLocal
                         ? ''
                         : '@' + log.expand.author.domain}"

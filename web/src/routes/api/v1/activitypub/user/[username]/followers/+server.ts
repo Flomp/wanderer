@@ -25,8 +25,8 @@ export async function GET(event: RequestEvent) {
 
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
-        const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getFirstListItem(`username='${username}'`)
-        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user='${user.id}'`)
+        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username='${username}'&&isLocal=true`)
+
         const followers: ListResult<Follow> = await event.locals.pb.collection("follows").getList(intPage, 10, { sort: "-created", filter: `followee='${actor.id}'`, expand: "follower" })
 
         const id = actor.iri;
@@ -51,7 +51,7 @@ export async function GET(event: RequestEvent) {
 
         return json(outbox, { headers });
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 
 

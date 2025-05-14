@@ -15,6 +15,6 @@ export async function GET(event: RequestEvent) {
         const r = await event.locals.pb.collection('trails_bounding_box').getOne<TrailBoundingBox>(event.locals.user.actor!)
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }

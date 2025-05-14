@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { page } from "$app/state";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import type { Trail, TrailFilter } from "$lib/models/trail.js";
+    import { profile_trails_index } from "$lib/stores/profile_store.js";
     import { trails_search_filter } from "$lib/stores/trail_store";
     import { _ } from "svelte-i18n";
 
@@ -19,14 +21,26 @@
 
     async function handleFilterUpdate() {
         loading = true;
-        trails = await trails_search_filter(filter, pagination.page);
+        trails = await profile_trails_index(
+            page.params.username,
+            filter,
+            pagination.page,
+            12,
+            fetch,
+        );
 
         loading = false;
     }
 
-    async function paginate(page: number) {
-        pagination.page = page;
-        trails = await trails_search_filter(filter, page);
+    async function paginate(newPage: number) {
+        pagination.page = newPage;
+        trails = await profile_trails_index(
+            page.params.username,
+            filter,
+            newPage,
+            12,
+            fetch,
+        );
     }
 </script>
 

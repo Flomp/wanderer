@@ -43,7 +43,7 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 
 	polyline, err := getPolyline(app, r)
 	if err != nil {
-		return nil, err
+		polyline = ""
 	}
 
 	document := map[string]any{

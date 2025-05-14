@@ -48,7 +48,7 @@
     out:fade={{ duration: 150 }}
 >
     <a
-        href="/profile/{comment.expand?.author.id}"
+        href="/profile/@{comment.expand?.author.username.toLowerCase()}"
         class="text-sm font-semibold shrink-0"
     >
         <img
@@ -61,7 +61,7 @@
         <div class="flex items-center">
             <p class="">
                 <a
-                    href="/profile/@{comment.expand?.author.username}{comment
+                    href="/profile/@{comment.expand?.author.username.toLowerCase()}{comment
                         .expand?.author.isLocal
                         ? ''
                         : '@' + comment.expand?.author.domain}"

@@ -45,7 +45,7 @@
     <h1 class="text-3xl font-semibold mb-4">{$_(page.params.type)}</h1>
     <ul class="space-y-4">
         {#each follows.items as follow}
-            <a href="/profile/@{follow.expand?.[key].username}{follow.expand?.[key].isLocal ? '' : '@' + follow.expand?.[key].username}">
+            <a href="/profile/@{follow.expand?.[key].username}{follow.expand?.[key].isLocal ? '' : '@' + follow.expand?.[key].domain}">
                 <li
                     class="flex items-center gap-x-4 hover:bg-menu-item-background-hover p-4"
                 >

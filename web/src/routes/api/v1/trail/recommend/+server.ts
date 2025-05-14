@@ -15,6 +15,6 @@ export async function GET(event: RequestEvent) {
 
         return json(response.hits)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }

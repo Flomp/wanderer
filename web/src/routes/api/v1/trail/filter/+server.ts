@@ -17,6 +17,6 @@ export async function GET(event: RequestEvent) {
         const r = await event.locals.pb.collection('trails_filter').getOne<TrailFilterValues>(event.locals.user.actor)
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }

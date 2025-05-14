@@ -1,7 +1,11 @@
 import type { Actor } from '$lib/models/activitypub/actor';
 import type { WebfingerResponse } from '$lib/models/activitypub/webfinger_response';
+import type { SummitLog } from '$lib/models/summit_log';
+import type { Trail } from '$lib/models/trail';
 import { type APActor, type APImage, type APOrderedCollection } from 'activitypub-types';
 import { ClientResponseError } from 'pocketbase';
+import { Collection, list } from './api_util';
+import type { RequestEvent } from '@sveltejs/kit';
 
 
 export function splitUsername(username: string, localDomain?: string) {
@@ -70,7 +74,7 @@ async function fetchRemoteActor(domain?: string, username?: string, f: (url: Req
 
     if (!actorRequest.ok) {
         const errorResponse = await actorRequest.json();
-        throw new ClientResponseError({ status: 500, response: errorResponse });
+        throw new ClientResponseError({ status: actorRequest.status, response: errorResponse });
     }
     const apActor: APActor & { publicKey: { id: string, owner: string, publicKeyPem: string } } = await actorRequest.json();
 

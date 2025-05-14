@@ -28,7 +28,7 @@ export async function POST(event: RequestEvent) {
         const response = await r.json();
         return json(response)
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 

@@ -19,7 +19,7 @@ export async function GET(event: RequestEvent) {
         }
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 
@@ -29,7 +29,7 @@ export async function PUT(event: RequestEvent) {
         enrichRecord(r);
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 

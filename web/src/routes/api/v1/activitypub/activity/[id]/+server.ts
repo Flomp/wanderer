@@ -22,6 +22,6 @@ export async function GET(event: RequestEvent) {
 
         return json(activity, { headers })
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

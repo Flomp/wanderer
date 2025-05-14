@@ -5,6 +5,7 @@ import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 import { type APActor, type APRoot } from 'activitypub-types';
 import type { UserAnonymous } from "$lib/models/user";
+import { ClientResponseError } from 'pocketbase';
 
 
 export async function GET(event: RequestEvent) {
@@ -19,9 +20,9 @@ export async function GET(event: RequestEvent) {
 
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
-        const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getFirstListItem(`username='${username}'`)
+        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username='${username}'&&isLocal=true`)
+        const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getOne(actor.user!)
 
-        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user='${user.id}'`)
 
         const id = `${env.ORIGIN}/api/v1/activitypub/user/${username}`
 
@@ -34,7 +35,7 @@ export async function GET(event: RequestEvent) {
             inbox: id + '/inbox',
             outbox: id + '/outbox',
             summary: user.bio,
-            name: user.username,
+            name: actor.username,
             preferredUsername: user.username,
             followers: id + '/followers',
             following: id + '/following',
@@ -56,7 +57,7 @@ export async function GET(event: RequestEvent) {
 
         return json(r, { headers });
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 
 

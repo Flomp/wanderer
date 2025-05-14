@@ -8,6 +8,6 @@ export async function POST(event: RequestEvent) {
         r.date = r.date?.substring(0, 10) ?? "";
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

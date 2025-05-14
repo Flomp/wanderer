@@ -24,6 +24,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<TrailShare>(event, TrailShareCreateSchema, Collection.trail_share)
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

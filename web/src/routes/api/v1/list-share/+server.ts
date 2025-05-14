@@ -16,7 +16,7 @@ export async function GET(event: RequestEvent) {
         }
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 
@@ -25,6 +25,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<ListShare>(event, ListShareCreateSchema, Collection.list_share)
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

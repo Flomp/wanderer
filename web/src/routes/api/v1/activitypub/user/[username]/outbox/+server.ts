@@ -25,8 +25,7 @@ export async function GET(event: RequestEvent) {
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
 
-        const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getFirstListItem(`username='${username}'`)
-        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user='${user.id}'`)
+        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username='${username}'&&isLocal=true`)
 
         const filter = `actor='${actor.iri}'${safeSearchParams.filter ? '&&' + safeSearchParams.filter : ''}`
         const activities: ListResult<Activity> = await event.locals.pb.collection("activitypub_activities").getList(page, safeSearchParams.perPage, { sort: safeSearchParams.sort ?? "-created", filter })
@@ -61,7 +60,7 @@ export async function GET(event: RequestEvent) {
 
         return json(outbox, { headers });
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 
 

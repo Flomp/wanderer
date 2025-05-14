@@ -93,7 +93,7 @@ func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	if origin == "" {
 		return nil, fmt.Errorf("ORIGIN environment variable not set")
 	}
-	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, u.GetString("username"))
+	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, strings.ToLower(u.GetString("username")))
 
 	url, err := url.Parse(origin)
 	if err != nil {
@@ -101,7 +101,7 @@ func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	}
 	domain := strings.TrimPrefix(url.Hostname(), "www.")
 
-	record.Set("username", u.GetString("username"))
+	record.Set("username", strings.ToLower(u.GetString("username")))
 	record.Set("domain", domain)
 	record.Set("summary", settings.GetString("bio"))
 	record.Set("published", u.GetDateTime("created"))

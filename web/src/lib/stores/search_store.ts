@@ -1,5 +1,5 @@
 import { env } from "$env/dynamic/public";
-import { defaultTrailSearchAttributes } from "$lib/models/trail";
+import { defaultTrailSearchAttributes, type TrailSearchResult } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits, MultiSearchParams, MultiSearchResponse, MultiSearchResult, SearchParams, SearchResponse } from "meilisearch";
 
@@ -10,30 +10,6 @@ export type LocationSearchResult = {
     lon: number;
     category: string;
     type: string;
-}
-
-export type TrailSearchResult = {
-    id: string;
-    _geo: {
-        lat: number,
-        lon: number
-    }
-    author: string;
-    category: string;
-    completed: boolean;
-    created: number;
-    date: number;
-    description: string;
-    difficulty: "easy" | "moderate" | "difficult"
-    distance: number;
-    duration: number
-    elevation_gain: number;
-    elevation_loss: number
-    location: string;
-    name: string;
-    public: boolean;
-    domain?: string;
-    polyline?: string;
 }
 
 export type ListSearchResult = {

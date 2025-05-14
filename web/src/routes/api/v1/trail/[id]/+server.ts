@@ -22,7 +22,7 @@ export async function GET(event: RequestEvent) {
         r.expand?.waypoints?.sort((a, b) => (a.distance_from_start ?? 0) - (b.distance_from_start ?? 0))
         return json(r)
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -32,7 +32,7 @@ export async function POST(event: RequestEvent) {
         await enrichRecord(event.locals.pb, r)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -41,7 +41,7 @@ export async function DELETE(event: RequestEvent) {
         const r = await remove(event, Collection.trails)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 

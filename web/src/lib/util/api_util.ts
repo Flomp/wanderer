@@ -1,4 +1,4 @@
-import { error, type NumericRange, type RequestEvent } from "@sveltejs/kit";
+import { error, json, type NumericRange, type RequestEvent } from "@sveltejs/kit";
 import { ClientResponseError, type ListResult } from "pocketbase";
 import { ZodError, type ZodSchema } from "zod";
 import { RecordListOptionsSchema, RecordIdSchema, RecordOptionsSchema } from "$lib/models/api/base_schema";
@@ -20,6 +20,7 @@ export class APIError extends Error {
 export enum Collection {
     users = "users",
     activitypub_activities = "activitypub_activities",
+    activitypub_actors = "activitypub_actors",
     categories = "categories",
     comments = "comments",
     follows = "follows",
@@ -33,11 +34,10 @@ export enum Collection {
     trails = "trails",
     tags = "tags",
     waypoints = "waypoints",
-    activities = "activities",
-    follow_counts = "follow_counts",
+    timeline = "timeline",
     trails_bounding_box = "trails_bounding_box",
     trails_filter = "trails_filter",
-    users_anonymous = "users_anonymous"
+    users_anonymous = "users_anonymous",
 }
 
 export async function list<T>(event: RequestEvent, collection: Collection) {
@@ -119,7 +119,7 @@ export async function uploadUpdate<T>(event: RequestEvent, collection: Collectio
     const safeSearchParams = RecordOptionsSchema.parse(searchParams);
 
     const data = await event.request.formData();
-    if(!data.has('id')) {
+    if (!data.has('id')) {
         throw new Error("data has no id")
     }
 
@@ -151,12 +151,12 @@ export async function remove(event: RequestEvent, collection: Collection) {
 
 export function handleError(e: any) {
     if (e instanceof ZodError) {
-        return error(400, { message: "invalid_params", detail: e.issues } as any)
+        return json({ message: "invalid_params", detail: e.issues }, { status: 400 })
     } else if (e instanceof ClientResponseError && e.status > 0) {
-        return error(e.status as NumericRange<400, 599>, { ...e.response, message: e.message, detail: e.originalError.data } as any)
+        return json({ ...e.response, message: e.message, detail: e.originalError.data }, { status: e.status })
     } else if (e instanceof SyntaxError) {
-        return error(400, "invalid_json")
+        return json({ message: "invalid_json" }, { status: 400 })
     } else {
-        return error(500, e.toString())
+        return json({ message: e }, { status: 500 })
     }
 }

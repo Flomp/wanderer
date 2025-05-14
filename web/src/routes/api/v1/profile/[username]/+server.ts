@@ -1,7 +1,8 @@
 import type { Profile } from '$lib/models/profile';
 import { actorFromRemote, splitUsername } from '$lib/util/activitypub_util';
-import { handleError } from '$lib/util/api_util';
+import { APIError, handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
+import { ClientResponseError } from 'pocketbase';
 
 export async function GET(event: RequestEvent) {
     const fullUsername = event.params.username;
@@ -36,6 +37,9 @@ export async function GET(event: RequestEvent) {
 
         return json({profile, actor: fetchedActor})
     } catch (e) {
-        throw handleError(e)
+        if(e instanceof Error && e.message == "fetch failed") {
+            return error(404, "Not found")
+        }
+        return handleError(e)
     }
 }

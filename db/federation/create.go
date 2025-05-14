@@ -18,10 +18,6 @@ import (
 )
 
 func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocabularyType) error {
-	// prevents running this hook during migrations
-	if app.IsTransactional() {
-		return nil
-	}
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -142,7 +138,7 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 		return err
 	}
 
-	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}", "", -1, 0, dbx.Params{"followee": trailAuthor.Id})
+	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}&&status='accepted'", "", -1, 0, dbx.Params{"followee": trailAuthor.Id})
 	if err != nil {
 		return err
 	}
@@ -160,10 +156,6 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 }
 
 func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comment *core.Record, typ pub.ActivityVocabularyType) error {
-	// prevents running this hook during migrations
-	if app.IsTransactional() {
-		return nil
-	}
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -243,10 +235,6 @@ func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comm
 }
 
 func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, summitLog *core.Record, typ pub.ActivityVocabularyType) error {
-	// prevents running this hook during migrations
-	if app.IsTransactional() {
-		return nil
-	}
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -258,19 +246,28 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 		return err
 	}
 
-	summitLogTrail := struct {
-		Domain string `json:"domain"`
-		Author string `json:"author"`
-		URL    string `json:"url"`
-	}{}
-	err = client.Index("trails").GetDocument(summitLog.GetString("trail"), &meilisearch.DocumentQuery{
-		Fields: []string{"domain", "author", "url"},
-	}, &summitLogTrail)
+	var summitLogAuthorId string
+	// first check if we find the trail locally
+	summitLogTrailRecord, err := app.FindRecordById("trails", summitLog.GetString("trail"))
 	if err != nil {
-		return err
+		summitLogTrail := struct {
+			Author string `json:"author"`
+		}{}
+		err = client.Index("trails").GetDocument(summitLog.GetString("trail"), &meilisearch.DocumentQuery{
+			Fields: []string{"author"},
+		}, &summitLogTrail)
+		if err != nil {
+			return err
+		}
+		if summitLogTrail.Author == "" {
+			return fmt.Errorf("trail %s on log %s does exist", summitLog.GetString("trail"), summitLog.Id)
+		}
+		summitLogAuthorId = summitLogTrail.Author
+	} else {
+		summitLogAuthorId = summitLogTrailRecord.GetString("author")
 	}
 
-	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", summitLogTrail.Author)
+	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", summitLogAuthorId)
 	if err != nil {
 		return err
 	}
@@ -360,7 +357,7 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 		return err
 	}
 
-	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}", "", -1, 0, dbx.Params{"followee": summitLogAuthor.Id})
+	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}&&status='accepted'", "", -1, 0, dbx.Params{"followee": summitLogAuthor.Id})
 	if err != nil {
 		return err
 	}

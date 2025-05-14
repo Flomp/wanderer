@@ -9,7 +9,7 @@ export async function GET(event: RequestEvent) {
         const r = await show<SummitLog>(event, Collection.summit_logs)
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 
@@ -18,7 +18,7 @@ export async function POST(event: RequestEvent) {
         const r = await update<SummitLog>(event, SummitLogUpdateSchema, Collection.summit_logs)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -27,6 +27,6 @@ export async function DELETE(event: RequestEvent) {
         const r = await remove(event, Collection.summit_logs)
         return json(r);
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }

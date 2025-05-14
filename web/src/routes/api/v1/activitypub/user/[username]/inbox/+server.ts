@@ -20,9 +20,6 @@ export async function POST(event: RequestEvent) {
 
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
-        const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getFirstListItem(`username='${username}'`)
-        const object: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`user='${user.id}'`)
-
         const activity: APActivity = await event.request.json()
 
         if (!activity.actor) {
@@ -62,7 +59,7 @@ export async function POST(event: RequestEvent) {
 
         return json("", { status: 200, headers });
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 
 

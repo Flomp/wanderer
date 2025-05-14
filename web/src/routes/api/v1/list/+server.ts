@@ -17,7 +17,7 @@ export async function GET(event: RequestEvent) {
         }
         return json(r)
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -26,6 +26,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<List>(event, ListCreateSchema, Collection.lists)
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

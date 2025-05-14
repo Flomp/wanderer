@@ -429,7 +429,7 @@ export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f:
     return gpxData
 }
 
-async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<Trail[]> {
+export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<Trail[]> {
     const trails: Trail[] = []
     for (const h of hits) {
         const t: Trail & RecordModel = {

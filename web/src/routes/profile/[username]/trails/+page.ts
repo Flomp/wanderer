@@ -1,8 +1,11 @@
 import type { TrailFilter } from "$lib/models/trail";
-import { trails_search_filter } from "$lib/stores/trail_store";
-import { type Load } from "@sveltejs/kit";
+import { profile_trails_index } from "$lib/stores/profile_store";
+import { error, type Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch, parent }) => {
+    if (!params.username) {
+        error(404, "Not found")
+    }
     const { actor } = await parent()
 
     const filter: TrailFilter = {
@@ -28,6 +31,6 @@ export const load: Load = async ({ params, fetch, parent }) => {
         sort: "created",
         sortOrder: "+",
     };
-    const trails = await trails_search_filter(filter, 1, fetch)
+    const trails = await profile_trails_index(params.username, filter, 1, 12, fetch)
     return { trails, filter }
 };

@@ -8,7 +8,7 @@ export async function GET(event: RequestEvent) {
         const r = await list<Comment>(event, Collection.comments);
         return json(r)
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -17,6 +17,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<Comment>(event, CommentCreateSchema, Collection.comments)
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

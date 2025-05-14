@@ -1,4 +1,3 @@
-import type { Actor } from "$lib/models/activitypub/actor";
 import { follows_a_b } from "$lib/stores/follow_store";
 import { profile_show } from "$lib/stores/profile_store";
 import { APIError } from "$lib/util/api_util";

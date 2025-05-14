@@ -4,20 +4,20 @@
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import ActivityCard from "$lib/components/profile/activity_card.svelte";
-    import { activities_index } from "$lib/stores/activity_store.js";
+    import { profile_timeline_index } from "$lib/stores/profile_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
 
     let { data } = $props();
 
-    let activities = $state(data.activities);
+    let timeline = $state(data.timeline);
 
     let loading: boolean = false;
 
     let pagination = $derived({
         page: 1,
-        totalPages: data.activities.totalItems,
+        totalPages: data.timeline.totalItems,
     });
 
     async function onListScroll(e: Event) {
@@ -35,7 +35,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        activities = await activities_index(data.actor.iri + '/outbox', pagination.page);
+        timeline = await profile_timeline_index(data.actor.iri, pagination.page);
     }
 </script>
 
@@ -115,29 +115,27 @@
     </div>
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">Timeline</h4>
-        {#if !activities.items?.length && data.isOwnProfile}
+        {#if !timeline.items?.length && data.isOwnProfile}
             <a class="btn-primary inline-block" href="/trails/edit/new"
                 >+ {$_("new-trail")}</a
             >
-        {:else if !activities.items?.length}
+        {:else if !timeline.items?.length}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-activities", {
                     values: { username: data.profile.username },
                 })}
             </p>
         {/if}
-        {#each activities.items as activity}
+        {#each timeline.items as item}
             <div
                 class="py-1 cursor-pointer"
                 role="presentation"
                 onclick={() =>
                     goto(
-                        `/trail/view/${page.params.username}/${
-                            activity.object.trail_id
-                        }`,
+                        `/trail/view/${page.params.username}/${item.trail_id}`,
                     )}
             >
-                <ActivityCard {activity} user={data.actor}></ActivityCard>
+                <ActivityCard activity={item} actor={data.actor}></ActivityCard>
             </div>
         {/each}
     </div>

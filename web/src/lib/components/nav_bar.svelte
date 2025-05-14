@@ -96,7 +96,7 @@
 
     function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "profile") {
-            goto(`/profile/@${$currentUser?.username}`);
+            goto(`/profile/@${$currentUser?.username?.toLowerCase()}`);
         } else if (item.value == "logout") {
             logout();
             window.location.href = "/";
@@ -142,7 +142,7 @@
             <div class="basis-full"></div>
             <hr class="border-input-border" />
             <div class="flex gap-4 items-center justify-between m-4">
-                <a class="shrink-0" href="/profile/@{user.username}">
+                <a class="shrink-0" href="/profile/@{user.username.toLowerCase()}">
                     <img
                         class="rounded-full w-10 aspect-square"
                         src={getFileURL(user, user.avatar) ||
@@ -150,7 +150,7 @@
                         alt="avatar"
                     />
                 </a>
-                <a href="/profile/@{user.username}" style="width: calc(100% - 104px)">
+                <a href="/profile/@{user.username.toLowerCase()}" style="width: calc(100% - 104px)">
                     <p class="text-sm overflow-hidden text-ellipsis">
                         {user.username}
                     </p>

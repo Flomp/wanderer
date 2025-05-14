@@ -18,7 +18,7 @@ func init() {
 				return err
 			}
 			t.Set("author", actor.Id)
-			err = app.Save(t)
+			err = app.UnsafeWithoutHooks().Save(t)
 			if err != nil {
 				return err
 			}

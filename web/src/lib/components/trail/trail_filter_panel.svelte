@@ -18,6 +18,7 @@
     import Slider from "../base/slider.svelte";
     import UserSearch from "../user_search.svelte";
     import { currentUser } from "$lib/stores/user_store";
+    import ActorSearch from "../actor_search.svelte";
 
     interface Props {
         categories: Category[];
@@ -198,7 +199,7 @@
             <hr class="my-4 border-separator" />
 
             {#if $currentUser}
-                <UserSearch
+                <ActorSearch
                     onclick={(item) => setAuthorFilter(item)}
                     onclear={() => {
                         filter.author = "";
@@ -206,7 +207,7 @@
                     }}
                     clearAfterSelect={false}
                     label={$_("author")}
-                ></UserSearch>
+                ></ActorSearch>
                 <div class="flex items-center my-4">
                     <input
                         id="public-checkbox"

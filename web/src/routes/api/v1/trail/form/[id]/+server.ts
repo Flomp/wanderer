@@ -8,7 +8,7 @@ export async function POST(event: RequestEvent) {
         enrichRecord(r);
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
