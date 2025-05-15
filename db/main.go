@@ -283,24 +283,64 @@ func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 
 func createCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
+		data := struct {
+			Handle string `json:"handle"`
+		}{}
+		if err := json.NewDecoder(e.Request.Body).Decode(&data); err != nil {
+			return err
+		}
+		user, domain := util.SplitHandle(data.Handle)
 
-		// this is a remote trail
-		err := federation.CreateCommentActivity(e.App, client, e.Record, pub.CreateType)
+		if domain == nil {
+			return e.Next()
+		}
+
+		recipient, err := e.App.FindFirstRecordByFilter("activitypub_actors", "username={:user}&&domain={:domain}", dbx.Params{"user": user, "domain": domain})
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		if recipient.GetBool("isLocal") {
+			return e.Next()
+		}
+
+		err = federation.CreateCommentActivity(e.App, e.Record, recipient, pub.CreateType)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 }
 
 func updateCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
+		data := struct {
+			Handle string `json:"handle"`
+		}{}
+		if err := json.NewDecoder(e.Request.Body).Decode(&data); err != nil {
+			return err
+		}
+		user, domain := util.SplitHandle(data.Handle)
 
-		err := federation.CreateCommentActivity(e.App, client, e.Record, pub.UpdateType)
+		if domain == nil {
+			return e.Next()
+		}
+
+		recipient, err := e.App.FindFirstRecordByFilter("activitypub_actors", "username={:user}&&domain={:domain}", dbx.Params{"user": user, "domain": domain})
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		if recipient.GetBool("isLocal") {
+			return e.Next()
+		}
+
+		err = federation.CreateCommentActivity(e.App, e.Record, recipient, pub.UpdateType)
+		if err != nil {
+			return err
+		}
+		return nil
+
 	}
 }
 

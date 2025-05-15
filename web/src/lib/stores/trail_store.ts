@@ -132,9 +132,9 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 
 }
 
-export async function trails_show(id: string, domain?: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_show(id: string, handle?: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
-    const r = await f(`${domain ? ('https://' + domain) : ''}/api/v1/trail/${id}?` + new URLSearchParams({
+    const r = await f(`/api/v1/trail/${handle ? handle +'/' : ''}${id}?` + new URLSearchParams({
         expand: "category,waypoints,summit_logs_via_trail,summit_logs_via_trail.author,trail_share_via_trail,tags,author",
     }), {
         method: 'GET',

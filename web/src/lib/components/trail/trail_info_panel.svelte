@@ -45,7 +45,7 @@
 
     interface Props {
         initTrail: Trail;
-        domain: string;
+        handle: string;
         mode?: "overview" | "map" | "list";
         markers?: M.Marker[];
         activeTab?: number;
@@ -53,7 +53,7 @@
 
     let {
         initTrail,
-        domain,
+        handle,
         mode = "map",
         markers = [],
         activeTab = 0,
@@ -74,9 +74,8 @@
 
     let newComment: Comment = $state({
         text: "",
-        rating: 0,
         author: "",
-        trail: trail.id ?? "",
+        trail: handle + "/" + (trail.id ?? ""),
     });
 
     let commentsLoading: boolean = $state(activeTab == 2);
@@ -102,7 +101,7 @@
     }
 
     async function toggleMapFullScreen() {
-        goto(`/map/trail/${domain}/${trail.id!}`);
+        goto(`/map/trail/${handle}/${trail.id!}`);
     }
 
     async function fetchComments() {
@@ -116,8 +115,9 @@
             return;
         }
         commentCreateLoading = true;
-        newComment.author = $currentUser.id;
+        newComment.author = $currentUser.actor;
         newComment.trail = trail.id;
+        newComment.handle = handle;
 
         try {
             const c = await comments_create(newComment);
@@ -138,11 +138,13 @@
 
     async function editComment(data: { comment: Comment; text: string }) {
         data.comment.text = data.text;
+        data.comment.handle = handle;
         await comments_update(data.comment);
     }
 
     async function deleteComment(comment: Comment) {
         commentDeleteLoading = true;
+        comment.handle = handle;
         await comments_delete(comment);
         const newCommentList = $comments.filter((c) => c.id !== comment.id);
         comments.set(newCommentList);
@@ -286,7 +288,7 @@
                                     `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <a class="underline" href="/profile/{domain}"
+                            <a class="underline" href="/profile/{handle}"
                                 >{trail.expand.author.username}</a
                             >
                         </p>
@@ -305,7 +307,7 @@
                     </div>
                 </div>
                 {#if ($currentUser && $currentUser.id == trail.expand?.author?.user) || trail.expand?.trail_share_via_trail?.length || trail.public}
-                    <TrailDropdown {trail} {mode} {domain}></TrailDropdown>
+                    <TrailDropdown {trail} {mode} {handle}></TrailDropdown>
                 {/if}
             </div>
         </section>
@@ -418,7 +420,7 @@
                 {#if activeTab == 0}
                     <div class="overflow-x-auto">
                         <SummitLogTable
-                            {domain}
+                            {handle}
                             summitLogs={trail.expand?.summit_logs_via_trail}
                             showAuthor
                             showRoute

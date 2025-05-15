@@ -155,7 +155,7 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	return PostActivity(app, trailAuthor, activity, recipients)
 }
 
-func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comment *core.Record, typ pub.ActivityVocabularyType) error {
+func CreateCommentActivity(app core.App, comment *core.Record, recipient *core.Record, typ pub.ActivityVocabularyType) error {
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -168,25 +168,6 @@ func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comm
 		return err
 	}
 
-	// trail that the comment was left on
-	commentTrail := struct {
-		Domain string `json:"domain"`
-		Author string `json:"author"`
-		URL    string `json:"url"`
-	}{}
-	err = client.Index("trails").GetDocument(comment.GetString("trail"), &meilisearch.DocumentQuery{
-		Fields: []string{"domain", "author", "url"},
-	}, &commentTrail)
-	if err != nil {
-		return err
-	}
-
-	// author of the trail that the comment was left on
-	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", commentTrail.Author)
-	if err != nil {
-		return err
-	}
-
 	commentRecordId := comment.Id
 	if commentRecordId == "" {
 		commentRecordId = security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
@@ -194,7 +175,8 @@ func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comm
 	activityRecordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
-	to := commentTrailAuthor.GetString("iri")
+	to := recipient.GetString("iri")
+	trailURL := fmt.Sprintf("https://%s/api/v1/%s", recipient.GetString("domain"), comment.GetString("trail"))
 
 	author := commentAuthor.GetString("iri")
 
@@ -203,7 +185,7 @@ func CreateCommentActivity(app core.App, client meilisearch.ServiceManager, comm
 	commentObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, comment.GetString("text")))
 	commentObject.Published = comment.GetDateTime("created").Time()
 	commentObject.AttributedTo = pub.IRI(author)
-	commentObject.InReplyTo = pub.IRI(commentTrail.URL)
+	commentObject.InReplyTo = pub.IRI(trailURL)
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, commentObject)
 	activity.Actor = pub.IRI(author)

@@ -18,7 +18,7 @@
     let fullDescription: boolean = $state(false);
 </script>
 
-<div class="activity-card p-6 space-y-6 rounded-xl border border-input-border">
+<div class="activity-card p-6 ounded-xl border border-input-border">
     <div class="flex gap-x-4 items-start">
         <img
             class="rounded-full w-10 aspect-square overflow-hidden"
@@ -68,7 +68,7 @@
         <div
             class="grid gap-[1px] {activity.photos.length > 1
                 ? 'grid-cols-[8fr_5fr]'
-                : 'grid-cols-1'}"
+                : 'grid-cols-1'} mt-6"
         >
             {#each activity.photos.slice(0, 3) as photo, i}
                 {#if isVideoURL(photo)}
@@ -103,7 +103,7 @@
         </div>
     {/if}
     {#if activity.description.length}
-        <p class="text-sm whitespace-pre-wrap">
+        <p class="text-sm whitespace-pre-wrap mt-6">
             {!fullDescription
                 ? activity.description?.substring(0, 100)
                 : activity.description}

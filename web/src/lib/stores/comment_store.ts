@@ -35,7 +35,7 @@ export async function comments_create(comment: Comment) {
     }
 
     comment.author = user.actor
-
+    
     let r = await fetch('/api/v1/comment?' + new URLSearchParams({
         expand: "author",
     }), {

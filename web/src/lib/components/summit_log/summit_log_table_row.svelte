@@ -12,7 +12,7 @@
 
     interface Props {
         log: SummitLog;
-        domain: string;
+        handle: string;
         showCategory?: boolean;
         showTrail?: boolean;
         showRoute?: boolean;
@@ -25,7 +25,7 @@
 
     let {
         log,
-        domain,
+        handle,
         showCategory = false,
         showTrail = false,
         showRoute = false,
@@ -143,7 +143,7 @@
             <a
                 aria-label="Go to trail"
                 class="btn-icon aspect-square"
-                href="/trail/view/{domain}/{log.expand?.trail?.id ?? ''}"
+                href="/trail/view/{handle}/{log.expand?.trail?.id ?? ''}"
                 ><i class="fa fa-arrow-up-right-from-square px-[3px]"></i></a
             >
         </td>

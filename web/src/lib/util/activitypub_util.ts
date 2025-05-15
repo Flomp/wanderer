@@ -1,15 +1,12 @@
 import type { Actor } from '$lib/models/activitypub/actor';
 import type { WebfingerResponse } from '$lib/models/activitypub/webfinger_response';
-import type { SummitLog } from '$lib/models/summit_log';
-import type { Trail } from '$lib/models/trail';
 import { type APActor, type APImage, type APOrderedCollection } from 'activitypub-types';
+import type PocketBase from 'pocketbase';
 import { ClientResponseError } from 'pocketbase';
-import { Collection, list } from './api_util';
-import type { RequestEvent } from '@sveltejs/kit';
 
 
-export function splitUsername(username: string, localDomain?: string) {
-    const cleaned = username.replace(/^@/, "").trim();
+export function splitUsername(handle: string, localDomain?: string) {
+    const cleaned = handle.replace(/^@/, "").trim();
 
     if (!cleaned.includes("@")) {
         return [cleaned, localDomain];
@@ -18,6 +15,21 @@ export function splitUsername(username: string, localDomain?: string) {
     let [user, domain] = cleaned.split("@");
 
     return [user, domain]
+}
+
+export async function actorFromDb(pb: PocketBase, handle: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const [username, domain] = splitUsername(handle)
+    
+    const { actor: fetchedActor, remote: remoteActor } = await actorFromRemote(domain, username, f);
+
+    let dbActor: Actor
+    try {
+        dbActor = await pb.collection("activitypub_actors").getFirstListItem(`iri='${fetchedActor.iri}'`)
+    } catch (e) {
+        dbActor = await pb.collection("activitypub_actors").create(fetchedActor);
+    }
+
+    return dbActor;
 }
 
 export async function actorFromRemote(domain?: string, username?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {

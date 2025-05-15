@@ -8,13 +8,12 @@
     import CategoryCard from "$lib/components/category_card.svelte";
     import Scene from "$lib/components/scene.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
-    import { defaultTrailSearchAttributes } from "$lib/models/trail.js";
+    import { defaultTrailSearchAttributes, type TrailSearchResult } from "$lib/models/trail.js";
     import { categories } from "$lib/stores/category_store";
     import {
         searchMulti,
         type ListSearchResult,
         type LocationSearchResult,
-        type TrailSearchResult,
     } from "$lib/stores/search_store.js";
     import { theme } from "$lib/stores/theme_store";
     import { currentUser } from "$lib/stores/user_store";

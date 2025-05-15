@@ -8,8 +8,8 @@ import { searchResultToTrailList } from "./trail_store";
 let timeline: TimelineItem[] = []
 
 
-export async function profile_show(username: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    let r = await f('/api/v1/profile/' + username, {
+export async function profile_show(handle: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    let r = await f('/api/v1/profile/' + handle, {
         method: 'GET',
     })
     if (!r.ok) {
@@ -22,10 +22,11 @@ export async function profile_show(username: string, f: (url: RequestInfo | URL,
 
 }
 
-export async function profile_timeline_index(username: string, page: number, perPage: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    let r = await f(`/api/v1/profile/${username}/timeline?` + new URLSearchParams({
+export async function profile_timeline_index(handle: string, page: number, perPage: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    let r = await f(`/api/v1/profile/${handle}/timeline?` + new URLSearchParams({
         page: page.toString(),
-        perPage: perPage.toString()
+        perPage: perPage.toString(),
+        sort: '-created'
     }), {
         method: 'GET',
     })
@@ -44,8 +45,8 @@ export async function profile_timeline_index(username: string, page: number, per
 
 }
 
-export async function profile_trails_index(username: string, filter: TrailFilter, page: number = 1, perPage: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    let r = await f(`/api/v1/profile/${username}/trails`, {
+export async function profile_trails_index(handle: string, filter: TrailFilter, page: number = 1, perPage: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    let r = await f(`/api/v1/profile/${handle}/trails`, {
         method: "POST",
         body: JSON.stringify({
             q: filter.q,

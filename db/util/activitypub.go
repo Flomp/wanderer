@@ -212,3 +212,19 @@ func IndexActivity(activity pub.Activity, app core.App, actor *core.Record) erro
 	}
 	return nil
 }
+
+func SplitHandle(handle string) (string, *string) {
+
+	cleaned := strings.TrimPrefix(handle, "@")
+	cleaned = strings.TrimSpace(cleaned)
+
+	if !strings.Contains(cleaned, "@") {
+		return cleaned, nil
+	}
+
+	parts := strings.SplitN(cleaned, "@", 2)
+	user := parts[0]
+	domain := parts[1]
+
+	return user, &domain
+}
