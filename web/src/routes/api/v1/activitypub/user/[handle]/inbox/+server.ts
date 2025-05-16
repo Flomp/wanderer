@@ -1,10 +1,8 @@
 import { env } from '$env/dynamic/private';
-import type { Actor } from '$lib/models/activitypub/actor';
-import { actorFromRemote, splitUsername } from '$lib/util/activitypub_util';
+import { splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { APActivity } from 'activitypub-types';
-import { ClientResponseError } from 'pocketbase';
 
 export async function POST(event: RequestEvent) {
 
@@ -23,19 +21,9 @@ export async function POST(event: RequestEvent) {
         if (!activity.actor) {
             return json("Bad request", { status: 400 });
         }
+        
+        await event.locals.pb.send(`/activitypub/actor?resource=acct:@${username}${domain ? '@' + domain : ''}`, { method: "GET", fetch: event.fetch, });
 
-        let actor: Actor;
-        try {
-            actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`iri='${activity.actor.toString()}'`);
-        } catch (e) {
-            if (e instanceof ClientResponseError && e.status == 404) {
-                // we have not seen this actor before:
-                // discover its data via webfinger and save them to our db
-                actor = (await actorFromRemote(domain, username, event.fetch)).actor
-                await event.locals.pb.collection("activitypub_actors").create(actor);
-            }
-            throw e
-        }
 
         const success = await event.locals.pb.send("/activitypub/activity/process", {
             method: "POST", fetch: event.fetch,

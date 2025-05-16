@@ -121,7 +121,7 @@ export async function summit_logs_delete(summitLog: SummitLog) {
 
 }
 
-function buildFilterText(filter: SummitLogFilter,): string {
+export function buildFilterText(filter: SummitLogFilter,): string {
     let filterText: string = "";
 
     if (filter.category.length > 0) {

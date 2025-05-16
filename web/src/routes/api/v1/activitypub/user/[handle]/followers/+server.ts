@@ -25,7 +25,7 @@ export async function GET(event: RequestEvent) {
 
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
-        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username='${username}'&&isLocal=true`)
+        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username:lower='${username?.toLowerCase()}'&&isLocal=true`)
 
         const followers: ListResult<Follow> = await event.locals.pb.collection("follows").getList(intPage, 10, { sort: "-created", filter: `followee='${actor.id}'`, expand: "follower" })
 
@@ -33,15 +33,15 @@ export async function GET(event: RequestEvent) {
 
         const hasNextPage = intPage * 10 < followers.totalItems;
 
-        const outbox: APRoot<APOrderedCollectionPage> = {
+        const followersPage: APRoot<APOrderedCollectionPage> = {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
             ],
             type: "OrderedCollectionPage",
-            first: id + "/outbox?page=1",
-            ...(intPage > 1 ? { prev: `${id}/outbox?page=${intPage - 1}` } : {}),
+            first: id + "/followers?page=1",
+            ...(intPage > 1 ? { prev: `${id}/followers?page=${intPage - 1}` } : {}),
             ...(hasNextPage ? { next: `${id}/outbox?page=${intPage + 1}` } : {}),
-            partOf: id + "/outbox",
+            partOf: id + "/followers",
             totalItems: followers.totalItems,
             orderedItems: followers.items.map<string>(f => f.expand!.follower.iri)
         }
@@ -49,7 +49,7 @@ export async function GET(event: RequestEvent) {
         const headers = new Headers()
         headers.append("Content-Type", "application/activity+json")
 
-        return json(outbox, { headers });
+        return json(followersPage, { headers });
     } catch (e) {
         return handleError(e)
     }

@@ -1,18 +1,17 @@
 import type { TrailSearchResult } from '$lib/models/trail';
-import { actorFromDb, splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 import type { SearchResponse } from 'meilisearch';
 import { ClientResponseError } from 'pocketbase';
 
 export async function POST(event: RequestEvent) {
-    const fullUsername = event.params.handle;
-    if (!fullUsername) {
+    const handle = event.params.handle;
+    if (!handle) {
         return error(400, { message: "Bad request" })
     }
 
     try {
-        const actor = await actorFromDb(event.locals.pb, fullUsername, event.fetch);
+        const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
 
         const data = await event.request.json()
 
@@ -26,7 +25,7 @@ export async function POST(event: RequestEvent) {
 
             if (!response.ok) {
                 const errorResponse = await response.json()
-                throw new ClientResponseError({ status: 500, response: errorResponse });
+                throw new ClientResponseError({ status: response.status, response: errorResponse });
             }
             r = await response.json()
 

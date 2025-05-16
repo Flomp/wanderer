@@ -1,11 +1,10 @@
 import type { SummitLogFilter } from "$lib/models/summit_log";
 import { categories_index } from "$lib/stores/category_store";
+import { profile_stats_index } from "$lib/stores/profile_store";
 import { summit_logs_index } from "$lib/stores/summit_log_store";
 import { error, type Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch, parent }) => {
-
-    const { actor } = await parent()
 
     if (!params.handle) {
         error(404, "Not found")
@@ -25,7 +24,7 @@ export const load: Load = async ({ params, fetch, parent }) => {
         endDate: lastDay.toISOString().slice(0, 10),
         category: []
     }
-    const logs = await summit_logs_index(actor.id, filter, fetch);
+    const logs = await profile_stats_index(params.handle, filter, fetch);
 
-    return { filter }
+    return { filter, logs }
 };

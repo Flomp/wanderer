@@ -1,7 +1,10 @@
 import { env } from "$env/dynamic/public";
+import type { Actor } from "$lib/models/activitypub/actor";
 import { defaultTrailSearchAttributes, type TrailSearchResult } from "$lib/models/trail";
+import { splitUsername } from "$lib/util/activitypub_util";
 import { APIError } from "$lib/util/api_util";
 import type { Hits, MultiSearchParams, MultiSearchResponse, MultiSearchResult, SearchParams, SearchResponse } from "meilisearch";
+import type { ListResult } from "pocketbase";
 
 export type LocationSearchResult = {
     name: string;
@@ -179,4 +182,21 @@ export async function searchMulti(options: MultiSearchParams): Promise<MultiSear
 
 
     return response.results
+}
+
+export async function searchActors(q: string): Promise<Actor[]> {
+    try {
+        const r = await fetch(`/api/v1/search/actor?q=${q}`,)
+
+        if (!r.ok) {
+            return []
+        }
+        const response: ListResult<Actor> = await r.json()
+
+        return response.items
+    } catch (e) {
+        console.log(e);
+
+        return []
+    }
 }

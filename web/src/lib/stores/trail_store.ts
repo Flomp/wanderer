@@ -463,10 +463,11 @@ export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Pr
             expand: {
                 author: {
                     collectionId: "activitypub_actors",
-                    private: false,
+                    isLocal: (h.domain?.length ?? 0) == 0,
                     id: h.author,
                     icon: h.author_avatar,
-                    username: h.author_name
+                    username: h.author_name,
+                    domain: h.domain
                 } as any,
                 trail_share_via_trail: h.shares?.map(s => ({
                     permission: "view",
@@ -479,7 +480,6 @@ export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Pr
 
         trails.push(t)
     }
-    console.log(trails);
 
     return trails
 }

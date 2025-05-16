@@ -10,7 +10,7 @@ export function getFileURL(record: { [key: string]: any; }, filename?: string) {
     return `/api/v1/files/${record.collectionId}/${record.id}/${filename}`
 }
 
-function isURL(value: string) {
+export function isURL(value: string) {
     let url
     try {
         url = new URL(value);

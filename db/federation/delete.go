@@ -89,19 +89,12 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 		return err
 	}
 
-	commentTrail := struct {
-		Domain string `json:"domain"`
-		Author string `json:"author"`
-		URL    string `json:"url"`
-	}{}
-	err = client.Index("trails").GetDocument(r.GetString("trail"), &meilisearch.DocumentQuery{
-		Fields: []string{"domain", "author", "url"},
-	}, &commentTrail)
+	commentTrail, err := app.FindRecordById("trails", r.GetString("trail"))
 	if err != nil {
 		return err
 	}
 
-	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", commentTrail.GetString("author"))
 	if err != nil {
 		return err
 	}

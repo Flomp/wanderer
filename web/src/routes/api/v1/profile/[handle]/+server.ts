@@ -1,22 +1,20 @@
 import type { Profile } from '$lib/models/profile';
-import { actorFromDb, splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 
 export async function GET(event: RequestEvent) {
-    const fullUsername = event.params.handle;
-    if (!fullUsername) {
+    const handle = event.params.handle;
+    if (!handle) {
         return error(400, { message: "Bad request" })
     }
 
     try {
-        const actor = await actorFromDb(event.locals.pb, fullUsername, event.fetch);
-
+        const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
 
         const profile: Profile = {
             id: actor.id!,
             username: actor.username,
-            acct: fullUsername,
+            acct: handle,
             createdAt: actor.published ?? "",
             bio: actor.summary ?? "",
             uri: actor.iri,

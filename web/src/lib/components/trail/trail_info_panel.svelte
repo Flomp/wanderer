@@ -117,7 +117,6 @@
         commentCreateLoading = true;
         newComment.author = $currentUser.actor;
         newComment.trail = trail.id;
-        newComment.handle = handle;
 
         try {
             const c = await comments_create(newComment);
@@ -138,13 +137,11 @@
 
     async function editComment(data: { comment: Comment; text: string }) {
         data.comment.text = data.text;
-        data.comment.handle = handle;
         await comments_update(data.comment);
     }
 
     async function deleteComment(comment: Comment) {
         commentDeleteLoading = true;
-        comment.handle = handle;
         await comments_delete(comment);
         const newCommentList = $comments.filter((c) => c.id !== comment.id);
         comments.set(newCommentList);
@@ -289,7 +286,7 @@
                                 alt="avatar"
                             />
                             <a class="underline" href="/profile/{handle}"
-                                >{trail.expand.author.username}</a
+                                >{trail.expand.author.username}{trail.expand.author.isLocal ? '' : '@' + trail.expand.author.domain}</a
                             >
                         </p>
                     {/if}

@@ -28,6 +28,7 @@ class Trail {
     waypoints: string[];
     polyline?: string;
     domain?: string;
+    remote_url?: string;
     expand?: {
         tags?: Tag[]
         category?: Category;

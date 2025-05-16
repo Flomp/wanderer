@@ -155,7 +155,7 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	return PostActivity(app, trailAuthor, activity, recipients)
 }
 
-func CreateCommentActivity(app core.App, comment *core.Record, recipient *core.Record, typ pub.ActivityVocabularyType) error {
+func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityVocabularyType) error {
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -168,6 +168,15 @@ func CreateCommentActivity(app core.App, comment *core.Record, recipient *core.R
 		return err
 	}
 
+	commentTrail, err := app.FindRecordById("trails", comment.GetString("trail"))
+	if err != nil {
+		return err
+	}
+	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", commentTrail.GetString("author"))
+	if err != nil {
+		return err
+	}
+
 	commentRecordId := comment.Id
 	if commentRecordId == "" {
 		commentRecordId = security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
@@ -175,8 +184,8 @@ func CreateCommentActivity(app core.App, comment *core.Record, recipient *core.R
 	activityRecordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
-	to := recipient.GetString("iri")
-	trailURL := fmt.Sprintf("https://%s/api/v1/%s", recipient.GetString("domain"), comment.GetString("trail"))
+	to := commentTrailAuthor.GetString("iri")
+	trailURL := fmt.Sprintf("https://%s/api/v1/%s", commentTrailAuthor.GetString("domain"), comment.GetString("trail"))
 
 	author := commentAuthor.GetString("iri")
 

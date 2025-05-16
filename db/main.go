@@ -91,8 +91,8 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("summit_logs").BindFunc(updateSummitLogHandler(client))
 	app.OnRecordAfterDeleteSuccess("summit_logs").BindFunc(deleteSummitLogHandler(client))
 
-	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler(client))
-	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler(client))
+	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler())
+	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler())
 	app.OnRecordDeleteRequest("comments").BindFunc(deleteCommentHandler(client))
 
 	app.OnRecordAfterCreateSuccess("trail_share").BindFunc(createTrailShareHandler(client))
@@ -179,21 +179,11 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		if err := util.IndexTrail(e.App, record, author, client); err != nil {
 			return err
 		}
-
-		if record.GetBool("public") {
-			notification := util.Notification{
-				Type: util.TrailCreate,
-				Metadata: map[string]string{
-					"id":    record.Id,
-					"trail": record.GetString("name"),
-				},
-				Seen:   false,
-				Author: record.GetString("author"),
-			}
-			err = util.SendNotificationToFollowers(e.App, notification)
-			if err != nil {
-				return err
-			}
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote trail
+			// we create a stub trail record for later reference
+			// no need to create an activity for that
+			return nil
 		}
 
 		err = federation.CreateTrailActivity(e.App, e.Record, pub.CreateType)
@@ -215,6 +205,12 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		err = util.UpdateTrail(e.App, record, author, client)
 		if err != nil {
 			return err
+		}
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote trail
+			// we create a stub trail record for later reference
+			// no need to create an activity for that
+			return nil
 		}
 
 		err = federation.CreateTrailActivity(e.App, e.Record, pub.UpdateType)
@@ -281,65 +277,24 @@ func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func createCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+func createCommentHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		data := struct {
-			Handle string `json:"handle"`
-		}{}
-		if err := json.NewDecoder(e.Request.Body).Decode(&data); err != nil {
-			return err
-		}
-		user, domain := util.SplitHandle(data.Handle)
 
-		if domain == nil {
-			return e.Next()
-		}
-
-		recipient, err := e.App.FindFirstRecordByFilter("activitypub_actors", "username={:user}&&domain={:domain}", dbx.Params{"user": user, "domain": domain})
+		err := federation.CreateCommentActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
-
-		if recipient.GetBool("isLocal") {
-			return e.Next()
-		}
-
-		err = federation.CreateCommentActivity(e.App, e.Record, recipient, pub.CreateType)
-		if err != nil {
-			return err
-		}
-		return nil
+		return e.Next()
 	}
 }
 
-func updateCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+func updateCommentHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		data := struct {
-			Handle string `json:"handle"`
-		}{}
-		if err := json.NewDecoder(e.Request.Body).Decode(&data); err != nil {
-			return err
-		}
-		user, domain := util.SplitHandle(data.Handle)
-
-		if domain == nil {
-			return e.Next()
-		}
-
-		recipient, err := e.App.FindFirstRecordByFilter("activitypub_actors", "username={:user}&&domain={:domain}", dbx.Params{"user": user, "domain": domain})
+		err := federation.CreateCommentActivity(e.App, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
-
-		if recipient.GetBool("isLocal") {
-			return e.Next()
-		}
-
-		err = federation.CreateCommentActivity(e.App, e.Record, recipient, pub.UpdateType)
-		if err != nil {
-			return err
-		}
-		return nil
+		return e.Next()
 
 	}
 }
@@ -893,6 +848,21 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		return e.JSON(http.StatusOK, nil)
 	})
 	se.Router.POST("/activitypub/activity/process", federation.ProcessActivity)
+	se.Router.GET("/activitypub/actor", func(e *core.RequestEvent) error {
+		resource := e.Request.URL.Query().Get("resource")
+		resource = strings.TrimPrefix(resource, "acct:")
+
+		actor, err := util.GetActor(e.App, resource)
+		if err != nil {
+			if strings.HasPrefix(err.Error(), "webfinger") {
+				return e.NotFoundError("Not found", err)
+			}
+			return err
+		}
+
+		return e.JSON(http.StatusOK, actor)
+	})
+
 }
 
 func registerCronJobs(app core.App) {

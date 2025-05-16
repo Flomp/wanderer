@@ -11,6 +11,7 @@
     import { fade } from "svelte/transition";
     import TextField from "./text_field.svelte";
     import type { Snippet } from "svelte";
+    import { isURL, isVideoURL } from "$lib/util/file_util";
 
     interface Props {
         maxSearchLength?: number;
@@ -132,7 +133,14 @@
                     onmousedown={(e) => handleItemClick(e, item)}
                     onkeydown={(e) => handleItemClick(e, item)}
                 >
-                    {#if prepend}{@render prepend({ item })}{:else}
+                    {#if prepend}{@render prepend({ item })}
+                    {:else if isURL(item.icon)}
+                        <img
+                            class="rounded-full w-8 mr-4 aspect-square"
+                            src={item.icon}
+                            alt="avatar"
+                        />
+                    {:else}
                         <i class="fa fa-{item.icon} basis-8 shrink-0"></i>
                     {/if}
 

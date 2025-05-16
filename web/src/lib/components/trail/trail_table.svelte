@@ -85,7 +85,7 @@
                                 {#if trail.expand && trail.expand.author}
                                     <div class="author-icon">
                                         <img
-                                            title={`${trail.public ? $_("public") + " " : ""}${$_("by")} ${trail.expand.author.username}`}
+                                            title={`${trail.public ? $_("public") + " " : ""}${$_("by")} ${trail.expand.author.username}${trail.expand.author.isLocal ? '' : '@' + trail.expand.author.domain}`}
                                             class="rounded-full w-5 aspect-square mx-1 inline"
                                             src={trail.expand.author.icon ||
                                                 `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}

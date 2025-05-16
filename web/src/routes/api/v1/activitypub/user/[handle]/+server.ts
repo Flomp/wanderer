@@ -20,7 +20,7 @@ export async function GET(event: RequestEvent) {
 
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
-        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username='${username}'&&isLocal=true`)
+        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username:lower='${username?.toLowerCase()}'&&isLocal=true`)
         const user: UserAnonymous = await event.locals.pb.collection("users_anonymous").getOne(actor.user!)
 
 
@@ -40,7 +40,7 @@ export async function GET(event: RequestEvent) {
             followers: id + '/followers',
             following: id + '/following',
             url: `${env.ORIGIN}/profile/@${username}`,
-            published: user.created,
+            published: new Date(user.created ?? "").toISOString(),
             icon: {
                 type: "Image",
                 url: user.avatar ? `${env.ORIGIN}/api/v1/files/users/${user.id}/${user.avatar}` : undefined

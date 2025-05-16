@@ -4,6 +4,8 @@ import { APIError } from "$lib/util/api_util";
 import type { Hits } from "meilisearch";
 import type { ListResult } from "pocketbase";
 import { searchResultToTrailList } from "./trail_store";
+import type { SummitLog, SummitLogFilter } from "$lib/models/summit_log";
+import { buildFilterText } from "./summit_log_store";
 
 let timeline: TimelineItem[] = []
 
@@ -73,5 +75,28 @@ export async function profile_trails_index(handle: string, filter: TrailFilter, 
     const resultTrails: Trail[] = await searchResultToTrailList(result.hits)
 
     return { items: resultTrails, ...result };
+
+}
+
+export async function profile_stats_index(handle: string, filter: SummitLogFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    const filterText = buildFilterText(filter);
+
+    const r = await f(`/api/v1/profile/${handle}/stats?` + new URLSearchParams({
+        filter: filterText,
+        perPage: "-1",
+        expand: "trail.category,author",
+        sort: "+date",
+    }), {
+        method: 'GET',
+    })
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
+    const result: ListResult<SummitLog> = await r.json();
+
+    return result.items;
 
 }

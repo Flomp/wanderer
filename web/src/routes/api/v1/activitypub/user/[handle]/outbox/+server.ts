@@ -25,7 +25,7 @@ export async function GET(event: RequestEvent) {
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
 
-        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username='${username}'&&isLocal=true`)
+        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username:lower='${username?.toLowerCase()}'&&isLocal=true`)
 
         const filter = `actor='${actor.iri}'${safeSearchParams.filter ? '&&' + safeSearchParams.filter : ''}`
         const activities: ListResult<Activity> = await event.locals.pb.collection("activitypub_activities").getList(page, safeSearchParams.perPage, { sort: safeSearchParams.sort ?? "-created", filter })

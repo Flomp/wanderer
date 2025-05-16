@@ -82,7 +82,7 @@
                         `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />
-                {trail.expand.author.username}
+                {trail.expand.author.username}{trail.expand.author.isLocal ? '' : '@' + trail.expand.author.domain}
             </p>
         {/if}
         <div class="flex flex-wrap gap-x-8">

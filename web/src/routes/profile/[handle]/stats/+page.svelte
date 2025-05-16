@@ -7,11 +7,9 @@
         type SelectItem,
     } from "$lib/components/base/select.svelte";
     import SummitLogTable from "$lib/components/summit_log/summit_log_table.svelte";
+    import type { SummitLog } from "$lib/models/summit_log.js";
     import { categories } from "$lib/stores/category_store.js";
-    import {
-        summit_logs_index,
-        summitLogs,
-    } from "$lib/stores/summit_log_store";
+    import { profile_stats_index } from "$lib/stores/profile_store.js";
     import {
         formatDistance,
         formatElevation,
@@ -43,6 +41,8 @@
         LinearScale,
         BarElement,
     );
+
+    let summitLogs: SummitLog[] = $state(data.logs);
 
     const filter = $state(data.filter);
 
@@ -87,25 +87,28 @@
         elevation_loss: 3.28084,
     };
 
-    let logCategories = $derived($summitLogs.reduce(
-        (acc, log) => {
-            const cat =
-                log.expand?.trail?.expand?.category
-                    ?.name ?? "unknown";
-            acc[$_(cat)] = (acc[$_(cat)] || 0) + 1;
-            return acc;
-        },
-        {} as Record<string, number>,
-    ));
+    let logCategories = $derived(
+        summitLogs.reduce(
+            (acc, log) => {
+                const cat =
+                    log.expand?.trail?.expand?.category?.name ?? "unknown";
+                acc[$_(cat)] = (acc[$_(cat)] || 0) + 1;
+                return acc;
+            },
+            {} as Record<string, number>,
+        ),
+    );
 
     let categoryLabels = $derived(Object.keys(logCategories).sort());
     let categoryValues = $derived(Object.values(logCategories));
-    let categoryColorMap = $derived(Object.fromEntries(
-        categoryLabels.map((label, index) => [
-            label,
-            categoryColors[index % categoryColors.length],
-        ]),
-    ));
+    let categoryColorMap = $derived(
+        Object.fromEntries(
+            categoryLabels.map((label, index) => [
+                label,
+                categoryColors[index % categoryColors.length],
+            ]),
+        ),
+    );
 
     let categoryChartData = $derived({
         labels: categoryLabels,
@@ -131,30 +134,33 @@
         }
     }
 
-    let barChartDataByDate = $derived($summitLogs.reduce(
-        (acc, log) => {
-            const date = new Date(log.date).toLocaleDateString(undefined, {
-                month: "2-digit",
-                day: "2-digit",
-                year: "numeric",
-                timeZone: "UTC",
-            });
-            acc[date] =
-                (acc[date] || 0) + ((log as any)[barChartSelectedValue] ?? 0);
-            if (barChartSelectedValue === "distance") {
-                acc[date] = acc[date] / 1000;
-            } else if (barChartSelectedValue === "duration") {
-                acc[date] = acc[date] / 60 / 60;
-            }
-            if (page.data.settings?.unit !== "metric") {
+    let barChartDataByDate = $derived(
+        summitLogs.reduce(
+            (acc, log) => {
+                const date = new Date(log.date).toLocaleDateString(undefined, {
+                    month: "2-digit",
+                    day: "2-digit",
+                    year: "numeric",
+                    timeZone: "UTC",
+                });
                 acc[date] =
-                    acc[date] *
-                    (conversionFactors as any)[barChartSelectedValue];
-            }
-            return acc;
-        },
-        {} as Record<string, number>,
-    ));
+                    (acc[date] || 0) +
+                    ((log as any)[barChartSelectedValue] ?? 0);
+                if (barChartSelectedValue === "distance") {
+                    acc[date] = acc[date] / 1000;
+                } else if (barChartSelectedValue === "duration") {
+                    acc[date] = acc[date] / 60 / 60;
+                }
+                if (page.data.settings?.unit !== "metric") {
+                    acc[date] =
+                        acc[date] *
+                        (conversionFactors as any)[barChartSelectedValue];
+                }
+                return acc;
+            },
+            {} as Record<string, number>,
+        ),
+    );
 
     let barChartLabels = $derived(Object.keys(barChartDataByDate)); // Dates as labels
     let barChartValues = $derived(Object.values(barChartDataByDate));
@@ -173,34 +179,31 @@
         ],
     });
 
-    let totalDistance = $derived($summitLogs.reduce(
-        (sum, log) => sum + (log.distance ?? 0),
-        0,
-    ));
+    let totalDistance = $derived(
+        summitLogs.reduce((sum, log) => sum + (log.distance ?? 0), 0),
+    );
 
-    let totalDuration = $derived($summitLogs.reduce(
-        (sum, log) => sum + (log.duration ?? 0),
-        0,
-    ));
+    let totalDuration = $derived(
+        summitLogs.reduce((sum, log) => sum + (log.duration ?? 0), 0),
+    );
 
-    let totalElevationGain = $derived($summitLogs.reduce(
-        (sum, log) => sum + (log.elevation_gain ?? 0),
-        0,
-    ));
+    let totalElevationGain = $derived(
+        summitLogs.reduce((sum, log) => sum + (log.elevation_gain ?? 0), 0),
+    );
 
-    let totalElevationLoss = $derived($summitLogs.reduce(
-        (sum, log) => sum + (log.elevation_loss ?? 0),
-        0,
-    ));
+    let totalElevationLoss = $derived(
+        summitLogs.reduce((sum, log) => sum + (log.elevation_loss ?? 0), 0),
+    );
 
-    let averageSpeed =
-        $derived(totalDuration > 0
-            ? $summitLogs.reduce(
+    let averageSpeed = $derived(
+        totalDuration > 0
+            ? summitLogs.reduce(
                   (sum, log) =>
                       sum + (log.distance && log.duration ? log.distance : 0),
                   0,
               ) / totalDuration
-            : undefined);
+            : undefined,
+    );
 
     function updateFilterCategory(categories: SelectItem[]) {
         filter.category = categories.map((c) => c.value);
@@ -217,8 +220,8 @@
     }
 
     async function loadSummitLogs() {
-        const logs = await summit_logs_index(page.params.id, filter);
-        summitLogs.set(logs.items);
+        const logs = await profile_stats_index(page.params.handle, filter);
+        summitLogs = logs;
     }
 </script>
 
@@ -226,7 +229,9 @@
     <title>{$_("profile")} | wanderer</title>
 </svelte:head>
 
-<div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,_1fr)] gap-y-4 max-w-6xl mx-auto">
+<div
+    class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,_1fr)] gap-y-4 max-w-6xl mx-auto"
+>
     <div
         class="flex flex-wrap lg:flex-nowrap col-start-1 lg:col-start-2 gap-x-4 justify-end"
     >
@@ -251,7 +256,7 @@
         <div class="border border-input-border rounded-xl p-6">
             <Calendar
                 onclick={handleDateClick}
-                logs={$summitLogs}
+                logs={summitLogs}
                 colorMap={categoryColorMap}
             ></Calendar>
         </div>
@@ -284,7 +289,7 @@
                     values: { n: 2 },
                 })}</span
             >
-            <p class="text-3xl font-bold">{$summitLogs.length}</p>
+            <p class="text-3xl font-bold">{summitLogs.length}</p>
         </div>
         <div
             class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"
@@ -391,7 +396,7 @@
         >
         <div class=" overflow-x-auto">
             <SummitLogTable
-                summitLogs={$summitLogs}
+                summitLogs={data.logs}
                 handle={page.params.handle}
                 showCategory
                 showTrail

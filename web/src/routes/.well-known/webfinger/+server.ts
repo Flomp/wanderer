@@ -21,10 +21,12 @@ export async function GET(event: RequestEvent) {
         const [username, domain] = splitUsername(resource.replace("acct:", ""))
 
         if (hostname !== domain) {
-            return error(404, "Not found");
+            return json({ message: "Not found" }, { status: 404 });
         }
 
-        const id = `${env.ORIGIN}/api/v1/activitypub/user/${username}`
+        const id = `${env.ORIGIN}/api/v1/activitypub/user/${username.toLowerCase()}`
+
+        const actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`iri='${id}'`)
 
         const r: WebfingerResponse = {
             subject: resource,
@@ -38,7 +40,7 @@ export async function GET(event: RequestEvent) {
                 {
                     rel: 'http://webfinger.net/rel/profile-page',
                     type: 'text/html',
-                    href: `${env.ORIGIN}/profile/@${username}`,
+                    href: `${env.ORIGIN}/profile/@${username.toLowerCase()}`,
                 },
             ],
         }

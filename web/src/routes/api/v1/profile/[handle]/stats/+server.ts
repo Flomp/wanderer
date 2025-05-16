@@ -1,5 +1,5 @@
 import { RecordListOptionsSchema } from '$lib/models/api/base_schema';
-import { type TimelineItem } from '$lib/models/timeline';
+import type { SummitLog } from '$lib/models/summit_log';
 import { Collection, handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 import { ClientResponseError, type ListResult } from 'pocketbase';
@@ -16,30 +16,33 @@ export async function GET(event: RequestEvent) {
         const searchParams = Object.fromEntries(event.url.searchParams);
         const safeSearchParams = RecordListOptionsSchema.parse(searchParams);
 
-        let timeline: ListResult<TimelineItem>;
+        let summitLogs: ListResult<SummitLog>;
         if (actor.isLocal) {
-            timeline = await event.locals.pb.collection(Collection.timeline)
-                .getList<TimelineItem>(safeSearchParams.page, safeSearchParams.perPage, { ...safeSearchParams, filter: `author='${actor.iri}'` })
+            summitLogs = await event.locals.pb.collection(Collection.summit_logs)
+                .getList<SummitLog>(safeSearchParams.page, safeSearchParams.perPage, { ...safeSearchParams, filter: `author='${actor.id}'` })
         } else {
             const origin = new URL(actor.iri).origin
-            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
-            const timelineURL = `${origin}/api/v1/profile/${actor.username}/timeline?` + event.url.searchParams
-            const response = await event.fetch(timelineURL, { method: 'GET' })
+            const summitLogURL = `${origin}/api/v1/profile/${actor.username}/stats?` + event.url.searchParams
+            const response = await event.fetch(summitLogURL, { method: 'GET' })
             if (!response.ok) {
                 const errorResponse = await response.json()
                 throw new ClientResponseError({ status: response.status, response: errorResponse });
             }
-            timeline = await response.json()
+            summitLogs = await response.json()
 
-            timeline.items.forEach(i => {
+            summitLogs.items.forEach(i => {
                 i.photos = i.photos.map(p =>
-                    `${origin}/api/v1/files/${i.type}s/${i.id}/${p}`
+                    `${origin}/api/v1/files/summit_logs/${i.id}/${p}`
                 )
+                if (i.gpx) {
+                    i.gpx =  `${origin}/api/v1/files/summit_logs/${i.id}/${i.gpx}`
+                }
+
             })
         }
 
 
-        return json(timeline)
+        return json(summitLogs)
     } catch (e) {
         return handleError(e)
     }

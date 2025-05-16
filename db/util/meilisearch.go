@@ -46,6 +46,11 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		polyline = ""
 	}
 
+	domain := ""
+	if !author.GetBool("isLocal") {
+		domain = author.GetString("domain")
+	}
+
 	document := map[string]any{
 		"id":             r.Id,
 		"author":         author.Id,
@@ -68,6 +73,8 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		"gpx":            r.GetString("gpx"),
 		"tags":           tags,
 		"polyline":       polyline,
+		"domain":         domain,
+		"url":            r.GetString("remote_url"),
 		"_geo": map[string]float64{
 			"lat": r.GetFloat("lat"),
 			"lng": r.GetFloat("lon"),

@@ -5,7 +5,6 @@ export class Comment {
     text: string;
     author: string;
     trail: string;
-    handle?: string;
     created?: string;
     updated?: string;
     expand?: {
