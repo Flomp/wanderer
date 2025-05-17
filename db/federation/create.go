@@ -190,7 +190,7 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 	author := commentAuthor.GetString("iri")
 
 	commentObject := pub.ObjectNew(pub.NoteType)
-	commentObject.ID = pub.IRI(fmt.Sprintf("%s#comment-%s", author, commentRecordId))
+	commentObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/comment/%s", origin, commentRecordId))
 	commentObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, comment.GetString("text")))
 	commentObject.Published = comment.GetDateTime("created").Time()
 	commentObject.AttributedTo = pub.IRI(author)
@@ -398,7 +398,7 @@ func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pu
 }
 
 func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-	return util.IndexActivity(activity, app, actor)
+	return util.TrailFromActivity(activity, app, actor)
 }
 
 func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, actor *core.Record) error {
@@ -418,8 +418,6 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 	}
 	trailId := path.Base(trailUrl.Path)
 
-	recordId := commentObject.ID.String()[len(commentObject.ID.String())-15:]
-
 	var record *core.Record
 	if activity.Type == pub.CreateType {
 		collection, err := app.FindCollectionByNameOrId("comments")
@@ -427,10 +425,9 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 			return err
 		}
 
-		record := core.NewRecord(collection)
-		record.Set("id", recordId)
+		record = core.NewRecord(collection)
 	} else if activity.Type == pub.UpdateType {
-		record, err = app.FindRecordById("comments", recordId)
+		record, err = app.FindFirstRecordByData("comments", "iri", commentObject.ID.String())
 		if err != nil {
 			return err
 		}
@@ -438,6 +435,7 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 		return fmt.Errorf("activity must be of type 'Create' or 'Update")
 	}
 
+	record.Set("iri", commentObject.ID.String())
 	record.Set("text", commentObject.Content.First().Value)
 	record.Set("author", actor.Id)
 	record.Set("trail", trailId)

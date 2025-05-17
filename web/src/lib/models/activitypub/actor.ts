@@ -3,6 +3,7 @@ import type { User } from "../user";
 export interface Actor {
     id?: string;
     username: string;
+    preferred_username: string;
     domain?: string;
     summary?: string;
     published?: string;

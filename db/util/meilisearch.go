@@ -6,11 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
-	"pocketbase/models"
-	"strings"
 
-	pub "github.com/go-ap/activitypub"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/twpayne/go-gpx"
@@ -83,50 +79,6 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 
 	if includeShares {
 		document["shares"] = []string{}
-	}
-
-	return document, nil
-}
-
-func DocumentFromActivity(app core.App, t *models.Trail, author *core.Record) (map[string]interface{}, error) {
-	tags, err := t.Tag.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-
-	url, err := url.Parse(t.ID.String())
-	if err != nil {
-		return nil, err
-	}
-	domain := strings.TrimPrefix(url.Hostname(), "www.")
-
-	document := map[string]any{
-		"id":             t.TrailId,
-		"author":         author.Id,
-		"author_name":    author.GetString("username"),
-		"author_avatar":  author.GetString("icon"),
-		"name":           t.Name.String(),
-		"description":    t.Content.String(),
-		"location":       t.Location.(*pub.Place).Name.String(),
-		"distance":       t.Distance,
-		"elevation_gain": t.ElevationGain,
-		"elevation_loss": t.ElevationLoss,
-		"duration":       t.Duration,
-		"difficulty":     t.Difficulty,
-		"category":       t.Category,
-		"completed":      false,
-		"date":           t.Date.Unix(),
-		"created":        t.Published.Unix(),
-		"public":         true,
-		"thumbnail":      t.Thumbnail,
-		"gpx":            t.Gpx,
-		"tags":           tags,
-		"domain":         domain,
-		"url":            t.ID.String(),
-		"_geo": map[string]float64{
-			"lat": t.Location.(*pub.Place).Latitude,
-			"lng": t.Location.(*pub.Place).Longitude,
-		},
 	}
 
 	return document, nil

@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
+import fs from 'fs';
 
 export default defineConfig({
 	plugins: [sveltekit()],
@@ -8,5 +9,14 @@ export default defineConfig({
 	},
 	ssr: {
 		noExternal: ['three']
+	},
+	server: {
+		https: {
+			key: fs.readFileSync('.svelte-kit/key.pem'),
+			cert: fs.readFileSync('.svelte-kit/cert.pem')
+		},
+		host: true, // same as 0.0.0.0
+		port: 443
 	}
+
 });

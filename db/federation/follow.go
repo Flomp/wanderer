@@ -3,7 +3,6 @@ package federation
 import (
 	"fmt"
 	"os"
-	"pocketbase/util"
 	"time"
 
 	pub "github.com/go-ap/activitypub"
@@ -41,6 +40,14 @@ func CreateFollowActivity(app core.App, follow *core.Record) error {
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 
+	activity := pub.FollowNew(pub.IRI(id), pub.IRI(followeeActor.GetString("iri")))
+	activity.Actor = pub.IRI(followerActor.GetString("iri"))
+
+	err = PostActivity(app, followerActor, activity, []string{followeeActor.GetString("inbox")})
+	if err != nil {
+		return err
+	}
+
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
 	record.Set("iri", id)
@@ -49,15 +56,7 @@ func CreateFollowActivity(app core.App, follow *core.Record) error {
 	record.Set("actor", followerActor.GetString("iri"))
 	record.Set("published", time.Now())
 
-	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	activity := pub.FollowNew(pub.IRI(id), pub.IRI(followeeActor.GetString("iri")))
-	activity.Actor = pub.IRI(followerActor.GetString("iri"))
-
-	return PostActivity(app, followerActor, activity, []string{followeeActor.GetString("inbox")})
+	return app.Save(record)
 }
 
 // process incoming follow activity
@@ -90,14 +89,22 @@ func ProcessFollowActivity(app core.App, actor *core.Record, activity pub.Activi
 			return err
 		}
 	}
+	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
+
+	// send the accept activity back to the actor's inbox
+	acceptActivity := pub.AcceptNew(pub.IRI(id), activity)
+	acceptActivity.Actor = activity.Object
+	err = PostActivity(app, object, acceptActivity, []string{actor.GetString("inbox")})
+	if err != nil {
+		return err
+	}
 
 	// create record of the accept activity in our db
 	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
 	if err != nil {
 		return err
 	}
-	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
-	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
@@ -107,16 +114,7 @@ func ProcessFollowActivity(app core.App, actor *core.Record, activity pub.Activi
 	record.Set("actor", object.GetString("iri"))
 	record.Set("published", time.Now())
 
-	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	// send the accept activity back to the actor's inbox
-	acceptActivity := pub.AcceptNew(pub.IRI(id), activity)
-	acceptActivity.Actor = activity.Object
-
-	return PostActivity(app, object, acceptActivity, []string{actor.GetString("inbox")})
+	return app.Save(record)
 }
 
 func ProcessAcceptActivity(app core.App, actor *core.Record, activity pub.Activity) error {
@@ -138,7 +136,7 @@ func ProcessAcceptActivity(app core.App, actor *core.Record, activity pub.Activi
 		return err
 	}
 
-	err = util.SyncOutbox(app, actor)
+	// err = util.SyncOutbox(app, actor)
 	if err != nil {
 		return err
 	}

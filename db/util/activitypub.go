@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -17,9 +18,9 @@ import (
 	"time"
 
 	pub "github.com/go-ap/activitypub"
-	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/valyala/fastjson"
 )
@@ -104,6 +105,7 @@ func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	domain := strings.TrimPrefix(url.Hostname(), "www.")
 
 	record.Set("username", strings.ToLower(u.GetString("username")))
+	record.Set("preferred_username", u.GetString("username"))
 	record.Set("domain", domain)
 	record.Set("summary", settings.GetString("bio"))
 	record.Set("published", u.GetDateTime("created"))
@@ -178,7 +180,7 @@ func fetchOutboxPage(app core.App, actor *core.Record, pageURL string) error {
 			continue
 		}
 		if activity.Object.GetType() == models.TrailType {
-			err = IndexActivity(*activity, app, actor)
+			err = TrailFromActivity(*activity, app, actor)
 			if err != nil {
 				return err
 			}
@@ -192,27 +194,59 @@ func fetchOutboxPage(app core.App, actor *core.Record, pageURL string) error {
 	return nil
 }
 
-func IndexActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-	client := meilisearch.New(
-		os.Getenv("MEILI_URL"),
-		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
-	)
-
-	trailObject, err := models.ToTrail(activity.Object)
+func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+	t, err := models.ToTrail(activity.Object)
 	if err != nil {
 		return err
 	}
 
-	doc, err := DocumentFromActivity(app, trailObject, actor)
+	record, err := app.FindFirstRecordByData("trails", "remote_url", t.ID.String())
 	if err != nil {
-		return err
-	}
-	documents := []map[string]interface{}{doc}
+		if err == sql.ErrNoRows {
+			collection, err := app.FindCollectionByNameOrId("trails")
+			if err != nil {
+				return err
+			}
 
-	if _, err := client.Index("trails").AddDocuments(documents); err != nil {
-		return err
+			record = core.NewRecord(collection)
+		} else {
+			return err
+		}
 	}
-	return nil
+
+	record.Set("id", t.TrailId)
+	record.Set("name", t.Name.String())
+	record.Set("description", t.Content.String())
+	record.Set("location", t.Location.(*pub.Place).Name.String())
+	record.Set("lat", t.Location.(*pub.Place).Latitude)
+	record.Set("lon", t.Location.(*pub.Place).Longitude)
+	record.Set("distance", t.Distance)
+	record.Set("elevation_gain", t.ElevationGain)
+	record.Set("elevation_loss", t.ElevationLoss)
+	record.Set("duration", t.Duration)
+	record.Set("difficulty", t.Difficulty)
+	record.Set("date", t.Date.Unix())
+	record.Set("public", true)
+	record.Set("remote_url", t.ID.String())
+	record.Set("author", actor.Id)
+
+	category, err := app.FindFirstRecordByData("categories", "name", t.Category)
+	if err == nil {
+		record.Set("category", category.Id)
+	}
+
+	if t.Thumbnail != "" {
+		thumbnail, err := filesystem.NewFileFromURL(context.Background(), t.Thumbnail)
+		if err != nil {
+			return err
+		}
+
+		record.Set("photos", thumbnail)
+	}
+
+	err = app.Save(record)
+
+	return err
 }
 
 func SplitHandle(handle string) (string, string) {
@@ -304,6 +338,7 @@ func GetActor(app core.App, handle string) (*core.Record, error) {
 		dbActor.Set("inbox", pubActor.Inbox.GetID().String())
 		dbActor.Set("iri", pubActor.GetID().String())
 		dbActor.Set("username", pubActor.Name.String())
+		dbActor.Set("preferred_username", pubActor.PreferredUsername.String())
 		dbActor.Set("followerCount", int(followers.TotalItems))
 		dbActor.Set("followingCount", int(following.TotalItems))
 		dbActor.Set("following", pubActor.Following.GetID().String())

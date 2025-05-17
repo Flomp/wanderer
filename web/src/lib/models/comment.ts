@@ -7,6 +7,7 @@ export class Comment {
     trail: string;
     created?: string;
     updated?: string;
+    iri?: string;
     expand?: {
         author: Actor
     }

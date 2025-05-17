@@ -14,6 +14,7 @@ export async function GET(event: RequestEvent) {
         const profile: Profile = {
             id: actor.id!,
             username: actor.username,
+            preferredUsername: actor.preferred_username,
             acct: handle,
             createdAt: actor.published ?? "",
             bio: actor.summary ?? "",

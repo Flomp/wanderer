@@ -87,9 +87,9 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("trails").BindFunc(updateTrailHandler(client))
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(deleteTrailHandler(client))
 
-	app.OnRecordAfterCreateSuccess("summit_logs").BindFunc(createSummitLogHandler(client))
-	app.OnRecordAfterUpdateSuccess("summit_logs").BindFunc(updateSummitLogHandler(client))
-	app.OnRecordAfterDeleteSuccess("summit_logs").BindFunc(deleteSummitLogHandler(client))
+	app.OnRecordCreateRequest("summit_logs").BindFunc(createSummitLogHandler(client))
+	app.OnRecordUpdateRequest("summit_logs").BindFunc(updateSummitLogHandler(client))
+	app.OnRecordDeleteRequest("summit_logs").BindFunc(deleteSummitLogHandler(client))
 
 	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler())
 	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler())
@@ -105,8 +105,8 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterCreateSuccess("list_share").BindFunc(createListShareHandler(client))
 	app.OnRecordAfterDeleteSuccess("list_share").BindFunc(deleteListShareHandler(client))
 
-	app.OnRecordAfterCreateSuccess("follows").BindFunc(createFollowHandler())
-	app.OnRecordAfterDeleteSuccess("follows").BindFunc(deleteFollowHandler())
+	app.OnRecordCreateRequest("follows").BindFunc(createFollowHandler())
+	app.OnRecordDeleteRequest("follows").BindFunc(deleteFollowHandler())
 
 	app.OnRecordsListRequest("integrations").BindFunc(listIntegrationHandler())
 	app.OnRecordCreate("integrations").BindFunc(createIntegrationHandler())
@@ -244,8 +244,8 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 	}
 }
 
-func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 
 		err := federation.CreateSummitLogActivity(e.App, client, e.Record, pub.CreateType)
 		if err != nil {
@@ -256,8 +256,8 @@ func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 
 		err := federation.CreateSummitLogActivity(e.App, client, e.Record, pub.UpdateType)
 		if err != nil {
@@ -267,8 +267,8 @@ func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		err := federation.CreateSummitLogDeleteActivity(e.App, client, e.Record)
 		if err != nil {
 			return err
@@ -280,11 +280,13 @@ func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 func createCommentHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
+		e.Next()
+
 		err := federation.CreateCommentActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
-		return e.Next()
+		return nil
 	}
 }
 
@@ -475,8 +477,8 @@ func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func createFollowHandler() func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func createFollowHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		// record := e.Record
 		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
 		// 	return fmt.Errorf("failed to expand: %v", errs)
@@ -495,15 +497,15 @@ func createFollowHandler() func(e *core.RecordEvent) error {
 		// if err != nil {
 		// 	return err
 		// }
-
+		e.Next()
 		federation.CreateFollowActivity(e.App, e.Record)
 
-		return e.Next()
+		return nil
 	}
 }
 
-func deleteFollowHandler() func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func deleteFollowHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		// record := e.Record
 		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
 		// 	return fmt.Errorf("failed to expand: %v", errs)

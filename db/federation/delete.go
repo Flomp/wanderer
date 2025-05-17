@@ -89,6 +89,10 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 		return err
 	}
 
+	if !author.GetBool("isLocal") {
+		return nil
+	}
+
 	commentTrail, err := app.FindRecordById("trails", r.GetString("trail"))
 	if err != nil {
 		return err
@@ -108,8 +112,17 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 	to := commentTrailAuthor.GetString("iri")
-	object := fmt.Sprintf("%s#comment-%s", to, r.Id)
+	object := fmt.Sprintf("%s/api/v1/comment/%s", origin, r.Id)
 
+	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
+	activity.Actor = pub.IRI(author.GetString("iri"))
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.Published = time.Now()
+
+	err = PostActivity(app, author, activity, []string{to + "/inbox"})
+	if err != nil {
+		return err
+	}
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
 	record.Set("iri", id)
@@ -119,17 +132,7 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 	record.Set("actor", author.GetString("iri"))
 	record.Set("published", time.Now())
 
-	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
-	activity.Actor = pub.IRI(author.GetString("iri"))
-	activity.To = pub.ItemCollection{pub.IRI(to)}
-	activity.Published = time.Now()
-
-	return PostActivity(app, author, activity, []string{to + "/inbox"})
+	return app.Save(record)
 }
 
 func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManager, r *core.Record) error {
@@ -156,7 +159,7 @@ func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManag
 		return err
 	}
 
-	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
 	if err != nil {
 		return err
 	}
@@ -169,8 +172,8 @@ func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManag
 	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
-	to := commentTrailAuthor.GetString("iri")
-	object := fmt.Sprintf("%s#summit-log-%s", to, r.Id)
+	to := summitLogTrailAuthor.GetString("iri")
+	object := fmt.Sprintf("%s#summit-log-%s", origin, r.Id)
 
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
@@ -205,7 +208,7 @@ func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activi
 	var err error
 	switch {
 	case strings.Contains(object, "trail"):
-		err = processDeleteTrailActivity(activity)
+		err = processDeleteTrailActivity(app, activity)
 	case strings.Contains(object, "comment"):
 		err = processDeleteCommentActivity(app, actor, activity)
 	case strings.Contains(object, "summit-log"):
@@ -219,29 +222,25 @@ func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activi
 	return nil
 }
 
-func processDeleteTrailActivity(activity pub.Activity) error {
-	client := meilisearch.New(
-		os.Getenv("MEILI_URL"),
-		meilisearch.WithAPIKey(os.Getenv("MEILI_MASTER_KEY")),
-	)
+func processDeleteTrailActivity(app core.App, activity pub.Activity) error {
+
 	trailUrl, err := url.Parse(activity.Object.GetID().String())
 	if err != nil {
 		return err
 	}
 	recordId := path.Base(trailUrl.Path)
 
-	_, err = client.Index("trails").Delete(recordId)
+	trail, err := app.FindRecordById("trails", recordId)
 	if err != nil {
 		return err
 	}
-	return nil
+	return app.Delete(trail)
 }
 
 func processDeleteCommentActivity(app core.App, actor *core.Record, activity pub.Activity) error {
 	object := activity.Object.GetID().String()
 
-	commentId := object[len(object)-15:]
-	comment, err := app.FindRecordById("comments", commentId)
+	comment, err := app.FindFirstRecordByData("comments", "iri", object)
 	if err != nil {
 		return err
 	}

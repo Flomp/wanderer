@@ -8,7 +8,6 @@ import { ClientResponseError } from "pocketbase";
 
 export async function GET(event: RequestEvent) {
     try {
-
         let t: Trail
         if (!event.params.handle) {
             t = await show<Trail>(event, Collection.trails)
@@ -24,7 +23,9 @@ export async function GET(event: RequestEvent) {
                 const response = await event.fetch(url + '?' + event.url.searchParams, { method: 'GET' })
                 if (!response.ok) {
                     const errorResponse = await response.json()
-                    throw new ClientResponseError({ status: response.status, response: errorResponse });
+                    console.error(errorResponse)
+                    const cachedTrail = await event.locals.pb.collection("trails").getOne(`${event.params.id}`)
+                    return json(cachedTrail)
                 }
                 t = await response.json()
                 t.gpx = `${origin}/api/v1/files/trails/${t.id}/${t.gpx}`
@@ -42,6 +43,12 @@ export async function GET(event: RequestEvent) {
                     if (l.expand?.author) {
                         l.expand.author.isLocal = false
                     }
+                })
+                t.expand?.waypoints?.forEach(w => {
+                   
+                    w.photos = w.photos.map(p =>
+                        `${origin}/api/v1/files/waypoints/${w.id}/${p}`
+                    )
                 })
                 t.author = actor.id!
                 t.expand!.author = actor

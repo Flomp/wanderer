@@ -106,7 +106,7 @@
 
     async function fetchComments() {
         commentsLoading = true;
-        await comments_index(trail);
+        await comments_index(trail, handle);
         commentsLoading = false;
     }
 

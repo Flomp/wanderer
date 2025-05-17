@@ -50,6 +50,8 @@ function isFormContentType(request: Request) {
 
 
 const auth: Handle = async ({ event, resolve }) => {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+
   const pb = new PocketBase(envPub.PUBLIC_POCKETBASE_URL)
   // load the store data from the request cookie string
   pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '')
@@ -92,7 +94,7 @@ const auth: Handle = async ({ event, resolve }) => {
   event.locals.ms = ms
   event.locals.pb = pb
   event.locals.user = pb.authStore.record
-  if(event.locals.user) {
+  if (event.locals.user) {
     event.locals.user.actor = actor?.id
   }
   event.locals.settings = settings

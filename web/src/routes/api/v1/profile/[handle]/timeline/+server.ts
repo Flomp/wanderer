@@ -1,3 +1,4 @@
+import type { Actor } from '$lib/models/activitypub/actor';
 import { RecordListOptionsSchema } from '$lib/models/api/base_schema';
 import { type TimelineItem } from '$lib/models/timeline';
 import { Collection, handleError } from '$lib/util/api_util';
@@ -11,7 +12,7 @@ export async function GET(event: RequestEvent) {
     }
 
     try {
-        const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
+        const actor: Actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
 
         const searchParams = Object.fromEntries(event.url.searchParams);
         const safeSearchParams = RecordListOptionsSchema.parse(searchParams);
@@ -22,8 +23,8 @@ export async function GET(event: RequestEvent) {
                 .getList<TimelineItem>(safeSearchParams.page, safeSearchParams.perPage, { ...safeSearchParams, filter: `author='${actor.iri}'` })
         } else {
             const origin = new URL(actor.iri).origin
-            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
             const timelineURL = `${origin}/api/v1/profile/${actor.username}/timeline?` + event.url.searchParams
+            console.log(timelineURL)
             const response = await event.fetch(timelineURL, { method: 'GET' })
             if (!response.ok) {
                 const errorResponse = await response.json()
@@ -32,7 +33,7 @@ export async function GET(event: RequestEvent) {
             timeline = await response.json()
 
             timeline.items.forEach(i => {
-                i.photos = i.photos.map(p =>
+                i.photos = i. photos.map(p =>
                     `${origin}/api/v1/files/${i.type}s/${i.id}/${p}`
                 )
             })
@@ -41,6 +42,7 @@ export async function GET(event: RequestEvent) {
 
         return json(timeline)
     } catch (e) {
+        console.error(e)
         return handleError(e)
     }
 }

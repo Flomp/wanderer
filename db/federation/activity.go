@@ -3,12 +3,14 @@ package federation
 import (
 	"bytes"
 	"crypto/x509"
+	"database/sql"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"pocketbase/util"
 	"strings"
 	"time"
 
@@ -99,7 +101,30 @@ func ProcessActivity(e *core.RequestEvent) error {
 
 	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor)
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			parsedURL, err := url.Parse(activity.Actor.GetID().String())
+			if err != nil {
+				return err
+			}
+
+			domain := parsedURL.Hostname()
+
+			// Split the path and find the username
+			parts := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
+			if len(parts) < 2 {
+				return fmt.Errorf("error creating new actor: unexpected actor path format")
+			}
+			username := parts[len(parts)-1]
+			handle := fmt.Sprintf("@%s@%s", username, domain)
+
+			actor, err = util.GetActor(e.App, handle)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+
+		}
 	}
 
 	verified, err := verifySignature(e.Request, actor.GetString("public_key"))

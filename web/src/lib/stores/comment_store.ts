@@ -7,11 +7,12 @@ import { currentUser } from "./user_store";
 
 export const comments: Writable<Comment[]> = writable([])
 
-export async function comments_index(trail: Trail) {
-    let r = await fetch('/api/v1/comment?' + new URLSearchParams({
+export async function comments_index(trail: Trail, handle?: string) {
+    let r = await fetch(`/api/v1/comment?` + new URLSearchParams({
         filter: `trail="${trail.id}"`,
         expand: "author",
-        sort: "-created"
+        sort: "-created",
+        ...(handle ? { handle } : {})
     }), {
         method: 'GET',
     })
@@ -35,7 +36,7 @@ export async function comments_create(comment: Comment) {
     }
 
     comment.author = user.actor
-    
+
     let r = await fetch('/api/v1/comment?' + new URLSearchParams({
         expand: "author",
     }), {
