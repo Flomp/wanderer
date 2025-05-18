@@ -15,6 +15,8 @@ class SummitLog {
   duration?: number
   author: string;
   trail?: string;
+  iri?: string;
+  created?: string;
 
   expand?: {
     gpx_data?: string;
@@ -42,6 +44,7 @@ interface SummitLogFilter {
   category: string[],
   startDate?: string;
   endDate?: string;
+  trail?: string;
 }
 
 export { SummitLog, type SummitLogFilter };

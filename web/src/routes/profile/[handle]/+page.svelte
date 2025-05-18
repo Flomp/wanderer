@@ -11,7 +11,7 @@
 
     let { data } = $props();
 
-    let timeline = $state(data.timeline);
+    let timeline = $derived(data.timeline);
 
     let loading: boolean = false;
 
@@ -35,7 +35,7 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        timeline = await profile_timeline_index(data.actor.iri, pagination.page);
+        data.timeline = await profile_timeline_index(data.actor.iri, pagination.page);
     }
 </script>
 

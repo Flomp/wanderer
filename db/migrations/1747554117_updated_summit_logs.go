@@ -7,38 +7,35 @@ import (
 
 func init() {
 	m.Register(func(app core.App) error {
-		collection, err := app.FindCollectionByNameOrId("pbc_1295301207")
+		collection, err := app.FindCollectionByNameOrId("dd2l9a4vxpy2ni8")
 		if err != nil {
 			return err
 		}
 
 		// add field
-		if err := collection.Fields.AddMarshaledJSONAt(2, []byte(`{
-			"autogeneratePattern": "",
+		if err := collection.Fields.AddMarshaledJSONAt(11, []byte(`{
+			"exceptDomains": null,
 			"hidden": false,
-			"id": "text4002953752",
-			"max": 0,
-			"min": 0,
-			"name": "preferred_username",
-			"pattern": "",
+			"id": "url2434853685",
+			"name": "iri",
+			"onlyDomains": null,
 			"presentable": false,
-			"primaryKey": false,
 			"required": false,
 			"system": false,
-			"type": "text"
+			"type": "url"
 		}`)); err != nil {
 			return err
 		}
 
 		return app.Save(collection)
 	}, func(app core.App) error {
-		collection, err := app.FindCollectionByNameOrId("pbc_1295301207")
+		collection, err := app.FindCollectionByNameOrId("dd2l9a4vxpy2ni8")
 		if err != nil {
 			return err
 		}
 
 		// remove field
-		collection.Fields.RemoveById("text4002953752")
+		collection.Fields.RemoveById("url2434853685")
 
 		return app.Save(collection)
 	})

@@ -103,6 +103,10 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 		return err
 	}
 
+	if commentTrailAuthor.GetBool("isLocal") {
+		return nil
+	}
+
 	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
 	if err != nil {
 		return err
@@ -147,19 +151,16 @@ func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManag
 		return err
 	}
 
-	summitLogTrail := struct {
-		Domain string `json:"domain"`
-		Author string `json:"author"`
-		URL    string `json:"url"`
-	}{}
-	err = client.Index("trails").GetDocument(r.GetString("trail"), &meilisearch.DocumentQuery{
-		Fields: []string{"domain", "author", "url"},
-	}, &summitLogTrail)
+	if !author.GetBool("isLocal") {
+		return nil
+	}
+
+	summitLogTrail, err := app.FindRecordById("trails", r.GetString("trail"))
 	if err != nil {
 		return err
 	}
 
-	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", r.GetString("author"))
+	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", summitLogTrail.GetString("author"))
 	if err != nil {
 		return err
 	}
@@ -173,28 +174,50 @@ func CreateSummitLogDeleteActivity(app core.App, client meilisearch.ServiceManag
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 	to := summitLogTrailAuthor.GetString("iri")
-	object := fmt.Sprintf("%s#summit-log-%s", origin, r.Id)
+	object := fmt.Sprintf("%s/api/v1/summit-log/%s", origin, r.Id)
+	cc := pub.ItemCollection{pub.IRI(author.GetString("iri") + "/followers")}
+
+	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
+	activity.Actor = pub.IRI(author.GetString("iri"))
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.CC = cc
+	activity.Published = time.Now()
+
+	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}&&status='accepted'", "", -1, 0, dbx.Params{"followee": author.Id})
+	if err != nil {
+		return err
+	}
+
+	recipients := []string{}
+
+	for _, f := range follows {
+		follower, err := app.FindRecordById("activitypub_actors", f.GetString("follower"))
+		if err != nil {
+			return err
+		}
+		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+	}
+
+	if author.Id != summitLogTrailAuthor.Id {
+		recipients = append(recipients, summitLogTrailAuthor.GetString("iri")+"/inbox")
+	}
+
+	err = PostActivity(app, author, activity, recipients)
+	if err != nil {
+		return err
+	}
 
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
 	record.Set("iri", id)
 	record.Set("type", string(pub.DeleteType))
 	record.Set("to", to)
+	record.Set("cc", cc)
 	record.Set("object", object)
 	record.Set("actor", author.GetString("iri"))
 	record.Set("published", time.Now())
 
-	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
-	activity.Actor = pub.IRI(author.GetString("iri"))
-	activity.To = pub.ItemCollection{pub.IRI(to)}
-	activity.Published = time.Now()
-
-	return PostActivity(app, author, activity, []string{to + "/inbox"})
+	return app.Save(record)
 }
 
 func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activity) error {
@@ -259,8 +282,7 @@ func processDeleteCommentActivity(app core.App, actor *core.Record, activity pub
 func processDeleteSummitLogActivity(app core.App, actor *core.Record, activity pub.Activity) error {
 	object := activity.Object.GetID().String()
 
-	summitLogId := object[len(object)-15:]
-	summitLog, err := app.FindRecordById("summit_logs", summitLogId)
+	summitLog, err := app.FindFirstRecordByData("summit_logs", "iri", object)
 	if err != nil {
 		return err
 	}

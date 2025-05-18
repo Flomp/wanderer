@@ -13,8 +13,8 @@
         value?: string;
         includeSelf?: boolean;
         clearAfterSelect?: boolean;
-        onclear?: () => void
-        onclick?: (item: SearchItem) => void
+        onclear?: () => void;
+        onclick?: (item: SearchItem) => void;
     }
 
     let {
@@ -23,7 +23,7 @@
         includeSelf = true,
         clearAfterSelect = true,
         onclear,
-        onclick
+        onclick,
     }: Props = $props();
 
     let searchItems: SearchItem[] = $state([]);
@@ -37,7 +37,8 @@
         try {
             const actors: Actor[] = await actors_search(q, includeSelf);
             searchItems = actors.map((a) => ({
-                text: a.username!,
+                text: a.preferred_username!,
+                description: `@${a.username}${a.isLocal ? "" : "@" + a.domain}`,
                 value: a,
                 icon: "user",
             }));
@@ -69,7 +70,7 @@
     bind:value
 >
     {#snippet prepend({ item })}
-        <img            
+        <img
             class="rounded-full w-8 aspect-square mr-2"
             src={item.value.icon ||
                 `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}

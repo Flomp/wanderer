@@ -216,8 +216,8 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 
 	record.Set("id", t.TrailId)
 	record.Set("name", t.Name.String())
-	record.Set("description", t.Content.String())
-	record.Set("location", t.Location.(*pub.Place).Name.String())
+	record.Set("description", t.Content.First().Value)
+	record.Set("location", t.Location.(*pub.Place).Name.First().Value)
 	record.Set("lat", t.Location.(*pub.Place).Latitude)
 	record.Set("lon", t.Location.(*pub.Place).Longitude)
 	record.Set("distance", t.Distance)
@@ -351,7 +351,7 @@ func GetActor(app core.App, handle string) (*core.Record, error) {
 	}
 
 	err = app.Save(dbActor)
-	if err != nil {
+	if err != nil && err.Error() != "iri: Value must be unique." {
 		return nil, err
 	}
 

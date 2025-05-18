@@ -14,7 +14,7 @@
 
     let followLoading: boolean = $state(false);
 
-    const profileLinks: DropdownItem[] = [
+    const profileLinks: DropdownItem[] = $derived([
         {
             text: $_("profile"),
             value: `/profile/${page.params.handle}`,
@@ -30,7 +30,7 @@
             value: `/profile/${page.params.handle}/stats`,
             icon: "chart-pie",
         },
-    ];
+    ]);
 
     let activeIndex = $derived(
         profileLinks.findIndex((l) => l.value === page.url.pathname),

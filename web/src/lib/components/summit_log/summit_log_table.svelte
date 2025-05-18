@@ -10,6 +10,7 @@
     import { _ } from "svelte-i18n";
     import MapWithElevationMaplibre from "../trail/map_with_elevation_maplibre.svelte";
     import { fetchGPX } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
 
     interface Props {
         summitLogs?: SummitLog[];
@@ -19,6 +20,9 @@
         showAuthor?: boolean;
         showRoute?: boolean;
         showPhotos?: boolean;
+        showMenu?: boolean;
+        ondelete?: (summitLog: SummitLog) => void;
+        onedit?: (summitLog: SummitLog) => void;
     }
 
     let {
@@ -29,6 +33,9 @@
         showAuthor = false,
         showRoute = false,
         showPhotos = false,
+        showMenu = false,
+        ondelete,
+        onedit,
     }: Props = $props();
 
     let mapModal: Modal;
@@ -100,6 +107,9 @@
                     {$_("map")}
                 </th>
             {/if}
+            {#if showMenu}
+                <th> </th>
+            {/if}
         </tr>
     </thead>
     <tbody>
@@ -116,6 +126,9 @@
                     summitLogs.some((l) => l.photos.length)}
                 showDescription={summitLogs.some((l) => l.text?.length)}
                 showRoute={showRoute && summitLogs.some((l) => l.gpx)}
+                showMenu={showMenu && log.author == $currentUser?.actor}
+                {ondelete}
+                {onedit}
             ></SummitLogTableRow>
         {/each}
     </tbody>
@@ -151,6 +164,6 @@
 
 <style>
     th {
-        padding: 0rem 0.5rem;
+        padding: 0.5rem 0.5rem;
     }
 </style>

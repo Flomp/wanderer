@@ -70,6 +70,7 @@
   "delete": "Borrar",
   "delete-account": "Borrar Cuenta",
   "delete-list-confirm": "¿Seguro quieres borrar esta lista? Las rutas en la lista seguirán estando disponibles.",
+  "delete-summit-log-confirm": "",
   "delete-trail-confirm": "¿Seguro que quieres borrar esta ruta? Esta acción no puede restablecerse.",
   "describe-your-trail": "Describe tu ruta",
   "description": "Descripción",

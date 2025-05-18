@@ -8,16 +8,14 @@ import { objectToFormData } from "$lib/util/file_util";
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
 export const summitLogs: Writable<SummitLog[]> = writable([]);
 
-export async function summit_logs_index(author: string, filter?: SummitLogFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-
-    let filterText = `author='${author}'`
-    filterText += filter ? "&&" + buildFilterText(filter) : "";
+export async function summit_logs_index(filter?: SummitLogFilter, handle?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const r = await f('/api/v1/summit-log?' + new URLSearchParams({
-        filter: filterText,
+        ...(filter ? { filter: buildFilterText(filter) } : {}),
         perPage: "-1",
         expand: "trail.category,author",
         sort: "+date",
+        ...(handle ? { handle } : {})
     }), {
         method: 'GET',
     })
@@ -56,7 +54,9 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
         }
     }
 
-    let r = await f('/api/v1/summit-log/form', {
+    let r = await f('/api/v1/summit-log/form?' + new URLSearchParams({
+        expand: "author"
+    }), {
         method: 'PUT',
         body: formData,
     })
@@ -134,6 +134,10 @@ export function buildFilterText(filter: SummitLogFilter,): string {
 
     if (filter.endDate) {
         filterText += `${filter.category.length || filter.startDate ? '&&' : ''}date<='${filter.endDate}'`
+    }
+
+    if (filter.trail) {
+        filterText += `${filter.category.length || filter.startDate || filter.endDate ? '&&' : ''}trail='${filter.trail}'`;
     }
 
     return filterText;

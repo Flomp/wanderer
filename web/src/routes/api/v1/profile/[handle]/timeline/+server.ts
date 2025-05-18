@@ -24,7 +24,7 @@ export async function GET(event: RequestEvent) {
         } else {
             const origin = new URL(actor.iri).origin
             const timelineURL = `${origin}/api/v1/profile/${actor.username}/timeline?` + event.url.searchParams
-            console.log(timelineURL)
+
             const response = await event.fetch(timelineURL, { method: 'GET' })
             if (!response.ok) {
                 const errorResponse = await response.json()

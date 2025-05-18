@@ -247,12 +247,14 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
+		e.Next()
+
 		err := federation.CreateSummitLogActivity(e.App, client, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
 
-		return e.Next()
+		return nil
 	}
 }
 

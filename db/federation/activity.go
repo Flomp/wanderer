@@ -49,8 +49,12 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 
 	client := &http.Client{}
 
+	alreadySentTo := map[string]bool{}
 	// for each recipient
 	for _, v := range recipients {
+		if alreadySentTo[v] {
+			continue
+		}
 		buf := bytes.NewBuffer(body)
 		req, err := http.NewRequest(http.MethodPost, v, buf)
 		if err != nil {
@@ -89,6 +93,8 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("error sending request to inbox %s (%d): %s", v, resp.StatusCode, string(body))
 		}
+
+		alreadySentTo[v] = true
 	}
 	return nil
 }

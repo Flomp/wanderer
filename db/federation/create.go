@@ -18,7 +18,10 @@ import (
 )
 
 func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocabularyType) error {
-
+	if !trail.GetBool("public") {
+		// only broadcast the trail if it is public
+		return nil
+	}
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -239,24 +242,15 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 
 	var summitLogAuthorId string
 	// first check if we find the trail locally
-	summitLogTrailRecord, err := app.FindRecordById("trails", summitLog.GetString("trail"))
+	summitLogTrail, err := app.FindRecordById("trails", summitLog.GetString("trail"))
 	if err != nil {
-		summitLogTrail := struct {
-			Author string `json:"author"`
-		}{}
-		err = client.Index("trails").GetDocument(summitLog.GetString("trail"), &meilisearch.DocumentQuery{
-			Fields: []string{"author"},
-		}, &summitLogTrail)
-		if err != nil {
-			return err
-		}
-		if summitLogTrail.Author == "" {
-			return fmt.Errorf("trail %s on log %s does exist", summitLog.GetString("trail"), summitLog.Id)
-		}
-		summitLogAuthorId = summitLogTrail.Author
-	} else {
-		summitLogAuthorId = summitLogTrailRecord.GetString("author")
+		return err
 	}
+	if !summitLogTrail.GetBool("public") {
+		// only broadcast the log if the trail it belongs to is public
+		return nil
+	}
+	summitLogAuthorId = summitLogTrail.GetString("author")
 
 	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", summitLogAuthorId)
 	if err != nil {
@@ -282,17 +276,17 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 	photos := summitLog.GetStringSlice("photos")
 	thumbnail := ""
 	if len(photos) > 0 {
-		thumbnail = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, summitLog.Id, photos[0])
+		thumbnail = fmt.Sprintf("%s/api/v1/files/summit_logs/%s/%s", origin, summitLog.Id, photos[0])
 	}
 
 	gpx := ""
 	if summitLog.GetString("gpx") != "" {
-		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, summitLog.Id, summitLog.GetString("gpx"))
+		gpx = fmt.Sprintf("%s/api/v1/files/summit_logs/%s/%s", origin, summitLog.Id, summitLog.GetString("gpx"))
 	}
 
 	attachments := pub.ItemCollection{}
 	for i := range min(len(photos), 3) {
-		iri := fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, summitLog.Id, photos[i])
+		iri := fmt.Sprintf("%s/api/v1/files/summit_logs/%s/%s", origin, summitLog.Id, photos[i])
 
 		attachments.Append(pub.Document{
 			Type:      pub.DocumentType,
@@ -309,7 +303,7 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 	}
 
 	logObject := models.SummitLogNew()
-	logObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, summitLog.GetString("name")))
+
 	logObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, summitLog.GetString("text")))
 	logObject.AttributedTo = pub.IRI(summitLogAuthor.GetString("iri"))
 	logObject.Published = summitLog.GetDateTime("created").Time()
@@ -333,6 +327,30 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 	activity.CC = cc
 	activity.Published = time.Now()
 
+	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}&&status='accepted'", "", -1, 0, dbx.Params{"followee": summitLogAuthor.Id})
+	if err != nil {
+		return err
+	}
+
+	recipients := []string{}
+
+	for _, f := range follows {
+		follower, err := app.FindRecordById("activitypub_actors", f.GetString("follower"))
+		if err != nil {
+			return err
+		}
+		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+	}
+
+	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
+		recipients = append(recipients, summitLogTrailAuthor.GetString("iri")+"/inbox")
+	}
+
+	err = PostActivity(app, summitLogAuthor, activity, recipients)
+	if err != nil {
+		return err
+	}
+
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
 	record.Set("iri", id)
@@ -343,33 +361,7 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 	record.Set("actor", summitLogAuthor.GetString("iri"))
 	record.Set("published", time.Now())
 
-	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}&&status='accepted'", "", -1, 0, dbx.Params{"followee": summitLogAuthor.Id})
-	if err != nil {
-		return err
-	}
-
-	recipients := []string{}
-	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
-		recipients = append(recipients, summitLogTrailAuthor.GetString("iri"))
-	}
-	for _, f := range follows {
-		follower, err := app.FindRecordById("activitypub_actors", f.GetString("follower"))
-		if err != nil {
-			return err
-		}
-		recipients = append(recipients, follower.GetString("iri")+"/inbox")
-	}
-
-	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
-		recipients = append(recipients, summitLogTrailAuthor.GetString("iri"))
-	}
-
-	return PostActivity(app, summitLogAuthor, activity, recipients)
+	return app.Save(record)
 }
 
 func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
@@ -461,8 +453,6 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		return nil
 	}
 
-	recordId := logObject.ID.String()[len(logObject.ID.String())-15:]
-
 	var record *core.Record
 	if activity.Type == pub.CreateType {
 		collection, err := app.FindCollectionByNameOrId("summit_logs")
@@ -471,9 +461,8 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		}
 
 		record = core.NewRecord(collection)
-		record.Set("id", recordId)
 	} else if activity.Type == pub.UpdateType {
-		record, err = app.FindRecordById("summit_logs", recordId)
+		record, err = app.FindFirstRecordByData("summit_logs", "iri", logObject.ID.String())
 		if err != nil {
 			return err
 		}
@@ -481,13 +470,14 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		return fmt.Errorf("activity must be of type 'Create' or 'Update")
 	}
 	record.Set("date", logObject.Date)
-	record.Set("text", logObject.Content)
+	record.Set("text", logObject.Content.First().Value)
 	record.Set("distance", logObject.Distance)
 	record.Set("duration", logObject.Duration)
 	record.Set("elevation_gain", logObject.ElevationGain)
 	record.Set("elevation_loss", logObject.ElevationLoss)
 	record.Set("author", actor.Id)
 	record.Set("trail", logObject.TrailId)
+	record.Set("iri", logObject.ID.String())
 
 	err = app.Save(record)
 	if err != nil {

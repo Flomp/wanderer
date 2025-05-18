@@ -70,6 +70,7 @@
   "delete": "Delete",
   "delete-account": "Delete Account",
   "delete-list-confirm": "Do you really want to delete this list? The trails in the list will still be available.",
+  "delete-summit-log-confirm": "Do you really want to delete this summit log? This action cannot be undone.",
   "delete-trail-confirm": "Do you really want to delete this trail? This action cannot be undone.",
   "describe-your-trail": "Describe your trail",
   "description": "Description",

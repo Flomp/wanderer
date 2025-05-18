@@ -3,10 +3,12 @@
     import type { TrailFilter } from "$lib/models/trail";
     import { searchLocations } from "$lib/stores/search_store";
     import { tags_index } from "$lib/stores/tag_store";
+    import { currentUser } from "$lib/stores/user_store";
     import { formatDistance, formatElevation } from "$lib/util/format_util";
     import { getIconForLocation } from "$lib/util/icon_util";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
+    import ActorSearch from "../actor_search.svelte";
     import Combobox, { type ComboboxItem } from "../base/combobox.svelte";
     import Datepicker from "../base/datepicker.svelte";
     import DoubleSlider from "../base/double_slider.svelte";
@@ -16,9 +18,6 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Slider from "../base/slider.svelte";
-    import UserSearch from "../user_search.svelte";
-    import { currentUser } from "$lib/stores/user_store";
-    import ActorSearch from "../actor_search.svelte";
 
     interface Props {
         categories: Category[];

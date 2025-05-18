@@ -6,7 +6,11 @@
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
     import { theme } from "$lib/stores/theme_store";
-    import { getFileURL, isVideoURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import {
+        getFileURL,
+        isVideoURL,
+        readAsDataURLAsync,
+    } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
@@ -91,6 +95,20 @@
                     <Dropdown items={dropdownItems} {onchange}></Dropdown>
                 {/if}
             </div>
+            {#if log.expand?.author}
+                <p class="text-xs text-gray-500 mb-3">
+                    {$_("by")}
+                    <img
+                        class="rounded-full w-5 aspect-square mx-1 inline"
+                        src={log.expand.author.icon ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.username}&backgroundType=gradientLinear`}
+                        alt="avatar"
+                    />
+                    {log.expand.author.username}{log.expand.author.isLocal
+                        ? ""
+                        : "@" + log.expand.author.domain}
+                </p>
+            {/if}
             {#if log.distance || log.elevation_gain || log.elevation_loss || log.duration}
                 <div
                     class="flex mt-1 gap-x-4 text-sm text-gray-500 flex-wrap mb-2"

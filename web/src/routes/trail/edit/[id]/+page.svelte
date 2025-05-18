@@ -89,6 +89,7 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
+    import { currentUser } from "$lib/stores/user_store.js";
 
     let { data } = $props();
 
@@ -119,7 +120,9 @@
         expand: z
             .object({
                 gpx_data: z.string().optional(),
-                summit_logs_via_trail: z.array(SummitLogCreateSchema).optional(),
+                summit_logs_via_trail: z
+                    .array(SummitLogCreateSchema)
+                    .optional(),
                 waypoints: z
                     .array(
                         WaypointCreateSchema.extend({
@@ -474,11 +477,13 @@
     }
 
     function saveSummitLog(log: SummitLog) {
-        let editedSummitLogIndex = $formData.expand!.summit_logs_via_trail?.findIndex(
-            (s) => s.id == log.id,
-        );
+        let editedSummitLogIndex =
+            $formData.expand!.summit_logs_via_trail?.findIndex(
+                (s) => s.id == log.id,
+            );
         if ((editedSummitLogIndex ?? -1) >= 0) {
-            $formData.expand!.summit_logs_via_trail![editedSummitLogIndex!] = log;
+            $formData.expand!.summit_logs_via_trail![editedSummitLogIndex!] =
+                log;
         } else {
             log.id = cryptoRandomString({ length: 15 });
             $formData.expand!.summit_logs_via_trail = [
@@ -498,7 +503,8 @@
             summitLogModal.openModal();
         } else if (item.value === "delete") {
             $formData.expand!.summit_logs_via_trail?.splice(index, 1);
-            $formData.expand!.summit_logs_via_trail = $formData.expand!.summit_logs_via_trail;
+            $formData.expand!.summit_logs_via_trail =
+                $formData.expand!.summit_logs_via_trail;
         }
     }
 
@@ -603,7 +609,7 @@
             );
             insertIntoRoute(routeWaypoints);
             updateTrailWithRouteData();
-            normalizeRouteTime()
+            normalizeRouteTime();
         } catch (e) {
             console.error(e);
             show_toast({
@@ -767,7 +773,7 @@
             if ($formData.expand?.gpx_data) {
                 updateTrailWithRouteData();
             }
-            normalizeRouteTime()
+            normalizeRouteTime();
         } catch (e) {
             console.error(e);
             show_toast({
@@ -829,7 +835,7 @@
 
             editRoute(data.segment, previousRouteSegment);
             insertIntoRoute(nextRouteSegment, data.segment + 1);
-            normalizeRouteTime()
+            normalizeRouteTime();
             updateTrailWithRouteData();
         } catch (e) {
             console.error(e);
@@ -1198,7 +1204,9 @@
                 <li>
                     <SummitLogCard
                         {log}
-                        mode="edit"
+                        mode={log.author == $currentUser?.actor
+                            ? "edit"
+                            : "show"}
                         onchange={(item) =>
                             handleSummitLogMenuClick(log, i, item)}
                     ></SummitLogCard>

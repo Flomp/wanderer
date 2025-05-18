@@ -1,7 +1,6 @@
 import type { SummitLogFilter } from "$lib/models/summit_log";
 import { categories_index } from "$lib/stores/category_store";
 import { profile_stats_index } from "$lib/stores/profile_store";
-import { summit_logs_index } from "$lib/stores/summit_log_store";
 import { error, type Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch, parent }) => {

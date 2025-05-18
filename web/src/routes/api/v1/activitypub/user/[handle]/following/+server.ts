@@ -26,7 +26,7 @@ export async function GET(event: RequestEvent) {
 
         const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username:lower='${username?.toLowerCase()}'&&isLocal=true`)
 
-        const followers: ListResult<Follow> = await event.locals.pb.collection("follows").getList(intPage, 10, { sort: "-created", filter: `follower='${actor.id}&&accepted=true'`, expand: "followee" })
+        const followers: ListResult<Follow> = await event.locals.pb.collection("follows").getList(intPage, 10, { sort: "-created", filter: `follower='${actor.id}'&&status='accepted'`, expand: "followee" })
 
         const id = actor.iri;
 

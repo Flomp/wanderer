@@ -9,6 +9,7 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import PhotoGallery from "../photo_gallery.svelte";
+    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
     interface Props {
         log: SummitLog;
@@ -19,8 +20,11 @@
         showAuthor?: boolean;
         showDescription?: boolean;
         showPhotos?: boolean;
+        showMenu?: boolean;
         ontext?: (summitLog: SummitLog) => void;
         onopen?: (summitLog: SummitLog) => void;
+        ondelete?: (summitLog: SummitLog) => void;
+        onedit?: (summitLog: SummitLog) => void;
     }
 
     let {
@@ -32,13 +36,27 @@
         showAuthor = false,
         showDescription = false,
         showPhotos = false,
+        showMenu = false,
         onopen,
         ontext,
+        ondelete,
+        onedit,
     }: Props = $props();
 
     let gallery: PhotoGallery;
 
     let imgSrc: string[] = $state([]);
+
+    let dropdownItems: DropdownItem[] = [
+        {
+            text: $_("edit"),
+            value: "edit",
+        },
+        {
+            text: $_("delete"),
+            value: "delete",
+        },
+    ];
     $effect(() => {
         if (log.photos?.length) {
             imgSrc = log.photos
@@ -66,6 +84,14 @@
             showRoute,
             showDescription,
         ].reduce((b, v) => (v ? b + 1 : b), 7);
+    }
+
+    function handleDropdownClick(item: DropdownItem): void {
+        if (item.value == "edit") {
+            onedit?.(log);
+        } else if (item.value == "delete") {
+            ondelete?.(log);
+        }
     }
 </script>
 
@@ -132,10 +158,7 @@
     </td>
     {#if showCategory}
         <td>
-            {$_(
-                log.expand?.trail?.expand?.category
-                    ?.name ?? "-",
-            )}
+            {$_(log.expand?.trail?.expand?.category?.name ?? "-")}
         </td>
     {/if}
     {#if showTrail}
@@ -165,11 +188,14 @@
         <td>
             <p
                 class="tooltip flex justify-center"
-                data-title={log.expand.author.username}
+                data-title="{log.expand.author.username}{log.expand.author
+                    .isLocal
+                    ? ''
+                    : '@' + log.expand.author.domain}"
             >
                 <a
-                    href="/profile/@{log.expand.author.username?.toLowerCase()}{log.expand
-                        .author.isLocal
+                    href="/profile/@{log.expand.author.username?.toLowerCase()}{log
+                        .expand.author.isLocal
                         ? ''
                         : '@' + log.expand.author.domain}"
                 >
@@ -183,15 +209,33 @@
             </p>
         </td>
     {/if}
-    {#if showRoute && log.gpx}
+    {#if showRoute}
         <td>
-            <button
-                aria-label="Open route"
-                onclick={openRoute}
-                class="btn-icon"
-            >
-                <i class="fa fa-map-location-dot px-[3px] text-xl"></i></button
-            >
+            {#if log.gpx}
+                <button
+                    aria-label="Open route"
+                    onclick={openRoute}
+                    class="btn-icon"
+                >
+                    <i class="fa fa-map-location-dot px-[3px] text-xl"
+                    ></i></button
+                >
+            {/if}
+        </td>
+    {/if}
+    {#if showMenu}
+        <td>
+            <Dropdown onchange={handleDropdownClick} items={dropdownItems}>
+                {#snippet children({ toggleMenu: openDropdown })}
+                    <button
+                        aria-label="Open dropdown"
+                        class="rounded-full bg-white text-black hover:bg-gray-200 focus:ring-4 ring-gray-100/50 transition-colors h-6 w-6"
+                        onclick={openDropdown}
+                    >
+                        <i class="fa fa-ellipsis-vertical"></i>
+                    </button>
+                {/snippet}
+            </Dropdown>
         </td>
     {/if}
 </tr>

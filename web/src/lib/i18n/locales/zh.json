@@ -70,6 +70,7 @@
   "delete": "删除",
   "delete-account": "注销账户",
   "delete-list-confirm": "您确认要删除当前列表？列表中所有行程仍然继续保留不会被删除。",
+  "delete-summit-log-confirm": "",
   "delete-trail-confirm": "您确认想要删除当前行程？此操作不可撤回。",
   "describe-your-trail": "行程描述",
   "description": "描述",

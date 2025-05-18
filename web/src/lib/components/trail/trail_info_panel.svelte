@@ -42,6 +42,18 @@
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
     import TrailTimeline from "./trail_timeline.svelte";
+    import {
+        summit_logs_create,
+        summit_logs_delete,
+        summit_logs_index,
+        summit_logs_update,
+        summitLog,
+        summitLogs,
+    } from "$lib/stores/summit_log_store";
+    import { SummitLog } from "$lib/models/summit_log";
+    import SummitLogModal from "../summit_log/summit_log_modal.svelte";
+    import SkeletonTable from "../base/skeleton_table.svelte";
+    import ConfirmModal from "../confirm_modal.svelte";
 
     interface Props {
         initTrail: Trail;
@@ -58,6 +70,9 @@
         markers = [],
         activeTab = 0,
     }: Props = $props();
+
+    let summitLogModal: SummitLogModal;
+    let confirmModal: ConfirmModal;
 
     let trail = $state(initTrail);
 
@@ -81,6 +96,8 @@
     let commentsLoading: boolean = $state(activeTab == 2);
     let commentCreateLoading: boolean = $state(false);
     let commentDeleteLoading: boolean = false;
+
+    let summitLogsLoading: boolean = $state(activeTab == 0);
 
     let fullDescription: boolean = $state(false);
 
@@ -165,6 +182,55 @@
             fetchComments();
         }
     });
+
+    $effect(() => {
+        if (activeTab == 0) {
+            fetchSummitLog();
+        }
+    });
+
+    async function fetchSummitLog() {
+        summitLogsLoading = true;
+        await summit_logs_index({ trail: trail.id, category: [] }, handle);
+        summitLogsLoading = false;
+    }
+
+    function beforeSummitLogModalOpen(currentSummitLog?: SummitLog) {
+        currentSummitLog ??= new SummitLog(
+            new Date().toISOString().split("T")[0],
+        );
+
+        summitLog.set(currentSummitLog);
+        summitLogModal.openModal();
+    }
+
+    async function saveSummitLog(log: SummitLog) {
+        if (log.id) {
+            let oldLogIndex = $summitLogs.findIndex((l) => l.id === log.id);
+            if (oldLogIndex < 0) {
+                return;
+            }
+            await summit_logs_update($summitLogs[oldLogIndex], log);
+            $summitLogs[oldLogIndex] = log;
+        } else {
+            log.trail = trail.id;
+            const newLog = await summit_logs_create(log);
+            summitLogs.set([...$summitLogs, newLog]);
+        }
+    }
+
+    function beforeConfirmModalOpen(currentSummitLog: SummitLog) {
+        summitLog.set(currentSummitLog);
+        confirmModal.openModal();
+    }
+
+    async function deleteSummitLog() {
+        await summit_logs_delete($summitLog);
+        const newSummitLogList = $summitLogs.filter(
+            (l) => l.id !== $summitLog.id,
+        );
+        summitLogs.set(newSummitLogList);
+    }
 </script>
 
 <div
@@ -286,7 +352,10 @@
                                 alt="avatar"
                             />
                             <a class="underline" href="/profile/{handle}"
-                                >{trail.expand.author.username}{trail.expand.author.isLocal ? '' : '@' + trail.expand.author.domain}</a
+                                >{trail.expand.author.username}{trail.expand
+                                    .author.isLocal
+                                    ? ""
+                                    : "@" + trail.expand.author.domain}</a
                             >
                         </p>
                     {/if}
@@ -411,18 +480,35 @@
                     onmouseleave={closeMarkerPopup}
                 ></TrailTimeline>
 
-                <div class="mb-6 mt-12">
+                <div class="mb-6 mt-12 flex justify-between">
                     <Tabs {tabs} bind:activeTab></Tabs>
+                    {#if activeTab == 0}
+                        <Button
+                            secondary
+                            type="button"
+                            onclick={() => beforeSummitLogModalOpen()}
+                            ><i class="fa fa-plus mr-2"></i>{$_(
+                                "add-entry",
+                            )}</Button
+                        >
+                    {/if}
                 </div>
                 {#if activeTab == 0}
-                    <div class="overflow-x-auto">
-                        <SummitLogTable
-                            {handle}
-                            summitLogs={trail.expand?.summit_logs_via_trail}
-                            showAuthor
-                            showRoute
-                            showPhotos
-                        ></SummitLogTable>
+                    <div>
+                        {#if summitLogsLoading}
+                            <SkeletonTable></SkeletonTable>
+                        {:else}
+                            <SummitLogTable
+                                {handle}
+                                summitLogs={$summitLogs}
+                                showAuthor
+                                showRoute
+                                showPhotos
+                                showMenu
+                                onedit={(log) => beforeSummitLogModalOpen(log)}
+                                ondelete={(log) => beforeConfirmModalOpen(log)}
+                            ></SummitLogTable>
+                        {/if}
                     </div>
                 {/if}
                 {#if activeTab == 1}
@@ -546,6 +632,16 @@
         </div>
     </section>
 </div>
+
+<SummitLogModal bind:this={summitLogModal} onsave={(log) => saveSummitLog(log)}
+></SummitLogModal>
+
+<ConfirmModal
+    id="confirm-summit-log-delete-modal"
+    text={$_("delete-summit-log-confirm")}
+    bind:this={confirmModal}
+    onconfirm={deleteSummitLog}
+></ConfirmModal>
 
 <style>
     .trail-info-panel img {

@@ -70,6 +70,7 @@
   "delete": "Usuń",
   "delete-account": "Usuń Konto",
   "delete-list-confirm": "Czy na pewno chcesz usunąć tę listę? Ścieżki na liście zostaną zachowane.",
+  "delete-summit-log-confirm": "",
   "delete-trail-confirm": "Czy na pewno chcesz usunąć tą Ścieżkę? Ta akcja jest nieodwracalna.",
   "describe-your-trail": "Opisz swoją ścieżkę",
   "description": "Opis",

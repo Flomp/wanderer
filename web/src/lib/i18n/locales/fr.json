@@ -70,6 +70,7 @@
   "delete": "Supprimer",
   "delete-account": "Supprimer le compte",
   "delete-list-confirm": "Voulez-vous vraiment supprimer cette liste ? Les itinéraires de la liste seront toujours disponibles.",
+  "delete-summit-log-confirm": "",
   "delete-trail-confirm": "Voulez-vous vraiment supprimer cet itinéraire ? Cette action ne peut être annulée.",
   "describe-your-trail": "Décrivez votre itinéraire",
   "description": "Description",

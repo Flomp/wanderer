@@ -11,8 +11,8 @@ func init() {
     {
         "id": "pbc_1295301207",
         "listRule": "",
-        "viewRule": "@request.auth.id != \"\"",
-        "createRule": "@request.auth.id != \"\"",
+        "viewRule": "",
+        "createRule": null,
         "updateRule": null,
         "deleteRule": null,
         "name": "activitypub_actors",
@@ -43,6 +43,20 @@ func init() {
                 "presentable": false,
                 "primaryKey": false,
                 "required": true,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text4002953752",
+                "max": 0,
+                "min": 0,
+                "name": "preferred_username",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
                 "system": false,
                 "type": "text"
             },

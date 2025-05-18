@@ -70,6 +70,7 @@
   "delete": "Törlés",
   "delete-account": "Fiók törlése",
   "delete-list-confirm": "Tényleg törölni akarja ezt a listát? A listán szereplő nyomvonalak továbbra is elérhetőek maradnak.",
+  "delete-summit-log-confirm": "",
   "delete-trail-confirm": "Tényleg törölni akarja ezt a nyomvonalat? Ezt a műveletet nem lehet visszavonni!",
   "describe-your-trail": "Nyomvonal leírása",
   "description": "Leírás",
