@@ -23,6 +23,7 @@
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
     import { onDestroy, onMount, untrack } from "svelte";
+    import { env } from "$env/dynamic/public";
 
     interface Props {
         trails?: Trail[];
@@ -859,6 +860,8 @@
             )
         ).ElevationProfileControl;
 
+        const thunderforestApiKey = env.PUBLIC_THUNDERFOREST_API_KEY;
+
         const mapStyles: { text: string; value: string; thumbnail?: string }[] =
             [
                 ...((page.data.settings as Settings)?.tilesets ?? []).map(
@@ -884,12 +887,39 @@
                         "https://basemaps.cartocdn.com/light_all/1/0/0@2x.png",
                 },
                 {
-                    text: "Carto Dark",
+                    text: "Cartooo Dark",
                     value: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
                     thumbnail:
                         "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
                 },
             ];
+
+            if (thunderforestApiKey) {
+                mapStyles.push({
+                    text: "Open Cycle Maps",
+                    value: {
+                        version: 8,
+                        sources: {
+                            "opencyclemap-tiles": {
+                                type: "raster",
+                                tiles: [
+                                    `https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${thunderforestApiKey}`,
+                                ],
+                                tileSize: 256,
+                            },
+                        },
+                        layers: [
+                            {
+                                id: "opencyclemap-layer",
+                                type: "raster",
+                                source: "opencyclemap-tiles",
+                            },
+                        ],
+                    },
+                    thumbnail: "https://tile.thunderforest.com/cycle/1/0/0.png",
+                });
+            }
+
         let preferredMapStyleIndex = mapStyles.findIndex(
             (s) => s.text === localStorage.getItem("layer"),
         );
