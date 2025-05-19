@@ -57,10 +57,7 @@
                 {$_("by")}
                 <img
                     class="rounded-full w-5 aspect-square mx-1 inline"
-                    src={getFileURL(
-                        list.expand.author,
-                        list.expand.author.avatar,
-                    ) ||
+                    src={list.expand.author.icon ||
                         `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />

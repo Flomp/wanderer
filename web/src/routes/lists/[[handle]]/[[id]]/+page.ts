@@ -1,10 +1,8 @@
-import { ExpandType, type List, type ListFilter } from "$lib/models/list";
-import { lists_index, lists_search_filter, lists_show } from "$lib/stores/list_store";
-import type { ListSearchResult } from "$lib/stores/search_store";
+import { browser } from "$app/environment";
+import { type ListFilter } from "$lib/models/list";
+import { lists_search_filter, lists_show } from "$lib/stores/list_store";
 import { APIError } from "$lib/util/api_util";
 import { error, type Load, type NumericRange } from "@sveltejs/kit";
-import type { SearchResponse } from "meilisearch";
-import { type ListResult } from "pocketbase";
 
 export const load: Load = async ({ params, fetch, url }) => {
     const filter: ListFilter = {
@@ -17,9 +15,9 @@ export const load: Load = async ({ params, fetch, url }) => {
     };
 
     let lists: Awaited<ReturnType<typeof lists_search_filter>>;
-    if (url.searchParams.get("list")) {
+    if (params.handle && params.id) {
         try {
-            const list = await lists_show(url.searchParams.get("list") ?? "", fetch)
+            const list = await lists_show(params.id, params.handle, fetch)
 
             lists = { items: [list], page: 1, totalPages: 1, hits: [] }
         } catch (e) {
@@ -30,8 +28,10 @@ export const load: Load = async ({ params, fetch, url }) => {
             }
             throw e
         }
+    } else if (browser) {
+        lists = await lists_search_filter(filter, 1, undefined, fetch);        
     } else {
-        lists = await lists_search_filter(filter, 1, undefined, fetch);
+        lists = { items: [], page: 1, totalPages: 1, hits: [] }
     }
 
     return { lists, filter }

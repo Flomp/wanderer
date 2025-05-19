@@ -1,4 +1,4 @@
-import { ExpandType, ExpandTypeToString, List, type ListFilter } from "$lib/models/list";
+import { List, type ListFilter } from "$lib/models/list";
 import type { Trail } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits } from "meilisearch";
@@ -13,8 +13,7 @@ export const list: Writable<List | null> = writable(null)
 export const listTrail: Writable<Trail | null> = writable(null);
 
 export async function lists_index(filter?: ListFilter, page: number = 1, perPage: number = 5,
-    f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch,
-    e: ExpandType = ExpandType.All) {
+    f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const user = get(currentUser)
 
     const filterText = filter ? buildFilterText(user, filter) : ""
@@ -24,7 +23,6 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
         perPage: perPage.toString(),
         page: page.toString(),
         filter: filterText,
-        expand: ExpandTypeToString(e),
     }), {
         method: 'GET',
     })
@@ -44,8 +42,8 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
 }
 
 
-export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const user = get(currentUser)
+export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+    user ??= get(currentUser)
 
     const filterText = buildSearchFilterText(user, filter)
 
@@ -76,10 +74,11 @@ export async function lists_search_filter(filter: ListFilter, page: number = 1, 
 
 }
 
-export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, e: ExpandType = ExpandType.All) {
+export async function lists_show(id: string, handle?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const r = await f(`/api/v1/list/${id}?` + new URLSearchParams({
-        expand: ExpandTypeToString(e)
+        expand: "author,trails,trails.author",
+        ...(handle ? { handle } : {})
     }), {
         method: 'GET',
     })
@@ -95,9 +94,6 @@ export async function lists_show(id: string, f: (url: RequestInfo | URL, config?
         const gpxData: string = await fetchGPX(trail, f);
         trail.expand.gpx_data = gpxData;
     }
-
-
-
 
     list.set(response);
 
@@ -253,8 +249,8 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == user?.id) {
-                filterText += ` OR author = ${user?.id}`
+            if (!filter.author?.length || filter.author == user?.actor) {
+                filterText += ` OR author = ${user?.actor}`
             }
             filterText += ")"
         }
@@ -273,7 +269,7 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
     return filterText
 }
 
-async function searchResultToLists(hits: Hits<ListSearchResult>): Promise<List[]> {
+export async function searchResultToLists(hits: Hits<ListSearchResult>): Promise<List[]> {
     const lists: List[] = []
     for (const h of hits) {
         const l: List & RecordModel = {
@@ -291,13 +287,13 @@ async function searchResultToLists(hits: Hits<ListSearchResult>): Promise<List[]
             elevation_loss: h.elevation_loss,
             distance: h.distance,
             duration: h.duration,
+            iri: h.iri,
             expand: {
                 author: {
-                    avatar: h.author_avatar,
+                    icon: h.author_avatar,
                     id: h.author,
                     username: h.author_name,
-                    private: false
-                },
+                } as any,
                 list_share_via_list: h.shares?.map(s => ({
                     permission: "view",
                     list: h.id,

@@ -72,7 +72,7 @@
             case "/map":
                 childPosition = 3;
                 break;
-            case "/lists":
+            case "/lists/[[handle]]/[[id]]":
                 childPosition = 4;
                 break;
             default:
@@ -142,7 +142,10 @@
             <div class="basis-full"></div>
             <hr class="border-input-border" />
             <div class="flex gap-4 items-center justify-between m-4">
-                <a class="shrink-0" href="/profile/@{user.username.toLowerCase()}">
+                <a
+                    class="shrink-0"
+                    href="/profile/@{user.username.toLowerCase()}"
+                >
                     <img
                         class="rounded-full w-10 aspect-square"
                         src={getFileURL(user, user.avatar) ||
@@ -150,7 +153,10 @@
                         alt="avatar"
                     />
                 </a>
-                <a href="/profile/@{user.username.toLowerCase()}" style="width: calc(100% - 104px)">
+                <a
+                    href="/profile/@{user.username.toLowerCase()}"
+                    style="width: calc(100% - 104px)"
+                >
                     <p class="text-sm overflow-hidden text-ellipsis">
                         {user.username}
                     </p>

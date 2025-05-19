@@ -1,6 +1,7 @@
 import type { Trail } from "./trail";
 import type { ListShare } from "./list_share";
 import type { UserAnonymous } from "./user";
+import type { Actor } from "./activitypub/actor";
 
 export class List {
     id?: string;
@@ -13,10 +14,11 @@ export class List {
     duration?: number;
     avatar?: string;
     trails?: string[];
+    iri?: string;
     expand?: {
         trails?: Trail[]
         list_share_via_list?: ListShare[]
-        author?: UserAnonymous;
+        author?: Actor;
 
     }
     author: string;
@@ -40,34 +42,3 @@ export interface ListFilter {
     shared?: boolean;
     sortOrder?: "+" | "-"
 }
-
-export const enum ExpandType {
-    None = 0,
-    Trails = 1 << 0,
-    Waypoints = 1 << 1,
-    TrailCategories = 1 << 2,
-    ListShares = 1 << 3,
-    All = ~(~0 << 4),
-}
-
-export function ExpandTypeToString(e: ExpandType): string {
-
-    if (e == ExpandType.None)
-        return "";
-
-    var ret = "";
-    if ((e & ExpandType.Trails) === ExpandType.Trails) {
-        ret += "trails,trails.author,";
-    }
-    if ((e & ExpandType.Waypoints) === ExpandType.Waypoints) {
-        ret += "trails.waypoints,";
-    }
-    if ((e & ExpandType.TrailCategories) === ExpandType.TrailCategories) {
-        ret += "trails.category,";
-    }
-    if ((e & ExpandType.ListShares) === ExpandType.ListShares) {
-        ret += "list_share_via_list,";
-    }
-
-    return ret.slice(0, -1);
-} 

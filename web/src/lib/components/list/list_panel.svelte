@@ -15,6 +15,7 @@
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import ShareInfo from "../share_info.svelte";
     import TrailListItem from "../trail/trail_list_item.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
     interface Props {
         list: List;
         onclick?: (data: { trail: Trail; index: number }) => void;
@@ -43,15 +44,15 @@
     );
 
     let allowEdit = $derived(
-        list.author == $currentUser?.id ||
+        list.author == $currentUser?.actor ||
             list.expand?.list_share_via_list?.some(
                 (s) => s.permission == "edit",
             ),
     );
 
     let allowShare = $derived(
-        list.author == $currentUser?.id &&
-            !list.expand?.trails?.some((t) => t.author !== $currentUser?.id),
+        list.author == $currentUser?.actor &&
+            !list.expand?.trails?.some((t) => t.author !== $currentUser?.actor),
     );
 
     let dropdownItems = $derived([
@@ -61,7 +62,7 @@
         ...(allowEdit
             ? [{ text: $_("edit"), value: "edit", icon: "pen" }]
             : []),
-        ...(list.author == $currentUser?.id
+        ...(list.author == $currentUser?.actor
             ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
             : []),
     ]);
@@ -139,22 +140,13 @@
             {$_("by")}
             <img
                 class="rounded-full w-8 aspect-square mx-1 inline"
-                src={getFileURL(
-                    list.expand.author,
-                    list.expand.author.avatar,
-                ) ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
+                src={list.expand.author.icon ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.preferred_username}&backgroundType=gradientLinear`}
                 alt="avatar"
             />
-            {#if !list.expand.author.private}
-                <a
-                    class="underline"
-                    href="/profile/@{list.expand.author.username?.toLowerCase()}"
-                    >{list.expand.author.username}</a
-                >
-            {:else}
-                <span>{list.expand.author.username}</span>
-            {/if}
+            <a class="underline" href="/profile/{handleFromRecordWithIRI(list)}"
+                >{list.expand.author.preferred_username}</a
+            >
         </p>
     {/if}
     <hr />

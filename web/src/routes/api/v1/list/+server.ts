@@ -10,10 +10,7 @@ export async function GET(event: RequestEvent) {
             if (!t.author || !event.locals.pb.authStore.record) {
                 continue;
             }
-            if (!t.expand) {
-                t.expand = {}
-            }
-            t.expand!.author = await event.locals.pb.collection("users_anonymous").getOne(t.author);
+          
         }
         return json(r)
     } catch (e) {

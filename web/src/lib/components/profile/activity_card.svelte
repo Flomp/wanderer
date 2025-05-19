@@ -23,11 +23,11 @@
         <img
             class="rounded-full w-10 aspect-square overflow-hidden"
             src={actor.icon ||
-                `https://api.dicebear.com/7.x/initials/svg?seed=${actor.username}&backgroundType=gradientLinear`}
+                `https://api.dicebear.com/7.x/initials/svg?seed=${actor.preferred_username}&backgroundType=gradientLinear`}
             alt="avatar"
         />
         <div>
-            <span class="font-semibold">{actor.username}</span>
+            <span class="font-semibold">{actor.preferred_username}</span>
             {activity.type === "trail"
                 ? $_("planned-a-trail")
                 : $_("completed-a-trail")}

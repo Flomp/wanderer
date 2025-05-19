@@ -9,11 +9,11 @@ import { ClientResponseError } from "pocketbase";
 export async function GET(event: RequestEvent) {
     try {
         let t: Trail
-        if (!event.params.handle) {
+        if (!event.url.searchParams.has("handle")) {
             t = await show<Trail>(event, Collection.trails)
         } else {
-            const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.params.handle}`, { method: "GET", fetch: event.fetch, });
-
+            const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
+            event.url.searchParams.delete("handle")
             if (actor.isLocal) {
                 t = await show<Trail>(event, Collection.trails)
             } else {
@@ -52,11 +52,11 @@ export async function GET(event: RequestEvent) {
                 })
                 t.author = actor.id!
                 t.expand!.author = actor
-                t.remote_url = url;
+                t.iri = url;
 
                 let dbTrail: Trail | undefined;
                 try {
-                    dbTrail = await event.locals.pb.collection("trails").getFirstListItem(`remote_url='${url}'`)
+                    dbTrail = await event.locals.pb.collection("trails").getFirstListItem(`iri='${url}'`)
                 } catch (e) {
                     if (!(e instanceof ClientResponseError) || e.status != 404) {
                         throw e
@@ -68,6 +68,7 @@ export async function GET(event: RequestEvent) {
                     const photoURL = t.photos[t.thumbnail ?? 0]
                     let response = await event.fetch(photoURL, { method: "GET" })
                     const photo = await response.blob()
+                    formData.append("photos", photo)
 
                     const gpxURL = t.gpx
                     response = await event.fetch(gpxURL, { method: "GET" })

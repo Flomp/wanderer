@@ -13,15 +13,15 @@ export function splitUsername(handle: string, localDomain?: string) {
     return [user, domain]
 }
 
-export function handleFromTrail(trail: Trail) {
-    if (!trail.expand?.author) {
+export function handleFromRecordWithIRI(record: any) {
+    if (!record.expand?.author) {
         throw new Error("trail has no author info")
     }
-
-    if (!trail.remote_url) {
-        return `@${trail.expand.author.username}`
+    
+    if (!record.iri) {
+        return `@${record.expand.author.username}`
     }
-    const url = new URL(trail.remote_url)
+    const url = new URL(record.iri ?? "")
 
-    return `@${trail.expand.author.username}@${url.hostname}`
+    return `@${record.expand.author.username}@${url.hostname}`
 }

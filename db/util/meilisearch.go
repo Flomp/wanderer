@@ -70,7 +70,7 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		"tags":           tags,
 		"polyline":       polyline,
 		"domain":         domain,
-		"url":            r.GetString("remote_url"),
+		"iri":            r.GetString("iri"),
 		"_geo": map[string]float64{
 			"lat": r.GetFloat("lat"),
 			"lng": r.GetFloat("lon"),
@@ -154,6 +154,7 @@ func documentFromListRecord(r *core.Record, author *core.Record, includeShares b
 		"public":         r.GetBool("public"),
 		"created":        r.GetDateTime("created").Time().Unix(),
 		"trails":         r.GetStringSlice("trails"),
+		"iri":            r.GetString("iri"),
 	}
 
 	if includeShares {
@@ -237,7 +238,12 @@ func IndexList(app core.App, r *core.Record, author *core.Record, client meilise
 }
 
 func UpdateList(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
-	documents := documentFromListRecord(r, author, false)
+	errs := app.ExpandRecord(r, []string{"trails"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand trails: %v", errs)
+	}
+
+	documents := []map[string]interface{}{documentFromListRecord(r, author, true)}
 
 	if _, err := client.Index("lists").UpdateDocuments(documents); err != nil {
 		return err

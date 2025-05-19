@@ -200,7 +200,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		return err
 	}
 
-	record, err := app.FindFirstRecordByData("trails", "remote_url", t.ID.String())
+	record, err := app.FindFirstRecordByData("trails", "iri", t.ID.String())
 	if err != nil {
 		if err == sql.ErrNoRows {
 			collection, err := app.FindCollectionByNameOrId("trails")
@@ -227,7 +227,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 	record.Set("difficulty", t.Difficulty)
 	record.Set("date", t.Date.Unix())
 	record.Set("public", true)
-	record.Set("remote_url", t.ID.String())
+	record.Set("iri", t.ID.String())
 	record.Set("author", actor.Id)
 
 	category, err := app.FindFirstRecordByData("categories", "name", t.Category)
@@ -291,12 +291,11 @@ func GetActor(app core.App, handle string) (*core.Record, error) {
 	username, domain := SplitHandle(handle)
 
 	if domain == "" {
-		url, err := url.Parse(origin)
+		dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "username={:username}&&isLocal=true", dbx.Params{"username": username})
 		if err != nil {
 			return nil, err
 		}
-		domain = strings.TrimPrefix(url.Hostname(), "www.")
-
+		return dbActor, nil
 	}
 
 	var dbActor *core.Record

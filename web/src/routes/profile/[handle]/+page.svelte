@@ -35,7 +35,10 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.timeline = await profile_timeline_index(data.actor.iri, pagination.page);
+        data.timeline = await profile_timeline_index(
+            data.actor.iri,
+            pagination.page,
+        );
     }
 </script>
 
@@ -49,7 +52,7 @@
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">
             {$_("about")}
-            {data.profile.username}
+            {data.profile.preferredUsername}
             {#if data.isOwnProfile && data.profile.bio.length}
                 <a aria-label="Edit bio" class="ml-4" href="/settings/profile"
                     ><i class="fa fa-pen text-base"></i></a
@@ -65,7 +68,7 @@
         {:else}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-bio", {
-                    values: { username: data.profile.username },
+                    values: { username: data.profile.preferredUsername },
                 })}
             </p>
         {/if}
@@ -82,13 +85,13 @@
             {:else if !data.lists.length}
                 <p class="w-full text-center text-gray-500 text-sm">
                     {$_("empty-lists", {
-                        values: { username: data.profile.username },
+                        values: { username: data.profile.preferredUsername },
                     })}
                 </p>
             {/if}
             {#each data.lists as list}
                 <a
-                    href="/lists?list={list.id}"
+                    href="/lists/{page.params.handle}/{list.id}"
                     class="relative w-64 h-48 rounded-xl overflow-hidden group shrink-0"
                 >
                     <img
@@ -122,7 +125,7 @@
         {:else if !timeline.items?.length}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-activities", {
-                    values: { username: data.profile.username },
+                    values: { username: data.profile.preferredUsername },
                 })}
             </p>
         {/if}
@@ -131,9 +134,7 @@
                 class="py-1 cursor-pointer"
                 role="presentation"
                 onclick={() =>
-                    goto(
-                        `/trail/view/${page.params.handle}/${item.trail_id}`,
-                    )}
+                    goto(`/trail/view/${page.params.handle}/${item.trail_id}`)}
             >
                 <ActivityCard activity={item} actor={data.actor}></ActivityCard>
             </div>

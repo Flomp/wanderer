@@ -28,7 +28,7 @@ class Trail {
     waypoints: string[];
     polyline?: string;
     domain?: string;
-    remote_url?: string;
+    iri?: string;
     expand?: {
         tags?: Tag[]
         category?: Category;
@@ -170,6 +170,7 @@ interface TrailSearchResult {
     shares?: string[];
     tags?: string[]
     domain?: string;
+    iri?: string;
     gpx: string;
     _geo: {
         lat: number,
@@ -200,6 +201,7 @@ export const defaultTrailSearchAttributes = [
     "gpx",
     "tags",
     "shares",
+    "iri",
     "_geo",]
 
 

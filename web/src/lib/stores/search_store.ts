@@ -31,6 +31,7 @@ export type ListSearchResult = {
     public: boolean;
     trails: string[]
     shares?: string[];
+    iri?: string;
 }
 
 type NominatimResponse = {

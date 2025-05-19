@@ -376,7 +376,7 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 	return func(e *core.RecordEvent) error {
 		record := e.Record
 
-		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
@@ -407,7 +407,7 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
@@ -981,7 +981,7 @@ func bootstrapMeilisearchDocuments(app core.App, client meilisearch.ServiceManag
 	}
 
 	for _, list := range lists {
-		author, err := app.FindRecordById("users", list.GetString(("author")))
+		author, err := app.FindRecordById("activitypub_actors", list.GetString(("author")))
 		if err != nil {
 			return err
 		}

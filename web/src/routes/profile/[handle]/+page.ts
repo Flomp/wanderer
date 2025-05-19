@@ -1,5 +1,6 @@
+import type { ListFilter } from "$lib/models/list";
 import { lists_index } from "$lib/stores/list_store";
-import { profile_timeline_index } from "$lib/stores/profile_store";
+import { profile_lists_index, profile_timeline_index } from "$lib/stores/profile_store";
 import { error, type Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch, parent }) => {
@@ -7,7 +8,17 @@ export const load: Load = async ({ params, fetch, parent }) => {
         error(404, "Not found")
     }
 
-    const lists = await lists_index({ q: "", author: params.id, sort: "created", sortOrder: "-" }, 1, -1, fetch)
+    const filter: ListFilter = {
+        q: "",
+        author: "",
+        shared: true,
+        public: true,
+        sort: "created",
+        sortOrder: "+",
+    };
+
+
+    const lists = await profile_lists_index(params.handle, filter, 1, 6, fetch)
     const timeline = await profile_timeline_index(params.handle, 1, 10, fetch);
     return { lists: lists.items, timeline }
 };

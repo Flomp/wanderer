@@ -59,7 +59,7 @@
         {#if data.profile}
             <div class="flex items-center gap-x-6 px-6 mt-6">
                 <img
-                    class="rounded-full w-16 aspect-square overflow-hidden"
+                    class="rounded-full w-16 aspect-square overflow-hidden shrink-0"
                     src={data.profile.icon ||
                         `https://api.dicebear.com/7.x/initials/svg?seed=${data.profile.preferredUsername ?? data.profile.username}&backgroundType=gradientLinear`}
                     alt="avatar"

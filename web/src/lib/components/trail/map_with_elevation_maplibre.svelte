@@ -653,7 +653,7 @@
         }
     }
 
-    function adjustTrailFocus(activeTrail: number | null) {
+    function adjustTrailFocus(activeTrail: number | null) {       
         if (activeTrail !== null && trails[activeTrail] !== undefined) {
             if (
                 !drawing &&

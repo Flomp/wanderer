@@ -17,7 +17,7 @@
     import { ListCreateSchema } from "$lib/models/api/list_schema.js";
     import { ListShareCreateSchema } from "$lib/models/api/list_share_schema.js";
     import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
-    import type { Trail } from "$lib/models/trail.js";
+    import type { Trail, TrailSearchResult } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
     import { theme } from "$lib/stores/theme_store.js";
@@ -39,7 +39,6 @@
     import { z } from "zod";
     import {
         searchTrails,
-        type TrailSearchResult,
     } from "$lib/stores/search_store.js";
 
     let { data } = $props();

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
+    import ActorSearch from "$lib/components/actor_search.svelte";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
     import Search, {
         type SearchItem,
@@ -17,17 +18,16 @@
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import UserSearch from "$lib/components/user_search.svelte";
-    import { ExpandType, List, type ListFilter } from "$lib/models/list";
+    import { List, type ListFilter } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import {
         lists_delete,
-        lists_index,
         lists_search_filter,
         lists_show,
     } from "$lib/stores/list_store";
-    import { fetchGPX, trails_show } from "$lib/stores/trail_store";
+    import { trails_show } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
-    import { handleFromTrail } from "$lib/util/activitypub_util.js";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util.js";
     import * as M from "maplibre-gl";
 
     import { onMount } from "svelte";
@@ -58,10 +58,12 @@
     let markers: M.Marker[] = $state([]);
     let showMap: boolean = true;
 
-    let selectedList: List | null = $state(null);
+    let selectedList: List | null = $state(
+        page.params.handle && page.params.id ? data.lists.items[0] : null,
+    );
     let selectedTrail: Trail | null = $state(null);
 
-    let loading: boolean = $state(false);
+    let loading: boolean = $state(true);
     let loadingNextPage: boolean = false;
     let filterExpanded: boolean = $state(false);
 
@@ -69,25 +71,20 @@
 
     let userQuery = $state("");
 
-    let selectedTrailIndex = $derived(
-        selectedTrail
-            ? ((selectedList as List | null)?.expand?.trails?.indexOf(
-                  selectedTrail,
-              ) ?? null)
-            : null,
-    );
+    let selectedTrailIndex = $derived(selectedTrail ? 0 : null);
 
     let selectedTrailWaypoints = $derived(
         (selectedTrail as Trail | null)?.expand?.waypoints,
     );
 
     onMount(() => {
-        if (page.url.searchParams.get("list")) {
+        if (page.params.handle && page.params.id) {
             // setCurrentList(data.lists[0]);
             // only the requested list has been loaded at this point
             // load all lists the next time the user presses the back button
             loadAllListsOnNextBack = true;
         }
+        loading = false
     });
 
     async function handleDropdownClick(item: DropdownItem) {
@@ -113,7 +110,7 @@
     }
 
     async function setCurrentList(item: List) {
-        const fullList = await lists_show(item.id!, fetch, ExpandType.Trails)
+        const fullList = await lists_show(item.id!, handleFromRecordWithIRI(item), fetch);
         selectedList = fullList;
         document.getElementById("list-container")?.scrollTo({ top: 0 });
     }
@@ -135,9 +132,14 @@
         }
     }
 
-    async function selectTrail(trail: Trail) {
-        const fullTrail = await trails_show(trail.id!, handleFromTrail(trail));
+    async function selectTrail(trail: Trail) {       
+        const fullTrail = await trails_show(
+            trail.id!,
+            handleFromRecordWithIRI(trail),
+            true,
+        );
         selectedTrail = fullTrail;
+
         mapWithElevation?.unHighlightTrail(trail.id!);
         window.scrollTo({ top: 0 });
     }
@@ -289,13 +291,13 @@
                 {#if $currentUser}
                     <hr class="my-4 border-separator" />
 
-                    <UserSearch
+                    <ActorSearch
                         onclick={setAuthorFilter}
                         onclear={clearAuthorFilter}
                         bind:value={userQuery}
                         clearAfterSelect={false}
                         label={$_("author")}
-                    ></UserSearch>
+                    ></ActorSearch>
                     <div class="flex items-center my-4">
                         <input
                             id="public-checkbox"
@@ -363,14 +365,16 @@
                     initTrail={selectedTrail}
                     mode="list"
                     {markers}
-                    handle={handleFromTrail(selectedTrail)}
+                    handle={handleFromRecordWithIRI(selectedTrail)}
                 ></TrailInfoPanel>
             {/if}
         </div>
     </div>
     <div id="trail-map" class:hidden={!showMap}>
         <MapWithElevationMaplibre
-            trails={selectedList?.expand?.trails ?? []}
+            trails={selectedTrail
+                ? [selectedTrail]
+                : (selectedList?.expand?.trails ?? [])}
             waypoints={selectedTrailWaypoints}
             bind:map
             bind:this={mapWithElevation}
