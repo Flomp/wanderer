@@ -122,15 +122,38 @@ func getPolyline(app core.App, r *core.Record) (string, error) {
 	return string(polyline.EncodeCoords(coordinates)), nil
 }
 
-func documentFromListRecord(r *core.Record, includeShares bool) map[string]interface{} {
+func documentFromListRecord(r *core.Record, author *core.Record, includeShares bool) map[string]interface{} {
+
+	trails := r.ExpandedAll("trails")
+
+	totalElevationGain := 0.0
+	totalElevationLoss := 0.0
+	totalDistance := 0.0
+	totalDuration := 0.0
+
+	for _, t := range trails {
+		totalElevationGain += t.GetFloat("elevation_gain")
+		totalElevationLoss += t.GetFloat("elevation_loss")
+		totalDistance += t.GetFloat("distance")
+		totalDuration += t.GetFloat("duration")
+
+	}
+
 	document := map[string]interface{}{
-		"id":          r.Id,
-		"author":      r.GetString("author"),
-		"name":        r.GetString("name"),
-		"description": r.GetString("description"),
-		"public":      r.GetBool("public"),
-		"created":     r.GetDateTime("created").Time().Unix(),
-		"trails":      r.GetStringSlice("trails"),
+		"id":             r.Id,
+		"author":         author.Id,
+		"author_name":    author.GetString("username"),
+		"author_avatar":  author.GetString("avatar"),
+		"avatar":         r.GetString("avatar"),
+		"name":           r.GetString("name"),
+		"description":    r.GetString("description"),
+		"elevation_gain": totalElevationGain,
+		"elevation_loss": totalElevationLoss,
+		"distance":       totalDistance,
+		"duration":       totalDuration,
+		"public":         r.GetBool("public"),
+		"created":        r.GetDateTime("created").Time().Unix(),
+		"trails":         r.GetStringSlice("trails"),
 	}
 
 	if includeShares {
@@ -198,8 +221,13 @@ func UpdateTrailShares(trailId string, shares []string, client meilisearch.Servi
 	return nil
 }
 
-func IndexList(r *core.Record, client meilisearch.ServiceManager) error {
-	documents := []map[string]interface{}{documentFromListRecord(r, true)}
+func IndexList(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+	errs := app.ExpandRecord(r, []string{"trails"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand trails: %v", errs)
+	}
+
+	documents := []map[string]interface{}{documentFromListRecord(r, author, true)}
 
 	if _, err := client.Index("lists").AddDocuments(documents); err != nil {
 		return err
@@ -208,8 +236,8 @@ func IndexList(r *core.Record, client meilisearch.ServiceManager) error {
 	return nil
 }
 
-func UpdateList(r *core.Record, client meilisearch.ServiceManager) error {
-	documents := documentFromListRecord(r, false)
+func UpdateList(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+	documents := documentFromListRecord(r, author, false)
 
 	if _, err := client.Index("lists").UpdateDocuments(documents); err != nil {
 		return err

@@ -147,7 +147,9 @@
                 alt="avatar"
             />
             {#if !list.expand.author.private}
-                <a class="underline" href="/profile/@{list.expand.author.username?.toLowerCase()}"
+                <a
+                    class="underline"
+                    href="/profile/@{list.expand.author.username?.toLowerCase()}"
                     >{list.expand.author.username}</a
                 >
             {:else}
@@ -181,20 +183,22 @@
         >
     </div>
     <hr class="mb-4" />
-    <p
-        class="text-gray-500 whitespace-pre-wrap {fullDescription
-            ? ''
-            : 'max-h-24 overflow-hidden text-ellipsis'}"
-    >
-        {!fullDescription
-            ? list.description?.substring(0, 100)
-            : list.description}
-        {#if (list.description?.length ?? 0) > 100 && !fullDescription}
-            <button onclick={() => (fullDescription = true)}>
-                ... <span class="underline">{$_("read-more")}</span></button
-            >
-        {/if}
-    </p>
+    {#if list.description}
+        <p
+            class="text-gray-500 whitespace-pre-wrap {fullDescription
+                ? ''
+                : 'max-h-24 overflow-hidden text-ellipsis'}"
+        >
+            {!fullDescription
+                ? list.description?.substring(0, 100)
+                : list.description}
+            {#if (list.description?.length ?? 0) > 100 && !fullDescription}
+                <button onclick={() => (fullDescription = true)}>
+                    ... <span class="underline">{$_("read-more")}</span></button
+                >
+            {/if}
+        </p>
+    {/if}
     <h5 class="text-xl font-semibold my-4">
         {list.trails?.length ?? 0}
         {$_("trail", { values: { n: list.trails?.length ?? 0 } })}

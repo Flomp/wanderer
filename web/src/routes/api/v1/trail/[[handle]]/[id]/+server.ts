@@ -45,7 +45,7 @@ export async function GET(event: RequestEvent) {
                     }
                 })
                 t.expand?.waypoints?.forEach(w => {
-                   
+
                     w.photos = w.photos.map(p =>
                         `${origin}/api/v1/files/waypoints/${w.id}/${p}`
                     )
@@ -66,9 +66,13 @@ export async function GET(event: RequestEvent) {
                 const formData = objectToFormData({ ...t, gpx: undefined, photos: [], waypoints: [], tags: [], category: undefined })
                 if (t.photos.length) {
                     const photoURL = t.photos[t.thumbnail ?? 0]
-                    const response = await event.fetch(photoURL, { method: "GET" })
+                    let response = await event.fetch(photoURL, { method: "GET" })
                     const photo = await response.blob()
-                    formData.append("photos", photo)
+
+                    const gpxURL = t.gpx
+                    response = await event.fetch(gpxURL, { method: "GET" })
+                    const gpx = await response.blob()
+                    formData.append("gpx", gpx)
                 }
                 if (dbTrail !== undefined) {
                     dbTrail = await event.locals.pb.collection("trails").update(dbTrail.id!, formData)

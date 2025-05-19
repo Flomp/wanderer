@@ -15,8 +15,8 @@ export default defineConfig({
 			key: fs.readFileSync('.svelte-kit/key.pem'),
 			cert: fs.readFileSync('.svelte-kit/cert.pem')
 		},
-		host: true, // same as 0.0.0.0
-		port: 443
+		host: "localhost", // true
+		port: 5173 // 443
 	}
 
 });

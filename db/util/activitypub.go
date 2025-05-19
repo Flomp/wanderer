@@ -244,6 +244,15 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		record.Set("photos", thumbnail)
 	}
 
+	if t.Gpx != "" {
+		gpx, err := filesystem.NewFileFromURL(context.Background(), t.Gpx)
+		if err != nil {
+			return err
+		}
+
+		record.Set("gpx", gpx)
+	}
+
 	err = app.Save(record)
 
 	return err

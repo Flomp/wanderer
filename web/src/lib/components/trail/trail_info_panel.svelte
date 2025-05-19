@@ -482,7 +482,7 @@
 
                 <div class="mb-6 mt-12 flex justify-between">
                     <Tabs {tabs} bind:activeTab></Tabs>
-                    {#if activeTab == 0}
+                    {#if activeTab == 0 && mode != "list"}
                         <Button
                             secondary
                             type="button"

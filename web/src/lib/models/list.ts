@@ -7,6 +7,10 @@ export class List {
     name: string;
     public: boolean;
     description?: string;
+    elevation_gain?: number;
+    elevation_loss?: number;
+    distance?: number;
+    duration?: number;
     avatar?: string;
     trails?: string[];
     expand?: {
@@ -46,14 +50,14 @@ export const enum ExpandType {
     All = ~(~0 << 4),
 }
 
-export function ExpandTypeToString(e: ExpandType) : string {
+export function ExpandTypeToString(e: ExpandType): string {
 
     if (e == ExpandType.None)
         return "";
 
     var ret = "";
     if ((e & ExpandType.Trails) === ExpandType.Trails) {
-        ret += "trails,";
+        ret += "trails,trails.author,";
     }
     if ((e & ExpandType.Waypoints) === ExpandType.Waypoints) {
         ret += "trails.waypoints,";

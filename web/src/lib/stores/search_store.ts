@@ -18,11 +18,19 @@ export type LocationSearchResult = {
 export type ListSearchResult = {
     id: string;
     author: string;
+    author_name: string;
+    author_avatar: string;
+    avatar?: string;
     created: number;
     description: string;
     name: string;
+    elevation_gain: number;
+    elevation_loss: number;
+    distance: number,
+    duration: number,
     public: boolean;
     trails: string[]
+    shares?: string[];
 }
 
 type NominatimResponse = {

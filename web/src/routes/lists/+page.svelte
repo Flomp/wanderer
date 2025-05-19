@@ -17,15 +17,17 @@
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import UserSearch from "$lib/components/user_search.svelte";
-    import { List, type ListFilter } from "$lib/models/list";
+    import { ExpandType, List, type ListFilter } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import {
         lists_delete,
         lists_index,
         lists_search_filter,
+        lists_show,
     } from "$lib/stores/list_store";
-    import { fetchGPX } from "$lib/stores/trail_store";
+    import { fetchGPX, trails_show } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
+    import { handleFromTrail } from "$lib/util/activitypub_util.js";
     import * as M from "maplibre-gl";
 
     import { onMount } from "svelte";
@@ -39,12 +41,12 @@
         { text: $_("creation-date"), value: "created" },
     ];
 
-    let pagination = {
-        page: data.lists.page,
+    const pagination: { page: number; totalPages: number } = $state({
+        page: 1,
         totalPages: data.lists.totalPages,
-    };
+    });
 
-    let lists = $state(data.lists);
+    let lists: List[] = $state(data.lists.items);
 
     let confirmModal: ConfirmModal;
     let listShareModal: ListShareModal;
@@ -69,7 +71,9 @@
 
     let selectedTrailIndex = $derived(
         selectedTrail
-            ? ((selectedList as List | null)?.expand?.trails?.indexOf(selectedTrail) ?? null)
+            ? ((selectedList as List | null)?.expand?.trails?.indexOf(
+                  selectedTrail,
+              ) ?? null)
             : null,
     );
 
@@ -79,8 +83,7 @@
 
     onMount(() => {
         if (page.url.searchParams.get("list")) {
-            
-            setCurrentList(data.lists.items[0]);
+            // setCurrentList(data.lists[0]);
             // only the requested list has been loaded at this point
             // load all lists the next time the user presses the back button
             loadAllListsOnNextBack = true;
@@ -110,20 +113,8 @@
     }
 
     async function setCurrentList(item: List) {
-        if (
-            item.expand &&
-            item.expand.trails &&
-            item.expand.trails.length > 0
-        ) {
-            for (const trail of item.expand.trails) {
-                const gpxData: string = await fetchGPX(trail);
-                if (!trail.expand) {
-                    (trail as any).expand = {};
-                }
-                trail.expand!.gpx_data = gpxData;
-            }
-        }
-        selectedList = item;
+        const fullList = await lists_show(item.id!, fetch, ExpandType.Trails)
+        selectedList = fullList;
         document.getElementById("list-container")?.scrollTo({ top: 0 });
     }
 
@@ -144,8 +135,9 @@
         }
     }
 
-    function selectTrail(trail: Trail) {
-        selectedTrail = trail;
+    async function selectTrail(trail: Trail) {
+        const fullTrail = await trails_show(trail.id!, handleFromTrail(trail));
+        selectedTrail = fullTrail;
         mapWithElevation?.unHighlightTrail(trail.id!);
         window.scrollTo({ top: 0 });
     }
@@ -177,7 +169,10 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        lists = await lists_index(filter, pagination.page);
+        const response = await lists_search_filter(filter, pagination.page);
+        lists = response.items;
+        pagination.page = response.page;
+        pagination.totalPages = response.totalPages;
     }
 
     async function updateFilter() {
@@ -194,7 +189,10 @@
         }
 
         pagination.page = 1;
-        lists = await lists_search_filter(filter, pagination.page);
+        const response = await lists_search_filter(filter, pagination.page);
+        lists = response.items;
+        pagination.page = response.page;
+        pagination.totalPages = response.totalPages;
         loading = false;
     }
 
@@ -338,10 +336,10 @@
                         {#each { length: 3 } as _, index}
                             <SkeletonCard></SkeletonCard>
                         {/each}
-                    {:else if lists.items.length == 0}
+                    {:else if lists.length == 0}
                         <EmptyStateSearch width={356}></EmptyStateSearch>
                     {:else}
-                        {#each lists.items as item, i}
+                        {#each lists as item, i}
                             <div
                                 class="list-list-item"
                                 onclick={() => setCurrentList(item)}
@@ -361,7 +359,11 @@
                     onclick={(data) => selectTrail(data.trail)}
                 ></ListPanel>
             {:else if selectedList && selectedTrail}
-                <TrailInfoPanel initTrail={selectedTrail} mode="list" {markers} domain={selectedTrail.author}
+                <TrailInfoPanel
+                    initTrail={selectedTrail}
+                    mode="list"
+                    {markers}
+                    handle={handleFromTrail(selectedTrail)}
                 ></TrailInfoPanel>
             {/if}
         </div>

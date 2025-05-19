@@ -376,7 +376,12 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 	return func(e *core.RecordEvent) error {
 		record := e.Record
 
-		if err := util.IndexList(record, client); err != nil {
+		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		if err != nil {
+			return err
+		}
+
+		if err := util.IndexList(e.App, record, author, client); err != nil {
 			return err
 		}
 		if !record.GetBool("public") {
@@ -391,7 +396,7 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			Seen:   false,
 			Author: record.GetString("author"),
 		}
-		err := util.SendNotificationToFollowers(e.App, notification)
+		err = util.SendNotificationToFollowers(e.App, notification)
 		if err != nil {
 			return err
 		}
@@ -402,7 +407,11 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		err := util.UpdateList(record, client)
+		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		if err != nil {
+			return err
+		}
+		err = util.UpdateList(e.App, record, author, client)
 		if err != nil {
 			return err
 		}
@@ -893,7 +902,7 @@ func registerCronJobs(app core.App) {
 
 func bootstrapData(app core.App, client meilisearch.ServiceManager) error {
 	bootstrapCategories(app)
-	bootstrapMeilisearchTrails(app, client)
+	bootstrapMeilisearchDocuments(app, client)
 	return nil
 }
 
@@ -922,7 +931,7 @@ func bootstrapCategories(app core.App) error {
 	return nil
 }
 
-func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager) error {
+func bootstrapMeilisearchDocuments(app core.App, client meilisearch.ServiceManager) error {
 	query := app.RecordQuery("trails")
 	trails := []*core.Record{}
 
@@ -958,6 +967,43 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
+			continue
+		}
+	}
+
+	lists, err := app.FindAllRecords("lists")
+	if err != nil {
+		return err
+	}
+	_, err = client.Index("lists").DeleteAllDocuments()
+	if err != nil {
+		return err
+	}
+
+	for _, list := range lists {
+		author, err := app.FindRecordById("users", list.GetString(("author")))
+		if err != nil {
+			return err
+		}
+		if err := util.IndexList(app, list, author, client); err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to index list '%s': %v", list.GetString("name"), err))
+			continue
+		}
+
+		shares, err := app.FindAllRecords("list_share",
+			dbx.NewExp("list = {:listId}", dbx.Params{"listId": list.Id}),
+		)
+		if err != nil {
+			return err
+		}
+		userIds := make([]string, len(shares))
+		for i, r := range shares {
+			userIds[i] = r.GetString("user")
+		}
+		err = util.UpdateListShares(list.Id, userIds, client)
+
+		if err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to update list shares '%s': %v", list.GetString("name"), err))
 			continue
 		}
 	}

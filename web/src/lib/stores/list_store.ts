@@ -2,8 +2,9 @@ import { ExpandType, ExpandTypeToString, List, type ListFilter } from "$lib/mode
 import type { Trail } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits } from "meilisearch";
-import { type AuthRecord, type ListResult } from "pocketbase";
+import { type AuthRecord, type ListResult, type RecordModel } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
+import type { ListSearchResult } from "./search_store";
 import { fetchGPX } from "./trail_store";
 import { currentUser } from "./user_store";
 
@@ -15,7 +16,7 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
     f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch,
     e: ExpandType = ExpandType.All) {
     const user = get(currentUser)
-    
+
     const filterText = filter ? buildFilterText(user, filter) : ""
 
     const r = await f('/api/v1/list?' + new URLSearchParams({
@@ -43,7 +44,7 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
 }
 
 
-export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<ListResult<List>> {
+export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const user = get(currentUser)
 
     const filterText = buildSearchFilterText(user, filter)
@@ -65,40 +66,17 @@ export async function lists_search_filter(filter: ListFilter, page: number = 1, 
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const searchResult: { page: number, totalPages: number, hits: Hits<Record<string, any>> } = await r.json();
+    const result: { page: number, totalPages: number, hits: Hits<ListSearchResult> } = await r.json();
 
 
-    const listIds = searchResult.hits.map((h: Record<string, any>) => h.id);
+    const resultLists: List[] = await searchResultToLists(result.hits)
 
-    if (listIds.length == 0) {
-        return { items: [], page: searchResult.page, perPage, totalItems: 0, totalPages: searchResult.totalPages };
-    }
+    return { items: resultLists, ...result };
 
-    r = await f('/api/v1/list?' + new URLSearchParams({
-        expand: "trails,trails.waypoints,trails.category,list_share_via_list",
-        filter: `'${listIds.join(',')}'~id`,
-        sort: filter.sort && filter.sortOrder ? `${filter.sortOrder}${filter.sort}` : ''
-    }), {
-        method: 'GET',
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    const fetchedLists: ListResult<List> = await r.json();
-
-    const result = page > 1 ? [...lists, ...fetchedLists.items] : fetchedLists.items
-
-    lists = result;
-
-    return { ...fetchedLists, items: result };
 
 }
 
-export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch
-    , e: ExpandType = ExpandType.All) {
+export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, e: ExpandType = ExpandType.All) {
 
     const r = await f(`/api/v1/list/${id}?` + new URLSearchParams({
         expand: ExpandTypeToString(e)
@@ -293,4 +271,44 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
     }
 
     return filterText
+}
+
+async function searchResultToLists(hits: Hits<ListSearchResult>): Promise<List[]> {
+    const lists: List[] = []
+    for (const h of hits) {
+        const l: List & RecordModel = {
+            collectionId: "lists",
+            collectionName: "lists",
+            updated: new Date(h.created * 1000).toISOString(),
+            author: h.author,
+            name: h.name,
+            public: h.public,
+            description: h.description,
+            id: h.id,
+            trails: h.trails,
+            avatar: h.avatar,
+            elevation_gain: h.elevation_gain,
+            elevation_loss: h.elevation_loss,
+            distance: h.distance,
+            duration: h.duration,
+            expand: {
+                author: {
+                    avatar: h.author_avatar,
+                    id: h.author,
+                    username: h.author_name,
+                    private: false
+                },
+                list_share_via_list: h.shares?.map(s => ({
+                    permission: "view",
+                    list: h.id,
+                    user: s,
+                })),
+            }
+        }
+
+
+        lists.push(l)
+    }
+
+    return lists
 }
