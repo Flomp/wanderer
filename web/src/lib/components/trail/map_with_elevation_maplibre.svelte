@@ -887,7 +887,7 @@
                         "https://basemaps.cartocdn.com/light_all/1/0/0@2x.png",
                 },
                 {
-                    text: "Cartooo Dark",
+                    text: "Carto Dark",
                     value: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
                     thumbnail:
                         "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
