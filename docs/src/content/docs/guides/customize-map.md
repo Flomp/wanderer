@@ -38,3 +38,15 @@ To add the respective URLs navigate to `Settings -> Display` and add them in the
 2. Locate the compass control in the top-right corner of the map.
 3. Click and drag the compass control to tilt the map into 3D mode.
 4. Adjust the tilt and rotation as desired to view the terrain in 3D.
+
+## Thunderforest Maps
+
+![OpenCycle Maps from Thunderforest](../../../assets/guides/thunderforest_3.png)
+
+Optionally thunderforest maps can be configured by setting the `PUBLIC_THUNDERFOREST_API_KEY` environment variable. This will e.g. enable opencycle maps. For this its neccessary to obtain an API Key which requires [free registration](https://manage.thunderforest.com/users/sign_up?price=hobby-project-usd ) at Thunderforest.
+
+![Use Free Plan](../../../assets/guides/thunderforest_1.png)
+
+![After registration, confirm e-mail address](../../../assets/guides/thunderforest_2.png)
+
+![Obtain API Key](../../../assets/guides/thunderforest_4.png)
