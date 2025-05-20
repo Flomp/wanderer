@@ -7,6 +7,7 @@ import { get, writable, type Writable } from "svelte/store";
 import type { ListSearchResult } from "./search_store";
 import { fetchGPX } from "./trail_store";
 import { currentUser } from "./user_store";
+import { objectToFormData } from "$lib/util/file_util";
 
 let lists: List[] = []
 export const list: Writable<List | null> = writable(null)
@@ -106,11 +107,17 @@ export async function lists_create(list: List, avatar?: File) {
     if (!user) {
         throw Error("Unauthenticated")
     }
-    list.author = user.id;
+    list.author = user.actor;
 
-    let r = await fetch('/api/v1/list', {
+    const formData = objectToFormData(list)
+
+    if (avatar) {
+        formData.append("avatar", avatar);
+    }
+
+    let r = await fetch('/api/v1/list/form', {
         method: 'PUT',
-        body: JSON.stringify(list),
+        body: formData,
     })
 
     if (!r.ok) {
@@ -120,26 +127,17 @@ export async function lists_create(list: List, avatar?: File) {
 
     const model: List = await r.json();
 
-    const formData = new FormData();
+    return model;
+}
+
+export async function lists_update(list: List, avatar?: File) {
+
+    const formData = objectToFormData(list)
 
     if (avatar) {
         formData.append("avatar", avatar);
     }
 
-    r = await fetch(`/api/v1/list/${model.id!}/file`, {
-        method: 'POST',
-        body: formData,
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    return await r.json();
-}
-
-export async function lists_update(list: List, avatar?: File) {
     let r = await fetch('/api/v1/list/' + list.id, {
         method: 'POST',
         body: JSON.stringify(list),
@@ -151,22 +149,7 @@ export async function lists_update(list: List, avatar?: File) {
     }
 
     const model: List = await r.json();
-
-    const formData = new FormData();
-
-    if (avatar) {
-        formData.append("avatar", avatar);
-    }
-
-    r = await fetch(`/api/v1/list/${model.id!}/file`, {
-        method: 'POST',
-        body: formData,
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
+    return model;
 }
 
 export async function lists_add_trail(list: List, trail: Trail) {

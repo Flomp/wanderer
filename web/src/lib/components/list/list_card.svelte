@@ -11,6 +11,7 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         list: List;
@@ -61,7 +62,7 @@
                         `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />
-                {list.expand?.author.username}
+                {handleFromRecordWithIRI(list)}
             </p>
         {/if}
         <div

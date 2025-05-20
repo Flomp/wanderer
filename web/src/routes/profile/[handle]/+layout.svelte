@@ -69,7 +69,7 @@
                         {data.profile.preferredUsername ??
                             data.profile.username}
                     </h4>
-                    <p class="text-sm text-gray-500 mb-4">
+                    <p class="text-sm text-gray-500 mb-4  break-all">
                         {data.profile.acct}
                     </p>
                 </div>

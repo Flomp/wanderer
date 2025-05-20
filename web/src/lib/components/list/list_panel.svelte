@@ -141,11 +141,11 @@
             <img
                 class="rounded-full w-8 aspect-square mx-1 inline"
                 src={list.expand.author.icon ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.preferred_username}&backgroundType=gradientLinear`}
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
                 alt="avatar"
             />
             <a class="underline" href="/profile/{handleFromRecordWithIRI(list)}"
-                >{list.expand.author.preferred_username}</a
+                >{handleFromRecordWithIRI(list)}</a
             >
         </p>
     {/if}

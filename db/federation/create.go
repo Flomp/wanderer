@@ -11,7 +11,6 @@ import (
 	"pocketbase/util"
 
 	pub "github.com/go-ap/activitypub"
-	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -228,7 +227,7 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 
 }
 
-func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, summitLog *core.Record, typ pub.ActivityVocabularyType) error {
+func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.ActivityVocabularyType) error {
 
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
@@ -364,6 +363,98 @@ func CreateSummitLogActivity(app core.App, client meilisearch.ServiceManager, su
 	return app.Save(record)
 }
 
+func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabularyType) error {
+	if !list.GetBool("public") {
+		// only broadcast the list if it is public
+		return nil
+	}
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
+
+	// author of the list
+	listAuthor, err := app.FindRecordById("activitypub_actors", list.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	activityRecordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+
+	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
+	to := "https://www.w3.org/ns/activitystreams#Public"
+	cc := listAuthor.GetString("iri") + "/followers"
+
+	avatar := ""
+	if list.GetString("avatar") != "" {
+		avatar = fmt.Sprintf("%s/api/v1/files/lists/%s/%s", origin, list.Id, list.GetString("avatar"))
+	}
+
+	attachments := pub.ItemCollection{}
+	if avatar != "" {
+		attachments.Append(pub.Document{
+			Type:      pub.DocumentType,
+			MediaType: "image/jpeg",
+			URL:       pub.IRI(avatar),
+		})
+	}
+
+	author := listAuthor.GetString("iri")
+
+	listObject := models.ListNew()
+	listObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("name")))
+	listObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("description")))
+
+	listObject.AttributedTo = pub.IRI(listAuthor.GetString("iri"))
+	listObject.Published = list.GetDateTime("created").Time()
+	listObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/list/%s", origin, list.Id))
+	listObject.URL = pub.IRI(fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("username"), list.Id))
+	listObject.ListId = list.Id
+	listObject.Avatar = avatar
+
+	activity := pub.ActivityNew(pub.IRI(id), typ, listObject)
+	activity.Actor = pub.IRI(author)
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.To = pub.ItemCollection{pub.IRI(cc)}
+	activity.Published = time.Now()
+	activity.Object = listObject
+
+	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
+	if err != nil {
+		return err
+	}
+
+	follows, err := app.FindRecordsByFilter("follows", "followee={:followee}&&status='accepted'", "", -1, 0, dbx.Params{"followee": listAuthor.Id})
+	if err != nil {
+		return err
+	}
+
+	recipients := []string{}
+	for _, f := range follows {
+		follower, err := app.FindRecordById("activitypub_actors", f.GetString("follower"))
+		if err != nil {
+			return err
+		}
+		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+	}
+
+	err = PostActivity(app, listAuthor, activity, recipients)
+	if err != nil {
+		return err
+	}
+
+	record := core.NewRecord(collection)
+	record.Set("id", activityRecordId)
+	record.Set("iri", id)
+	record.Set("to", []string{to})
+	record.Set("type", string(typ))
+	record.Set("object", listObject)
+	record.Set("actor", author)
+	record.Set("published", time.Now())
+
+	return app.Save(record)
+}
+
 func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
 
 	// no need to do anything if the actor is local
@@ -379,6 +470,8 @@ func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pu
 		err = processCreateOrUpdateCommentActivity(activity, app, actor)
 	case models.SummitLogType:
 		err = processCreateOrUpdateSummitLogActivity(activity, app, actor)
+	case models.ListType:
+		err = processCreateOrUpdateListActivity(activity, app, actor)
 	}
 
 	if err != nil {
@@ -485,4 +578,8 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	}
 
 	return nil
+}
+
+func processCreateOrUpdateListActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+	return util.ListFromActivity(activity, app, actor)
 }

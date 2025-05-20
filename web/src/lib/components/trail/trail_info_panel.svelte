@@ -54,6 +54,7 @@
     import SummitLogModal from "../summit_log/summit_log_modal.svelte";
     import SkeletonTable from "../base/skeleton_table.svelte";
     import ConfirmModal from "../confirm_modal.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         initTrail: Trail;
@@ -352,10 +353,7 @@
                                 alt="avatar"
                             />
                             <a class="underline" href="/profile/{handle}"
-                                >{trail.expand.author.username}{trail.expand
-                                    .author.isLocal
-                                    ? ""
-                                    : "@" + trail.expand.author.domain}</a
+                                >{handleFromRecordWithIRI(trail)}</a
                             >
                         </p>
                     {/if}

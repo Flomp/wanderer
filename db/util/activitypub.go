@@ -31,6 +31,8 @@ func AddCustomTypesToPub() {
 			return models.TrailNew(), nil
 		} else if typ == models.SummitLogType {
 			return models.SummitLogNew(), nil
+		} else if typ == models.ListType {
+			return models.ListNew(), nil
 		}
 		return pub.GetItemByType(typ)
 	}
@@ -43,11 +45,15 @@ func AddCustomTypesToPub() {
 			return models.OnSummitLog(i, func(s *models.SummitLog) error {
 				return models.JSONLoadSummitLog(v, s)
 			})
+		} else if typ == models.ListType {
+			return models.OnList(i, func(l *models.List) error {
+				return models.JSONLoadList(v, l)
+			})
 		}
 		return nil
 	}
 	pub.IsNotEmpty = func(i pub.Item) bool {
-		if i.GetType() == models.TrailType || i.GetType() == models.SummitLogType {
+		if i.GetType() == models.TrailType || i.GetType() == models.SummitLogType || i.GetType() == models.ListType {
 			return true
 		}
 
@@ -215,7 +221,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 	}
 
 	record.Set("id", t.TrailId)
-	record.Set("name", t.Name.String())
+	record.Set("name", t.Name.First().Value)
 	record.Set("description", t.Content.First().Value)
 	record.Set("location", t.Location.(*pub.Place).Name.First().Value)
 	record.Set("lat", t.Location.(*pub.Place).Latitude)
@@ -251,6 +257,46 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		}
 
 		record.Set("gpx", gpx)
+	}
+
+	err = app.Save(record)
+
+	return err
+}
+
+func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+	l, err := models.ToList(activity.Object)
+	if err != nil {
+		return err
+	}
+
+	record, err := app.FindFirstRecordByData("lists", "iri", l.ID.String())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			collection, err := app.FindCollectionByNameOrId("lists")
+			if err != nil {
+				return err
+			}
+
+			record = core.NewRecord(collection)
+		} else {
+			return err
+		}
+	}
+
+	record.Set("name", l.Name.First().Value)
+	record.Set("description", l.Content.First().Value)
+	record.Set("public", true)
+	record.Set("iri", l.ID.String())
+	record.Set("author", actor.Id)
+
+	if l.Avatar != "" {
+		avatar, err := filesystem.NewFileFromURL(context.Background(), l.Avatar)
+		if err != nil {
+			return err
+		}
+
+		record.Set("avatar", avatar)
 	}
 
 	err = app.Save(record)

@@ -12,6 +12,7 @@
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         trail: Trail;
@@ -82,7 +83,7 @@
                         `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />
-                {trail.expand.author.username}{trail.expand.author.isLocal ? '' : '@' + trail.expand.author.domain}
+                {handleFromRecordWithIRI(trail)}
             </p>
         {/if}
         <div class="flex flex-wrap gap-x-8">

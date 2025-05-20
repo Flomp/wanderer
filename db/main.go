@@ -87,9 +87,9 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("trails").BindFunc(updateTrailHandler(client))
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(deleteTrailHandler(client))
 
-	app.OnRecordCreateRequest("summit_logs").BindFunc(createSummitLogHandler(client))
-	app.OnRecordUpdateRequest("summit_logs").BindFunc(updateSummitLogHandler(client))
-	app.OnRecordDeleteRequest("summit_logs").BindFunc(deleteSummitLogHandler(client))
+	app.OnRecordCreateRequest("summit_logs").BindFunc(createSummitLogHandler())
+	app.OnRecordUpdateRequest("summit_logs").BindFunc(updateSummitLogHandler())
+	app.OnRecordDeleteRequest("summit_logs").BindFunc(deleteSummitLogHandler())
 
 	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler())
 	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler())
@@ -244,12 +244,12 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 	}
 }
 
-func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+func createSummitLogHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
 		e.Next()
 
-		err := federation.CreateSummitLogActivity(e.App, client, e.Record, pub.CreateType)
+		err := federation.CreateSummitLogActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -258,10 +258,10 @@ func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+func updateSummitLogHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
-		err := federation.CreateSummitLogActivity(e.App, client, e.Record, pub.UpdateType)
+		err := federation.CreateSummitLogActivity(e.App, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -269,9 +269,9 @@ func updateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+func deleteSummitLogHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		err := federation.CreateSummitLogDeleteActivity(e.App, client, e.Record)
+		err := federation.CreateSummitLogDeleteActivity(e.App, e.Record)
 		if err != nil {
 			return err
 		}
@@ -384,22 +384,12 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 		if err := util.IndexList(e.App, record, author, client); err != nil {
 			return err
 		}
-		if !record.GetBool("public") {
-			return e.Next()
-		}
-		notification := util.Notification{
-			Type: util.ListCreate,
-			Metadata: map[string]string{
-				"id":   record.Id,
-				"list": record.GetString("name"),
-			},
-			Seen:   false,
-			Author: record.GetString("author"),
-		}
-		err = util.SendNotificationToFollowers(e.App, notification)
+
+		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
+
 		return e.Next()
 	}
 }
@@ -416,6 +406,11 @@ func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
+		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+
 		return e.Next()
 	}
 }
@@ -424,6 +419,11 @@ func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 	return func(e *core.RecordEvent) error {
 		record := e.Record
 		_, err := client.Index("lists").DeleteDocument(record.Id)
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateListDeleteActivity(e.App, record)
 		if err != nil {
 			return err
 		}
