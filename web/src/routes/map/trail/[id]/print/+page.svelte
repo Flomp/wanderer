@@ -107,6 +107,15 @@
         return char.charCodeAt(0);
     }
 
+    function getTextHeight(text: string, doc: jsPDF, width: number) {
+        let numLines = doc.splitTextToSize(text, width).length;
+
+        return (numLines * doc.getFontSize() * doc.getLineHeightFactor() -
+                doc.getFontSize() * (doc.getLineHeightFactor() - 1)) /
+            doc.internal.scaleFactor;
+
+    }
+
     async function print() {
         if (!map) {
             return;
@@ -349,19 +358,8 @@
             const logoRatio = 64 / 212;
             const logoWidth = 32;
             const logoHeight = logoWidth * logoRatio;
-            doc.addImage(
-                logo,
-                width - 8 - logoWidth,
-                height - 4 - logoHeight,
-                logoWidth,
-                logoHeight,
-            );
 
-            if (includeDescription && $trail.description) {
-                doc.addPage();
-                doc.text($trail.description, 16, 16, {
-                    maxWidth: width - 32,
-                });
+            function addLogo() {
                 doc.addImage(
                     logo,
                     width - 8 - logoWidth,
@@ -371,26 +369,58 @@
                 );
             }
 
-            if (includeWaypoints && $trail.expand?.waypoints) {
+            function newPage() {
+                addLogo();
                 doc.addPage();
                 currentHeight = 16;
+            }
+
+            if ((includeDescription && $trail.description) || (includeWaypoints && $trail.expand?.waypoints)) {
+                newPage();
+            }
+
+            if (includeDescription && $trail.description) {
+                doc.text($trail.description, 16, currentHeight, {
+                    maxWidth: width - 32,
+                });
+                currentHeight += getTextHeight($trail.description, doc, width - 32) + 8;
+            }
+
+            if (includeWaypoints && $trail.expand?.waypoints) {
+                const header = $_("waypoints", { values: { n: 2 } })
+                let textHeight = getTextHeight(header, doc, width - 32)
+                if (currentHeight + textHeight + 8 > height) {
+                    newPage();
+                }
+                doc.setFont("IBMPlexSans-SemiBold", "bold");
+                doc.text(header, 16, currentHeight);
+                currentHeight += textHeight + 8;
+                doc.setFont("IBMPlexSans-Regular", "normal");
 
                 ($trail.expand.waypoints || []).forEach(waypoint => {
-                    let description = waypoint?.description || "";
-                    let numLines = doc.splitTextToSize(description, width - 32).length;
+                    let description = waypoint.description || "";
+                    let name = waypoint.name || "";
 
-                    let textHeight = (numLines * doc.getFontSize() * doc.getLineHeightFactor() -
-                            doc.getFontSize() * (doc.getLineHeightFactor() - 1)) /
-                        doc.internal.scaleFactor;
+                    let content = description;
+                    if (name) {
+                        content = `${name}\n${description}`;
+                    }
 
+                    let textHeight = getTextHeight(content, doc, width - 32)
                     if (currentHeight + textHeight + 16 > height) {
-                        doc.addPage();
-                        currentHeight = 16;
+                        newPage();
                     }
 
                     doc.setFont("fa-solid-900", "normal");
                     doc.text(String.fromCharCode(faUnicode(waypoint.icon || "circle")), 16, currentHeight);
                     doc.setFont("IBMPlexSans-Regular", "normal");
+
+                    if (name) {
+                        doc.setFont("IBMPlexSans-SemiBold", "bold");
+                        doc.text(name, 24, currentHeight);
+                        currentHeight += getTextHeight(name, doc, width - 32);
+                        doc.setFont("IBMPlexSans-Regular", "normal");
+                    }
 
                     doc.text(description, 24, currentHeight, {
                         maxWidth: width - 32 - 8
@@ -398,6 +428,8 @@
                     currentHeight += textHeight + 8;
                 });
             }
+
+            addLogo();
 
             doc.save($trail.name + ".pdf");
             printLoading = false;
