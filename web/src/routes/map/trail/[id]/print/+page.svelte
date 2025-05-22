@@ -80,6 +80,7 @@
     let printLoading: boolean = $state(false);
 
     let includeDescription: boolean = $state(false);
+    let includeWaypoints: boolean = $state(false);
 
     onMount(() => {
         let qrcode = new QrCodeWithLogo({
@@ -90,6 +91,21 @@
             },
         });
     });
+
+    function faUnicode(name: string) {
+        var testI = document.createElement('i');
+        var char;
+
+        testI.className = 'fa fa-' + name;
+        document.body.appendChild(testI);
+
+        char = window.getComputedStyle( testI, ':before' )
+                .content.replace(/'|"/g, '');
+
+        testI.remove();
+
+        return char.charCodeAt(0);
+    }
 
     async function print() {
         if (!map) {
@@ -355,6 +371,34 @@
                 );
             }
 
+            if (includeWaypoints && $trail.expand?.waypoints) {
+                doc.addPage();
+                currentHeight = 16;
+
+                ($trail.expand.waypoints || []).forEach(waypoint => {
+                    let description = waypoint?.description || "";
+                    let numLines = doc.splitTextToSize(description, width - 32).length;
+
+                    let textHeight = (numLines * doc.getFontSize() * doc.getLineHeightFactor() -
+                            doc.getFontSize() * (doc.getLineHeightFactor() - 1)) /
+                        doc.internal.scaleFactor;
+
+                    if (currentHeight + textHeight + 16 > height) {
+                        doc.addPage();
+                        currentHeight = 16;
+                    }
+
+                    doc.setFont("fa-solid-900", "normal");
+                    doc.text(String.fromCharCode(faUnicode(waypoint.icon || "circle")), 16, currentHeight);
+                    doc.setFont("IBMPlexSans-Regular", "normal");
+
+                    doc.text(description, 24, currentHeight, {
+                        maxWidth: width - 32 - 8
+                    });
+                    currentHeight += textHeight + 8;
+                });
+            }
+
             doc.save($trail.name + ".pdf");
             printLoading = false;
         } catch (e) {
@@ -500,6 +544,17 @@
             />
             <label for="description-checkbox" class="ms-2 text-sm"
                 >{$_("include-description")}</label
+            >
+        </div>
+        <div>
+            <input
+                id="waypoints-checkbox"
+                type="checkbox"
+                bind:checked={includeWaypoints}
+                class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+            />
+            <label for="waypoints-checkbox" class="ms-2 text-sm"
+                >{$_("include-waypoints")}</label
             >
         </div>
 
