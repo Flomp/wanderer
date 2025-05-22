@@ -18,7 +18,13 @@ export const load: Load = async ({ params, fetch, parent }) => {
     };
 
 
-    const lists = await profile_lists_index(params.handle, filter, 1, 6, fetch)
-    const timeline = await profile_timeline_index(params.handle, 1, 10, fetch);
-    return { lists: lists.items, timeline }
+    try {
+        const lists = await profile_lists_index(params.handle, filter, 1, 6, fetch)
+        const timeline = await profile_timeline_index(params.handle, 1, 10, fetch);
+        return { lists: lists.items, timeline }
+    } catch(e) {
+        return {lists: [], timeline: {items: [], page: 1, perPage: 1, totalItems: 0, totalPages: 0}}
+    } 
+    
+    
 };

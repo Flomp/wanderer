@@ -10,6 +10,7 @@
     import type { SummitLog } from "$lib/models/summit_log.js";
     import { categories } from "$lib/stores/category_store.js";
     import { profile_stats_index } from "$lib/stores/profile_store.js";
+    import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import {
         formatDistance,
         formatElevation,
@@ -220,8 +221,16 @@
     }
 
     async function loadSummitLogs() {
-        const logs = await profile_stats_index(page.params.handle, filter);
-        summitLogs = logs;
+        try {
+            const logs = await profile_stats_index(page.params.handle, filter);
+            summitLogs = logs;
+        } catch (e) {
+            show_toast({
+                icon: "close",
+                text: "Error loading stats.",
+                type: "error",
+            });
+        }
     }
 </script>
 

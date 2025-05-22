@@ -29,7 +29,7 @@ export type ListSearchResult = {
     distance: number,
     duration: number,
     public: boolean;
-    trails: string[]
+    trails: number
     shares?: string[];
     iri?: string;
 }

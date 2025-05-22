@@ -1,6 +1,9 @@
 interface TimelineItem {
     id: string;
     trail_id: string;
+    trail_author_username: string;
+    trail_author_domain: string;
+    trail_iri: string;
     name: string,
     description: string;
     date: string;

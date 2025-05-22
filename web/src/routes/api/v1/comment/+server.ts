@@ -11,7 +11,7 @@ export async function GET(event: RequestEvent) {
             const comments = await list<Comment>(event, Collection.comments);
             return json(comments)
         } else {
-            const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
+            const {actor, error} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
             event.url.searchParams.delete("handle")
             const localComments = await list<Comment>(event, Collection.comments);
             if (actor.isLocal) {

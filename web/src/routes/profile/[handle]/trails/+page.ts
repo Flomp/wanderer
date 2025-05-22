@@ -31,6 +31,10 @@ export const load: Load = async ({ params, fetch, parent }) => {
         sort: "created",
         sortOrder: "+",
     };
-    const trails = await profile_trails_index(params.handle, filter, 1, 12, fetch)
-    return { trails, filter }
+    try {
+        const trails = await profile_trails_index(params.handle, filter, 1, 12, fetch)
+        return { trails, filter }
+    } catch (e) {
+        return { trails: { hits: {}, items: [], page: 1, totalPages: 0 }, filter }
+    }
 };

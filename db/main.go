@@ -385,6 +385,13 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote list
+			// we create a stub list record for later reference
+			// no need to create an activity for that
+			return nil
+		}
+
 		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
@@ -401,9 +408,17 @@ func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 		if err != nil {
 			return err
 		}
+
 		err = util.UpdateList(e.App, record, author, client)
 		if err != nil {
 			return err
+		}
+
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote list
+			// we create a stub list record for later reference
+			// no need to create an activity for that
+			return nil
 		}
 
 		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
@@ -866,14 +881,17 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		resource = strings.TrimPrefix(resource, "acct:")
 
 		actor, err := util.GetActor(e.App, resource)
-		if err != nil {
+		if err != nil && actor == nil {
 			if strings.HasPrefix(err.Error(), "webfinger") {
 				return e.NotFoundError("Not found", err)
 			}
 			return err
+		} else if err != nil && actor != nil {
+			// we could not fetch the remote actor so we return our local cached copy
+			return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": err.Error()})
 		}
 
-		return e.JSON(http.StatusOK, actor)
+		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": nil})
 	})
 
 }

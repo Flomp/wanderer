@@ -16,13 +16,13 @@
         type Trail,
         type TrailBoundingBox,
         type TrailFilter,
+        type TrailSearchResult,
     } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
     import {
         searchMulti,
         type ListSearchResult,
         type LocationSearchResult,
-        type TrailSearchResult,
     } from "$lib/stores/search_store";
     import { trails_search_bounding_box } from "$lib/stores/trail_store";
     import { getIconForLocation } from "$lib/util/icon_util";
@@ -92,7 +92,7 @@
         }));
         const listItems = r[1].hits.map((t: ListSearchResult) => ({
             text: t.name,
-            description: `List, ${t.trails.length} ${$_("trail", { values: { n: t.trails.length } })}`,
+            description: `List, ${t.trails} ${$_("trail", { values: { n: t.trails } })}`,
             value: t.id,
             icon: "layer-group",
         }));

@@ -11,4 +11,5 @@ export interface Profile {
     uri: string;
     icon: string;
     createdAt: DateTime;
+    error?: string;
 }

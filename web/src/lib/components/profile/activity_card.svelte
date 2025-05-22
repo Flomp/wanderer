@@ -23,7 +23,7 @@
         <img
             class="rounded-full w-10 aspect-square overflow-hidden"
             src={actor.icon ||
-                `https://api.dicebear.com/7.x/initials/svg?seed=${actor.preferred_username}&backgroundType=gradientLinear`}
+                `https://api.dicebear.com/7.x/initials/svg?seed=${actor.username}&backgroundType=gradientLinear`}
             alt="avatar"
         />
         <div>

@@ -11,7 +11,7 @@ export async function GET(event: RequestEvent) {
             removeTimeFromDates(summitLogs.items)
             return json(summitLogs)
         } else {
-            const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
+            const {actor, error} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
             event.url.searchParams.delete("handle")
             const localSummitLogs = await list<SummitLog>(event, Collection.summit_logs);
             if (actor.isLocal) {

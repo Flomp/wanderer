@@ -12,7 +12,7 @@ export async function GET(event: RequestEvent) {
     }
 
     try {
-        const actor: Actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
+        const {actor, error} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
 
         const searchParams = Object.fromEntries(event.url.searchParams);
         const safeSearchParams = RecordListOptionsSchema.parse(searchParams);

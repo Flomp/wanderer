@@ -264,7 +264,7 @@ export async function searchResultToLists(hits: Hits<ListSearchResult>): Promise
             public: h.public,
             description: h.description,
             id: h.id,
-            trails: h.trails,
+            trails: Array(h.trails).fill("000000000000000"),
             avatar: h.avatar,
             elevation_gain: h.elevation_gain,
             elevation_loss: h.elevation_loss,

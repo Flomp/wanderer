@@ -4,6 +4,7 @@
     import { _ } from "svelte-i18n";
     import { fade } from "svelte/transition";
     import TextField from "../base/text_field.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         comment: Comment;
@@ -61,12 +62,9 @@
         <div class="flex items-center">
             <p class="">
                 <a
-                    href="/profile/@{comment.expand?.author.username.toLowerCase()}{comment
-                        .expand?.author.isLocal
-                        ? ''
-                        : '@' + comment.expand?.author.domain}"
+                    href="/profile/{handleFromRecordWithIRI(comment)}"
                     class="text-sm font-semibold"
-                    >{comment.expand?.author.username}</a
+                    >{handleFromRecordWithIRI(comment)}</a
                 >
                 <span class="text-xs text-gray-500 ml-2"
                     >{$_(`n-${timeSince.unit}-ago`, {

@@ -12,7 +12,7 @@ export async function POST(event: RequestEvent) {
     }
 
     try {
-        const actor = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
+        const {actor, error} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
 
         const data = await event.request.json()
 

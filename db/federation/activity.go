@@ -100,10 +100,13 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 }
 
 func ProcessActivity(e *core.RequestEvent) error {
-	var activity pub.Activity
-	if err := e.BindBody(&activity); err != nil {
-		return e.BadRequestError("Failed to read request data", err)
+
+	body, err := io.ReadAll(e.Request.Body)
+	if err != nil {
+		return err
 	}
+	var activity pub.Activity
+	activity.UnmarshalJSON(body)
 
 	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor)
 	if err != nil {

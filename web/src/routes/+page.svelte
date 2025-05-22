@@ -69,7 +69,7 @@
             }));
             const listItems = r[1].hits.map((t: ListSearchResult) => ({
                 text: t.name,
-                description: `List, ${t.trails.length} ${$_("trail", { values: { n: t.trails.length } })}`,
+                description: `List, ${t.trails} ${$_("trail", { values: { n: t.trails } })}`,
                 value: t.id,
                 icon: "layer-group",
             }));

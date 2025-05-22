@@ -4,10 +4,13 @@
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import ActivityCard from "$lib/components/profile/activity_card.svelte";
+
+    import type { TimelineItem } from "$lib/models/timeline.js";
     import { profile_timeline_index } from "$lib/stores/profile_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
+    import { temp } from "three/examples/jsm/nodes/Nodes.js";
 
     let { data } = $props();
 
@@ -39,6 +42,19 @@
             data.actor.iri,
             pagination.page,
         );
+    }
+
+    function handleTimeLineItemClick(item: TimelineItem) {
+        if (item.trail_iri.length) {
+            const originalTrailId = item.trail_iri.substring(
+                item.trail_iri.length - 15,
+            );
+            goto(
+                `/trail/view/@${item.trail_author_username}@${item.trail_author_domain}/${item.trail_id}`,
+            );
+        } else {
+            goto(`/trail/view/${page.params.handle}/${item.trail_id}`);
+        }
     }
 </script>
 
@@ -133,8 +149,7 @@
             <div
                 class="py-1 cursor-pointer"
                 role="presentation"
-                onclick={() =>
-                    goto(`/trail/view/${page.params.handle}/${item.trail_id}`)}
+                onclick={() => handleTimeLineItemClick(item)}
             >
                 <ActivityCard activity={item} actor={data.actor}></ActivityCard>
             </div>

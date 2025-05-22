@@ -3,6 +3,7 @@
     import TrailList from "$lib/components/trail/trail_list.svelte";
     import type { Trail, TrailFilter } from "$lib/models/trail.js";
     import { profile_trails_index } from "$lib/stores/profile_store.js";
+    import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import { trails_search_filter } from "$lib/stores/trail_store";
     import { _ } from "svelte-i18n";
 
@@ -21,26 +22,44 @@
 
     async function handleFilterUpdate() {
         loading = true;
-        trails = await profile_trails_index(
-            page.params.handle,
-            filter,
-            pagination.page,
-            12,
-            fetch,
-        );
-
-        loading = false;
+        try {
+            trails = await profile_trails_index(
+                page.params.handle,
+                filter,
+                pagination.page,
+                12,
+                fetch,
+            );
+        } catch (e) {
+            show_toast({
+                icon: "close",
+                text: "Error loading trails.",
+                type: "error",
+            });
+        } finally {
+            loading = false;
+        }
     }
 
     async function paginate(newPage: number) {
         pagination.page = newPage;
-        trails = await profile_trails_index(
-            page.params.handle,
-            filter,
-            newPage,
-            12,
-            fetch,
-        );
+        try {
+            trails = await profile_trails_index(
+                page.params.handle,
+                filter,
+                newPage,
+                12,
+                fetch,
+            );
+        } catch (e) {
+            show_toast({
+                icon: "close",
+                text: "Error loading trails.",
+                type: "error",
+            });
+        } finally {
+            loading = false;
+        }
     }
 </script>
 

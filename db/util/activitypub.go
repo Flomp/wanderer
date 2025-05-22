@@ -220,7 +220,6 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		}
 	}
 
-	record.Set("id", t.TrailId)
 	record.Set("name", t.Name.First().Value)
 	record.Set("description", t.Content.First().Value)
 	record.Set("location", t.Location.(*pub.Place).Name.First().Value)
@@ -336,16 +335,8 @@ func GetActor(app core.App, handle string) (*core.Record, error) {
 
 	username, domain := SplitHandle(handle)
 
-	if domain == "" {
-		dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "username={:username}&&isLocal=true", dbx.Params{"username": username})
-		if err != nil {
-			return nil, err
-		}
-		return dbActor, nil
-	}
-
 	var dbActor *core.Record
-	dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "username={:username}&&domain={:domain}", dbx.Params{"username": username, "domain": domain})
+	dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "username={:username}&&(domain={:domain}||isLocal=true)", dbx.Params{"username": username, "domain": domain})
 	if err != nil && err == sql.ErrNoRows {
 		collection, err := app.FindCollectionByNameOrId("activitypub_actors")
 		if err != nil {
@@ -384,6 +375,9 @@ func GetActor(app core.App, handle string) (*core.Record, error) {
 	} else {
 		pubActor, followers, following, err := fetchRemoteActor(dbActor.GetString("iri"), username, domain)
 		if err != nil {
+			if dbActor.Id != "" {
+				return dbActor, err
+			}
 			return nil, err
 		}
 
@@ -446,9 +440,12 @@ func fetchRemoteActor(iri string, username string, domain string) (*pub.Actor, *
 		req.Header.Set(k, v)
 	}
 	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil {
 		return nil, nil, nil, fmt.Errorf("actor fetch failed: %v", err)
+	} else if resp.StatusCode != http.StatusOK {
+		return nil, nil, nil, fmt.Errorf("actor fetch failed: status %v", resp.StatusCode)
 	}
+
 	defer resp.Body.Close()
 
 	var pubActor pub.Actor

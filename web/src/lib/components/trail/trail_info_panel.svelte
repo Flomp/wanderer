@@ -124,8 +124,17 @@
 
     async function fetchComments() {
         commentsLoading = true;
-        await comments_index(trail, handle);
-        commentsLoading = false;
+        try {
+            await comments_index(trail, handle);
+        } catch (e) {
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: "Error loading comments.",
+            });
+        } finally {
+            commentsLoading = false;
+        }
     }
 
     async function createComment() {
@@ -192,8 +201,17 @@
 
     async function fetchSummitLog() {
         summitLogsLoading = true;
-        await summit_logs_index({ trail: trail.id, category: [] }, handle);
-        summitLogsLoading = false;
+        try {
+            await summit_logs_index({ trail: trail.id, category: [] }, handle);
+        } catch (e) {
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: "Error loading summit logs.",
+            });
+        } finally {
+            summitLogsLoading = false;
+        }
     }
 
     function beforeSummitLogModalOpen(currentSummitLog?: SummitLog) {

@@ -61,7 +61,7 @@
                 <img
                     class="rounded-full w-16 aspect-square overflow-hidden shrink-0"
                     src={data.profile.icon ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${data.profile.preferredUsername ?? data.profile.username}&backgroundType=gradientLinear`}
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${data.profile.username}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />
                 <div>
@@ -69,7 +69,7 @@
                         {data.profile.preferredUsername ??
                             data.profile.username}
                     </h4>
-                    <p class="text-sm text-gray-500 mb-4  break-all">
+                    <p class="text-sm text-gray-500 mb-4 break-all">
                         {data.profile.acct}
                     </p>
                 </div>
@@ -89,6 +89,12 @@
                 )}
             </p>
         </div>
+        {#if data.profile.error}
+            <p class="px-6 py-4 text-xs bg-red-200">
+                <span class="font-semibold">{data.profile.acct}</span> could not
+                be fetched from the remote server. Showing cached data.
+            </p>
+        {/if}
         <hr class="mb-4 border-input-border" />
         <div class="flex gap-x-6 items-center text-sm px-6">
             <a

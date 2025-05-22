@@ -23,7 +23,11 @@ export const load: Load = async ({ params, fetch, parent }) => {
         endDate: lastDay.toISOString().slice(0, 10),
         category: []
     }
-    const logs = await profile_stats_index(params.handle, filter, fetch);
+    try {
+        const logs = await profile_stats_index(params.handle, filter, fetch);
+        return { filter, logs }
 
-    return { filter, logs }
+    } catch (e) {
+        return { logs: [], filter }
+    }
 };

@@ -187,7 +187,13 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
 	to := commentTrailAuthor.GetString("iri")
-	trailURL := fmt.Sprintf("https://%s/api/v1/%s", commentTrailAuthor.GetString("domain"), comment.GetString("trail"))
+
+	trailURL := ""
+	if commentTrailAuthor.GetBool("isLocal") {
+		trailURL = fmt.Sprintf("https://%s/api/v1/%s", commentTrailAuthor.GetString("domain"), comment.GetString("trail"))
+	} else {
+		trailURL = commentTrail.GetString("iri")
+	}
 
 	author := commentAuthor.GetString("iri")
 
@@ -261,6 +267,17 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 		return err
 	}
 
+	trailId := ""
+	if summitLogTrailAuthor.GetBool("isLocal") {
+		trailId = summitLog.GetString("trail")
+	} else {
+		trailIRI, err := url.Parse(summitLogTrail.GetString("iri"))
+		if err != nil {
+			return err
+		}
+		trailId = path.Base(trailIRI.Path)
+	}
+
 	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
@@ -309,7 +326,7 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 	logObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/summit-log/%s", origin, summitLog.Id))
 	logObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, summitLogTrailAuthor.GetString("username"), summitLog.GetString("trail")))
 	logObject.SummitLogId = summitLog.Id
-	logObject.TrailId = summitLog.GetString("trail")
+	logObject.TrailId = trailId
 
 	logObject.Distance = summitLog.GetFloat("distance")
 	logObject.ElevationGain = summitLog.GetFloat("elevation_gain")

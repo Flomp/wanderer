@@ -16,6 +16,7 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     let thumbnail: string = $state(
         $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark,
@@ -104,9 +105,7 @@
                             `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                    {log.expand.author.username}{log.expand.author.isLocal
-                        ? ""
-                        : "@" + log.expand.author.domain}
+                    {handleFromRecordWithIRI(log)}
                 </p>
             {/if}
             {#if log.distance || log.elevation_gain || log.elevation_loss || log.duration}
