@@ -160,6 +160,7 @@
   "import": "Importuj",
   "import-hint": "Wybierz lub przeciągnij tutaj plik GPX, FIT, KML lub TCX...",
   "include-description": "Dołącz opis",
+  "include-waypoints": "Uwzględnij punkty trasy",
   "integration-description-komoot": "Synchronizuje trasy kamoot z wanderer w równych odstępach.",
   "integration-description-strava": "Synchronizuje trasy i aktywność z wanderer w równych odstępach.",
   "integration-disabled": "integracja wyłączona",
