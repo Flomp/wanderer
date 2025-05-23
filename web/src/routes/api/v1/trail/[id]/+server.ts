@@ -9,18 +9,18 @@ import { ClientResponseError } from "pocketbase";
 
 export async function GET(event: RequestEvent) {
     try {
+        // try to get the trail simply via the
         let t: Trail;
         if (!event.url.searchParams.has("handle")) {
             t = await show<Trail>(event, Collection.trails)
-            return json(t);
         } else {
-            const {actor, error} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
+            let { actor, error } = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
             event.url.searchParams.delete("handle")
 
             const safeSearchParams = RecordOptionsSchema.parse(Object.fromEntries(event.url.searchParams));
 
-            const origin = new URL(actor.iri).origin
-            const url = `${origin}/api/v1/trail/${event.params.id}`
+            let origin = new URL(actor.iri).origin
+            let url = `${origin}/api/v1/trail/${event.params.id}`
 
             let dbTrail: Trail | undefined;
             try {
@@ -33,10 +33,16 @@ export async function GET(event: RequestEvent) {
                 }
             }
 
-            if (actor.isLocal && dbTrail) {
+            if (dbTrail && !dbTrail.iri) {
                 t = dbTrail
             } else {
-                const response = await event.fetch((dbTrail?.iri ?? url)  + '?' + event.url.searchParams, { method: 'GET' })
+                if (dbTrail && dbTrail.iri) {
+                    origin = new URL(dbTrail.iri).origin
+                    url = `${origin}/api/v1/trail/${event.params.id}`
+                    actor = await event.locals.pb.collection("activitypub_actors").getOne(dbTrail.author)
+                }
+
+                const response = await event.fetch((dbTrail?.iri ?? url) + '?' + event.url.searchParams, { method: 'GET' })
                 if (!response.ok) {
                     const errorResponse = await response.json()
                     console.error(errorResponse)
@@ -65,11 +71,17 @@ export async function GET(event: RequestEvent) {
                         `${origin}/api/v1/files/waypoints/${w.id}/${p}`
                     )
                 })
+                let categoryId: string | undefined;
+                try {
+                    const category = await event.locals.pb.collection("categories").getFirstListItem(`name='${t.expand?.category?.name}'`)
+                    categoryId = category.id;
+                    t.expand!.category = category as any
+                } catch (e) { }
                 t.author = actor.id!
                 t.expand!.author = actor
                 t.iri = dbTrail?.iri ?? url;
 
-                const formData = objectToFormData({ ...t, id: dbTrail?.id, gpx: undefined, photos: [], waypoints: [], tags: [], category: undefined })
+                const formData = objectToFormData({ ...t, id: dbTrail?.id, gpx: undefined, photos: [], waypoints: [], tags: [], category: categoryId })
                 if (t.photos.length) {
                     const photoURL = t.photos[t.thumbnail ?? 0]
                     let response = await event.fetch(photoURL, { method: "GET" })
