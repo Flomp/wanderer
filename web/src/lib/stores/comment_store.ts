@@ -7,9 +7,9 @@ import { currentUser } from "./user_store";
 
 export const comments: Writable<Comment[]> = writable([])
 
-export async function comments_index(trail: Trail, handle?: string) {
+export async function comments_index(trailId: string, handle?: string) {
     let r = await fetch(`/api/v1/comment?` + new URLSearchParams({
-        filter: `trail="${trail.id}"`,
+        filter: `trail="${trailId}"`,
         expand: "author",
         sort: "-created",
         ...(handle ? { handle } : {})

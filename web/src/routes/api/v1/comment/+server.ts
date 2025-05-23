@@ -11,7 +11,7 @@ export async function GET(event: RequestEvent) {
             const comments = await list<Comment>(event, Collection.comments);
             return json(comments)
         } else {
-            const {actor, error} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
+            const { actor, error } = await event.locals.pb.send(`/activitypub/actor?resource=acct:${event.url.searchParams.get("handle")}`, { method: "GET", fetch: event.fetch, });
             event.url.searchParams.delete("handle")
             const localComments = await list<Comment>(event, Collection.comments);
             if (actor.isLocal) {
@@ -21,7 +21,10 @@ export async function GET(event: RequestEvent) {
             const deduplicationMap: Record<string, string> = {}
 
             localComments.items.forEach(c => {
-                if (c.id) {
+                if (c.iri) {
+                    const id = c.iri.substring(c.iri.length - 15)
+                    deduplicationMap[id] = c.author
+                } else if (c.id) {
                     deduplicationMap[c.id] = c.author
                 }
             })
@@ -37,8 +40,8 @@ export async function GET(event: RequestEvent) {
             const remoteComments: ListResult<Comment> = await response.json()
 
             remoteComments.items = remoteComments.items.filter(c => {
-                const id = c.iri?.substring(c.iri.length - 15) ?? ""
-                return deduplicationMap[id] == undefined
+                const iriId = c.iri?.substring(c.iri.length - 15) ?? ""
+                return deduplicationMap[c.id!] == undefined && deduplicationMap[iriId] == undefined
             })
 
             const allCommentItems = <ListResult<Comment>>{

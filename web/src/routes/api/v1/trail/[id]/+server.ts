@@ -20,88 +20,91 @@ export async function GET(event: RequestEvent) {
             const safeSearchParams = RecordOptionsSchema.parse(Object.fromEntries(event.url.searchParams));
 
             let origin = new URL(actor.iri).origin
-            let url = `${origin}/api/v1/trail/${event.params.id}`
+            let iri = `${origin}/api/v1/trail/${event.params.id}`
 
-            let dbTrail: Trail | undefined;
             try {
-                dbTrail = await event.locals.pb.collection("trails").getFirstListItem(`iri='${url}'||id='${event.params.id}'`, {
+                t = await event.locals.pb.collection("trails").getFirstListItem(`iri='${iri}'||id='${event.params.id}'`, {
                     ...safeSearchParams
                 })
             } catch (e) {
                 if (!(e instanceof ClientResponseError) || e.status != 404) {
                     throw e
                 }
+                t = {
+                    iri: iri,
+                    author: actor.id
+                } as Trail
             }
 
-            if (dbTrail && !dbTrail.iri) {
-                t = dbTrail
-            } else {
-                if (dbTrail && dbTrail.iri) {
-                    origin = new URL(dbTrail.iri).origin
-                    url = `${origin}/api/v1/trail/${event.params.id}`
-                    actor = await event.locals.pb.collection("activitypub_actors").getOne(dbTrail.author)
-                }
 
-                const response = await event.fetch((dbTrail?.iri ?? url) + '?' + event.url.searchParams, { method: 'GET' })
-                if (!response.ok) {
-                    const errorResponse = await response.json()
-                    console.error(errorResponse)
-                    return json(dbTrail)
+        }
+
+        if (t.iri) {
+            const origin = new URL(t.iri).origin
+            const actor = await event.locals.pb.collection("activitypub_actors").getOne(t.author)
+
+            const localTrailId = t.id;
+            const localTrailIRI = t.iri;
+
+            const response = await event.fetch((t.iri) + '?' + event.url.searchParams, { method: 'GET' })
+            if (!response.ok) {
+                const errorResponse = await response.json()
+                console.error(errorResponse)
+                return json(t)
+            }
+            t = await response.json()
+
+            t.gpx = `${origin}/api/v1/files/trails/${t.id}/${t.gpx}`
+            t.photos = t.photos.map(p =>
+                `${origin}/api/v1/files/trails/${t.id}/${p}`
+            )
+            t.expand?.summit_logs_via_trail?.forEach(l => {
+                if (l.gpx) {
+                    l.gpx = `${origin}/api/v1/files/summit_logs/${l.id}/${l.gpx}`
                 }
-                t = await response.json()
-                t.gpx = `${origin}/api/v1/files/trails/${t.id}/${t.gpx}`
-                t.photos = t.photos.map(p =>
-                    `${origin}/api/v1/files/trails/${t.id}/${p}`
+                l.photos = l.photos.map(p =>
+                    `${origin}/api/v1/files/summit_logs/${l.id}/${p}`
                 )
-                t.expand?.summit_logs_via_trail?.forEach(l => {
-                    if (l.gpx) {
-                        l.gpx = `${origin}/api/v1/files/summit_logs/${l.id}/${l.gpx}`
-                    }
-                    l.photos = l.photos.map(p =>
-                        `${origin}/api/v1/files/summit_logs/${l.id}/${p}`
-                    )
 
-                    if (l.expand?.author) {
-                        l.expand.author.isLocal = false
-                    }
-                })
-                t.expand?.waypoints?.forEach(w => {
-
-                    w.photos = w.photos.map(p =>
-                        `${origin}/api/v1/files/waypoints/${w.id}/${p}`
-                    )
-                })
-                let categoryId: string | undefined;
-                try {
-                    const category = await event.locals.pb.collection("categories").getFirstListItem(`name='${t.expand?.category?.name}'`)
-                    categoryId = category.id;
-                    t.expand!.category = category as any
-                } catch (e) { }
-                t.author = actor.id!
-                t.expand!.author = actor
-                t.iri = dbTrail?.iri ?? url;
-
-                const formData = objectToFormData({ ...t, id: dbTrail?.id, gpx: undefined, photos: [], waypoints: [], tags: [], category: categoryId })
-                if (t.photos.length) {
-                    const photoURL = t.photos[t.thumbnail ?? 0]
-                    let response = await event.fetch(photoURL, { method: "GET" })
-                    const photo = await response.blob()
-                    formData.append("photos", photo)
-
-                    const gpxURL = t.gpx
-                    response = await event.fetch(gpxURL, { method: "GET" })
-                    const gpx = await response.blob()
-                    formData.append("gpx", gpx)
+                if (l.expand?.author) {
+                    l.expand.author.isLocal = false
                 }
-                if (dbTrail !== undefined) {
-                    dbTrail = await event.locals.pb.collection("trails").update(dbTrail.id!, formData)
-                } else {
-                    dbTrail = await event.locals.pb.collection("trails").create(formData)
-                }
+            })
+            t.expand?.waypoints?.forEach(w => {
 
-                t.id = dbTrail!.id
+                w.photos = w.photos.map(p =>
+                    `${origin}/api/v1/files/waypoints/${w.id}/${p}`
+                )
+            })
+            let categoryId: string | undefined;
+            try {
+                const category = await event.locals.pb.collection("categories").getFirstListItem(`name='${t.expand?.category?.name}'`)
+                categoryId = category.id;
+                t.expand!.category = category as any
+            } catch (e) { }
+            t.author = actor.id!
+            t.expand!.author = actor as any
+            t.id = localTrailId
+            t.iri = localTrailIRI
+
+            const formData = objectToFormData({ ...t, id: t.id, gpx: undefined, expand: undefined, photos: [], waypoints: [], tags: [], category: categoryId })
+            if (t.photos.length) {
+                const photoURL = t.photos[t.thumbnail ?? 0]
+                let response = await event.fetch(photoURL, { method: "GET" })
+                const photo = await response.blob()
+                formData.append("photos", photo)
+
+                const gpxURL = t.gpx
+                response = await event.fetch(gpxURL, { method: "GET" })
+                const gpx = await response.blob()
+                formData.append("gpx", gpx)
             }
-
+            if (t.id) {
+                await event.locals.pb.collection("trails").update(t.id, formData)
+            } else {
+                const createdTrail = await event.locals.pb.collection("trails").create(formData)
+                t.id = createdTrail.id;
+            }
         }
 
         // remove time from dates

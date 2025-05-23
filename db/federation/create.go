@@ -1,6 +1,7 @@
 package federation
 
 import (
+	"database/sql"
 	"fmt"
 	"net/url"
 	"os"
@@ -533,21 +534,42 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 		return err
 	}
 
-	var record *core.Record
 	if activity.Type == pub.CreateType {
-		collection, err := app.FindCollectionByNameOrId("comments")
+		// send a notification to the trail author
+		notification := util.Notification{
+			Type: util.TrailComment,
+			Metadata: map[string]string{
+				"comment":      commentObject.Content.First().Value.String(),
+				"trail_id":     trailId,
+				"trail_name":   trail.GetString("name"),
+				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+			},
+			Seen:   false,
+			Author: actor.Id,
+		}
+		err = util.SendNotification(app, notification, trailAuthor)
 		if err != nil {
 			return err
 		}
+	}
 
-		record = core.NewRecord(collection)
-	} else if activity.Type == pub.UpdateType {
-		record, err = app.FindFirstRecordByData("comments", "iri", commentObject.ID.String())
-		if err != nil {
+	// no need to do anything else if the actor is local
+	if actor.GetBool("isLocal") {
+		return nil
+	}
+
+	record, err := app.FindFirstRecordByData("comments", "iri", commentObject.ID.String())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			collection, err := app.FindCollectionByNameOrId("comments")
+			if err != nil {
+				return err
+			}
+
+			record = core.NewRecord(collection)
+		} else {
 			return err
 		}
-	} else {
-		return fmt.Errorf("activity must be of type 'Create' or 'Update")
 	}
 
 	record.Set("iri", commentObject.ID.String())
@@ -556,23 +578,6 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 	record.Set("trail", trailId)
 
 	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	// send a notification to the trail author
-	notification := util.Notification{
-		Type: util.TrailComment,
-		Metadata: map[string]string{
-			"comment":      record.GetString("text"),
-			"trail_id":     trailId,
-			"trail_name":   trail.GetString("name"),
-			"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
-		},
-		Seen:   false,
-		Author: actor.Id,
-	}
-	err = util.SendNotification(app, notification, trailAuthor)
 	if err != nil {
 		return err
 	}
@@ -597,22 +602,45 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		return err
 	}
 
-	var record *core.Record
-	if activity.Type == pub.CreateType {
-		collection, err := app.FindCollectionByNameOrId("summit_logs")
-		if err != nil {
-			return err
-		}
+	newSummitLog := false
+	record, err := app.FindFirstRecordByData("summit_logs", "iri", logObject.ID.String())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			collection, err := app.FindCollectionByNameOrId("summit_logs")
+			if err != nil {
+				return err
+			}
 
-		record = core.NewRecord(collection)
-	} else if activity.Type == pub.UpdateType {
-		record, err = app.FindFirstRecordByData("summit_logs", "iri", logObject.ID.String())
+			record = core.NewRecord(collection)
+			newSummitLog = true
+		} else {
+			return err
+		}
+	}
+
+	if newSummitLog {
+		// send a notification to the trail author
+		notification := util.Notification{
+			Type: util.SummitLogCreate,
+			Metadata: map[string]string{
+				"trail_id":     trail.Id,
+				"trail_name":   trail.GetString("name"),
+				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+			},
+			Seen:   false,
+			Author: actor.Id,
+		}
+		err = util.SendNotification(app, notification, trailAuthor)
 		if err != nil {
 			return err
 		}
-	} else {
-		return fmt.Errorf("activity must be of type 'Create' or 'Update")
 	}
+
+	// no need to do anything else if the actor is local
+	if actor.GetBool("isLocal") {
+		return nil
+	}
+
 	record.Set("date", logObject.Date)
 	record.Set("text", logObject.Content.First().Value)
 	record.Set("distance", logObject.Distance)
@@ -624,22 +652,6 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	record.Set("iri", logObject.ID.String())
 
 	err = app.Save(record)
-	if err != nil {
-		return err
-	}
-
-	// send a notification to the trail author
-	notification := util.Notification{
-		Type: util.SummitLogCreate,
-		Metadata: map[string]string{
-			"trail_id":     trail.Id,
-			"trail_name":   trail.GetString("name"),
-			"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
-		},
-		Seen:   false,
-		Author: actor.Id,
-	}
-	err = util.SendNotification(app, notification, trailAuthor)
 	if err != nil {
 		return err
 	}
