@@ -79,7 +79,7 @@
         }
         pagination.page += 1;
         const result = await notifications_index(
-            { recipient: $currentUser.id },
+            { recipient: $currentUser.actor },
             pagination.page,
         );
 

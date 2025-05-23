@@ -338,23 +338,7 @@ func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 		if errs := e.App.ExpandRecord(record, []string{"trail", "trail.author"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
 		}
-		shareTrail := record.ExpandedOne("trail")
-		shareTrailAuthor := shareTrail.ExpandedOne("author")
 
-		notification := util.Notification{
-			Type: util.TrailShare,
-			Metadata: map[string]string{
-				"id":     shareTrail.Id,
-				"trail":  shareTrail.GetString("name"),
-				"author": shareTrailAuthor.GetString("username"),
-			},
-			Seen:   false,
-			Author: shareTrailAuthor.Id,
-		}
-		err = util.SendNotification(e.App, notification, record.GetString("user"))
-		if err != nil {
-			return err
-		}
 		return e.Next()
 	}
 }
@@ -470,23 +454,7 @@ func createListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 		if errs := e.App.ExpandRecord(record, []string{"list", "list.author"}, nil); len(errs) > 0 {
 			return fmt.Errorf("failed to expand: %v", errs)
 		}
-		shareList := record.ExpandedOne("list")
-		shareListAuthor := shareList.ExpandedOne("author")
 
-		notification := util.Notification{
-			Type: util.ListShare,
-			Metadata: map[string]string{
-				"id":     shareList.Id,
-				"list":   shareList.GetString("name"),
-				"author": shareListAuthor.GetString("username"),
-			},
-			Seen:   false,
-			Author: shareListAuthor.Id,
-		}
-		err = util.SendNotification(e.App, notification, record.GetString("user"))
-		if err != nil {
-			return err
-		}
 		return e.Next()
 	}
 }
@@ -880,7 +848,7 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		resource := e.Request.URL.Query().Get("resource")
 		resource = strings.TrimPrefix(resource, "acct:")
 
-		actor, err := util.GetActor(e.App, resource)
+		actor, private, err := federation.GetActor(e.App, resource)
 		if err != nil && actor == nil {
 			if strings.HasPrefix(err.Error(), "webfinger") {
 				return e.NotFoundError("Not found", err)
@@ -891,7 +859,7 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 			return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": err.Error()})
 		}
 
-		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": nil})
+		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "private": private, "error": nil})
 	})
 
 }

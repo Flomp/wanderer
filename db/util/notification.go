@@ -11,12 +11,11 @@ import (
 type NotificationType string
 
 const (
-	TrailCreate  NotificationType = "trail_create"
-	TrailShare   NotificationType = "trail_share"
-	ListCreate   NotificationType = "list_create"
-	ListShare    NotificationType = "list_share"
-	NewFollower  NotificationType = "new_follower"
-	TrailComment NotificationType = "trail_comment"
+	TrailShare      NotificationType = "trail_share"
+	ListShare       NotificationType = "list_share"
+	NewFollower     NotificationType = "new_follower"
+	TrailComment    NotificationType = "trail_comment"
+	SummitLogCreate NotificationType = "summit_log_create"
 )
 
 type Notification struct {
@@ -54,11 +53,14 @@ func getNotificationPermissions(app core.App, user string, notificationType Noti
 	return &settingsForType, nil
 }
 
-func SendNotification(app core.App, notification Notification, recipient string) error {
-	if notification.Author == recipient {
+func SendNotification(app core.App, notification Notification, recipient *core.Record) error {
+	if notification.Author == recipient.Id {
 		return nil
 	}
-	permissions, err := getNotificationPermissions(app, recipient, notification.Type)
+	if !recipient.GetBool("isLocal") {
+		return nil
+	}
+	permissions, err := getNotificationPermissions(app, recipient.GetString("user"), notification.Type)
 	if err != nil {
 		return err
 	}
@@ -73,7 +75,7 @@ func SendNotification(app core.App, notification Notification, recipient string)
 		n.Set("type", string(notification.Type))
 		n.Set("metadata", notification.Metadata)
 		n.Set("seen", notification.Seen)
-		n.Set("recipient", recipient)
+		n.Set("recipient", recipient.Id)
 		n.Set("author", notification.Author)
 
 		if err := app.Save(n); err != nil {
@@ -82,15 +84,15 @@ func SendNotification(app core.App, notification Notification, recipient string)
 	}
 
 	if permissions.Email {
-		recipientUser, err := app.FindRecordById("users", recipient)
+		recipientActor, err := app.FindRecordById("activitypub_actors", recipient.Id)
 		if err != nil {
 			return err
 		}
-		authorUser, err := app.FindRecordById("users", notification.Author)
+		authorActor, err := app.FindRecordById("activitypub_actors", notification.Author)
 		if err != nil {
 			return err
 		}
-		html, err := GenerateHTML(app.Settings().Meta.AppURL, recipientUser.GetString("username"), authorUser.GetString("username"), notification.Type, notification.Metadata)
+		html, err := GenerateHTML(app.Settings().Meta.AppURL, recipientActor.GetString("username"), authorActor.GetString("username"), notification.Type, notification.Metadata)
 		if err != nil {
 			return err
 		}
@@ -100,27 +102,12 @@ func SendNotification(app core.App, notification Notification, recipient string)
 				Address: app.Settings().Meta.SenderAddress,
 				Name:    app.Settings().Meta.SenderName,
 			},
-			To:      []mail.Address{{Address: recipientUser.Email()}},
+			To:      []mail.Address{{Address: recipientActor.Email()}},
 			Subject: "wanderer - New Notification",
 			HTML:    html,
 		}
 
 		app.NewMailClient().Send(message)
-	}
-	return nil
-}
-
-func SendNotificationToFollowers(app core.App, notification Notification) error {
-	followers, err := app.FindRecordsByFilter("follows", "followee={:user}", "", -1, 0, dbx.Params{"user": notification.Author})
-
-	if err != nil {
-		return err
-	}
-
-	for _, f := range followers {
-		recipient := f.GetString("follower")
-		SendNotification(app, notification, recipient)
-
 	}
 	return nil
 }

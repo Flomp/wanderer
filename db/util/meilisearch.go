@@ -148,7 +148,7 @@ func documentFromListRecord(r *core.Record, author *core.Record, includeShares b
 			totalDistance = doc["distance"].(float64)
 			totalDuration = doc["duration"].(float64)
 
-			trails = len(doc["trails"].([]any))
+			trails = int(doc["trails"].(float64))
 		}
 
 	} else {

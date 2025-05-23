@@ -6,32 +6,38 @@
     import { settings_update } from "$lib/stores/settings_store";
     import { _ } from "svelte-i18n";
 
-    const notifications = $state((page.data.settings as Settings)?.notifications ?? {
-        list_create: {
-            web: true,
-            email: true,
+    const notifications = $state(
+        (page.data.settings as Settings)?.notifications ?? {
+            list_create: {
+                web: true,
+                email: true,
+            },
+            list_share: {
+                web: true,
+                email: true,
+            },
+            trail_create: {
+                web: true,
+                email: true,
+            },
+            trail_share: {
+                web: true,
+                email: true,
+            },
+            new_follower: {
+                web: true,
+                email: true,
+            },
+            trail_comment: {
+                web: true,
+                email: true,
+            },
+            summit_log_create: {
+                web: true,
+                email: true,
+            },
         },
-        list_share: {
-            web: true,
-            email: true,
-        },
-        trail_create: {
-            web: true,
-            email: true,
-        },
-        trail_share: {
-            web: true,
-            email: true,
-        },
-        new_follower: {
-            web: true,
-            email: true,
-        },
-        trail_comment: {
-            web: true,
-            email: true,
-        },
-    });
+    );
 
     const notificationItems: { text: string; key: NotificationType }[] = [
         {
@@ -43,20 +49,16 @@
             key: NotificationType.newFollower,
         },
         {
-            text: $_("settings-notification-trail-create"),
-            key: NotificationType.trailCreate,
-        },
-        {
             text: $_("settings-notification-trail-share"),
             key: NotificationType.trailShare,
         },
         {
-            text: $_("settings-notification-list-create"),
-            key: NotificationType.listCreate,
-        },
-        {
             text: $_("settings-notification-list-share"),
             key: NotificationType.listShare,
+        },
+        {
+            text: $_("settings-notification-summit-log-create"),
+            key: NotificationType.summitLogCreate,
         },
     ];
 

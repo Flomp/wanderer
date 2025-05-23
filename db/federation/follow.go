@@ -3,6 +3,7 @@ package federation
 import (
 	"fmt"
 	"os"
+	"pocketbase/util"
 	"time"
 
 	pub "github.com/go-ap/activitypub"
@@ -89,6 +90,21 @@ func ProcessFollowActivity(app core.App, actor *core.Record, activity pub.Activi
 			return err
 		}
 	}
+
+	// send a notification to the followee
+	notification := util.Notification{
+		Type: util.NewFollower,
+		Metadata: map[string]string{
+			"follower": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+		},
+		Seen:   false,
+		Author: actor.Id,
+	}
+	err = util.SendNotification(app, notification, object)
+	if err != nil {
+		return err
+	}
+
 	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 
@@ -137,9 +153,9 @@ func ProcessAcceptActivity(app core.App, actor *core.Record, activity pub.Activi
 	}
 
 	// err = util.SyncOutbox(app, actor)
-	if err != nil {
-		return err
-	}
+	// if err != nil {
+	// 	return err
+	// }
 	return nil
 }
 

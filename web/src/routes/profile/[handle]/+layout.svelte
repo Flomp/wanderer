@@ -5,8 +5,11 @@
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
     import ProfileShareModal from "$lib/components/profile/profile_share_modal.svelte";
     import { follows_create, follows_delete } from "$lib/stores/follow_store";
+    import { theme } from "$lib/stores/theme_store.js";
     import { currentUser } from "$lib/stores/user_store";
     import { _ } from "svelte-i18n";
+    import errorDark from "$lib/assets/svgs/empty_states/error_dark.svg";
+    import errorLight from "$lib/assets/svgs/empty_states/error_light.svg";
 
     let { data, children } = $props();
 
@@ -95,73 +98,87 @@
                 be fetched from the remote server. Showing cached data.
             </p>
         {/if}
-        <hr class="mb-4 border-input-border" />
-        <div class="flex gap-x-6 items-center text-sm px-6">
-            <a
-                class:font-bold={page.url.pathname.endsWith("followers")}
-                href="/profile/{data.profile.acct}/users/followers"
-            >
-                <p class="font-semibold">{data.profile.followers}</p>
-                <p>{$_("followers")}</p>
-            </a>
-            <a
-                class:font-bold={page.url.pathname.endsWith("following")}
-                href="/profile/{data.profile.acct}/users/following"
-            >
-                <p class="font-semibold">{data.profile.following}</p>
-                <p>{$_("following")}</p>
-            </a>
-            {#if !data.isOwnProfile}
-                <div class="px-6 mt-2">
-                    <Button
-                        loading={followLoading}
-                        disabled={followLoading}
-                        primary={!data.follow}
-                        secondary={!!data.follow}
-                        icon={data.follow ? "check" : ""}
-                        onclick={() => follow()}
-                    >
-                        {#if data.follow}
-                            {data.follow.status == "accepted"
-                                ? $_("following")
-                                : $_("follow-request-pending")}
-                        {:else}
-                            {$_("follow")}
-                        {/if}
-                    </Button>
-                </div>
-            {/if}
-        </div>
-
-        <hr class="mt-4 border-input-border" />
-
-        <div class="mt-6 mb-4">
-            {#each profileLinks as link, i}
+        {#if !data.profile.private || data.isOwnProfile}
+            <hr class="mb-4 border-input-border" />
+            <div class="flex gap-x-6 items-center text-sm px-6">
                 <a
-                    class="block mx-2 px-4 py-3 my-1 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors rounded-md"
-                    class:bg-menu-item-background-hover={i == activeIndex}
-                    href={link.value}
-                    ><i class="fa fa-{link.icon} mr-2"></i>{link.text}</a
+                    class:font-bold={page.url.pathname.endsWith("followers")}
+                    href="/profile/{data.profile.acct}/users/followers"
                 >
-            {/each}
-        </div>
-        {#if data.isOwnProfile}
-            <div class="px-6 mb-4 flex flex-col gap-2">
-                <button
-                    class="btn-secondary basis-full"
-                    onclick={() => profileShareModal.openModal()}
-                    >{$_("share-profile")}</button
-                >
+                    <p class="font-semibold">{data.profile.followers}</p>
+                    <p>{$_("followers")}</p>
+                </a>
                 <a
-                    class="btn-secondary text-center basis-full"
-                    href="/settings/profile">{$_("settings")}</a
+                    class:font-bold={page.url.pathname.endsWith("following")}
+                    href="/profile/{data.profile.acct}/users/following"
                 >
+                    <p class="font-semibold">{data.profile.following}</p>
+                    <p>{$_("following")}</p>
+                </a>
+                {#if !data.isOwnProfile}
+                    <div class="px-6 mt-2">
+                        <Button
+                            loading={followLoading}
+                            disabled={followLoading}
+                            primary={!data.follow}
+                            secondary={!!data.follow}
+                            icon={data.follow ? "check" : ""}
+                            onclick={() => follow()}
+                        >
+                            {#if data.follow}
+                                {data.follow.status == "accepted"
+                                    ? $_("following")
+                                    : $_("follow-request-pending")}
+                            {:else}
+                                {$_("follow")}
+                            {/if}
+                        </Button>
+                    </div>
+                {/if}
             </div>
-            <ProfileShareModal bind:this={profileShareModal}
-            ></ProfileShareModal>
+
+            <hr class="mt-4 border-input-border" />
+
+            <div class="mt-6 mb-4">
+                {#each profileLinks as link, i}
+                    <a
+                        class="block mx-2 px-4 py-3 my-1 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors rounded-md"
+                        class:bg-menu-item-background-hover={i == activeIndex}
+                        href={link.value}
+                        ><i class="fa fa-{link.icon} mr-2"></i>{link.text}</a
+                    >
+                {/each}
+            </div>
+            {#if data.isOwnProfile}
+                <div class="px-6 mb-4 flex flex-col gap-2">
+                    <button
+                        class="btn-secondary basis-full"
+                        onclick={() => profileShareModal.openModal()}
+                        >{$_("share-profile")}</button
+                    >
+                    <a
+                        class="btn-secondary text-center basis-full"
+                        href="/settings/profile">{$_("settings")}</a
+                    >
+                </div>
+                <ProfileShareModal bind:this={profileShareModal}
+                ></ProfileShareModal>
+            {/if}
         {/if}
     </div>
     <div class="md:mr-6">
-        {@render children?.()}
+        {#if !data.profile.private || data.isOwnProfile}
+            {@render children?.()}
+        {:else}
+            <div class="flex flex-col items-center justify-center">
+                <img
+                    class="aspect-square rounded-xl mx-auto"
+                    width="300"
+                    src={$theme === "light" ? errorLight : errorDark}
+                    alt="Default error img"
+                />
+                <h5 class="text-lg font-semibold">This profile is private</h5>
+            </div>
+        {/if}
     </div>
 </div>

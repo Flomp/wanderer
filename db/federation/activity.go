@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"pocketbase/util"
 	"strings"
 	"time"
 
@@ -126,7 +125,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 			username := parts[len(parts)-1]
 			handle := fmt.Sprintf("@%s@%s", username, domain)
 
-			actor, err = util.GetActor(e.App, handle)
+			actor, _, err = GetActor(e.App, handle)
 			if err != nil {
 				return err
 			}

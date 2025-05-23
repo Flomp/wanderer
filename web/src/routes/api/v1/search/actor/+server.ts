@@ -16,7 +16,7 @@ export async function GET(event: RequestEvent) {
         const [user, domain] = splitUsername(q!)
 
         const r = await event.fetch(`${domain ? `https://${domain}` : ''}/api/v1/activitypub/actor?` + new URLSearchParams({
-            filter: `isLocal=true&&username~'${user}'`,
+            filter: `isLocal=true&&username~'${user}'&&user.settings_via_user.privacy.account != 'private'`,
             perPage: "3"
         }),)
 

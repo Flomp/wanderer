@@ -474,11 +474,6 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 
 func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
 
-	// no need to do anything if the actor is local
-	if actor.GetBool("isLocal") {
-		return nil
-	}
-
 	var err error
 	switch activity.Object.GetType() {
 	case models.TrailType:
@@ -500,6 +495,12 @@ func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pu
 }
 
 func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+
+	// no need to do anything if the actor is local
+	if actor.GetBool("isLocal") {
+		return nil
+	}
+
 	return util.TrailFromActivity(activity, app, actor)
 }
 
@@ -519,6 +520,18 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 		return err
 	}
 	trailId := path.Base(trailUrl.Path)
+
+	trail, err := app.FindRecordById("trails", trailId)
+
+	// if the trail is not present on this instance just ignore it
+	if err != nil {
+		return nil
+	}
+
+	trailAuthor, err := app.FindRecordById("activitypub_actors", trail.GetString("author"))
+	if err != nil {
+		return err
+	}
 
 	var record *core.Record
 	if activity.Type == pub.CreateType {
@@ -547,6 +560,23 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 		return err
 	}
 
+	// send a notification to the trail author
+	notification := util.Notification{
+		Type: util.TrailComment,
+		Metadata: map[string]string{
+			"comment":      record.GetString("text"),
+			"trail_id":     trailId,
+			"trail_name":   trail.GetString("name"),
+			"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+		},
+		Seen:   false,
+		Author: actor.Id,
+	}
+	err = util.SendNotification(app, notification, trailAuthor)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -556,11 +586,15 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		return err
 	}
 
-	_, err = app.FindRecordById("trails", logObject.TrailId)
-
+	trail, err := app.FindRecordById("trails", logObject.TrailId)
 	// if the trail is not present on this instance just ignore it
 	if err != nil {
 		return nil
+	}
+
+	trailAuthor, err := app.FindRecordById("activitypub_actors", trail.GetString("author"))
+	if err != nil {
+		return err
 	}
 
 	var record *core.Record
@@ -594,9 +628,31 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		return err
 	}
 
+	// send a notification to the trail author
+	notification := util.Notification{
+		Type: util.SummitLogCreate,
+		Metadata: map[string]string{
+			"trail_id":     trail.Id,
+			"trail_name":   trail.GetString("name"),
+			"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+		},
+		Seen:   false,
+		Author: actor.Id,
+	}
+	err = util.SendNotification(app, notification, trailAuthor)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func processCreateOrUpdateListActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+
+	// no need to do anything if the actor is local
+	if actor.GetBool("isLocal") {
+		return nil
+	}
+
 	return util.ListFromActivity(activity, app, actor)
 }

@@ -1,6 +1,3 @@
-import { env } from '$env/dynamic/private';
-import type { Actor } from '$lib/models/activitypub/actor';
-import { splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { APActivity } from 'activitypub-types';

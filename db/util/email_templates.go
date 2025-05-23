@@ -17,12 +17,11 @@ type EmailData struct {
 }
 
 var notificationTemplates = map[NotificationType]string{
-	TrailCreate:  "{{.Author}} has created a new trail: {{.trail}}.",
-	TrailShare:   "{{.Author}} has shared a trail with you: {{.trail}}.",
-	ListCreate:   "{{.Author}} has created a new list: {{.list}}.",
-	ListShare:    "{{.Author}} has shared a list with you: {{.list}}.",
-	NewFollower:  "Good news! You have a new follower: {{.Author}}.",
-	TrailComment: "{{.Author}} commented on your trail '{{.trail}}': '{{.comment}}'.",
+	TrailShare:      "{{.Author}} has shared a trail with you: {{.trail}}.",
+	ListShare:       "{{.Author}} has shared a list with you: {{.list}}.",
+	NewFollower:     "Good news! You have a new follower: {{.Author}}.",
+	TrailComment:    "{{.Author}} commented on your trail '{{.trail}}': '{{.comment}}'.",
+	SummitLogCreate: "{{.Author}} created a summit log on your trail '{{.trail}}'.",
 }
 
 func GenerateHTML(appUrl string, recipientName string, authorName string, notificationType NotificationType, metadata map[string]string) (string, error) {
