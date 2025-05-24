@@ -20,14 +20,14 @@ export async function GET(event: RequestEvent) {
                 return json(localSummitLogs)
             }
 
-            const deduplicationMap: Record<string, string> = {}
+            const deduplicationMap: Record<string, SummitLog> = {}
 
             localSummitLogs.items.forEach(l => {
                 if (l.iri) {
                     const id = l.iri.substring(l.iri.length - 15)
-                    deduplicationMap[id] = l.author
+                    deduplicationMap[id] = l
                 } else if (l.id) {
-                    deduplicationMap[l.id] = l.author
+                    deduplicationMap[l.id] = l
                 }
 
                 l.date = l.date.substring(0, 10);
@@ -46,7 +46,14 @@ export async function GET(event: RequestEvent) {
 
             remoteSummitLogs.items = remoteSummitLogs.items.filter(l => {
                 const iriId = l.iri?.substring(l.iri.length - 15) ?? ""
-                return deduplicationMap[l.id!] == undefined && deduplicationMap[iriId] == undefined
+                if (deduplicationMap[l.id!] != undefined) {
+                    deduplicationMap[l.id!] = {...l, author: deduplicationMap[l.id!].author}
+                    return false
+                } else if (deduplicationMap[iriId] != undefined) {
+                    deduplicationMap[iriId] = {...l, author: deduplicationMap[iriId].author}
+                    return false
+                }
+                return true
             })
 
             remoteSummitLogs.items.forEach(l => {

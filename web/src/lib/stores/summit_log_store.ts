@@ -3,7 +3,7 @@ import { APIError } from "$lib/util/api_util";
 import { type AuthRecord, type ListResult } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
 import { currentUser } from "./user_store";
-import { objectToFormData } from "$lib/util/file_util";
+import { isURL, objectToFormData } from "$lib/util/file_util";
 
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
 export const summitLogs: Writable<SummitLog[]> = writable([]);
@@ -137,7 +137,14 @@ export function buildFilterText(filter: SummitLogFilter,): string {
     }
 
     if (filter.trail) {
-        filterText += `${filter.category.length || filter.startDate || filter.endDate ? '&&' : ''}trail='${filter.trail}'`;
+        if (filter.category.length || filter.startDate || filter.endDate) {
+            filterText += "&&"
+        }
+        if (isURL(filter.trail)) {
+            filterText += `trail='${filter.trail}'||iri='${filter.trail}'||trail='${filter.trail.substring(filter.trail.length - 15)}'`;
+        }else {
+            filterText += `trail='${filter.trail}'`
+        }
     }
 
     return filterText;

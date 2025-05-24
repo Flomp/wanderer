@@ -13,7 +13,7 @@ export interface Actor {
     inbox: string;
     outbox?: string;
     icon?: string;
-    follower?: string;
+    followers?: string;
     following?: string;
     isLocal: boolean;
     public_key: string;

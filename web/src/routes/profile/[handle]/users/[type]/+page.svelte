@@ -1,17 +1,17 @@
 <script lang="ts">
     import { page } from "$app/state";
+    import { follows_index } from "$lib/stores/follow_store.js";
     import { _ } from "svelte-i18n";
     let { data } = $props();
 
-    let follows = $derived(data.follows);
+    let follows = $state(data.follows);
 
-    let loading: boolean = false;
+    $effect(() => {
+        page.params.type;
+        follows = data.follows;
+    });
 
-    let key = $derived(
-        (page.params.type == "following" ? "followee" : "follower") as
-            | "follower"
-            | "followee",
-    );
+    let loading: boolean = $state(false);
 
     let pagination = $derived({
         page: data.follows.page,
@@ -33,33 +33,53 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        // follows = await follows_index(
-        //     { followee: page.params.id },
-        //     pagination.page,
-        // );
+        follows = await follows_index(
+            {
+                type: page.params.type as "followers" | "following",
+                username: page.params.handle!,
+            },
+            pagination.page,
+            10,
+            fetch,
+        );
     }
 </script>
 
 <svelte:window onscroll={onListScroll} />
+
 <div>
     <h1 class="text-3xl font-semibold mb-4">{$_(page.params.type)}</h1>
     <ul class="space-y-4">
         {#each follows.items as follow}
-            <a href="/profile/@{follow.expand?.[key].username}{follow.expand?.[key].isLocal ? '' : '@' + follow.expand?.[key].domain}">
+            <a
+                href="/profile/@{follow.username}{follow.isLocal
+                    ? ''
+                    : '@' + follow.domain}"
+            >
                 <li
-                    class="flex items-center gap-x-4 hover:bg-menu-item-background-hover p-4"
+                    class="flex items-center gap-x-4 hover:bg-menu-item-background-hover p-2"
                 >
                     <img
                         class="rounded-full w-10 aspect-square overflow-hidden"
-                        src={follow.expand?.[key].icon ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${follow.expand?.[key].username}&backgroundType=gradientLinear`}
+                        src={follow.icon ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${follow.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                    <p class="text-lg font-medium">
-                        {follow.expand?.[key].username}
-                    </p>
+                    <div>
+                        <p class="text-lg font-medium">
+                            {follow.preferred_username}
+                        </p>
+                        <p class="text-sm text-gray-500 break-all">
+                            @{follow.username}@{follow.domain}
+                        </p>
+                    </div>
                 </li>
             </a>
         {/each}
     </ul>
+    {#if loading}
+        <div class="flex items-center justify-center mt-6">
+            <div class="aspect-square spinner"></div>
+        </div>
+    {/if}
 </div>

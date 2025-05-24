@@ -846,9 +846,17 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.POST("/activitypub/activity/process", federation.ProcessActivity)
 	se.Router.GET("/activitypub/actor", func(e *core.RequestEvent) error {
 		resource := e.Request.URL.Query().Get("resource")
+		iri := e.Request.URL.Query().Get("iri")
 		resource = strings.TrimPrefix(resource, "acct:")
 
-		actor, private, err := federation.GetActor(e.App, resource)
+		var actor *core.Record
+		var private bool
+		var err error
+		if resource != "" {
+			actor, private, err = federation.GetActorByHandle(e.App, resource)
+		} else {
+			actor, private, err = federation.GetActorByIRI(e.App, iri)
+		}
 		if err != nil && actor == nil {
 			if strings.HasPrefix(err.Error(), "webfinger") {
 				return e.NotFoundError("Not found", err)

@@ -107,25 +107,10 @@ func ProcessActivity(e *core.RequestEvent) error {
 	var activity pub.Activity
 	activity.UnmarshalJSON(body)
 
-	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor)
+	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor.GetID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {
-			parsedURL, err := url.Parse(activity.Actor.GetID().String())
-			if err != nil {
-				return err
-			}
-
-			domain := parsedURL.Hostname()
-
-			// Split the path and find the username
-			parts := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
-			if len(parts) < 2 {
-				return fmt.Errorf("error creating new actor: unexpected actor path format")
-			}
-			username := parts[len(parts)-1]
-			handle := fmt.Sprintf("@%s@%s", username, domain)
-
-			actor, _, err = GetActor(e.App, handle)
+			actor, _, err = GetActorByIRI(e.App, activity.Actor.GetID().String())
 			if err != nil {
 				return err
 			}

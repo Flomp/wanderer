@@ -1,4 +1,3 @@
-import type { Actor } from '$lib/models/activitypub/actor';
 import { CommentCreateSchema } from '$lib/models/api/comment_schema';
 import type { Comment } from '$lib/models/comment';
 import { Collection, create, handleError, list } from '$lib/util/api_util';
@@ -18,14 +17,14 @@ export async function GET(event: RequestEvent) {
                 return json(localComments)
             }
 
-            const deduplicationMap: Record<string, string> = {}
+            const deduplicationMap: Record<string, Comment> = {}
 
             localComments.items.forEach(c => {
                 if (c.iri) {
                     const id = c.iri.substring(c.iri.length - 15)
-                    deduplicationMap[id] = c.author
+                    deduplicationMap[id] = c
                 } else if (c.id) {
-                    deduplicationMap[c.id] = c.author
+                    deduplicationMap[c.id] = c
                 }
             })
             const origin = new URL(actor.iri).origin
@@ -41,7 +40,14 @@ export async function GET(event: RequestEvent) {
 
             remoteComments.items = remoteComments.items.filter(c => {
                 const iriId = c.iri?.substring(c.iri.length - 15) ?? ""
-                return deduplicationMap[c.id!] == undefined && deduplicationMap[iriId] == undefined
+                if (deduplicationMap[c.id!] != undefined) {
+                    deduplicationMap[c.id!] = {...c, author: deduplicationMap[c.id!].author}
+                    return false
+                } else if (deduplicationMap[iriId] != undefined) {
+                    deduplicationMap[iriId] = {...c, author: deduplicationMap[iriId].author}
+                    return false
+                }
+                return true
             })
 
             const allCommentItems = <ListResult<Comment>>{

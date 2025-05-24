@@ -88,7 +88,7 @@
         } else if (item.value == "list") {
             lists = (
                 await lists_index(
-                    { q: "", author: $currentUser?.id ?? "" },
+                    { q: "", author: $currentUser?.actor ?? "" },
                     1,
                     -1,
                 )

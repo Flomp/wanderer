@@ -54,38 +54,44 @@ export async function GET(event: RequestEvent) {
             }
             t = await response.json()
 
-            t.gpx = `${origin}/api/v1/files/trails/${t.id}/${t.gpx}`
-            t.photos = t.photos.map(p =>
-                `${origin}/api/v1/files/trails/${t.id}/${p}`
-            )
-            t.expand?.summit_logs_via_trail?.forEach(l => {
-                if (l.gpx) {
-                    l.gpx = `${origin}/api/v1/files/summit_logs/${l.id}/${l.gpx}`
-                }
-                l.photos = l.photos.map(p =>
-                    `${origin}/api/v1/files/summit_logs/${l.id}/${p}`
+            // this came directly from the database of the remote instance
+            // we need to adjust some urls to get photos, gpx etc.
+            if (!t.iri) {
+                t.gpx = `${origin}/api/v1/files/trails/${t.id}/${t.gpx}`
+                t.photos = t.photos.map(p =>
+                    `${origin}/api/v1/files/trails/${t.id}/${p}`
                 )
+                t.expand?.summit_logs_via_trail?.forEach(l => {
+                    if (l.gpx) {
+                        l.gpx = `${origin}/api/v1/files/summit_logs/${l.id}/${l.gpx}`
+                    }
+                    l.photos = l.photos.map(p =>
+                        `${origin}/api/v1/files/summit_logs/${l.id}/${p}`
+                    )
 
-                if (l.expand?.author) {
-                    l.expand.author.isLocal = false
-                }
-            })
-            t.expand?.waypoints?.forEach(w => {
+                    if (l.expand?.author) {
+                        l.expand.author.isLocal = false
+                    }
+                })
+                t.expand?.waypoints?.forEach(w => {
 
-                w.photos = w.photos.map(p =>
-                    `${origin}/api/v1/files/waypoints/${w.id}/${p}`
-                )
-            })
+                    w.photos = w.photos.map(p =>
+                        `${origin}/api/v1/files/waypoints/${w.id}/${p}`
+                    )
+                })
+
+                t.author = actor.id!
+                t.expand!.author = actor as any
+                t.id = localTrailId
+                t.iri = localTrailIRI
+            }
+
             let categoryId: string | undefined;
             try {
                 const category = await event.locals.pb.collection("categories").getFirstListItem(`name='${t.expand?.category?.name}'`)
                 categoryId = category.id;
                 t.expand!.category = category as any
             } catch (e) { }
-            t.author = actor.id!
-            t.expand!.author = actor as any
-            t.id = localTrailId
-            t.iri = localTrailIRI
 
             const formData = objectToFormData({ ...t, id: t.id, gpx: undefined, expand: undefined, photos: [], waypoints: [], tags: [], category: categoryId })
             if (t.photos.length) {
@@ -93,9 +99,10 @@ export async function GET(event: RequestEvent) {
                 let response = await event.fetch(photoURL, { method: "GET" })
                 const photo = await response.blob()
                 formData.append("photos", photo)
-
+            }
+            if (t.gpx) {
                 const gpxURL = t.gpx
-                response = await event.fetch(gpxURL, { method: "GET" })
+                const response = await event.fetch(gpxURL, { method: "GET" })
                 const gpx = await response.blob()
                 formData.append("gpx", gpx)
             }

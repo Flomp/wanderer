@@ -124,9 +124,7 @@
 
     async function fetchComments() {
         commentsLoading = true;
-        const trailId = trail.iri
-            ? trail.iri.substring(trail.iri.length - 15)
-            : trail.id!;
+        const trailId = trail.iri ? trail.iri : trail.id!;
         try {
             await comments_index(trailId, handle);
         } catch (e) {
@@ -204,9 +202,7 @@
 
     async function fetchSummitLog() {
         summitLogsLoading = true;
-        const trailId = trail.iri
-            ? trail.iri.substring(trail.iri.length - 15)
-            : trail.id;
+        const trailId = trail.iri ? trail.iri : trail.id;
         try {
             await summit_logs_index({ trail: trailId, category: [] }, handle);
         } catch (e) {

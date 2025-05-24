@@ -4,7 +4,8 @@ import { error, type Load, type NumericRange } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch }) => {
     try {
-        await trails_show(params.id!, true, fetch)
+        const trail = await trails_show(params.id!, params.handle, true, fetch)
+        return { trail };
     } catch (e) {
         if (e instanceof APIError) {
             error(e.status as NumericRange<400, 599>, {

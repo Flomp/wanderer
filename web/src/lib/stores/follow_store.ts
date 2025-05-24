@@ -1,23 +1,17 @@
+import type { Actor } from "$lib/models/activitypub/actor";
 import type { Follow } from "$lib/models/follow";
-import { splitUsername } from "$lib/util/activitypub_util";
 import { APIError } from "$lib/util/api_util";
 import { type ListResult } from "pocketbase";
 
-let follows: Follow[] = [];
+let follows: Actor[] = [];
 
-export async function follows_index(data: { username: string, type: "follower" | "followee" }, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function follows_index(data: { username: string, type: "followers" | "following" }, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
-    const [user, domain] = splitUsername(data.username)
-    let filter = `${data.type}.username='${user}'`
-    if(domain) {
-        filter += `&&${data.type}.domain='${domain}'`
-    }
-
-    const r = await f('/api/v1/follow?' + new URLSearchParams({
-        filter: filter,
+    const r = await f(`/api/v1/follow/activitypub?` + new URLSearchParams({
+        handle: data.username,
+        type: data.type,
         page: page.toString(),
         perPage: perPage.toString(),
-        requestKey: "page"
     }), {
         method: 'GET',
     })
@@ -27,11 +21,11 @@ export async function follows_index(data: { username: string, type: "follower" |
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const fetchedFollows: ListResult<Follow> = await r.json();
+    const fetchedFollows: ListResult<Actor> = await r.json();
 
     const result = page > 1 ? [...follows, ...fetchedFollows.items] : fetchedFollows.items
 
-    follows = result;
+    follows = result;  
 
     return { ...fetchedFollows, items: result };
 }

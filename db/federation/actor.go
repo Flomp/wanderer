@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -39,16 +40,18 @@ func SplitHandle(handle string) (string, string) {
 	return user, domain
 }
 
-func GetActor(app core.App, handle string) (*core.Record, bool, error) {
-	origin := os.Getenv("ORIGIN")
-	if origin == "" {
-		return nil, false, fmt.Errorf("ORIGIN environment variable not set")
-	}
-
+func GetActorByHandle(app core.App, handle string) (*core.Record, bool, error) {
 	username, domain := SplitHandle(handle)
 
+	filter := "username={:username}&&"
+	if domain != "" {
+		filter += "domain={:domain}"
+	} else {
+		filter += "isLocal=true"
+	}
+
 	var dbActor *core.Record
-	dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "username={:username}&&(domain={:domain}||isLocal=true)", dbx.Params{"username": username, "domain": domain})
+	dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", filter, dbx.Params{"username": username, "domain": domain})
 	if err != nil && err == sql.ErrNoRows {
 		collection, err := app.FindCollectionByNameOrId("activitypub_actors")
 		if err != nil {
@@ -57,10 +60,67 @@ func GetActor(app core.App, handle string) (*core.Record, bool, error) {
 
 		dbActor = core.NewRecord(collection)
 		dbActor.Set("isLocal", false)
+		iri, err := iriFromHandle(domain, username)
+		if err != nil {
+			return nil, false, err
+		}
+		dbActor.Set("iri", iri)
+
 	} else if err != nil {
 		return nil, false, err
 	}
 
+	return assembleActor(dbActor, app)
+}
+
+func GetActorByIRI(app core.App, iri string) (*core.Record, bool, error) {
+	var dbActor *core.Record
+	dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "iri={:iri}", dbx.Params{"iri": iri})
+	if err != nil && err == sql.ErrNoRows {
+		collection, err := app.FindCollectionByNameOrId("activitypub_actors")
+		if err != nil {
+			return nil, false, err
+		}
+
+		dbActor = core.NewRecord(collection)
+		dbActor.Set("isLocal", false)
+		dbActor.Set("iri", iri)
+
+	} else if err != nil {
+		return nil, false, err
+	}
+
+	return assembleActor(dbActor, app)
+}
+
+func iriFromHandle(domain string, username string) (string, error) {
+	client := &http.Client{}
+
+	webfingerURL := fmt.Sprintf("https://%s/.well-known/webfinger?resource=acct:%s@%s", domain, username, domain)
+	resp, err := client.Get(webfingerURL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("webfinger request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var wf WebfingerResponse
+	if err := json.NewDecoder(resp.Body).Decode(&wf); err != nil {
+		return "", err
+	}
+
+	for _, link := range wf.Links {
+		if link.Rel == "self" {
+			return link.Href, nil
+		}
+	}
+	return "", fmt.Errorf("no iri in response")
+}
+
+func assembleActor(dbActor *core.Record, app core.App) (*core.Record, bool, error) {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return nil, false, fmt.Errorf("ORIGIN environment variable not set")
+	}
 	private := false
 	if dbActor.GetBool("isLocal") {
 		user, err := app.FindRecordById("users_anonymous", dbActor.GetString("user"))
@@ -96,13 +156,31 @@ func GetActor(app core.App, handle string) (*core.Record, bool, error) {
 		private = result["account"] == "private"
 
 	} else {
-		pubActor, followers, following, err := fetchRemoteActor(dbActor.GetString("iri"), username, domain)
+
+		// check if value is still cached
+		twoHoursAgo := time.Now().Add(-2 * time.Hour)
+		if dbActor.GetDateTime("last_fetched").Time().After(twoHoursAgo) {
+			return dbActor, false, nil
+		}
+		pubActor, followers, following, err := fetchRemoteActor(dbActor.GetString("iri"))
 		if err != nil {
 			if dbActor.Id != "" {
 				return dbActor, false, err
 			}
 			return nil, false, err
 		}
+
+		icon := ""
+		if pub.IsObject(pubActor.Icon) {
+			iconObject, _ := pub.ToObject(pubActor.Icon)
+			icon = iconObject.URL.GetID().String()
+		}
+
+		parsedUrl, err := url.Parse(dbActor.GetString("iri"))
+		if err != nil {
+			return nil, false, err
+		}
+		domain := strings.TrimPrefix(parsedUrl.Hostname(), "www.")
 
 		dbActor.Set("domain", domain)
 		dbActor.Set("followers", pubActor.Followers.GetID().String())
@@ -115,13 +193,13 @@ func GetActor(app core.App, handle string) (*core.Record, bool, error) {
 		dbActor.Set("following", pubActor.Following.GetID().String())
 		dbActor.Set("summary", pubActor.Summary.String())
 		dbActor.Set("outbox", pubActor.Outbox.GetID().String())
-		dbActor.Set("icon", pubActor.Icon.GetID().String())
+		dbActor.Set("icon", icon)
 		dbActor.Set("published", pubActor.Published.String())
 		dbActor.Set("public_key", pubActor.PublicKey.PublicKeyPem)
 		dbActor.Set("last_fetched", time.Now())
 	}
 
-	err = app.Save(dbActor)
+	err := app.Save(dbActor)
 	if err != nil && err.Error() != "iri: Value must be unique." {
 		return nil, false, err
 	}
@@ -130,32 +208,10 @@ func GetActor(app core.App, handle string) (*core.Record, bool, error) {
 }
 
 // Fetches an AP actor and optionally followers/following collections
-func fetchRemoteActor(iri string, username string, domain string) (*pub.Actor, *pub.OrderedCollection, *pub.OrderedCollection, error) {
+func fetchRemoteActor(iri string) (*pub.Actor, *pub.OrderedCollection, *pub.OrderedCollection, error) {
 	client := &http.Client{}
 	headers := map[string]string{
 		"Accept": "application/ld+json",
-	}
-
-	// Resolve actor URI via Webfinger if domain is provided
-	if iri == "" {
-		webfingerURL := fmt.Sprintf("https://%s/.well-known/webfinger?resource=acct:%s@%s", domain, username, domain)
-		resp, err := client.Get(webfingerURL)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			return nil, nil, nil, fmt.Errorf("webfinger request failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		var wf WebfingerResponse
-		if err := json.NewDecoder(resp.Body).Decode(&wf); err != nil {
-			return nil, nil, nil, err
-		}
-
-		for _, link := range wf.Links {
-			if link.Rel == "self" {
-				iri = link.Href
-				break
-			}
-		}
 	}
 
 	req, _ := http.NewRequest("GET", iri, nil)
