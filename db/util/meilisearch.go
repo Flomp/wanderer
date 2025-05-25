@@ -167,7 +167,7 @@ func documentFromListRecord(r *core.Record, author *core.Record, includeShares b
 		"id":             r.Id,
 		"author":         author.Id,
 		"author_name":    author.GetString("username"),
-		"author_avatar":  author.GetString("avatar"),
+		"author_avatar":  author.GetString("icon"),
 		"avatar":         r.GetString("avatar"),
 		"name":           r.GetString("name"),
 		"description":    r.GetString("description"),

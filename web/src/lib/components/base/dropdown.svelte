@@ -29,28 +29,50 @@
         e.preventDefault();
 
         isOpen = !isOpen;
+
         if (isOpen) {
             await tick();
-            const toggleRect = dropdownToggleElement.getBoundingClientRect();
 
+            const toggleRect = dropdownToggleElement.getBoundingClientRect();
             const dropdownRect = dropdownElement.getBoundingClientRect();
             dropdownElement.style.visibility = "";
 
+            // Viewport dimensions
             const viewportHeight = window.innerHeight;
-            const spaceBelow = viewportHeight - toggleRect.bottom;
-            const spaceAbove = toggleRect.top;
+            const spaceBelowViewport = viewportHeight - toggleRect.bottom;
+            const spaceAboveViewport = toggleRect.top;
 
-            if (
+            // Container dimensions
+            const scrollContainer =
+                dropdownElement.closest(".scroll-x-only") ?? document.body;
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const spaceBelowContainer =
+                containerRect.bottom - toggleRect.bottom;
+            const spaceAboveContainer = toggleRect.top - containerRect.top;
+
+            // Effective space
+            const spaceBelow = Math.min(
+                spaceBelowViewport,
+                spaceBelowContainer,
+            );
+            const spaceAbove = Math.min(
+                spaceAboveViewport,
+                spaceAboveContainer,
+            );
+
+            // Determine direction
+            const openUpward =
                 spaceBelow < dropdownRect.height &&
-                spaceAbove > dropdownRect.height
-            ) {
+                spaceAbove > dropdownRect.height;
+
+            if (openUpward) {
                 dropdownElement.classList.remove("rounded-b-xl");
                 dropdownElement.classList.add("rounded-t-xl");
-                dropdownElement.style.top = `${-8-dropdownRect.height}px`;
+                dropdownElement.style.top = `${-8 - dropdownRect.height}px`;
             } else {
                 dropdownElement.classList.remove("rounded-t-xl");
                 dropdownElement.classList.add("rounded-b-xl");
-                dropdownElement.style.top = `${toggleRect.height +8}px`;
+                dropdownElement.style.top = `${toggleRect.height + 8}px`;
             }
         }
     }

@@ -390,7 +390,7 @@
                         </h3>
                     </div>
                 </div>
-                {#if ($currentUser && $currentUser.id == trail.expand?.author?.user) || trail.expand?.trail_share_via_trail?.length || trail.public}
+                {#if ($currentUser && $currentUser.actor == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
                     <TrailDropdown {trail} {mode} {handle}></TrailDropdown>
                 {/if}
             </div>
@@ -498,7 +498,7 @@
                     onmouseleave={closeMarkerPopup}
                 ></TrailTimeline>
 
-                <div class="mb-6 mt-12 flex justify-between">
+                <div class="mb-6 mt-12 flex justify-between flex-wrap gap-y-4">
                     <Tabs {tabs} bind:activeTab></Tabs>
                     {#if activeTab == 0 && mode != "list"}
                         <Button
@@ -512,7 +512,7 @@
                     {/if}
                 </div>
                 {#if activeTab == 0}
-                    <div>
+                    <div class="overflow-x-auto overflow-y-clip pb-3 scroll-x-only">
                         {#if summitLogsLoading}
                             <SkeletonTable></SkeletonTable>
                         {:else}

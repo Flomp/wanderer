@@ -36,7 +36,7 @@
 
     let lists: List[] = $state([]);
 
-    const isOwned: boolean = trail.expand?.author?.user == $currentUser?.id;
+    const isOwned: boolean = trail.author == $currentUser?.actor;
 
     const allowEdit =
         isOwned ||

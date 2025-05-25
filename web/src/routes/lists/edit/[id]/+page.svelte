@@ -155,7 +155,7 @@
     async function search(q: string) {
         try {
             const r = await searchTrails(q, {
-                filter: `author = ${$currentUser?.id} OR public = true`,
+                filter: `author = ${$currentUser?.actor} OR public = true`,
                 sort: ["name:desc"],
                 limit: 3,
             });
@@ -227,7 +227,7 @@
 
     async function publishTrails() {
         for (const trail of $formData.expand?.trails ?? []) {
-            if (trail.author !== $currentUser?.id) {
+            if (trail.author !== $currentUser?.actor) {
                 continue;
             }
             const updatedTrail: Trail = { ...trail, public: true };

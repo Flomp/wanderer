@@ -73,7 +73,7 @@
     }
 </script>
 
-<table class="w-full">
+<table class="w-full table-auto">
     <thead class="text-left text-gray-500">
         <tr class="text-sm">
             {#if showPhotos && summitLogs.some((l) => l.photos.length)}

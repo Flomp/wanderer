@@ -1,6 +1,7 @@
 package federation
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	pub "github.com/go-ap/activitypub"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
 )
 
@@ -629,6 +631,24 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	record.Set("author", actor.Id)
 	record.Set("trail", logObject.TrailId)
 	record.Set("iri", logObject.ID.String())
+
+	if logObject.Thumbnail != "" {
+		thumbnail, err := filesystem.NewFileFromURL(context.Background(), logObject.Thumbnail)
+		if err != nil {
+			return err
+		}
+
+		record.Set("photos", thumbnail)
+	}
+
+	if logObject.Gpx != "" {
+		gpx, err := filesystem.NewFileFromURL(context.Background(), logObject.Gpx)
+		if err != nil {
+			return err
+		}
+
+		record.Set("gpx", gpx)
+	}
 
 	err = app.Save(record)
 	if err != nil {

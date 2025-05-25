@@ -173,7 +173,7 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		icon := ""
 		if pub.IsObject(pubActor.Icon) {
 			iconObject, err := pub.ToObject(pubActor.Icon)
-			if err == nil {
+			if err == nil && iconObject.URL != nil {
 				icon = iconObject.URL.GetID().String()
 			}
 		}

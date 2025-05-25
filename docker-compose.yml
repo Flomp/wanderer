@@ -33,6 +33,7 @@ services:
     environment:
       <<: *cenv
       POCKETBASE_ENCRYPTION_KEY:
+      ORIGIN: http://localhost:3000
     ports:
       - "8090:8090"
     networks:

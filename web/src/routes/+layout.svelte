@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { beforeNavigate, goto } from "$app/navigation";
+    import { beforeNavigate, goto, invalidate, invalidateAll } from "$app/navigation";
     import { page } from "$app/state";
     import { env } from "$env/dynamic/public";
     import Toast from "$lib/components/base/toast.svelte";
@@ -16,6 +16,8 @@
     import "../css/components.css";
     import "../css/theme.css";
     import type { LayoutData } from "./$types";
+    import PocketBase from "pocketbase";
+    import { browser } from "$app/environment";
 
     interface Props {
         data: LayoutData;
@@ -35,6 +37,16 @@
         if (page.data.origin != location.origin) {
             showWarning = true;
         }
+
+        const pb = new PocketBase(env.PUBLIC_POCKETBASE_URL);
+        if (browser) {
+            pb.authStore.loadFromCookie(document.cookie);
+        }
+        pb.collection("notifications").subscribe("*", async (e) => {
+            if (e.action === "create") {
+                await invalidateAll();
+            }
+        });
     });
 
     let hideDemoHint = $state(false);

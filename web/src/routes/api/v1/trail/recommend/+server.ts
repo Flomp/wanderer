@@ -1,8 +1,6 @@
 import { TrailRecommendSchema } from '$lib/models/api/trail_schema';
-import type { Trail, TrailSearchResult } from '$lib/models/trail';
 import { handleError } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { Hits } from 'meilisearch';
 
 export async function GET(event: RequestEvent) {
     try {

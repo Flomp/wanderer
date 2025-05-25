@@ -30,11 +30,9 @@
         notifications.reduce((value, n) => (value += n.seen ? 0 : 1), 0),
     );
 
-    onMount(() => {
-        if (!notifications.length && page.data.notifications?.items?.length) {
-            notifications = page.data.notifications.items;
-        }
-    });
+    $effect(() => {
+        notifications = page.data.notifications.items
+    })
 
     async function toggleMenu(e: MouseEvent) {
         e.stopPropagation();

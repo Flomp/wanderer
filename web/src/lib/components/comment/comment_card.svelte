@@ -49,7 +49,7 @@
     out:fade={{ duration: 150 }}
 >
     <a
-        href="/profile/@{comment.expand?.author.username.toLowerCase()}"
+        href="/profile/{handleFromRecordWithIRI(comment)}"
         class="text-sm font-semibold shrink-0"
     >
         <img

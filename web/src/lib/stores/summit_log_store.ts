@@ -141,7 +141,7 @@ export function buildFilterText(filter: SummitLogFilter,): string {
             filterText += "&&"
         }
         if (isURL(filter.trail)) {
-            filterText += `trail='${filter.trail}'||iri='${filter.trail}'||trail='${filter.trail.substring(filter.trail.length - 15)}'`;
+            filterText += `trail='${filter.trail}'||trail.iri='${filter.trail}'||trail='${filter.trail.substring(filter.trail.length - 15)}'`;
         }else {
             filterText += `trail='${filter.trail}'`
         }

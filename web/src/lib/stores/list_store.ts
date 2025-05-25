@@ -253,7 +253,7 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
 }
 
 export async function searchResultToLists(hits: Hits<ListSearchResult>): Promise<List[]> {
-    const lists: List[] = []
+    const lists: List[] = []    
     for (const h of hits) {
         const l: List & RecordModel = {
             collectionId: "lists",
