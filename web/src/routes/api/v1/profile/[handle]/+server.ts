@@ -9,7 +9,7 @@ export async function GET(event: RequestEvent) {
     }
 
     try {
-        const {actor, error, private: privateProfile} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
+        const {actor, error, private: privateProfile} = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}&follows=true`, { method: "GET", fetch: event.fetch, });
 
         const profile: Profile = {
             id: actor.id!,

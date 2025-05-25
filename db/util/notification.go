@@ -107,7 +107,7 @@ func SendNotification(app core.App, notification Notification, recipient *core.R
 			HTML:    html,
 		}
 
-		app.NewMailClient().Send(message)
+		return app.NewMailClient().Send(message)
 	}
 	return nil
 }

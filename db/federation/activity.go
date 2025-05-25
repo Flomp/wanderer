@@ -2,6 +2,7 @@ package federation
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"database/sql"
 	"encoding/pem"
@@ -15,10 +16,13 @@ import (
 
 	pub "github.com/go-ap/activitypub"
 
+	"sync"
+
 	"github.com/go-ap/jsonld"
 	"github.com/go-fed/httpsig"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
+	"golang.org/x/sync/semaphore"
 )
 
 func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, recipients []string) error {
@@ -31,13 +35,11 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 	postHeaders := []string{"(request-target)", "Date", "Digest"}
 	expiresIn := 60
 
-	// create HTTP signer
 	signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
 	if err != nil {
 		return err
 	}
 
-	// marshal activity
 	body, err := jsonld.WithContext(
 		jsonld.IRI(pub.ActivityBaseURI),
 		jsonld.IRI(pub.SecurityContextURI),
@@ -46,55 +48,73 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 		return err
 	}
 
-	client := &http.Client{}
+	decryptedPrivateKey, err := security.Decrypt(actor.GetString("private_key"), encryptionKey)
+	if err != nil {
+		return err
+	}
+	privateKey, err := x509.ParsePKCS1PrivateKey(decryptedPrivateKey)
+	if err != nil {
+		return err
+	}
+	pubID := actor.GetString("iri") + "#main-key"
 
-	alreadySentTo := map[string]bool{}
-	// for each recipient
+	client := &http.Client{}
+	alreadySentTo := make(map[string]bool)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	sem := semaphore.NewWeighted(5) // Limit to 5 concurrent sends
+
 	for _, v := range recipients {
 		if alreadySentTo[v] {
 			continue
 		}
-		buf := bytes.NewBuffer(body)
-		req, err := http.NewRequest(http.MethodPost, v, buf)
-		if err != nil {
-			return err
-		}
-		req.Header.Add("Content-Type", `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`)
 
-		currentTime := strings.ReplaceAll(time.Now().UTC().Format(time.RFC1123), "UTC", "GMT")
-		req.Header.Add("Date", currentTime)
+		wg.Add(1)
+		go func(inbox string) {
+			defer wg.Done()
 
-		// sign request header
-		encryptedPrivateKey := actor.GetString("private_key")
-		decryptedPrivateKey, err := security.Decrypt(encryptedPrivateKey, encryptionKey)
-		if err != nil {
-			return err
-		}
+			if err := sem.Acquire(context.Background(), 1); err != nil {
+				app.Logger().Error(fmt.Sprintf("Semaphore acquire failed: %s", err))
+				return
+			}
+			defer sem.Release(1)
 
-		privateKey, err := x509.ParsePKCS1PrivateKey(decryptedPrivateKey)
-		if err != nil {
-			return err
-		}
+			buf := bytes.NewBuffer(body)
+			req, err := http.NewRequest(http.MethodPost, inbox, buf)
+			if err != nil {
+				app.Logger().Error(fmt.Sprintf("Request creation failed: %s", err))
+				return
+			}
+			req.Header.Add("Content-Type", `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`)
+			req.Header.Add("Date", strings.ReplaceAll(time.Now().UTC().Format(time.RFC1123), "UTC", "GMT"))
 
-		pubID := actor.GetString("iri") + "#main-key"
-		err = signer.SignRequest(privateKey, pubID, req, body)
-		if err != nil {
-			return err
-		}
+			if err := signer.SignRequest(privateKey, pubID, req, body); err != nil {
+				app.Logger().Error(fmt.Sprintf("Signing request failed: %s", err))
+				return
+			}
 
-		resp, err := client.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
+			resp, err := client.Do(req)
+			if err != nil {
+				app.Logger().Error(fmt.Sprintf("Error sending request to inbox %s: %s", inbox, err))
+				return
+			}
+			defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("error sending request to inbox %s (%d): %s", v, resp.StatusCode, string(body))
-		}
+			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+				body, _ := io.ReadAll(resp.Body)
+				app.Logger().Error(fmt.Sprintf("Inbox %s responded with %d: %s", inbox, resp.StatusCode, body))
+			}
 
-		alreadySentTo[v] = true
+			app.Logger().Info(fmt.Sprintf("Sent %s to %s", activity.Type, inbox))
+
+			mu.Lock()
+			alreadySentTo[inbox] = true
+			mu.Unlock()
+		}(v)
 	}
+
+	wg.Wait()
 	return nil
 }
 
@@ -110,7 +130,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor.GetID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {
-			actor, _, err = GetActorByIRI(e.App, activity.Actor.GetID().String())
+			actor, _, err = GetActorByIRI(e.App, activity.Actor.GetID().String(), false)
 			if err != nil {
 				return err
 			}

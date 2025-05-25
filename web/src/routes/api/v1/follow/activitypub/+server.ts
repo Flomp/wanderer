@@ -2,7 +2,7 @@ import type { Actor } from '$lib/models/activitypub/actor';
 import { APIError, handleError } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { APOrderedCollectionPage } from 'activitypub-types';
-import { type ListResult } from "pocketbase";
+import { ClientResponseError, type ListResult } from "pocketbase";
 
 export async function GET(event: RequestEvent) {
     try {
@@ -19,9 +19,13 @@ export async function GET(event: RequestEvent) {
         const headers = new Headers()
         headers.set("Accept", 'application/ld+json')
 
-        const response = await event.fetch(actor[type as "followers" | "following"]! + '?' + new URLSearchParams({ page }), { headers })
+        const r = await event.fetch(actor[type as "followers" | "following"]! + '?' + new URLSearchParams({ page }), { headers })
 
-        const followers: APOrderedCollectionPage = await response.json()
+        if (!r.ok) {
+            const errorResponse = await r.json()
+            throw new ClientResponseError({ status: r.status, response: errorResponse });
+        }
+        const followers: APOrderedCollectionPage = await r.json()
 
         const followerActors: Actor[] = []
         for (const f of followers.orderedItems ?? []) {

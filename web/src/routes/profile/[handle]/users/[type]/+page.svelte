@@ -1,6 +1,8 @@
 <script lang="ts">
     import { page } from "$app/state";
     import { follows_index } from "$lib/stores/follow_store.js";
+    import { show_toast } from "$lib/stores/toast_store.svelte.js";
+    import { APIError } from "$lib/util/api_util.js";
     import { _ } from "svelte-i18n";
     let { data } = $props();
 
@@ -33,15 +35,25 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        follows = await follows_index(
-            {
-                type: page.params.type as "followers" | "following",
-                username: page.params.handle!,
-            },
-            pagination.page,
-            10,
-            fetch,
-        );
+        try {
+            follows = await follows_index(
+                {
+                    type: page.params.type as "followers" | "following",
+                    username: page.params.handle!,
+                },
+                pagination.page,
+                10,
+                fetch,
+            );
+        } catch (e) {
+            if (e instanceof APIError) {
+                show_toast({
+                    icon: "close",
+                    text: `${e.status}: ${e.message}`,
+                    type: "error"
+                })
+            }
+        }
     }
 </script>
 

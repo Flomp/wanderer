@@ -91,20 +91,6 @@ func ProcessFollowActivity(app core.App, actor *core.Record, activity pub.Activi
 		}
 	}
 
-	// send a notification to the followee
-	notification := util.Notification{
-		Type: util.NewFollower,
-		Metadata: map[string]string{
-			"follower": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
-		},
-		Seen:   false,
-		Author: actor.Id,
-	}
-	err = util.SendNotification(app, notification, object)
-	if err != nil {
-		return err
-	}
-
 	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 
@@ -130,7 +116,21 @@ func ProcessFollowActivity(app core.App, actor *core.Record, activity pub.Activi
 	record.Set("actor", object.GetString("iri"))
 	record.Set("published", time.Now())
 
-	return app.Save(record)
+	err = app.Save(record)
+	if err != nil {
+		return err
+	}
+	// send a notification to the followee
+	notification := util.Notification{
+		Type: util.NewFollower,
+		Metadata: map[string]string{
+			"follower": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+		},
+		Seen:   false,
+		Author: actor.Id,
+	}
+	return util.SendNotification(app, notification, object)
+
 }
 
 func ProcessAcceptActivity(app core.App, actor *core.Record, activity pub.Activity) error {

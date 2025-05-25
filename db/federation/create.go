@@ -534,25 +534,6 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 		return err
 	}
 
-	if activity.Type == pub.CreateType {
-		// send a notification to the trail author
-		notification := util.Notification{
-			Type: util.TrailComment,
-			Metadata: map[string]string{
-				"comment":      commentObject.Content.First().Value.String(),
-				"trail_id":     trailId,
-				"trail_name":   trail.GetString("name"),
-				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
-			},
-			Seen:   false,
-			Author: actor.Id,
-		}
-		err = util.SendNotification(app, notification, trailAuthor)
-		if err != nil {
-			return err
-		}
-	}
-
 	// no need to do anything else if the actor is local
 	if actor.GetBool("isLocal") {
 		return nil
@@ -580,6 +561,23 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 	err = app.Save(record)
 	if err != nil {
 		return err
+	}
+
+	if activity.Type == pub.CreateType {
+		// send a notification to the trail author
+		notification := util.Notification{
+			Type: util.TrailComment,
+			Metadata: map[string]string{
+				"comment":      commentObject.Content.First().Value.String(),
+				"trail_id":     trailId,
+				"trail_name":   trail.GetString("name"),
+				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+			},
+			Seen:   false,
+			Author: actor.Id,
+		}
+		return util.SendNotification(app, notification, trailAuthor)
+
 	}
 
 	return nil
@@ -617,25 +615,6 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 			return err
 		}
 	}
-
-	if newSummitLog {
-		// send a notification to the trail author
-		notification := util.Notification{
-			Type: util.SummitLogCreate,
-			Metadata: map[string]string{
-				"trail_id":     trail.Id,
-				"trail_name":   trail.GetString("name"),
-				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
-			},
-			Seen:   false,
-			Author: actor.Id,
-		}
-		err = util.SendNotification(app, notification, trailAuthor)
-		if err != nil {
-			return err
-		}
-	}
-
 	// no need to do anything else if the actor is local
 	if actor.GetBool("isLocal") {
 		return nil
@@ -654,6 +633,21 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	err = app.Save(record)
 	if err != nil {
 		return err
+	}
+
+	if newSummitLog {
+		// send a notification to the trail author
+		notification := util.Notification{
+			Type: util.SummitLogCreate,
+			Metadata: map[string]string{
+				"trail_id":     trail.Id,
+				"trail_name":   trail.GetString("name"),
+				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+			},
+			Seen:   false,
+			Author: actor.Id,
+		}
+		return util.SendNotification(app, notification, trailAuthor)
 	}
 
 	return nil
