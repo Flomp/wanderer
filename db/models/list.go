@@ -15,7 +15,6 @@ const (
 type List struct {
 	pub.Object
 
-	ListId string `jsonld:"list_id,omitempty"`
 	Avatar string `jsonld:"avatar,omitempty"`
 }
 
@@ -33,7 +32,6 @@ func (r List) MarshalJSON() ([]byte, error) {
 	}
 
 	b = b[:len(b)-1]
-	pub.JSONWriteStringProp(&b, "list_id", r.ListId)
 	pub.JSONWriteStringProp(&b, "avatar", r.Avatar)
 
 	pub.JSONWrite(&b, '}')
@@ -41,7 +39,6 @@ func (r List) MarshalJSON() ([]byte, error) {
 }
 
 func JSONLoadList(val *fastjson.Value, r *List) error {
-	r.ListId = pub.JSONGetString(val, "list_id")
 	r.Avatar = pub.JSONGetString(val, "avatar")
 
 	return pub.OnObject(&r.Object, func(o *pub.Object) error {

@@ -16,6 +16,7 @@ export async function GET(event: RequestEvent) {
         const safeSearchParams = RecordListOptionsSchema.parse(Object.fromEntries(event.url.searchParams));
 
         const page = safeSearchParams.page ?? 1
+        const perPage = safeSearchParams.perPage ?? 10
 
         let fullUsername = event.params.handle;
         if (!fullUsername) {
@@ -27,12 +28,12 @@ export async function GET(event: RequestEvent) {
 
         const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username:lower='${username?.toLowerCase()}'&&isLocal=true`)
 
-        const filter = `actor='${actor.iri}'${safeSearchParams.filter ? '&&' + safeSearchParams.filter : ''}`
-        const activities: ListResult<Activity> = await event.locals.pb.collection("activitypub_activities").getList(page, safeSearchParams.perPage, { sort: safeSearchParams.sort ?? "-created", filter })
+        const filter = `actor='${actor.iri}'&&type='Create'${safeSearchParams.filter ? '&&' + safeSearchParams.filter : ''}`
+        const activities: ListResult<Activity> = await event.locals.pb.collection("activitypub_activities").getList(page, perPage, { sort: safeSearchParams.sort ?? "-created", filter })
 
         const id = actor.iri;
 
-        const hasNextPage = page * 10 < activities.totalItems;
+        const hasNextPage = page * perPage < activities.totalItems;
 
         const outbox: APRoot<APOrderedCollectionPage> = {
             "@context": [

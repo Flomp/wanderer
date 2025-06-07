@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/x509"
 	"database/sql"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -140,7 +141,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 		}
 	}
 
-	verified, err := verifySignature(e.Request, actor.GetString("public_key"))
+	verified, err := verifySignature(e.App, e.Request, actor.GetString("public_key"))
 	if err != nil || !verified {
 		return e.UnauthorizedError("Invalid http signature", err)
 	}
@@ -162,11 +163,16 @@ func ProcessActivity(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, nil)
 }
 
-func verifySignature(req *http.Request, publicKeyPem string) (bool, error) {
+func verifySignature(app core.App, req *http.Request, publicKeyPem string) (bool, error) {
 	block, _ := pem.Decode([]byte(publicKeyPem))
 	if block == nil || block.Type != "PUBLIC KEY" {
 		return false, fmt.Errorf("could not decode publicKeyPem to PUBLIC KEY pem block type")
 	}
+
+	if reqHeadersBytes, err := json.Marshal(req.Header); err == nil {
+		app.Logger().Info(string(reqHeadersBytes))
+	}
+	app.Logger().Info(publicKeyPem)
 
 	req.URL = &url.URL{
 		Path: req.Header.Get("X-Forwarded-Path"),

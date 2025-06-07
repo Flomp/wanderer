@@ -12,11 +12,57 @@ func init() {
 			return err
 		}
 
-		// remove field
-		collection.Fields.RemoveById("in1traur")
+		// update field
+		if err := collection.Fields.AddMarshaledJSONAt(1, []byte(`{
+			"cascadeDelete": true,
+			"collectionId": "_pb_users_auth_",
+			"hidden": false,
+			"id": "in1traur",
+			"maxSelect": 1,
+			"minSelect": 0,
+			"name": "old_follower",
+			"presentable": false,
+			"required": false,
+			"system": false,
+			"type": "relation"
+		}`)); err != nil {
+			return err
+		}
 
-		// remove field
-		collection.Fields.RemoveById("wxwomfd5")
+		// update field
+		if err := collection.Fields.AddMarshaledJSONAt(2, []byte(`{
+			"cascadeDelete": true,
+			"collectionId": "_pb_users_auth_",
+			"hidden": false,
+			"id": "wxwomfd5",
+			"maxSelect": 1,
+			"minSelect": 0,
+			"name": "old_followee",
+			"presentable": false,
+			"required": false,
+			"system": false,
+			"type": "relation"
+		}`)); err != nil {
+			return err
+		}
+
+		// add field
+		if err := collection.Fields.AddMarshaledJSONAt(3, []byte(`{
+                "hidden": false,
+                "id": "select2063623452",
+                "maxSelect": 1,
+                "name": "status",
+                "presentable": false,
+                "required": true,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "pending",
+                    "accepted"
+                ]
+            }`)); err != nil {
+			return err
+		}
 
 		// add field
 		if err := collection.Fields.AddMarshaledJSONAt(1, []byte(`{
@@ -59,7 +105,7 @@ func init() {
 			return err
 		}
 
-		// add field
+		// update field
 		if err := collection.Fields.AddMarshaledJSONAt(1, []byte(`{
 			"cascadeDelete": true,
 			"collectionId": "_pb_users_auth_",
@@ -76,7 +122,7 @@ func init() {
 			return err
 		}
 
-		// add field
+		// update field
 		if err := collection.Fields.AddMarshaledJSONAt(2, []byte(`{
 			"cascadeDelete": true,
 			"collectionId": "_pb_users_auth_",

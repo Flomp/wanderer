@@ -2,7 +2,6 @@ package models
 
 import (
 	"reflect"
-	"time"
 	"unsafe"
 
 	pub "github.com/go-ap/activitypub"
@@ -16,15 +15,10 @@ const (
 type SummitLog struct {
 	pub.Object
 
-	SummitLogId   string    `jsonld:"summitlog_id,omitempty"`
-	TrailId       string    `jsonld:"trail_id,omitempty"`
-	Distance      float64   `jsonld:"distance,omitempty"`
-	ElevationGain float64   `jsonld:"elevation_gain,omitempty"`
-	ElevationLoss float64   `jsonld:"elevation_loss,omitempty"`
-	Duration      float64   `jsonld:"duration,omitempty"`
-	Date          time.Time `jsonld:"date,omitempty"`
-	Thumbnail     string    `jsonld:"thumbnail,omitempty"`
-	Gpx           string    `jsonld:"gpx,omitempty"`
+	Distance      float64 `jsonld:"distance,omitempty"`
+	ElevationGain float64 `jsonld:"elevation_gain,omitempty"`
+	ElevationLoss float64 `jsonld:"elevation_loss,omitempty"`
+	Duration      float64 `jsonld:"duration,omitempty"`
 }
 
 // SummitLogNew initializes a SummitLog type object
@@ -41,30 +35,20 @@ func (r SummitLog) MarshalJSON() ([]byte, error) {
 	}
 
 	b = b[:len(b)-1]
-	pub.JSONWriteStringProp(&b, "summitlog_id", r.SummitLogId)
-	pub.JSONWriteStringProp(&b, "trail_id", r.TrailId)
 	pub.JSONWriteFloatProp(&b, "distance", r.Distance)
 	pub.JSONWriteFloatProp(&b, "elevation_gain", r.ElevationGain)
 	pub.JSONWriteFloatProp(&b, "elevation_loss", r.ElevationLoss)
 	pub.JSONWriteFloatProp(&b, "duration", r.Duration)
-	pub.JSONWriteTimeProp(&b, "date", r.Date)
-	pub.JSONWriteStringProp(&b, "thumbnail", r.Thumbnail)
-	pub.JSONWriteStringProp(&b, "gpx", r.Gpx)
 
 	pub.JSONWrite(&b, '}')
 	return b, nil
 }
 
 func JSONLoadSummitLog(val *fastjson.Value, r *SummitLog) error {
-	r.SummitLogId = pub.JSONGetString(val, "summitlog_id")
-	r.TrailId = pub.JSONGetString(val, "trail_id")
 	r.Distance = pub.JSONGetFloat(val, "distance")
 	r.ElevationGain = pub.JSONGetFloat(val, "elevation_gain")
 	r.ElevationLoss = pub.JSONGetFloat(val, "elevation_loss")
 	r.Duration = pub.JSONGetFloat(val, "duration")
-	r.Date = pub.JSONGetTime(val, "date")
-	r.Thumbnail = pub.JSONGetString(val, "thumbnail")
-	r.Gpx = pub.JSONGetString(val, "gpx")
 
 	return pub.OnObject(&r.Object, func(o *pub.Object) error {
 		return pub.JSONLoadObject(val, o)

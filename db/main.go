@@ -898,7 +898,7 @@ func registerCronJobs(app core.App) {
 
 func bootstrapData(app core.App, client meilisearch.ServiceManager) error {
 	bootstrapCategories(app)
-	bootstrapMeilisearchDocuments(app, client)
+	go bootstrapMeilisearchDocuments(app, client)
 	return nil
 }
 
