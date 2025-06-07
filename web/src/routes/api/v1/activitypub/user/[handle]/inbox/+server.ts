@@ -11,14 +11,16 @@ export async function POST(event: RequestEvent) {
         }
 
         const success = await event.locals.pb.send("/activitypub/activity/process", {
-            method: "POST", fetch: event.fetch,
+            method: "POST", 
+            fetch: event.fetch,
             headers: {
                 'X-Forwarded-Path': event.url.pathname,
+                'Content-Type': event.request.headers.get("content-type")!,
                 signature: event.request.headers.get("signature")!,
                 date: event.request.headers.get("date")!,
                 digest: event.request.headers.get("digest")!
             },
-            body: activity
+            body: JSON.stringify(activity)
         })
 
         if (success === false) {

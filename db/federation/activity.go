@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/x509"
 	"database/sql"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -31,9 +30,13 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 	if len(encryptionKey) == 0 {
 		return fmt.Errorf("POCKETBASE_ENCRYPTION_KEY not set")
 	}
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
 
 	algs := []httpsig.Algorithm{httpsig.RSA_SHA256}
-	postHeaders := []string{"(request-target)", "Date", "Digest"}
+	postHeaders := []string{"(request-target)", "Date", "Digest", "Content-Type", "Host"}
 	expiresIn := 60
 
 	signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
@@ -87,8 +90,9 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 				app.Logger().Error(fmt.Sprintf("Request creation failed: %s", err))
 				return
 			}
-			req.Header.Add("Content-Type", `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`)
+			req.Header.Add("Content-Type", "application/activity+json")
 			req.Header.Add("Date", strings.ReplaceAll(time.Now().UTC().Format(time.RFC1123), "UTC", "GMT"))
+			req.Header.Add("Host", req.Host)
 
 			if err := signer.SignRequest(privateKey, pubID, req, body); err != nil {
 				app.Logger().Error(fmt.Sprintf("Signing request failed: %s", err))
@@ -141,7 +145,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 		}
 	}
 
-	verified, err := verifySignature(e.App, e.Request, actor.GetString("public_key"))
+	verified, err := verifySignature(e.Request, actor.GetString("public_key"))
 	if err != nil || !verified {
 		return e.UnauthorizedError("Invalid http signature", err)
 	}
@@ -163,20 +167,27 @@ func ProcessActivity(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, nil)
 }
 
-func verifySignature(app core.App, req *http.Request, publicKeyPem string) (bool, error) {
+func verifySignature(req *http.Request, publicKeyPem string) (bool, error) {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return false, fmt.Errorf("ORIGIN not set")
+	}
 	block, _ := pem.Decode([]byte(publicKeyPem))
 	if block == nil || block.Type != "PUBLIC KEY" {
 		return false, fmt.Errorf("could not decode publicKeyPem to PUBLIC KEY pem block type")
 	}
 
-	if reqHeadersBytes, err := json.Marshal(req.Header); err == nil {
-		app.Logger().Info(string(reqHeadersBytes))
-	}
-	app.Logger().Info(publicKeyPem)
-
 	req.URL = &url.URL{
 		Path: req.Header.Get("X-Forwarded-Path"),
 	}
+
+	url, err := url.Parse(origin)
+	if err != nil {
+		return false, err
+	}
+
+	req.Header.Set("Host", url.Host)
+	req.Host = url.Host
 
 	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
