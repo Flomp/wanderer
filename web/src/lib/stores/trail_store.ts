@@ -160,7 +160,7 @@ export async function trails_show(id: string, handle?: string, loadGPX?: boolean
         response.expand.gpx_data = gpxData;
 
 
-        for (const log of response.expand.summit_logs ?? []) {
+        for (const log of response.expand.summit_logs_via_trail ?? []) {
             const gpxData: string = await fetchGPX(log, f);
 
             if (!log.expand) {
@@ -236,6 +236,7 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
 }
 
 export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: File[], gpx?: File | Blob | null) {
+    newTrail.author = oldTrail.author
 
     const waypointUpdates = compareObjectArrays<Waypoint>(oldTrail.expand?.waypoints ?? [], newTrail.expand?.waypoints ?? []);
 
@@ -324,6 +325,12 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
 
 
     let model: Trail = await r.json();
+
+    for (const log of model.expand?.summit_logs_via_trail ?? []) {
+        if (!log.expand) {
+            log.expand = {};
+        }
+    }
 
     trail.set(model);
 

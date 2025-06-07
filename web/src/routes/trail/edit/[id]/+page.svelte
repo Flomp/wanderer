@@ -472,7 +472,9 @@
     }
 
     function beforeSummitLogModalOpen() {
-        summitLog.set(new SummitLog(new Date().toISOString().split("T")[0]));
+        const newSummitLog = new SummitLog(new Date().toISOString().split("T")[0]);
+        newSummitLog.author = $currentUser?.actor;
+        summitLog.set(newSummitLog);
         summitLogModal.openModal();
     }
 

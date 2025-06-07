@@ -186,12 +186,17 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return nil
 		}
 
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
 		err = federation.CreateTrailActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
 
-		return e.Next()
+		return nil
 	}
 }
 
@@ -213,11 +218,17 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return nil
 		}
 
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
 		err = federation.CreateTrailActivity(e.App, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		return nil
 	}
 }
 
@@ -247,9 +258,12 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 func createSummitLogHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
-		e.Next()
+		err := e.Next()
+		if err != nil {
+			return err
+		}
 
-		err := federation.CreateSummitLogActivity(e.App, e.Record, pub.CreateType)
+		err = federation.CreateSummitLogActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -261,11 +275,16 @@ func createSummitLogHandler() func(e *core.RecordRequestEvent) error {
 func updateSummitLogHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
-		err := federation.CreateSummitLogActivity(e.App, e.Record, pub.UpdateType)
+		err := e.Next()
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		err = federation.CreateSummitLogActivity(e.App, e.Record, pub.UpdateType)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 }
 
@@ -376,12 +395,17 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return nil
 		}
 
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
 		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
 
-		return e.Next()
+		return nil
 	}
 }
 
@@ -405,12 +429,17 @@ func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return nil
 		}
 
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
 		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
 
-		return e.Next()
+		return nil
 	}
 }
 
@@ -673,7 +702,6 @@ func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.Serve
 		registerRoutes(se, client)
 		registerCronJobs(se.App)
 		bootstrapData(se.App, client)
-		util.AddCustomTypesToPub()
 
 		return se.Next()
 	}

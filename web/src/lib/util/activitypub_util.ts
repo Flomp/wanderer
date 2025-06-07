@@ -1,4 +1,3 @@
-import type { Trail } from "$lib/models/trail";
 
 
 export function splitUsername(handle: string, localDomain?: string) {
@@ -15,7 +14,7 @@ export function splitUsername(handle: string, localDomain?: string) {
 
 export function handleFromRecordWithIRI(record: any) {
     if (!record.expand?.author) {
-        throw new Error("trail has no author info")
+        throw new Error("object has no author info")
     }
     
     if (!record.iri) {

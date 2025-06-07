@@ -232,6 +232,10 @@ func CreateListDeleteActivity(app core.App, r *core.Record) error {
 		return err
 	}
 
+	if !author.GetBool("isLocal") {
+		return nil
+	}
+
 	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
 	if err != nil {
 		return err

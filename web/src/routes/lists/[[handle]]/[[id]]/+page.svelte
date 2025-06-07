@@ -84,7 +84,7 @@
             // load all lists the next time the user presses the back button
             loadAllListsOnNextBack = true;
         }
-        loading = false
+        loading = false;
     });
 
     async function handleDropdownClick(item: DropdownItem) {
@@ -110,7 +110,11 @@
     }
 
     async function setCurrentList(item: List) {
-        const fullList = await lists_show(item.id!, handleFromRecordWithIRI(item), fetch);
+        const fullList = await lists_show(
+            item.id!,
+            handleFromRecordWithIRI(item),
+            fetch,
+        );
         selectedList = fullList;
         document.getElementById("list-container")?.scrollTo({ top: 0 });
     }
@@ -132,9 +136,9 @@
         }
     }
 
-    async function selectTrail(trail: Trail) {       
+    async function selectTrail(trail: Trail) {
         const fullTrail = await trails_show(
-            trail.id!,
+            trail.iri ? trail.iri.substring(trail.iri.length - 15) : trail.id!,
             handleFromRecordWithIRI(trail),
             true,
         );

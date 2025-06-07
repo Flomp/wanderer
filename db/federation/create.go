@@ -7,9 +7,10 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 	"time"
 
-	"pocketbase/models"
 	"pocketbase/util"
 
 	pub "github.com/go-ap/activitypub"
@@ -42,17 +43,48 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 		return fmt.Errorf("failed to expand category: %v", errs)
 	}
 
-	tagRecords := trail.ExpandedAll("tags")
-	tags := pub.ItemCollection{}
-
-	for _, v := range tagRecords {
-		tags.Append(pub.IRI(v.GetString("name")))
-	}
-
 	category := ""
 	categoryRecord := trail.ExpandedOne("category")
 	if categoryRecord != nil {
 		category = categoryRecord.GetString("name")
+	}
+
+	tagRecords := trail.ExpandedAll("tags")
+	tags := pub.ItemCollection{
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "category")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, category)),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "difficulty")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("difficulty"))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_gain")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("elevation_gain")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_loss")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("elevation_loss")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "distance")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("distance")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "duration")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("duration")))),
+		},
+	}
+
+	for _, v := range tagRecords {
+		tags.Append(pub.IRI(v.GetString("name")))
 	}
 
 	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
@@ -67,29 +99,21 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	cc := trailAuthor.GetString("iri") + "/followers"
 
 	photos := trail.GetStringSlice("photos")
-	thumbnail := ""
-	if len(photos) > 0 {
-		thumbnailIndex := trail.GetInt("thumbnail")
-		if thumbnailIndex >= len(photos) {
-			thumbnailIndex = 0
-		}
-		thumbnail = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[thumbnailIndex])
-	}
 
 	gpx := ""
 	if trail.GetString("gpx") != "" {
 		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, trail.GetString("gpx"))
 	}
 
-	attachments := pub.ItemCollection{}
+	attachments := make(pub.ItemCollection, max(len(photos), 2))
 	for i := range min(len(photos), 3) {
 		iri := fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[i])
 
-		attachments.Append(pub.Document{
-			Type:      pub.DocumentType,
+		attachments[i] = pub.Image{
+			Type:      pub.ImageType,
 			MediaType: "image/jpeg",
 			URL:       pub.IRI(iri),
-		})
+		}
 	}
 	if gpx != "" {
 		attachments.Append(pub.Document{
@@ -99,7 +123,8 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 		})
 	}
 
-	trailObject := models.TrailNew()
+	trailObject := pub.ObjectNew(pub.ArticleType)
+
 	trailObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("name")))
 	trailObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("description")))
 	trailObject.Location = pub.Place{
@@ -112,18 +137,10 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	trailObject.Published = trail.GetDateTime("created").Time()
 	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
 	trailObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id))
-	trailObject.TrailId = trail.Id
 
-	trailObject.Distance = trail.GetFloat("distance")
-	trailObject.ElevationGain = trail.GetFloat("elevation_gain")
-	trailObject.ElevationLoss = trail.GetFloat("elevation_loss")
-	trailObject.Duration = trail.GetFloat("duration")
-	trailObject.Difficulty = trail.GetString("difficulty")
-	trailObject.Category = category
-	trailObject.Date = trail.GetDateTime("date").Time()
+	trailObject.StartTime = trail.GetDateTime("date").Time()
 	trailObject.Attachment = attachments
-	trailObject.Gpx = gpx
-	trailObject.Thumbnail = thumbnail
+
 	trailObject.Tag = tags
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, trailObject)
@@ -300,15 +317,15 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 		gpx = fmt.Sprintf("%s/api/v1/files/summit_logs/%s/%s", origin, summitLog.Id, summitLog.GetString("gpx"))
 	}
 
-	attachments := make(pub.ItemCollection, 2)
-	for i := range min(len(photos), 1) {
+	attachments := make(pub.ItemCollection, max(len(photos), 2))
+	for i := range len(photos) {
 		iri := fmt.Sprintf("%s/api/v1/files/summit_logs/%s/%s", origin, summitLog.Id, photos[i])
 
-		attachments.Append(pub.Document{
+		attachments[i] = pub.Document{
 			Type:      pub.ImageType,
 			MediaType: "image/jpeg",
 			URL:       pub.IRI(iri),
-		})
+		}
 	}
 	if gpx != "" {
 		attachments.Append(pub.Document{
@@ -318,7 +335,30 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 		})
 	}
 
-	logObject := models.SummitLogNew()
+	tags := pub.ItemCollection{
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_gain")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", summitLog.GetFloat("elevation_gain")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_loss")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", summitLog.GetFloat("elevation_loss")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "distance")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", summitLog.GetFloat("distance")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "duration")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", summitLog.GetFloat("duration")))),
+		},
+	}
+
+	logObject := pub.ObjectNew(pub.NoteType)
 
 	logObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, summitLog.GetString("text")))
 	logObject.AttributedTo = pub.IRI(summitLogAuthor.GetString("iri"))
@@ -326,11 +366,8 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 	logObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/summit-log/%s", origin, summitLog.Id))
 	logObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, summitLogTrailAuthor.GetString("username"), summitLog.GetString("trail")))
 	logObject.InReplyTo = trailIRI
+	logObject.Tag = tags
 
-	logObject.Distance = summitLog.GetFloat("distance")
-	logObject.ElevationGain = summitLog.GetFloat("elevation_gain")
-	logObject.ElevationLoss = summitLog.GetFloat("elevation_loss")
-	logObject.Duration = summitLog.GetFloat("duration")
 	logObject.StartTime = summitLog.GetDateTime("date").Time()
 	logObject.Attachment = attachments
 
@@ -404,18 +441,18 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 		avatar = fmt.Sprintf("%s/api/v1/files/lists/%s/%s", origin, list.Id, list.GetString("avatar"))
 	}
 
-	attachments := make(pub.ItemCollection, 1)
+	attachments := make(pub.ItemCollection, 2)
 	if avatar != "" {
-		attachments.Append(pub.Document{
-			Type:      pub.DocumentType,
+		attachments[0] = pub.Image{
+			Type:      pub.ImageType,
 			MediaType: "image/jpeg",
 			URL:       pub.IRI(avatar),
-		})
+		}
 	}
 
 	author := listAuthor.GetString("iri")
 
-	listObject := pub.ObjectNew(pub.DocumentType)
+	listObject := pub.ObjectNew(pub.ArticleType)
 	listObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("name")))
 	listObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("description")))
 
@@ -423,6 +460,7 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 	listObject.Published = list.GetDateTime("created").Time()
 	listObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/list/%s", origin, list.Id))
 	listObject.URL = pub.IRI(fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("username"), list.Id))
+	listObject.Attachment = attachments
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, listObject)
 	activity.Actor = pub.IRI(author)
@@ -470,14 +508,13 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
 
 	var err error
-	switch activity.Object.GetType() {
-	case models.TrailType:
+	if strings.Contains(activity.Object.GetID().String(), "/api/v1/trail") {
 		err = processCreateOrUpdateTrailActivity(activity, app, actor)
-	case pub.NoteType:
+	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/comment") {
 		err = processCreateOrUpdateCommentActivity(activity, app, actor)
-	case models.SummitLogType:
+	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/summit-log") {
 		err = processCreateOrUpdateSummitLogActivity(activity, app, actor)
-	case models.ListType:
+	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/list") {
 		err = processCreateOrUpdateListActivity(activity, app, actor)
 	}
 
@@ -578,7 +615,7 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 }
 
 func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-	logObject, err := models.ToSummitLog(activity.Object)
+	logObject, err := pub.ToObject(activity.Object)
 	if err != nil {
 		return err
 	}
@@ -620,52 +657,84 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		return nil
 	}
 
-	record.Set("date", logObject.StartTime)
-	record.Set("text", logObject.Content.First().Value)
-	record.Set("distance", logObject.Distance)
-	record.Set("duration", logObject.Duration)
-	record.Set("elevation_gain", logObject.ElevationGain)
-	record.Set("elevation_loss", logObject.ElevationLoss)
-	record.Set("author", actor.Id)
-	record.Set("trail", trail.Id)
-	record.Set("iri", logObject.ID.String())
-
-	thumbnailURL := ""
-	gpxURL := ""
-	attachments, err := pub.ToItemCollection(logObject.Attachment)
+	var distance, duration, elevation_gain, elevation_loss float64
+	tags, err := pub.ToItemCollection(logObject.Tag)
 	if err != nil {
 		return err
 	}
 
-	for _, a := range attachments.Collection() {
-		attachment, err := pub.ToObject(a)
+	for _, tag := range tags.Collection() {
+		tagObj, err := pub.ToObject(tag)
 		if err != nil {
 			continue
 		}
-		if attachment.Type == pub.DocumentType && attachment.MediaType != "application/xml+gpx" {
-			gpxURL = attachment.URL.GetLink().String()
-		} else if attachment.Type == pub.ImageType {
-			thumbnailURL = attachment.URL.GetLink().String()
+		content := tagObj.Content.First().Value.String()
+		switch tagObj.Name.First().Value.String() {
+		case "elevation_gain":
+			elevation_gain, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		case "elevation_loss":
+			elevation_loss, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		case "duration":
+			duration, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		case "distance":
+			distance, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		}
+		if err != nil {
+			continue
 		}
 	}
 
-	if thumbnailURL != "" {
-		thumbnail, err := filesystem.NewFileFromURL(context.Background(), thumbnailURL)
+	record.Set("date", logObject.StartTime)
+	record.Set("text", logObject.Content.First().Value)
+	record.Set("distance", distance)
+	record.Set("duration", duration)
+	record.Set("elevation_gain", elevation_gain)
+	record.Set("elevation_loss", elevation_loss)
+	record.Set("author", actor.Id)
+	record.Set("trail", trail.Id)
+	record.Set("iri", logObject.ID.String())
 
+	if logObject.Attachment != nil {
+		attachments, err := pub.ToItemCollection(logObject.Attachment)
 		if err != nil {
 			return err
 		}
 
-		record.Set("photos", thumbnail)
-	}
-
-	if gpxURL != "" {
-		gpx, err := filesystem.NewFileFromURL(context.Background(), gpxURL)
-		if err != nil {
-			return err
+		photoURLs := []string{}
+		gpxURL := ""
+		for _, a := range attachments.Collection() {
+			attachment, err := pub.ToObject(a)
+			if err != nil {
+				continue
+			}
+			if attachment.Type == pub.DocumentType && attachment.MediaType == "application/xml+gpx" {
+				gpxURL = attachment.URL.GetLink().String()
+			} else if attachment.Type == pub.ImageType {
+				photoURLs = append(photoURLs, attachment.URL.GetLink().String())
+			}
 		}
 
-		record.Set("gpx", gpx)
+		if len(photoURLs) > 0 {
+			photos := make([]*filesystem.File, len(photoURLs))
+			for i, purl := range photoURLs {
+				photo, err := filesystem.NewFileFromURL(context.Background(), purl)
+				if err != nil {
+					continue
+				}
+				photos[i] = photo
+			}
+
+			record.Set("photos", photos)
+		}
+
+		if gpxURL != "" {
+			gpx, err := filesystem.NewFileFromURL(context.Background(), gpxURL)
+			if err != nil {
+				return err
+			}
+
+			record.Set("gpx", gpx)
+		}
 	}
 
 	err = app.Save(record)

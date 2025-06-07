@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -39,11 +40,6 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 	postHeaders := []string{"(request-target)", "Date", "Digest", "Content-Type", "Host"}
 	expiresIn := 60
 
-	signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
-	if err != nil {
-		return err
-	}
-
 	body, err := jsonld.WithContext(
 		jsonld.IRI(pub.ActivityBaseURI),
 		jsonld.IRI(pub.SecurityContextURI),
@@ -63,20 +59,23 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 	pubID := actor.GetString("iri") + "#main-key"
 
 	client := &http.Client{}
-	alreadySentTo := make(map[string]bool)
-	var mu sync.Mutex
 	var wg sync.WaitGroup
 
 	sem := semaphore.NewWeighted(5) // Limit to 5 concurrent sends
 
-	for _, v := range recipients {
-		if alreadySentTo[v] {
-			continue
-		}
+	slices.Sort(recipients)
+	uniqueRecipients := slices.Compact(recipients)
+
+	for _, v := range uniqueRecipients {
 
 		wg.Add(1)
 		go func(inbox string) {
 			defer wg.Done()
+
+			signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
+			if err != nil {
+				return
+			}
 
 			if err := sem.Acquire(context.Background(), 1); err != nil {
 				app.Logger().Error(fmt.Sprintf("Semaphore acquire failed: %s", err))
@@ -112,10 +111,6 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 			}
 
 			app.Logger().Info(fmt.Sprintf("Sent %s to %s", activity.Type, inbox))
-
-			mu.Lock()
-			alreadySentTo[inbox] = true
-			mu.Unlock()
 		}(v)
 	}
 

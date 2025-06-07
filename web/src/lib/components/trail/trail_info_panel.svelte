@@ -512,7 +512,7 @@
                     {/if}
                 </div>
                 {#if activeTab == 0}
-                    <div class="overflow-x-auto overflow-y-clip pb-3 scroll-x-only">
+                    <div class="overflow-x-auto overflow-y-clip pb-3 scroll-x-only min-h-[175px]">
                         {#if summitLogsLoading}
                             <SkeletonTable></SkeletonTable>
                         {:else}

@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"pocketbase/models"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,44 +21,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
-	"github.com/valyala/fastjson"
 )
-
-func AddCustomTypesToPub() {
-	pub.ItemTyperFunc = func(typ pub.ActivityVocabularyType) (pub.Item, error) {
-		if typ == models.TrailType {
-			return models.TrailNew(), nil
-		} else if typ == models.SummitLogType {
-			return models.SummitLogNew(), nil
-		} else if typ == models.ListType {
-			return models.ListNew(), nil
-		}
-		return pub.GetItemByType(typ)
-	}
-	pub.JSONItemUnmarshal = func(typ pub.ActivityVocabularyType, v *fastjson.Value, i pub.Item) error {
-		if typ == models.TrailType {
-			return models.OnTrail(i, func(t *models.Trail) error {
-				return models.JSONLoadTrail(v, t)
-			})
-		} else if typ == models.SummitLogType {
-			return models.OnSummitLog(i, func(s *models.SummitLog) error {
-				return models.JSONLoadSummitLog(v, s)
-			})
-		} else if typ == models.ListType {
-			return models.OnList(i, func(l *models.List) error {
-				return models.JSONLoadList(v, l)
-			})
-		}
-		return nil
-	}
-	pub.IsNotEmpty = func(i pub.Item) bool {
-		if i.GetType() == models.TrailType || i.GetType() == models.SummitLogType || i.GetType() == models.ListType {
-			return true
-		}
-
-		return pub.NotEmpty(i)
-	}
-}
 
 func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
@@ -184,12 +147,6 @@ func fetchOutboxPage(app core.App, actor *core.Record, pageURL string) error {
 		if activity.Type != pub.CreateType {
 			continue
 		}
-		if activity.Object.GetType() == models.TrailType {
-			// _, err = TrailFromActivity(*activity, app, actor)
-			// if err != nil {
-			// 	return err
-			// }
-		}
 	}
 
 	if page.Next != nil {
@@ -200,7 +157,7 @@ func fetchOutboxPage(app core.App, actor *core.Record, pageURL string) error {
 }
 
 func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-	t, err := models.ToTrail(activity.Object)
+	t, err := pub.ToObject(activity.Object)
 	if err != nil {
 		return err
 	}
@@ -219,49 +176,107 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		}
 	}
 
+	var distance, duration, elevation_gain, elevation_loss float64
+	var diffculty, category string
+	tags, err := pub.ToItemCollection(t.Tag)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range tags.Collection() {
+		tagObj, err := pub.ToObject(tag)
+		if err != nil {
+			continue
+		}
+		content := tagObj.Content.First().Value.String()
+		switch tagObj.Name.First().Value.String() {
+		case "category":
+			category = content
+		case "difficulty":
+			diffculty = content
+		case "elevation_gain":
+			elevation_gain, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		case "elevation_loss":
+			elevation_loss, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		case "duration":
+			duration, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		case "distance":
+			distance, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		}
+		if err != nil {
+			continue
+		}
+	}
+
 	record.Set("name", t.Name.First().Value)
 	record.Set("description", t.Content.First().Value)
 	record.Set("location", t.Location.(*pub.Place).Name.First().Value)
 	record.Set("lat", t.Location.(*pub.Place).Latitude)
 	record.Set("lon", t.Location.(*pub.Place).Longitude)
-	record.Set("distance", t.Distance)
-	record.Set("elevation_gain", t.ElevationGain)
-	record.Set("elevation_loss", t.ElevationLoss)
-	record.Set("duration", t.Duration)
-	record.Set("difficulty", t.Difficulty)
-	record.Set("date", t.Date.Unix())
+	record.Set("distance", distance)
+	record.Set("elevation_gain", elevation_gain)
+	record.Set("elevation_loss", elevation_loss)
+	record.Set("duration", duration)
+	record.Set("difficulty", diffculty)
+	record.Set("date", t.StartTime.Unix())
 	record.Set("public", true)
 	record.Set("iri", t.ID.String())
 	record.Set("author", actor.Id)
 
-	category, err := app.FindFirstRecordByData("categories", "name", t.Category)
+	categoryRecord, err := app.FindFirstRecordByData("categories", "name", category)
 	if err == nil {
-		record.Set("category", category.Id)
+		record.Set("category", categoryRecord.Id)
 	}
 
-	if t.Thumbnail != "" {
-		thumbnail, err := filesystem.NewFileFromURL(context.Background(), t.Thumbnail)
+	if t.Attachment != nil {
+
+		attachments, err := pub.ToItemCollection(t.Attachment)
 		if err != nil {
 			return err
 		}
 
-		record.Set("photos", thumbnail)
-	}
-
-	if t.Gpx != "" {
-		gpx, err := filesystem.NewFileFromURL(context.Background(), t.Gpx)
-		if err != nil {
-			return err
+		photoURLs := []string{}
+		gpxURL := ""
+		for _, a := range attachments.Collection() {
+			attachment, err := pub.ToObject(a)
+			if err != nil {
+				continue
+			}
+			if attachment.Type == pub.DocumentType && attachment.MediaType == "application/xml+gpx" {
+				gpxURL = attachment.URL.GetLink().String()
+			} else if attachment.Type == pub.ImageType {
+				photoURLs = append(photoURLs, attachment.URL.GetLink().String())
+			}
 		}
 
-		record.Set("gpx", gpx)
+		if len(photoURLs) > 0 {
+			photos := make([]*filesystem.File, len(photoURLs))
+			for i, purl := range photoURLs {
+				photo, err := filesystem.NewFileFromURL(context.Background(), purl)
+				if err != nil {
+					continue
+				}
+				photos[i] = photo
+			}
+
+			record.Set("photos", photos)
+		}
+
+		if gpxURL != "" {
+			gpx, err := filesystem.NewFileFromURL(context.Background(), gpxURL)
+			if err != nil {
+				return err
+			}
+
+			record.Set("gpx", gpx)
+		}
 	}
 
 	return app.Save(record)
 }
 
 func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-	l, err := models.ToList(activity.Object)
+	l, err := pub.ToObject(activity.Object)
 	if err != nil {
 		return err
 	}
@@ -286,13 +301,33 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) e
 	record.Set("iri", l.ID.String())
 	record.Set("author", actor.Id)
 
-	if l.Avatar != "" {
-		avatar, err := filesystem.NewFileFromURL(context.Background(), l.Avatar)
+	if l.Attachment != nil {
+
+		avatarURL := ""
+		attachments, err := pub.ToItemCollection(l.Attachment)
 		if err != nil {
 			return err
 		}
 
-		record.Set("avatar", avatar)
+		for _, a := range attachments.Collection() {
+			attachment, err := pub.ToObject(a)
+			if err != nil {
+				continue
+			}
+			if attachment.Type == pub.ImageType {
+				avatarURL = attachment.URL.GetLink().String()
+			}
+		}
+
+		if avatarURL != "" {
+			avatar, err := filesystem.NewFileFromURL(context.Background(), avatarURL)
+
+			if err != nil {
+				return err
+			}
+
+			record.Set("avatar", avatar)
+		}
 	}
 
 	err = app.Save(record)

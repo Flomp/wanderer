@@ -57,7 +57,9 @@ export async function GET(event: RequestEvent) {
             // this came directly from the database of the remote instance
             // we need to adjust some urls to get photos, gpx etc.
             if (!t.iri) {
-                t.gpx = `${origin}/api/v1/files/trails/${t.id}/${t.gpx}`
+                if (t.gpx) {
+                    t.gpx = `${origin}/api/v1/files/trails/${t.id}/${t.gpx}`
+                }
                 t.photos = t.photos.map(p =>
                     `${origin}/api/v1/files/trails/${t.id}/${p}`
                 )

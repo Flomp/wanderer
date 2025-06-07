@@ -138,9 +138,9 @@ export async function lists_update(list: List, avatar?: File) {
         formData.append("avatar", avatar);
     }
 
-    let r = await fetch('/api/v1/list/' + list.id, {
+    let r = await fetch('/api/v1/list/form/' + list.id, {
         method: 'POST',
-        body: JSON.stringify(list),
+        body: formData,
     })
 
     if (!r.ok) {
