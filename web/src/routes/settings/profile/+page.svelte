@@ -1,6 +1,7 @@
 <script lang="ts">
     import { page } from "$app/state";
     import Button from "$lib/components/base/button.svelte";
+    import Editor from "$lib/components/base/editor.svelte";
     import type { SelectItem } from "$lib/components/base/select.svelte";
     import Select from "$lib/components/base/select.svelte";
     import Textarea from "$lib/components/base/textarea.svelte";
@@ -110,7 +111,7 @@
         </div>
         <div>
             <h4 class="text-xl font-medium">Bio</h4>
-            <Textarea bind:value={bio} rows={5}></Textarea>
+            <Editor bind:value={bio}></Editor>
             <div class="mt-3">
                 <Button
                     onclick={() => handleBioSave()}

@@ -73,8 +73,9 @@
     </div>
 </dialog>
 
-<style>
+<style lang="postcss">
+    @reference "tailwindcss";
     dialog::backdrop {
-        @apply bg-gray-500/50;
+        @apply bg-gray-500 opacity-50;
     }
 </style>

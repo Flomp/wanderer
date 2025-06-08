@@ -123,7 +123,11 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 	}
 	private := false
 	if dbActor.GetBool("isLocal") {
-		user, err := app.FindRecordById("users_anonymous", dbActor.GetString("user"))
+		user, err := app.FindRecordById("users", dbActor.GetString("user"))
+		if err != nil {
+			return nil, false, err
+		}
+		settings, err := app.FindFirstRecordByData("settings", "user", user.Id)
 		if err != nil {
 			return nil, false, err
 		}
@@ -131,7 +135,7 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		if user.GetString("avatar") != "" {
 			dbActor.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, user.Id, user.GetString("avatar")))
 		}
-		dbActor.Set("summary", user.GetString("bio"))
+		dbActor.Set("summary", settings.GetString("bio"))
 		followerCount, err := app.CountRecords("follows", dbx.NewExp("followee={:user}", dbx.Params{"user": dbActor.Id}))
 		if err != nil {
 			return nil, false, err
@@ -145,10 +149,6 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 
 		dbActor.Set("last_fetched", time.Now())
 
-		settings, err := app.FindFirstRecordByData("settings", "user", user.Id)
-		if err != nil {
-			return nil, false, err
-		}
 		privacy := settings.GetString("privacy")
 		result := make(map[string]interface{})
 		json.Unmarshal([]byte(privacy), &result)

@@ -27,6 +27,7 @@ import (
 	"pocketbase/util"
 
 	pub "github.com/go-ap/activitypub"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
@@ -114,10 +115,41 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordUpdate("integrations").BindFunc(updateIntegrationHandler())
 	app.OnRecordAfterUpdateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 
+	app.OnRecordCreateRequest().BindFunc(sanitizeHTML())
+	app.OnRecordUpdateRequest().BindFunc(sanitizeHTML())
+
 	app.OnRecordRequestEmailChangeRequest("users").BindFunc(changeUserEmailHandler())
 	app.OnServe().BindFunc(onBeforeServeHandler(client))
 
 	app.OnBootstrap().BindFunc(onBootstrapHandler())
+}
+
+func sanitizeHTML() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		fieldsToSanitize := map[string][]string{
+			"lists":       {"description"},
+			"settings":    {"bio"},
+			"pages":       {"body"},
+			"summit_logs": {"text"},
+			"trails":      {"description"},
+			"waypoints":   {"description"},
+		}
+		collection := e.Collection.Name
+		fields, ok := fieldsToSanitize[collection]
+		if !ok {
+			return e.Next()
+		}
+
+		p := bluemonday.UGCPolicy()
+
+		for _, field := range fields {
+			if val, ok := e.Record.Get(field).(string); ok {
+				e.Record.Set(field, p.Sanitize(val))
+			}
+		}
+
+		return e.Next()
+	}
 }
 
 func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {

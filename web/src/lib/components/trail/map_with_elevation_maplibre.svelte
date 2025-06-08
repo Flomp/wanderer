@@ -653,7 +653,7 @@
         }
     }
 
-    function adjustTrailFocus(activeTrail: number | null) {       
+    function adjustTrailFocus(activeTrail: number | null) {
         if (activeTrail !== null && trails[activeTrail] !== undefined) {
             if (
                 !drawing &&
@@ -1160,7 +1160,10 @@
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
 <div id="map" bind:this={mapContainer}></div>
 
-<style>
+<style lang="postcss">
+    @reference "tailwindcss";
+    @reference "../../../css/app.css";
+
     #map {
         width: 100%;
         height: 100%;

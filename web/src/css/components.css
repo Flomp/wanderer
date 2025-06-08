@@ -1,6 +1,5 @@
-@import 'tailwindcss/utilities';
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
+@import 'tailwindcss';
+@reference "./app.css";
 
 .btn-primary {
     @apply min-h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-ring

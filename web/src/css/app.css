@@ -1,6 +1,47 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "@fortawesome/fontawesome-free/css/all.min.css";
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+@plugin '@tailwindcss/typography';
+
+@theme {
+    --color-primary: rgba(var(--primary));
+    --color-background: rgba(var(--background));
+    --color-background-inverse: rgba(var(--background-inverse));
+    --color-content: rgba(var(--content));
+    --color-content-inverse: rgba(var(--content-inverse));
+
+    --color-primary: rgba(var(--primary));
+    --color-primary-hover: rgba(var(--primary-hover));
+    --color-secondary-hover: rgba(var(--secondary-hover));
+    --color-input-background: rgba(var(--input-background));
+    --color-input-background-error: rgba(var(--input-background-error));
+    --color-input-border: rgba(var(--input-border));
+    --color-input-border-focus: rgba(var(--input-border-focus));
+    --color-input-ring: rgba(var(--input-ring));
+    --color-menu-background: rgba(var(--menu-background));
+    --color-menu-item-background-hover: rgba(var(--menu-item-background-hover));
+    --color-menu-item-background-focus: rgba(var(--menu-item-background-focus));
+    --color-footer-background: rgba(var(--footer-background));
+    --color-separator: rgba(var(--separator));
+
+    --font-sans: "IBMPlexSans"
+}
+
+@layer base {
+
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+
+    dialog {
+        margin: auto;
+    }
+}
 
 @font-face {
     font-family: "IBMPlexSans";

@@ -9,6 +9,7 @@
     import { profile_timeline_index } from "$lib/stores/profile_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
+    import { HTML } from "@threlte/extras";
     import { _ } from "svelte-i18n";
     import { temp } from "three/examples/jsm/nodes/Nodes.js";
 
@@ -76,7 +77,7 @@
             {/if}
         </h4>
         {#if data.profile.bio.length}
-            <p class="whitespace-pre-wrap text-sm">{data.profile.bio}</p>
+            <p class="prose">{@html data.profile.bio}</p>
         {:else if data.isOwnProfile}
             <a class="btn-primary inline-block" href="/settings/profile"
                 >+ {$_("add-bio")}</a
