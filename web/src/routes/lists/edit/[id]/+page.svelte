@@ -6,11 +6,11 @@
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import Button from "$lib/components/base/button.svelte";
+    import Editor from "$lib/components/base/editor.svelte";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
-    import Textarea from "$lib/components/base/textarea.svelte";
     import Toggle from "$lib/components/base/toggle.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
@@ -20,6 +20,9 @@
     import type { Trail, TrailSearchResult } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
+    import {
+        searchTrails,
+    } from "$lib/stores/search_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import {
@@ -37,9 +40,6 @@
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
     import { z } from "zod";
-    import {
-        searchTrails,
-    } from "$lib/stores/search_store.js";
 
     let { data } = $props();
 
@@ -309,11 +309,12 @@
         <TextField name="name" label={$_("name")} error={$errors.name}
         ></TextField>
 
-        <Textarea
-            name="description"
+        <Editor
+        extraClasses="min-h-24"
+            bind:value={$formData.description}
             label={$_("description")}
             error={$errors.description}
-        ></Textarea>
+        ></Editor>
         <Toggle name="public" label={$_("public")}></Toggle>
         <h3 class="text-xl font-semibold">
             {$_("trail", { values: { n: 2 } })}

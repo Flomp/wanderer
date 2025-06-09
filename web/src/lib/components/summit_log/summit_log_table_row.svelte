@@ -5,6 +5,7 @@
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
@@ -178,7 +179,7 @@
                     ><p
                         class="rounded-full bg-menu-item-background-hover hover:bg-menu-item-background-focus text-ellipsis max-w-28 whitespace-nowrap overflow-hidden px-3 py-1"
                     >
-                        {log.text}
+                        {formatHTMLAsText(log.text)}
                     </p></button
                 >
             {/if}

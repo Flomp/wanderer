@@ -7,6 +7,7 @@
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
@@ -100,7 +101,11 @@
                 ? ''
                 : 'max-h-24 overflow-hidden text-ellipsis'}"
         >
-            {!active ? list.description?.substring(0, 100) : list.description}
+            {formatHTMLAsText(
+                !active
+                    ? list.description?.substring(0, 100)
+                    : list.description,
+            )}
             {#if (list.description?.length ?? 0) > 100 && !active}
                 ...
             {/if}

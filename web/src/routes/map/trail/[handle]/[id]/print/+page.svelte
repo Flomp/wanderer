@@ -13,6 +13,7 @@
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import {
@@ -343,7 +344,7 @@
 
             if (includeDescription && $trail.description) {
                 doc.addPage();
-                doc.text($trail.description, 16, 16, {
+                doc.text(formatHTMLAsText($trail.description), 16, 16, {
                     maxWidth: width - 32,
                 });
                 doc.addImage(
@@ -460,6 +461,7 @@
             showGrid = true;
         }
     }
+
 </script>
 
 <svelte:head>

@@ -77,7 +77,7 @@
             {/if}
         </h4>
         {#if data.profile.bio.length}
-            <p class="prose">{@html data.profile.bio}</p>
+            <p class="prose dark:prose-invert">{@html data.profile.bio}</p>
         {:else if data.isOwnProfile}
             <a class="btn-primary inline-block" href="/settings/profile"
                 >+ {$_("add-bio")}</a

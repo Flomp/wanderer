@@ -15,6 +15,7 @@
     import PhotoPicker from "../trail/photo_picker.svelte";
     import TrailPicker from "../trail/trail_picker.svelte";
     import type { SummitLog } from "$lib/models/summit_log";
+    import Editor from "../base/editor.svelte";
     interface Props {
         children?: Snippet<[any]>;
         onsave?: (summitLog: SummitLog) => void;
@@ -134,7 +135,7 @@
                     showThumbnailControls={false}
                 ></PhotoPicker>
             </div>
-            <div class="flex gap-4">
+            <div class="flex gap-4 items-end">
                 {#if $data.expand}
                     <TrailPicker
                         bind:trailFile={$data._gpx}
@@ -144,12 +145,12 @@
                     ></TrailPicker>
                 {/if}
                 <div class="basis-full">
-                    <Textarea
-                        name="text"
+                    <Editor
+                        bind:value={$data.text}
                         extraClasses="h-28"
                         label={$_("text")}
                         error={$errors.text}
-                    ></Textarea>
+                    ></Editor>
                 </div>
             </div>
         </form>

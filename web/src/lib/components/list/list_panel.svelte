@@ -179,9 +179,9 @@
         <p
             class="text-gray-500 whitespace-pre-wrap {fullDescription
                 ? ''
-                : 'max-h-24 overflow-hidden text-ellipsis'}"
+                : 'max-h-24 overflow-hidden text-ellipsis'} prose dark:prose-invert"
         >
-            {!fullDescription
+            {@html !fullDescription
                 ? list.description?.substring(0, 100)
                 : list.description}
             {#if (list.description?.length ?? 0) > 100 && !fullDescription}

@@ -8,6 +8,7 @@
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
@@ -121,7 +122,7 @@
             <p
                 class="mt-3 text-sm whitespace-nowrap min-w-0 max-w-full overflow-hidden text-ellipsis"
             >
-                {trail.description}
+                {formatHTMLAsText(trail.description ?? "")}
             </p>
         {/if}
     </div>

@@ -1,13 +1,13 @@
 <script lang="ts">
     import { Editor } from "@tiptap/core";
-    import { type Level } from "@tiptap/extension-heading";
     import { Link } from "@tiptap/extension-link";
+    import { Underline } from "@tiptap/extension-underline";
     import StarterKit from "@tiptap/starter-kit";
-    import { onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { z, ZodError } from "zod";
     import Modal from "./modal.svelte";
-    import Select, { type SelectItem } from "./select.svelte";
+    import { type SelectItem } from "./select.svelte";
     import TextField from "./text_field.svelte";
     import Toggle from "./toggle.svelte";
 
@@ -45,11 +45,21 @@
     let linkText: string = $state("");
     let openLinkInNewTab: boolean = $state(false);
 
+    $effect(() => {
+        value;
+        untrack(() => {
+            if (value !== editor?.getHTML()) {
+                editor?.commands.setContent(value);
+            }
+        });
+    });
+
     onMount(() => {
         editor = new Editor({
             element: element,
             extensions: [
                 StarterKit,
+                Underline,
                 Link.configure({
                     openOnClick: false,
                     autolink: true,
@@ -105,7 +115,7 @@
             },
             editorProps: {
                 attributes: {
-                    class: `prose text-content bg-input-background border border-input-border rounded-md p-3 resize-none transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0 ${extraClasses}`,
+                    class: `prose dark:prose-invert text-content bg-input-background border border-input-border rounded-md p-3 resize-none transition-colors focus:border-input-border-focus focus:outline-none focus:ring-0 ${extraClasses}`,
                 },
             },
             onSelectionUpdate: ({ editor }) => {
@@ -130,7 +140,6 @@
     });
 
     function openLinkModal() {
-        console.log(editor?.getAttributes("link"));
         linkURL = editor?.getAttributes("link").href ?? "";
         openLinkInNewTab = editor?.getAttributes("link").target === "_blank";
         if (linkURL) {
@@ -166,13 +175,13 @@
                             type: "link",
                             attrs: {
                                 href: linkURL,
-                                target: "_blank",
+                                target: openLinkInNewTab ? "_blank" : null,
                             },
                         },
                     ],
                 })
                 .run();
-
+            console.log(editor?.getHTML());
             modal.closeModal();
         } catch (e) {
             if (
@@ -191,106 +200,120 @@
     }
 </script>
 
-<!-- Toolbar -->
-<div class="flex flex-wrap items-center py-2">
-    <div class="mr-2">
-        <Select
-            items={fontSizes}
-            bind:value={currentFontSize}
-            onchange={(value: string) => {
-                if (value.startsWith("p")) {
-                    editor?.chain().focus().setParagraph().run();
-                } else {
-                    editor
-                        ?.chain()
-                        .focus()
-                        .setHeading({
-                            level: parseInt(value.substring(1)) as Level,
-                        })
-                        .run();
-                }
-            }}
-        ></Select>
+<div>
+    {#if label.length}
+        <p class="text-sm font-medium mb-1">
+            {label}
+        </p>
+    {/if}
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-center py-2 gap-y-2">
+        <div class="mr-2">
+            <!-- <Select
+                items={fontSizes}
+                bind:value={currentFontSize}
+                onchange={(value: string) => {
+                    if (value.startsWith("p")) {
+                        editor?.chain().focus().setParagraph().run();
+                    } else {
+                        editor
+                            ?.chain()
+                            .focus()
+                            .setHeading({
+                                level: parseInt(value.substring(1)) as Level,
+                            })
+                            .run();
+                    }
+                }}
+            ></Select> -->
+        </div>
+        <div class="flex gap-2 border-r border-input-border pr-2">
+            <button
+                type="button"
+                class="btn-icon"
+                onclick={() => editor?.chain().focus().toggleBold().run()}
+                class:ring-2={editor?.isActive("bold")}
+                aria-label="Bold"
+            >
+                <i class="fas fa-bold"></i>
+            </button>
+
+            <button
+                type="button"
+                class="btn-icon"
+                onclick={() => editor?.chain().focus().toggleItalic().run()}
+                class:ring-2={editor?.isActive("italic")}
+                aria-label="Italic"
+            >
+                <i class="fas fa-italic"></i>
+            </button>
+
+            <button
+                type="button"
+                class="btn-icon"
+                onclick={() => editor?.chain().focus().toggleUnderline().run()}
+                class:ring-2={editor?.isActive("underline")}
+                aria-label="Underline"
+            >
+                <i class="fas fa-underline"></i>
+            </button>
+        </div>
+
+        <div class="flex gap-1 border-r border-input-border px-2">
+            <button
+                type="button"
+                class="btn-icon"
+                onclick={() => editor?.chain().focus().toggleBulletList().run()}
+                class:ring-2={editor?.isActive("bulletList")}
+                aria-label="Bullet List"
+            >
+                <i class="fas fa-list-ul"></i>
+            </button>
+
+            <button
+                type="button"
+                class="btn-icon"
+                onclick={() =>
+                    editor?.chain().focus().toggleOrderedList().run()}
+                class:ring-2={editor?.isActive("orderedList")}
+                aria-label="Numbered List"
+            >
+                <i class="fas fa-list-ol"></i>
+            </button>
+        </div>
+
+        <div class="flex gap-1 border-r border-input-border px-2">
+            <button
+                type="button"
+                class="btn-icon"
+                onclick={() => editor?.chain().focus().toggleBlockquote().run()}
+                class:ring-2={editor?.isActive("blockquote")}
+                aria-label="Quote"
+            >
+                <i class="fas fa-quote-right"></i>
+            </button>
+        </div>
+
+        <div class="flex gap-1 px-2">
+            <button
+                type="button"
+                class="btn-icon"
+                onclick={() => openLinkModal()}
+                class:ring-2={editor?.isActive("link")}
+                aria-label="Link"
+            >
+                <i class="fas fa-link"></i>
+            </button>
+        </div>
     </div>
-    <div class="flex gap-2 border-r border-input-border px-2">
-        <button
-            class="btn-icon"
-            onclick={() => editor?.chain().focus().toggleBold().run()}
-            class:ring-2={editor?.isActive("bold")}
-            aria-label="Bold"
-        >
-            <i class="fas fa-bold"></i>
-        </button>
+    <div bind:this={element}></div>
 
-        <button
-            class="btn-icon"
-            onclick={() => editor?.chain().focus().toggleItalic().run()}
-            class:ring-2={editor?.isActive("italic")}
-            aria-label="Italic"
-        >
-            <i class="fas fa-italic"></i>
-        </button>
-
-        <button
-            class="btn-icon"
-            onclick={() => editor?.chain().focus().toggleStrike().run()}
-            class:ring-2={editor?.isActive("strike")}
-            aria-label="Strike"
-        >
-            <i class="fas fa-strikethrough"></i>
-        </button>
-    </div>
-
-    <div class="flex gap-1 border-r border-input-border px-2">
-        <button
-            class="btn-icon"
-            onclick={() => editor?.chain().focus().toggleBulletList().run()}
-            class:ring-2={editor?.isActive("bulletList")}
-            aria-label="Bullet List"
-        >
-            <i class="fas fa-list-ul"></i>
-        </button>
-
-        <button
-            class="btn-icon"
-            onclick={() => editor?.chain().focus().toggleOrderedList().run()}
-            class:ring-2={editor?.isActive("orderedList")}
-            aria-label="Numbered List"
-        >
-            <i class="fas fa-list-ol"></i>
-        </button>
-    </div>
-
-    <div class="flex gap-1 border-r border-input-border px-2">
-        <button
-            class="btn-icon"
-            onclick={() => editor?.chain().focus().toggleBlockquote().run()}
-            class:ring-2={editor?.isActive("blockquote")}
-            aria-label="Quote"
-        >
-            <i class="fas fa-quote-right"></i>
-        </button>
-    </div>
-
-    <div class="flex gap-1 px-2">
-        <button
-            class="btn-icon"
-            onclick={() => openLinkModal()}
-            class:ring-2={editor?.isActive("link")}
-            aria-label="Link"
-        >
-            <i class="fas fa-link"></i>
-        </button>
-    </div>
+    {#if error}
+        <span class="editor-error text-xs text-red-400">
+            {error instanceof Array ? $_(error[0]) : error}
+        </span>
+    {/if}
 </div>
-<div bind:this={element}></div>
-
-{#if error}
-    <span class="editor-error text-xs text-red-400">
-        {error instanceof Array ? $_(error[0]) : error}
-    </span>
-{/if}
-
 <Modal
     id="summit-log-modal"
     title={"Insert/edit link"}
@@ -310,6 +333,7 @@
         <div class="flex items-center gap-4">
             {#if editor?.getAttributes("link").href}
                 <button
+                    type="button"
                     class="btn-secondary shrink-0"
                     onclick={() => unsetLink()}
                     aria-label="Link"
@@ -319,8 +343,10 @@
                 </button>
                 <div class="basis-full"></div>
             {/if}
-            <button class="btn-secondary" onclick={() => modal.closeModal()}
-                >{$_("cancel")}</button
+            <button
+                type="button"
+                class="btn-secondary"
+                onclick={() => modal.closeModal()}>{$_("cancel")}</button
             >
             <button
                 class="btn-primary"

@@ -28,7 +28,7 @@ export class List {
         this.public = params?.public ?? false
         this.expand = { trails: trails };
         this.trails = trails.map(t => t.id!);
-        this.description = params?.description;
+        this.description = params?.description ?? "";
         this.avatar = params?.avatar;
         this.author = params?.author ?? "000000000000000";
     }

@@ -158,7 +158,7 @@
     bind:this={textModal}
 >
     {#snippet content()}
-        <p class="whitespace-pre-wrap">{currentText}</p>
+        <div class="prose dark:prose-invert">{@html currentText}</div>
     {/snippet}
 </Modal>
 

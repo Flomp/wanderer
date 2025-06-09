@@ -90,6 +90,7 @@
     import { scale } from "svelte/transition";
     import { z } from "zod";
     import { currentUser } from "$lib/stores/user_store.js";
+    import Editor from "$lib/components/base/editor.svelte";
 
     let { data } = $props();
 
@@ -472,7 +473,9 @@
     }
 
     function beforeSummitLogModalOpen() {
-        const newSummitLog = new SummitLog(new Date().toISOString().split("T")[0]);
+        const newSummitLog = new SummitLog(
+            new Date().toISOString().split("T")[0],
+        );
         newSummitLog.author = $currentUser?.actor;
         summitLog.set(newSummitLog);
         summitLogModal.openModal();
@@ -1116,8 +1119,11 @@
             error={$errors.location}
         ></TextField>
         <Datepicker label={$_("date")} bind:value={$formData.date}></Datepicker>
-        <Textarea name="description" label={$_("describe-your-trail")}
-        ></Textarea>
+        <Editor
+        extraClasses="min-h-24"
+            bind:value={$formData.description}
+            label={$_("describe-your-trail")}
+        ></Editor>
         <Combobox
             bind:value={getTrailTags, setTrailTags}
             onupdate={searchTags}

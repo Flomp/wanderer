@@ -129,7 +129,6 @@ func sanitizeHTML() func(e *core.RecordRequestEvent) error {
 		fieldsToSanitize := map[string][]string{
 			"lists":       {"description"},
 			"settings":    {"bio"},
-			"pages":       {"body"},
 			"summit_logs": {"text"},
 			"trails":      {"description"},
 			"waypoints":   {"description"},
@@ -140,11 +139,19 @@ func sanitizeHTML() func(e *core.RecordRequestEvent) error {
 			return e.Next()
 		}
 
-		p := bluemonday.UGCPolicy()
+		p := bluemonday.NewPolicy()
+		p.AllowStandardAttributes()
+		p.AllowStandardURLs()
+		p.AllowLists()
+		p.AllowElements("br", "div", "hr", "p", "span", "wbr")
+		p.AllowElements("b", "strong", "em", "u", "blockquote", "a")
+		p.AllowAttrs("href").OnElements("a")
+		p.AllowAttrs("target").OnElements("a")
 
 		for _, field := range fields {
 			if val, ok := e.Record.Get(field).(string); ok {
-				e.Record.Set(field, p.Sanitize(val))
+				sanitizedValue := p.Sanitize(val)
+				e.Record.Set(field, sanitizedValue)
 			}
 		}
 

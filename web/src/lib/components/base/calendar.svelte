@@ -169,6 +169,7 @@
 
 <style lang="postcss">
 	@reference "tailwindcss";
+    @reference "../../../css/app.css";
 
 	.calendar-weekday {
 		font-weight: 600;

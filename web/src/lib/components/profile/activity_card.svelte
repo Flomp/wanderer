@@ -5,6 +5,7 @@
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
@@ -104,9 +105,11 @@
     {/if}
     {#if activity.description.length}
         <p class="text-sm whitespace-pre-wrap mt-6">
-            {!fullDescription
-                ? activity.description?.substring(0, 100)
-                : activity.description}
+            {formatHTMLAsText(
+                !fullDescription
+                    ? activity.description?.substring(0, 100)
+                    : activity.description,
+            )}
             {#if (activity.description?.length ?? 0) > 100 && !fullDescription}
                 <button
                     onclick={(e) => {

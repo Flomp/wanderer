@@ -7,6 +7,8 @@
 @import "tailwindcss/utilities.css";
 @plugin '@tailwindcss/typography';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
     --color-primary: rgba(var(--primary));
     --color-background: rgba(var(--background));

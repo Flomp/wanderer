@@ -14,6 +14,7 @@
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
@@ -132,7 +133,7 @@
                     >
                 </div>
             {/if}
-            <span class="whitespace-pre-wrap">{log.text}</span>
+            <span class="whitespace-pre-wrap">{formatHTMLAsText(log.text)}</span>
         </div>
     </div>
 </div>

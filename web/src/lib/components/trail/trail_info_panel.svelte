@@ -462,10 +462,10 @@
                     {$_("description")}
                 </h4>
                 {#if trail.description?.length}
-                    <article class="text-justify whitespace-pre-line text-sm">
-                        {!fullDescription
-                            ? trail.description?.substring(0, 300)
-                            : trail.description}
+                    <article class="text-justify whitespace-pre-line text-sm prose dark:prose-invert">
+                        {@html (!fullDescription
+                            ?trail.description?.substring(0, 300)
+                            : trail.description)}
                         {#if (trail.description?.length ?? 0) > 300 && !fullDescription}
                             <button
                                 onclick={(e) => {
