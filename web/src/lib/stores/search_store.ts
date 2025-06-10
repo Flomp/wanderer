@@ -193,9 +193,9 @@ export async function searchMulti(options: MultiSearchParams): Promise<MultiSear
     return response.results
 }
 
-export async function searchActors(q: string): Promise<Actor[]> {
+export async function searchActors(q: string, includeSelf: boolean = true): Promise<Actor[]> {
     try {
-        const r = await fetch(`/api/v1/search/actor?q=${q}`,)
+        const r = await fetch(`/api/v1/search/actor?q=${q}&includeSelf=${includeSelf}`,)
 
         if (!r.ok) {
             return []

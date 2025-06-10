@@ -383,18 +383,14 @@ func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 		if err != nil {
 			return err
 		}
-		userIds := make([]string, len(shares))
+		actorIds := make([]string, len(shares))
 		for i, r := range shares {
-			userIds[i] = r.GetString("user")
+			actorIds[i] = r.GetString("actor")
 		}
-		err = util.UpdateTrailShares(trailId, userIds, client)
+		err = util.UpdateTrailShares(trailId, actorIds, client)
 
 		if err != nil {
 			return err
-		}
-
-		if errs := e.App.ExpandRecord(record, []string{"trail", "trail.author"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
 		}
 
 		return e.Next()
@@ -509,18 +505,14 @@ func createListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 		if err != nil {
 			return err
 		}
-		userIds := make([]string, len(shares))
+		actorIds := make([]string, len(shares))
 		for i, r := range shares {
-			userIds[i] = r.GetString("user")
+			actorIds[i] = r.GetString("actor")
 		}
-		err = util.UpdateListShares(listId, userIds, client)
+		err = util.UpdateListShares(listId, actorIds, client)
 
 		if err != nil {
 			return err
-		}
-
-		if errs := e.App.ExpandRecord(record, []string{"list", "list.author"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
 		}
 
 		return e.Next()
@@ -1022,11 +1014,11 @@ func bootstrapMeilisearchDocuments(app core.App, client meilisearch.ServiceManag
 		if err != nil {
 			return err
 		}
-		userIds := make([]string, len(shares))
+		actorIds := make([]string, len(shares))
 		for i, r := range shares {
-			userIds[i] = r.GetString("user")
+			actorIds[i] = r.GetString("actor")
 		}
-		err = util.UpdateTrailShares(trail.Id, userIds, client)
+		err = util.UpdateTrailShares(trail.Id, actorIds, client)
 
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
@@ -1059,11 +1051,11 @@ func bootstrapMeilisearchDocuments(app core.App, client meilisearch.ServiceManag
 		if err != nil {
 			return err
 		}
-		userIds := make([]string, len(shares))
+		actorIds := make([]string, len(shares))
 		for i, r := range shares {
-			userIds[i] = r.GetString("user")
+			actorIds[i] = r.GetString("actor")
 		}
-		err = util.UpdateListShares(list.Id, userIds, client)
+		err = util.UpdateListShares(list.Id, actorIds, client)
 
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to update list shares '%s': %v", list.GetString("name"), err))

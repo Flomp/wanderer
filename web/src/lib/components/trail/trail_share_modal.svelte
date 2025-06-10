@@ -9,12 +9,11 @@
         trail_share_index,
         trail_share_update,
     } from "$lib/stores/trail_share_store";
-    import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
+    import ActorSearch from "../actor_search.svelte";
     import Button from "../base/button.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
-    import UserSearch from "../user_search.svelte";
 
     interface Props {
         trail: Trail;
@@ -55,7 +54,7 @@
     }
 
     async function shareTrail(item: SelectItem) {
-        const share = new TrailShare(item.value.id, trail.id!, "view");
+        const share = new TrailShare(item.value.iri, trail.id!, "view");
         await trail_share_create(share);
         fetchShares();
     }
@@ -83,13 +82,15 @@
 <Modal
     id="share-modal"
     title={$_("share-this-trail")}
-    size="max-w-sm overflow-visible"
+    size="min-w-sm overflow-visible"
     bind:this={modal}
 >
     {#snippet content()}
         <div>
-            <UserSearch includeSelf={false} onclick={(item) => shareTrail(item)}
-            ></UserSearch>
+            <ActorSearch
+                includeSelf={false}
+                onclick={(item) => shareTrail(item)}
+            ></ActorSearch>
             <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
             {#if $shares.length == 0}
@@ -102,16 +103,15 @@
                         <div class="flex items-center gap-x-2 p-2">
                             <img
                                 class="rounded-full w-8 aspect-square mr-2"
-                                src={getFileURL(
-                                    share.expand.user,
-                                    share.expand.user.avatar,
-                                ) ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.user.username}&backgroundType=gradientLinear`}
+                                src={share.expand.actor.icon ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <p>{share.expand.user.username}</p>
+                            <p>
+                                {`@${share.expand.actor.username}${share.expand.actor.isLocal ? "" : "@" + share.expand.actor.domain}`}
+                            </p>
                             <span
-                                class="basis-full text-sm text-center text-gray-500"
+                                class="basis-full text-sm  text-gray-500 text-end"
                                 >{$_("can")}</span
                             >
                             <div class="shrink-0">

@@ -2,7 +2,7 @@ import { z, ZodType } from "zod";
 import type { ListShare } from "../list_share";
 
 const ListShareCreateSchema = z.object({
-    user: z.string().length(15),
+    actor: z.string().url(),
     list: z.string().length(15),
     permission: z.enum(["view", "edit"])
 

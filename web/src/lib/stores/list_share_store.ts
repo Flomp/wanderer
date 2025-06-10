@@ -9,6 +9,7 @@ export const shares: Writable<ListShare[]> = writable([])
 export async function list_share_index(list: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/list-share?' + new URLSearchParams({
         filter: `list='${list}'`,
+        expand: "actor"
     }), {
         method: 'GET',
     })

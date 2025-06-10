@@ -42,7 +42,7 @@
 
 <Modal
     id="email-modal"
-    size="max-w-xl"
+    size="min-w-md"
     title={$_("change-email")}
     bind:this={modal}
 >

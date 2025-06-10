@@ -24,7 +24,10 @@
 
     let thumbnail = $derived(
         trail.photos.length
-            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            ? getFileURL(
+                  trail,
+                  trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0],
+              )
             : $theme === "light"
               ? emptyStateTrailLight
               : emptyStateTrailDark,

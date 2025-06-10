@@ -50,8 +50,10 @@
                     <i class="fa fa-globe"></i>
                 </span>
             {/if}
-            {#if listIsShared}
-                <ShareInfo type="list" subject={list}></ShareInfo>
+            {#if list.expand?.list_share_via_list?.length}
+                <span class="tooltip" data-title={$_("shared")}>
+                    <i class="fa fa-share-nodes"></i>
+                </span>
             {/if}
         </div>
         {#if list.expand?.author}

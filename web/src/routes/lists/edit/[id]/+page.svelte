@@ -20,9 +20,7 @@
     import type { Trail, TrailSearchResult } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
-    import {
-        searchTrails,
-    } from "$lib/stores/search_store.js";
+    import { searchTrails } from "$lib/stores/search_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import {
@@ -192,17 +190,19 @@
     }
 
     async function findNewTrailShares() {
-        const usersWithAccess: string[] = [
+        const actorsWithAccess: string[] = [
             $formData.author!,
-            ...($formData.expand?.list_share_via_list ?? []).map((s) => s.user),
+            ...($formData.expand?.list_share_via_list ?? []).map(
+                (s) => s.actor,
+            ),
         ];
-        for (const userId of usersWithAccess) {
+        for (const actorId of actorsWithAccess) {
             const existingTrailShares = await trail_share_index({
-                user: userId,
+                actor: actorId,
             });
             for (const trail of $formData.expand?.trails ?? []) {
                 if (
-                    trail.author == userId ||
+                    trail.author == actorId ||
                     trail.author != $currentUser?.id
                 ) {
                     continue;
@@ -211,7 +211,7 @@
                     (s) => s.trail == trail.id,
                 );
                 if (!trailShare) {
-                    newShares.push(new TrailShare(userId, trail.id!, "view"));
+                    newShares.push(new TrailShare(actorId, trail.id!, "view"));
                 }
             }
         }
@@ -310,7 +310,7 @@
         ></TextField>
 
         <Editor
-        extraClasses="min-h-24"
+            extraClasses="min-h-24"
             bind:value={$formData.description}
             label={$_("description")}
             error={$errors.description}
@@ -340,7 +340,8 @@
                             src={trail.photos.length
                                 ? getFileURL(
                                       trail,
-                                      trail.photos[trail.thumbnail ?? 0],
+                                      trail.photos.at(trail.thumbnail ?? 0) ??
+                                          trail.photos[0],
                                   )
                                 : $theme === "light"
                                   ? emptyStateTrailLight

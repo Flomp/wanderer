@@ -274,7 +274,7 @@ func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meili
 		return fmt.Errorf("failed to expand category: %v", errs)
 	}
 
-	doc, err := documentFromTrailRecord(app, r, author, true)
+	doc, err := documentFromTrailRecord(app, r, author, false)
 	if err != nil {
 		return err
 	}
@@ -323,7 +323,7 @@ func UpdateList(app core.App, r *core.Record, author *core.Record, client meilis
 		return fmt.Errorf("failed to expand trails: %v", errs)
 	}
 
-	documents, err := documentFromListRecord(r, author, true)
+	documents, err := documentFromListRecord(r, author, false)
 	if err != nil {
 		return err
 	}

@@ -42,7 +42,7 @@
     {id}
     tabindex="-1"
     aria-hidden="true"
-    class="w-full {size} max-h-full rounded-xl text-content"
+    class="{size} max-h-full rounded-xl text-content"
 >
     <!-- Modal content -->
     <div class="bg-background shadow rounded-xl">

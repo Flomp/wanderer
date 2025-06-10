@@ -149,7 +149,7 @@
                     <img
                         class="rounded-full w-10 aspect-square"
                         src={getFileURL(user, user.avatar) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${user.username.toLowerCase()}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
                 </a>
@@ -247,7 +247,7 @@
                             <img
                                 class="rounded-full w-full h-full"
                                 src={getFileURL(user, user.avatar) ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${user.username.toLowerCase()}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
                         </button>

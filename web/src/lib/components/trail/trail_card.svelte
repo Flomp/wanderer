@@ -30,7 +30,10 @@
 
     let thumbnail = $derived(
         trail.photos.length
-            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            ? getFileURL(
+                  trail,
+                  trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0],
+              )
             : $theme === "light"
               ? emptyStateTrailLight
               : emptyStateTrailDark,
@@ -115,7 +118,9 @@
                             `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                    {trail.expand.author.username}{trail.expand.author.isLocal ? '' : '@' + trail.expand.author.domain}
+                    {trail.expand.author.username}{trail.expand.author.isLocal
+                        ? ""
+                        : "@" + trail.expand.author.domain}
                 </p>
             {/if}
             {#if trail.expand?.tags?.length}

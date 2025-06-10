@@ -15,8 +15,14 @@ export async function GET(event: RequestEvent) {
 
         const [user, domain] = splitUsername(q!)
 
+        let filter = `isLocal=true&&username~'${user}'&&user.settings_via_user.privacy.account != 'private'`;
+
+         if (event.url.searchParams.get("includeSelf") == "false" && event.locals.pb.authStore.record) {
+            filter += `&& id != "${event.locals.pb.authStore.record.actor}"`
+         }
+
         const r = await event.fetch(`${domain ? `https://${domain}` : ''}/api/v1/activitypub/actor?` + new URLSearchParams({
-            filter: `isLocal=true&&username~'${user}'&&user.settings_via_user.privacy.account != 'private'`,
+            filter,
             perPage: "3"
         }),)
 

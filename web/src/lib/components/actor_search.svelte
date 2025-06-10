@@ -1,12 +1,9 @@
 <script lang="ts">
     import type { Actor } from "$lib/models/activitypub/actor";
-    import type { User } from "$lib/models/user";
-    import { actors_search } from "$lib/stores/actor_store";
+    import { searchActors } from "$lib/stores/search_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
-    import { users_search } from "$lib/stores/user_store";
-    import { getFileURL } from "$lib/util/file_util";
-    import Search, { type SearchItem } from "./base/search.svelte";
     import { _ } from "svelte-i18n";
+    import Search, { type SearchItem } from "./base/search.svelte";
 
     interface Props {
         label?: string;
@@ -35,7 +32,7 @@
             return;
         }
         try {
-            const actors: Actor[] = await actors_search(q, includeSelf);
+            const actors: Actor[] = await searchActors(q, includeSelf);
             searchItems = actors.map((a) => ({
                 text: a.preferred_username!,
                 description: `@${a.username}${a.isLocal ? "" : "@" + a.domain}`,

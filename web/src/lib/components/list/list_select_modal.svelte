@@ -39,7 +39,7 @@
 <Modal
     id="list-modal"
     title={$_("select-list")}
-    size="max-w-sm"
+    size="min-w-sm"
     bind:this={modal}
 >
     {#snippet children({ openModal })}

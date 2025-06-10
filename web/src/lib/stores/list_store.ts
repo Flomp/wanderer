@@ -78,7 +78,7 @@ export async function lists_search_filter(filter: ListFilter, page: number = 1, 
 export async function lists_show(id: string, handle?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const r = await f(`/api/v1/list/${id}?` + new URLSearchParams({
-        expand: "author,trails,trails.author",
+        expand: "author,trails,trails.author,list_share_via_list.actor",
         ...(handle ? { handle } : {})
     }), {
         method: 'GET',
@@ -240,9 +240,9 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${user?.id}`
+                filterText += ` OR shares = ${user?.actor}`
             } else {
-                filterText += ` AND NOT shares = ${user?.id}`
+                filterText += ` AND NOT shares = ${user?.actor}`
 
             }
         }
@@ -280,7 +280,7 @@ export async function searchResultToLists(hits: Hits<ListSearchResult>): Promise
                 list_share_via_list: h.shares?.map(s => ({
                     permission: "view",
                     list: h.id,
-                    user: s,
+                    actor: s,
                 })),
             }
         }

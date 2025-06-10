@@ -315,9 +315,9 @@
     {/if}
 </div>
 <Modal
-    id="summit-log-modal"
+    id="editor-modal"
     title={"Insert/edit link"}
-    size="max-w-lg"
+    size="min-w-lg"
     bind:this={modal}
 >
     {#snippet content()}

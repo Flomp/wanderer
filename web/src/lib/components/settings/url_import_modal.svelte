@@ -72,7 +72,7 @@
 
 <Modal
     id="url-import-modal"
-    size="max-w-xl"
+    size="min-w-sm"
     title={$_("from-url")}
     bind:this={modal}
 >
@@ -88,7 +88,7 @@
     {/snippet}
     {#snippet footer()}
         <div class="flex items-center gap-4">
-            <button class="btn-secondary" onclick={() => modal.closeModal()}
+            <button type="button" class="btn-secondary" onclick={() => modal.closeModal()}
                 >{$_("cancel")}</button
             >
             <Button primary type="submit" form="url-import-form" {loading}>{$_("import")}</Button>

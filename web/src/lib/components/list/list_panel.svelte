@@ -52,7 +52,7 @@
 
     let allowShare = $derived(
         list.author == $currentUser?.actor &&
-            !list.expand?.trails?.some((t) => t.author !== $currentUser?.actor),
+            !list.expand?.trails?.some((t) => !t.public && t.author !== $currentUser?.actor),
     );
 
     let dropdownItems = $derived([
