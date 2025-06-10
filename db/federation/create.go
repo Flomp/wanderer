@@ -123,10 +123,13 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 		})
 	}
 
-	trailObject := pub.ObjectNew(pub.ArticleType)
+	activityURL := fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id)
+	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", trail.GetString("description"), activityURL, activityURL)
+
+	trailObject := pub.ObjectNew(pub.NoteType)
 
 	trailObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("name")))
-	trailObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("description")))
+	trailObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, activityContent))
 	trailObject.Location = pub.Place{
 		Type:      pub.PlaceType,
 		Name:      pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("location"))),
@@ -136,7 +139,7 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	trailObject.AttributedTo = pub.IRI(trailAuthor.GetString("iri"))
 	trailObject.Published = trail.GetDateTime("created").Time()
 	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
-	trailObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id))
+	trailObject.URL = pub.IRI(activityURL)
 
 	trailObject.StartTime = trail.GetDateTime("date").Time()
 	trailObject.Attachment = attachments
@@ -452,14 +455,17 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 
 	author := listAuthor.GetString("iri")
 
-	listObject := pub.ObjectNew(pub.ArticleType)
+	activityURL := fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("username"), list.Id)
+	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", list.GetString("description"), activityURL, activityURL)
+
+	listObject := pub.ObjectNew(pub.NoteType)
 	listObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("name")))
-	listObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("description")))
+	listObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, activityContent))
 
 	listObject.AttributedTo = pub.IRI(listAuthor.GetString("iri"))
 	listObject.Published = list.GetDateTime("created").Time()
 	listObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/list/%s", origin, list.Id))
-	listObject.URL = pub.IRI(fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("username"), list.Id))
+	listObject.URL = pub.IRI(activityURL)
 	listObject.Attachment = attachments
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, listObject)
