@@ -99,6 +99,7 @@
     let commentDeleteLoading: boolean = false;
 
     let summitLogsLoading: boolean = $state(activeTab == 0);
+    let summitLogCreateLoading: boolean = $state(false);
 
     let fullDescription: boolean = $state(false);
 
@@ -226,18 +227,23 @@
     }
 
     async function saveSummitLog(log: SummitLog) {
+        summitLogCreateLoading = true;
         if (log.id) {
             let oldLogIndex = $summitLogs.findIndex((l) => l.id === log.id);
             if (oldLogIndex < 0) {
                 return;
             }
-            await summit_logs_update($summitLogs[oldLogIndex], log);
-            $summitLogs[oldLogIndex] = log;
+            const updatedLog = await summit_logs_update(
+                $summitLogs[oldLogIndex],
+                log,
+            );
+            $summitLogs[oldLogIndex] = updatedLog;
         } else {
             log.trail = trail.id;
             const newLog = await summit_logs_create(log);
             summitLogs.set([...$summitLogs, newLog]);
         }
+        summitLogCreateLoading = false;
     }
 
     function beforeConfirmModalOpen(currentSummitLog: SummitLog) {
@@ -462,10 +468,12 @@
                     {$_("description")}
                 </h4>
                 {#if trail.description?.length}
-                    <article class="text-justify whitespace-pre-line text-sm prose dark:prose-invert">
-                        {@html (!fullDescription
-                            ?trail.description?.substring(0, 300)
-                            : trail.description)}
+                    <article
+                        class="text-justify whitespace-pre-line text-sm prose dark:prose-invert"
+                    >
+                        {@html !fullDescription
+                            ? trail.description?.substring(0, 300)
+                            : trail.description}
                         {#if (trail.description?.length ?? 0) > 300 && !fullDescription}
                             <button
                                 onclick={(e) => {
@@ -504,6 +512,8 @@
                         <Button
                             secondary
                             type="button"
+                            loading={summitLogCreateLoading}
+                            disabled={summitLogCreateLoading}
                             onclick={() => beforeSummitLogModalOpen()}
                             ><i class="fa fa-plus mr-2"></i>{$_(
                                 "add-entry",
@@ -512,7 +522,9 @@
                     {/if}
                 </div>
                 {#if activeTab == 0}
-                    <div class="overflow-x-auto overflow-y-clip pb-3 scroll-x-only min-h-[175px]">
+                    <div
+                        class="overflow-x-auto overflow-y-clip pb-3 scroll-x-only min-h-[175px]"
+                    >
                         {#if summitLogsLoading}
                             <SkeletonTable></SkeletonTable>
                         {:else}

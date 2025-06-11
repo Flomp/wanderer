@@ -95,7 +95,9 @@ export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: 
         formData.append("gpx", newSummitLog._gpx);
     }
 
-    let r = await fetch('/api/v1/summit-log/form/' + newSummitLog.id, {
+    let r = await fetch('/api/v1/summit-log/form/' + newSummitLog.id + '?' + new URLSearchParams({
+        expand: "author"
+    }), {
         method: 'POST',
         body: formData,
     })
@@ -142,7 +144,7 @@ export function buildFilterText(filter: SummitLogFilter,): string {
         }
         if (isURL(filter.trail)) {
             filterText += `trail='${filter.trail}'||trail.iri='${filter.trail}'||trail='${filter.trail.substring(filter.trail.length - 15)}'`;
-        }else {
+        } else {
             filterText += `trail='${filter.trail}'`
         }
     }

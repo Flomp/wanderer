@@ -1135,6 +1135,17 @@
     });
 
     function handleKeydown(e: KeyboardEvent) {
+        const target = e.target as HTMLElement;
+
+        const isInputField =
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable;
+
+        if (isInputField) {
+            return;
+        }
+
         if (e.key == "m") {
             if (trails.length === 1) {
                 removeCaretLayer();
@@ -1144,6 +1155,17 @@
     }
 
     function handleKeyup(e: KeyboardEvent) {
+        const target = e.target as HTMLElement;
+
+        const isInputField =
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable;
+
+        if (isInputField) {
+            return;
+        }
+
         if (e.key == "m") {
             if (trails.length === 1) {
                 addTrailLayer(trails[0], trails[0].id!, 0, data[0]);
