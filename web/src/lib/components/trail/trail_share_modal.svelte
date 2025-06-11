@@ -24,6 +24,8 @@
 
     let modal: Modal;
 
+    let displayShareError = $state(false);
+
     export function openModal() {
         openShareModalLocal();
     }
@@ -54,6 +56,11 @@
     }
 
     async function shareTrail(item: SelectItem) {
+        if (!item.value.isLocal && !trail.public) {
+            displayShareError = true;
+            return;
+        }
+        displayShareError = false;
         const share = new TrailShare(item.value.iri, trail.id!, "view");
         await trail_share_create(share);
         fetchShares();
@@ -87,6 +94,14 @@
 >
     {#snippet content()}
         <div>
+            {#if displayShareError}
+                <p class="p-4 bg-red-100 rounded-xl mb-4 text-sm text-gray-500">
+                    <i class="fa fa-warning mr-2"></i>
+                    {$_("object-share-error", {
+                        values: { object: $_("trail", { values: { n: 1 } }) },
+                    })}
+                </p>
+            {/if}
             <ActorSearch
                 includeSelf={false}
                 onclick={(item) => shareTrail(item)}
@@ -111,13 +126,18 @@
                                 {`@${share.expand.actor.username}${share.expand.actor.isLocal ? "" : "@" + share.expand.actor.domain}`}
                             </p>
                             <span
-                                class="basis-full text-sm  text-gray-500 text-end"
+                                class="basis-full text-sm text-gray-500 text-end"
                                 >{$_("can")}</span
                             >
-                            <div class="shrink-0">
+                            <div
+                                class="shrink-0"
+                                class:tooltip={!share.expand.actor.isLocal}
+                                data-title={$_("remote-users-cannot-edit")}
+                            >
                                 <Select
                                     value={share.permission}
                                     items={permissionSelectItems}
+                                    disabled={!share.expand.actor.isLocal}
                                     onchange={(value) =>
                                         updateSharePermission(share, value)}
                                 ></Select>

@@ -3,8 +3,6 @@
         NotificationType,
         type Notification,
     } from "$lib/models/notification";
-    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
-    import { getFileURL } from "$lib/util/file_util";
     import { formatTimeSince } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
 
@@ -71,13 +69,13 @@
     function getLink(n: Notification) {
         switch (n.type) {
             case NotificationType.listShare:
-                return `/lists?list=${n.metadata?.id}`;
+                return `/lists/${n.metadata?.author}/${n.metadata?.id}`;
             case NotificationType.newFollower:
                 return `/profile/${n.metadata?.follower}`;
             case NotificationType.trailComment:
                 return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}?t=2`;
             case NotificationType.trailShare:
-                return `/trail/view/${n.metadata?.id}`;
+                return `/trail/view/${n.metadata?.author}/${n.metadata?.id}`;
             case NotificationType.summitLogCreate:
                 return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}`;
         }

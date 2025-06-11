@@ -52,7 +52,9 @@
 
     let allowShare = $derived(
         list.author == $currentUser?.actor &&
-            !list.expand?.trails?.some((t) => !t.public && t.author !== $currentUser?.actor),
+            !list.expand?.trails?.some(
+                (t) => !t.public && t.author !== $currentUser?.actor,
+            ),
     );
 
     let dropdownItems = $derived([
@@ -89,7 +91,7 @@
 <div class="relative">
     {#if (list.public || listIsShared) && $currentUser}
         <div
-            class="flex absolute top-4 right-6 {list.public && listIsShared
+            class="flex absolute top-4 left-6 {list.public && listIsShared
                 ? 'w-16'
                 : 'w-8'} h-8 rounded-full items-center justify-center bg-white text-primary"
         >

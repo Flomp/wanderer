@@ -158,6 +158,8 @@ func ProcessActivity(e *core.RequestEvent) error {
 		ProcessCreateOrUpdateActivity(e.App, actor, activity)
 	case pub.DeleteType:
 		ProcessDeleteActivity(e.App, actor, activity)
+	case pub.AnnounceType:
+		ProcessAnnounceActivity(e.App, actor, activity)
 	}
 	return e.JSON(http.StatusOK, nil)
 }

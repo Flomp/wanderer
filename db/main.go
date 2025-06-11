@@ -96,15 +96,15 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler())
 	app.OnRecordDeleteRequest("comments").BindFunc(deleteCommentHandler(client))
 
-	app.OnRecordAfterCreateSuccess("trail_share").BindFunc(createTrailShareHandler(client))
-	app.OnRecordAfterDeleteSuccess("trail_share").BindFunc(deleteTrailShareHandler(client))
+	app.OnRecordCreateRequest("trail_share").BindFunc(createTrailShareHandler(client))
+	app.OnRecordDeleteRequest("trail_share").BindFunc(deleteTrailShareHandler(client))
 
 	app.OnRecordAfterCreateSuccess("lists").BindFunc(createListHandler(client))
 	app.OnRecordAfterUpdateSuccess("lists").BindFunc(updateListHandler(client))
 	app.OnRecordAfterDeleteSuccess("lists").BindFunc(deleteListHandler(client))
 
-	app.OnRecordAfterCreateSuccess("list_share").BindFunc(createListShareHandler(client))
-	app.OnRecordAfterDeleteSuccess("list_share").BindFunc(deleteListShareHandler(client))
+	app.OnRecordCreateRequest("list_share").BindFunc(createListShareHandler(client))
+	app.OnRecordDeleteRequest("list_share").BindFunc(deleteListShareHandler(client))
 
 	app.OnRecordCreateRequest("follows").BindFunc(createFollowHandler())
 	app.OnRecordDeleteRequest("follows").BindFunc(deleteFollowHandler())
@@ -372,8 +372,8 @@ func deleteCommentHandler(client meilisearch.ServiceManager) func(e *core.Record
 	}
 }
 
-func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		record := e.Record
 
 		trailId := record.GetString("trail")
@@ -388,7 +388,11 @@ func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 			actorIds[i] = r.GetString("actor")
 		}
 		err = util.UpdateTrailShares(trailId, actorIds, client)
+		if err != nil {
+			return err
+		}
 
+		err = federation.CreateAnnounceActivity(e.App, record, federation.TrailAnnounceType)
 		if err != nil {
 			return err
 		}
@@ -397,8 +401,8 @@ func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 	}
 }
 
-func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		record := e.Record
 
 		trailId := record.GetString("trail")
@@ -495,8 +499,8 @@ func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 	}
 }
 
-func createListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func createListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		record := e.Record
 		listId := record.GetString("list")
 		shares, err := e.App.FindAllRecords("list_share",
@@ -515,12 +519,17 @@ func createListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 			return err
 		}
 
+		err = federation.CreateAnnounceActivity(e.App, record, federation.ListAnnounceType)
+		if err != nil {
+			return err
+		}
+
 		return e.Next()
 	}
 }
 
-func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		record := e.Record
 		listId := record.GetString("list")
 		err := util.UpdateListShares(listId, []string{}, client)

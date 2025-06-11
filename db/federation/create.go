@@ -34,58 +34,6 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	if err != nil {
 		return err
 	}
-	errs := app.ExpandRecord(trail, []string{"tags"}, nil)
-	if len(errs) > 0 {
-		return fmt.Errorf("failed to expand tags: %v", errs)
-	}
-	errs = app.ExpandRecord(trail, []string{"category"}, nil)
-	if len(errs) > 0 {
-		return fmt.Errorf("failed to expand category: %v", errs)
-	}
-
-	category := ""
-	categoryRecord := trail.ExpandedOne("category")
-	if categoryRecord != nil {
-		category = categoryRecord.GetString("name")
-	}
-
-	tagRecords := trail.ExpandedAll("tags")
-	tags := pub.ItemCollection{
-		pub.Object{
-			Type:    pub.NoteType,
-			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "category")),
-			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, category)),
-		},
-		pub.Object{
-			Type:    pub.NoteType,
-			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "difficulty")),
-			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("difficulty"))),
-		},
-		pub.Object{
-			Type:    pub.NoteType,
-			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_gain")),
-			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("elevation_gain")))),
-		},
-		pub.Object{
-			Type:    pub.NoteType,
-			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_loss")),
-			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("elevation_loss")))),
-		},
-		pub.Object{
-			Type:    pub.NoteType,
-			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "distance")),
-			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("distance")))),
-		},
-		pub.Object{
-			Type:    pub.NoteType,
-			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "duration")),
-			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("duration")))),
-		},
-	}
-
-	for _, v := range tagRecords {
-		tags.Append(pub.IRI(v.GetString("name")))
-	}
 
 	collection, err := app.FindCollectionByNameOrId("activitypub_activities")
 	if err != nil {
@@ -98,53 +46,10 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	to := "https://www.w3.org/ns/activitystreams#Public"
 	cc := trailAuthor.GetString("iri") + "/followers"
 
-	photos := trail.GetStringSlice("photos")
-
-	gpx := ""
-	if trail.GetString("gpx") != "" {
-		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, trail.GetString("gpx"))
+	trailObject, err := util.ObjectFromTrail(app, trail)
+	if err != nil {
+		return err
 	}
-
-	attachments := make(pub.ItemCollection, max(len(photos), 2))
-	for i := range min(len(photos), 3) {
-		iri := fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[i])
-
-		attachments[i] = pub.Image{
-			Type:      pub.ImageType,
-			MediaType: "image/jpeg",
-			URL:       pub.IRI(iri),
-		}
-	}
-	if gpx != "" {
-		attachments.Append(pub.Document{
-			Type:      pub.DocumentType,
-			MediaType: "application/xml+gpx",
-			URL:       pub.IRI(gpx),
-		})
-	}
-
-	activityURL := fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id)
-	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", trail.GetString("description"), activityURL, activityURL)
-
-	trailObject := pub.ObjectNew(pub.NoteType)
-
-	trailObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("name")))
-	trailObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, activityContent))
-	trailObject.Location = pub.Place{
-		Type:      pub.PlaceType,
-		Name:      pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("location"))),
-		Latitude:  trail.GetFloat("lat"),
-		Longitude: trail.GetFloat("lon"),
-	}
-	trailObject.AttributedTo = pub.IRI(trailAuthor.GetString("iri"))
-	trailObject.Published = trail.GetDateTime("created").Time()
-	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
-	trailObject.URL = pub.IRI(activityURL)
-
-	trailObject.StartTime = trail.GetDateTime("date").Time()
-	trailObject.Attachment = attachments
-
-	trailObject.Tag = tags
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, trailObject)
 	activity.Actor = pub.IRI(trailAuthor.GetString("iri"))
@@ -438,35 +343,12 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
 	to := "https://www.w3.org/ns/activitystreams#Public"
 	cc := listAuthor.GetString("iri") + "/followers"
-
-	avatar := ""
-	if list.GetString("avatar") != "" {
-		avatar = fmt.Sprintf("%s/api/v1/files/lists/%s/%s", origin, list.Id, list.GetString("avatar"))
-	}
-
-	attachments := make(pub.ItemCollection, 2)
-	if avatar != "" {
-		attachments[0] = pub.Image{
-			Type:      pub.ImageType,
-			MediaType: "image/jpeg",
-			URL:       pub.IRI(avatar),
-		}
-	}
-
 	author := listAuthor.GetString("iri")
 
-	activityURL := fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("username"), list.Id)
-	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", list.GetString("description"), activityURL, activityURL)
-
-	listObject := pub.ObjectNew(pub.NoteType)
-	listObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("name")))
-	listObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, activityContent))
-
-	listObject.AttributedTo = pub.IRI(listAuthor.GetString("iri"))
-	listObject.Published = list.GetDateTime("created").Time()
-	listObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/list/%s", origin, list.Id))
-	listObject.URL = pub.IRI(activityURL)
-	listObject.Attachment = attachments
+	listObject, err := util.ObjectFromList(app, list)
+	if err != nil {
+		return err
+	}
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, listObject)
 	activity.Actor = pub.IRI(author)
@@ -539,7 +421,9 @@ func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, act
 		return nil
 	}
 
-	return util.TrailFromActivity(activity, app, actor)
+	_, err := util.TrailFromActivity(activity, app, actor)
+
+	return err
 }
 
 func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, actor *core.Record) error {
@@ -773,5 +657,7 @@ func processCreateOrUpdateListActivity(activity pub.Activity, app core.App, acto
 		return nil
 	}
 
-	return util.ListFromActivity(activity, app, actor)
+	_, err := util.ListFromActivity(activity, app, actor)
+
+	return err
 }

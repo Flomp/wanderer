@@ -15,7 +15,6 @@
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import { ListCreateSchema } from "$lib/models/api/list_schema.js";
-    import { ListShareCreateSchema } from "$lib/models/api/list_share_schema.js";
     import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
     import type { Trail, TrailSearchResult } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
@@ -61,7 +60,15 @@
         expand: z
             .object({
                 trails: z.array(TrailCreateSchema).optional(),
-                list_share_via_list: z.array(ListShareCreateSchema).optional(),
+                list_share_via_list: z
+                    .array(
+                        z.object({
+                            actor: z.string().length(15),
+                            list: z.string().length(15),
+                            permission: z.enum(["view", "edit"]),
+                        }),
+                    )
+                    .optional(),
             })
             .optional(),
     });
@@ -100,7 +107,6 @@
             shareConfirmModal.openModal();
             return false;
         }
-
         return true;
     }
 
@@ -193,7 +199,7 @@
         const actorsWithAccess: string[] = [
             $formData.author!,
             ...($formData.expand?.list_share_via_list ?? []).map(
-                (s) => s.actor,
+                (s) => s.actor!,
             ),
         ];
         for (const actorId of actorsWithAccess) {

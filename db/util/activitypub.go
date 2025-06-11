@@ -156,10 +156,10 @@ func fetchOutboxPage(app core.App, actor *core.Record, pageURL string) error {
 	return nil
 }
 
-func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) (*core.Record, error) {
 	t, err := pub.ToObject(activity.Object)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	record, err := app.FindFirstRecordByData("trails", "iri", t.ID.String())
@@ -167,12 +167,14 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		if err == sql.ErrNoRows {
 			collection, err := app.FindCollectionByNameOrId("trails")
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			record = core.NewRecord(collection)
+			record.Set("id", security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet))
+
 		} else {
-			return err
+			return nil, err
 		}
 	}
 
@@ -180,7 +182,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 	var diffculty, category string
 	tags, err := pub.ToItemCollection(t.Tag)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, tag := range tags.Collection() {
@@ -232,7 +234,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 
 		attachments, err := pub.ToItemCollection(t.Attachment)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		photoURLs := []string{}
@@ -265,20 +267,133 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		if gpxURL != "" {
 			gpx, err := filesystem.NewFileFromURL(context.Background(), gpxURL)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			record.Set("gpx", gpx)
 		}
 	}
 
-	return app.Save(record)
+	return record, app.Save(record)
 }
 
-func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+func ObjectFromTrail(app core.App, trail *core.Record) (*pub.Object, error) {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return nil, fmt.Errorf("ORIGIN not set")
+	}
+
+	trailAuthor, err := app.FindRecordById("activitypub_actors", trail.GetString("author"))
+	if err != nil {
+		return nil, err
+	}
+	errs := app.ExpandRecord(trail, []string{"tags"}, nil)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("failed to expand tags: %v", errs)
+	}
+	errs = app.ExpandRecord(trail, []string{"category"}, nil)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("failed to expand category: %v", errs)
+	}
+
+	category := ""
+	categoryRecord := trail.ExpandedOne("category")
+	if categoryRecord != nil {
+		category = categoryRecord.GetString("name")
+	}
+
+	tagRecords := trail.ExpandedAll("tags")
+	tags := pub.ItemCollection{
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "category")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, category)),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "difficulty")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("difficulty"))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_gain")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("elevation_gain")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "elevation_loss")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("elevation_loss")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "distance")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("distance")))),
+		},
+		pub.Object{
+			Type:    pub.NoteType,
+			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "duration")),
+			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("duration")))),
+		},
+	}
+
+	for _, v := range tagRecords {
+		tags.Append(pub.IRI(v.GetString("name")))
+	}
+
+	photos := trail.GetStringSlice("photos")
+
+	gpx := ""
+	if trail.GetString("gpx") != "" {
+		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, trail.GetString("gpx"))
+	}
+
+	attachments := make(pub.ItemCollection, max(len(photos), 2))
+	for i := range min(len(photos), 3) {
+		iri := fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[i])
+
+		attachments[i] = pub.Image{
+			Type:      pub.ImageType,
+			MediaType: "image/jpeg",
+			URL:       pub.IRI(iri),
+		}
+	}
+	if gpx != "" {
+		attachments.Append(pub.Document{
+			Type:      pub.DocumentType,
+			MediaType: "application/xml+gpx",
+			URL:       pub.IRI(gpx),
+		})
+	}
+
+	activityURL := fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id)
+	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", trail.GetString("description"), activityURL, activityURL)
+
+	trailObject := pub.ObjectNew(pub.NoteType)
+
+	trailObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("name")))
+	trailObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, activityContent))
+	trailObject.Location = pub.Place{
+		Type:      pub.PlaceType,
+		Name:      pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, trail.GetString("location"))),
+		Latitude:  trail.GetFloat("lat"),
+		Longitude: trail.GetFloat("lon"),
+	}
+	trailObject.AttributedTo = pub.IRI(trailAuthor.GetString("iri"))
+	trailObject.Published = trail.GetDateTime("created").Time()
+	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
+	trailObject.URL = pub.IRI(activityURL)
+
+	trailObject.StartTime = trail.GetDateTime("date").Time()
+	trailObject.Attachment = attachments
+
+	trailObject.Tag = tags
+	return trailObject, nil
+}
+
+func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) (*core.Record, error) {
 	l, err := pub.ToObject(activity.Object)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	record, err := app.FindFirstRecordByData("lists", "iri", l.ID.String())
@@ -286,12 +401,13 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) e
 		if err == sql.ErrNoRows {
 			collection, err := app.FindCollectionByNameOrId("lists")
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			record = core.NewRecord(collection)
+			record.Set("id", security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet))
 		} else {
-			return err
+			return nil, err
 		}
 	}
 
@@ -306,7 +422,7 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) e
 		avatarURL := ""
 		attachments, err := pub.ToItemCollection(l.Attachment)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, a := range attachments.Collection() {
@@ -323,7 +439,7 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) e
 			avatar, err := filesystem.NewFileFromURL(context.Background(), avatarURL)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			record.Set("avatar", avatar)
@@ -332,5 +448,44 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) e
 
 	err = app.Save(record)
 
-	return err
+	return record, err
+}
+
+func ObjectFromList(app core.App, list *core.Record) (*pub.Object, error) {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return nil, fmt.Errorf("ORIGIN not set")
+	}
+
+	listAuthor, err := app.FindRecordById("activitypub_actors", list.GetString("author"))
+	if err != nil {
+		return nil, err
+	}
+	avatar := ""
+	if list.GetString("avatar") != "" {
+		avatar = fmt.Sprintf("%s/api/v1/files/lists/%s/%s", origin, list.Id, list.GetString("avatar"))
+	}
+
+	attachments := make(pub.ItemCollection, 2)
+	if avatar != "" {
+		attachments[0] = pub.Image{
+			Type:      pub.ImageType,
+			MediaType: "image/jpeg",
+			URL:       pub.IRI(avatar),
+		}
+	}
+
+	activityURL := fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("username"), list.Id)
+	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", list.GetString("description"), activityURL, activityURL)
+
+	listObject := pub.ObjectNew(pub.NoteType)
+	listObject.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, list.GetString("name")))
+	listObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, activityContent))
+
+	listObject.AttributedTo = pub.IRI(listAuthor.GetString("iri"))
+	listObject.Published = list.GetDateTime("created").Time()
+	listObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/list/%s", origin, list.Id))
+	listObject.URL = pub.IRI(activityURL)
+	listObject.Attachment = attachments
+	return listObject, nil
 }

@@ -12,7 +12,7 @@
     } from "$lib/stores/list_share_store";
     import {
         trail_share_create,
-        trail_share_index
+        trail_share_index,
     } from "$lib/stores/trail_share_store";
     import { currentUser } from "$lib/stores/user_store";
     import { _ } from "svelte-i18n";
@@ -20,6 +20,7 @@
     import Button from "../base/button.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         list: List;
@@ -30,6 +31,8 @@
     let { list, onsave, onupdate }: Props = $props();
 
     let modal: Modal;
+
+    let displayShareError = $state(false);
 
     export function openModal() {
         openShareModal();
@@ -51,7 +54,7 @@
 
     function copyURLToClipboard() {
         navigator.clipboard.writeText(
-            window.location.href.split("?")[0] + "?list=" + list.id,
+            `${window.location.origin}/lists/${handleFromRecordWithIRI(list)}/${list.id}`,
         );
 
         copyButtonText = $_("link-copied");
@@ -64,10 +67,16 @@
     }
 
     async function shareTrails(actorIRI: string) {
-        const existingTrailShares = await trail_share_index({ actorIRI: actorIRI });
+        const existingTrailShares = await trail_share_index({
+            actorIRI: actorIRI,
+        });
         const trailIds = existingTrailShares.map((s) => s.trail);
         for (const trail of list.expand?.trails ?? []) {
-            if (!trailIds.includes(trail.id!) && !trail.public && trail.author == $currentUser?.actor) {
+            if (
+                !trailIds.includes(trail.id!) &&
+                !trail.public &&
+                trail.author == $currentUser?.actor
+            ) {
                 const share = new TrailShare(actorIRI, trail.id!, "view");
                 await trail_share_create(share);
             }
@@ -75,6 +84,11 @@
     }
 
     async function shareList(item: SelectItem) {
+        if (!item.value.isLocal && !list.public) {
+            displayShareError = true;
+            return;
+        }
+        displayShareError = false;
         const share = new ListShare(item.value.iri, list.id!, "view");
         await list_share_create(share);
         await shareTrails(item.value.iri);
@@ -115,9 +129,19 @@
 >
     {#snippet content()}
         <div>
-            <p class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500 max-w-sm">
+            <p
+                class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500 max-w-sm"
+            >
                 {$_("list-share-warning")}
             </p>
+            {#if displayShareError}
+                <p class="p-4 bg-red-100 rounded-xl mb-4 text-sm text-gray-500">
+                    <i class="fa fa-warning mr-2"></i>
+                    {$_("object-share-error", {
+                        values: { object: $_("trail", { values: { n: 1 } }) },
+                    })}
+                </p>
+            {/if}
             <ActorSearch includeSelf={false} onclick={(item) => shareList(item)}
             ></ActorSearch>
             <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
@@ -143,10 +167,15 @@
                                 class="basis-full text-sm text-center text-gray-500"
                                 >{$_("can")}</span
                             >
-                            <div class="shrink-0">
+                            <div
+                                class="shrink-0"
+                                class:tooltip={!share.expand.actor.isLocal}
+                                data-title={$_("remote-users-cannot-edit")}
+                            >
                                 <Select
                                     bind:value={share.permission}
                                     items={permissionSelectItems}
+                                    disabled={!share.expand.actor.isLocal}
                                     onchange={(value) =>
                                         updateSharePermission(share, value)}
                                 ></Select>

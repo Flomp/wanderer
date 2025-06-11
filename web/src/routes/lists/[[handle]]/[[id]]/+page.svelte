@@ -17,7 +17,6 @@
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
-    import UserSearch from "$lib/components/user_search.svelte";
     import { List, type ListFilter } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import {
