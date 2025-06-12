@@ -15,6 +15,7 @@ const (
 	ListShare       NotificationType = "list_share"
 	NewFollower     NotificationType = "new_follower"
 	TrailComment    NotificationType = "trail_comment"
+	TrailLike       NotificationType = "trail_like"
 	SummitLogCreate NotificationType = "summit_log_create"
 )
 

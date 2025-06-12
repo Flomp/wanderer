@@ -30,6 +30,7 @@ export enum Collection {
     notifications = "notifications",
     settings = "settings",
     summit_logs = "summit_logs",
+    trail_like = "trail_like",
     trail_share = "trail_share",
     trails = "trails",
     tags = "tags",

@@ -55,6 +55,7 @@
     import SkeletonTable from "../base/skeleton_table.svelte";
     import ConfirmModal from "../confirm_modal.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
+    import LikeButton from "./like_button.svelte";
 
     interface Props {
         initTrail: Trail;
@@ -397,7 +398,10 @@
                     </div>
                 </div>
                 {#if ($currentUser && $currentUser.actor == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
-                    <TrailDropdown {trail} {mode} {handle}></TrailDropdown>
+                    <div class="flex flex-col items-center gap-y-2">
+                        <LikeButton {trail} large></LikeButton>
+                        <TrailDropdown {trail} {mode} {handle}></TrailDropdown>
+                    </div>
                 {/if}
             </div>
         </section>

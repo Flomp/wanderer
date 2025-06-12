@@ -1,7 +1,6 @@
 import { env } from "$env/dynamic/public";
 import type { Actor } from "$lib/models/activitypub/actor";
 import { defaultTrailSearchAttributes, type TrailSearchResult } from "$lib/models/trail";
-import { splitUsername } from "$lib/util/activitypub_util";
 import { APIError } from "$lib/util/api_util";
 import type { Hits, MultiSearchParams, MultiSearchResponse, MultiSearchResult, SearchParams, SearchResponse } from "meilisearch";
 import type { ListResult } from "pocketbase";

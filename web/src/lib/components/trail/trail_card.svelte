@@ -13,6 +13,12 @@
     import { _ } from "svelte-i18n";
     import type { MouseEventHandler } from "svelte/elements";
     import Chip from "../base/chip.svelte";
+    import {
+        trail_like_create,
+        trail_like_delete,
+    } from "$lib/stores/trail_like_store";
+    import { TrailLike } from "$lib/models/trail_like";
+    import LikeButton from "./like_button.svelte";
 
     interface Props {
         trail: Trail;
@@ -74,6 +80,11 @@
             />
         {/if}
     </div>
+    {#if $currentUser}
+        <div class="absolute top-4 left-4">
+            <LikeButton {trail}></LikeButton>
+        </div>
+    {/if}
     {#if (trail.public || trailIsShared) && $currentUser}
         <div
             class="flex absolute top-4 right-4 {trail.public && trailIsShared

@@ -3,6 +3,7 @@ import type { Category } from "./category";
 import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
 import type { Tag } from "./tag";
+import type { TrailLike } from "./trail_like";
 import type { TrailShare } from "./trail_share";
 import type { Waypoint } from "./waypoint";
 
@@ -38,6 +39,8 @@ class Trail {
         comments_via_trail?: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]
+        trail_like_via_trail?: TrailLike[]
+
     }
     description?: string;
     author: string;
@@ -167,6 +170,7 @@ interface TrailSearchResult {
     public: boolean;
     thumbnail: string;
     polyline?: string;
+    likes?: string[];
     shares?: string[];
     tags?: string[]
     domain?: string;
@@ -200,6 +204,7 @@ export const defaultTrailSearchAttributes = [
     "domain",
     "gpx",
     "tags",
+    "likes",
     "shares",
     "iri",
     "_geo",]
@@ -207,5 +212,5 @@ export const defaultTrailSearchAttributes = [
 
 export { Trail };
 
-    export type { TrailBoundingBox, TrailFilter, TrailFilterValues, TrailSearchResult };
+export type { TrailBoundingBox, TrailFilter, TrailFilterValues, TrailSearchResult };
 

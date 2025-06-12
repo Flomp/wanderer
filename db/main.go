@@ -99,6 +99,9 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordCreateRequest("trail_share").BindFunc(createTrailShareHandler(client))
 	app.OnRecordDeleteRequest("trail_share").BindFunc(deleteTrailShareHandler(client))
 
+	app.OnRecordCreateRequest("trail_like").BindFunc(createTrailLikeHandler(client))
+	app.OnRecordDeleteRequest("trail_like").BindFunc(deleteTrailLikeHandler(client))
+
 	app.OnRecordAfterCreateSuccess("lists").BindFunc(createListHandler(client))
 	app.OnRecordAfterUpdateSuccess("lists").BindFunc(updateListHandler(client))
 	app.OnRecordAfterDeleteSuccess("lists").BindFunc(deleteListHandler(client))
@@ -374,6 +377,11 @@ func deleteCommentHandler(client meilisearch.ServiceManager) func(e *core.Record
 
 func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
 		record := e.Record
 
 		trailId := record.GetString("trail")
@@ -397,7 +405,7 @@ func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 			return err
 		}
 
-		return e.Next()
+		return nil
 	}
 }
 
@@ -411,6 +419,63 @@ func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 			return err
 		}
 		return e.Next()
+	}
+}
+
+func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
+		record := e.Record
+
+		trailId := record.GetString("trail")
+		likes, err := e.App.FindAllRecords("trail_like",
+			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trailId}),
+		)
+		if err != nil {
+			return err
+		}
+		actorIds := make([]string, len(likes))
+		for i, r := range likes {
+			actorIds[i] = r.GetString("actor")
+		}
+		err = util.UpdateTrailLikes(trailId, actorIds, client)
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateLikeActivity(e.App, record)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
+func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+		record := e.Record
+
+		trailId := record.GetString("trail")
+		err = util.UpdateTrailLikes(trailId, []string{}, client)
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateUnlikeActivity(e.App, record)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
@@ -501,6 +566,11 @@ func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 
 func createListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
 		record := e.Record
 		listId := record.GetString("list")
 		shares, err := e.App.FindAllRecords("list_share",
@@ -524,7 +594,7 @@ func createListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 			return err
 		}
 
-		return e.Next()
+		return nil
 	}
 }
 

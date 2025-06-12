@@ -151,7 +151,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 	case pub.AcceptType:
 		ProcessAcceptActivity(e.App, actor, activity)
 	case pub.UndoType:
-		ProcessUnfollowActivity(e.App, actor, activity)
+		ProcessUndoActivity(e.App, actor, activity)
 	case pub.UpdateType:
 		fallthrough
 	case pub.CreateType:
@@ -160,6 +160,8 @@ func ProcessActivity(e *core.RequestEvent) error {
 		ProcessDeleteActivity(e.App, actor, activity)
 	case pub.AnnounceType:
 		ProcessAnnounceActivity(e.App, actor, activity)
+	case pub.LikeType:
+		ProcessLikeActivity(e.App, actor, activity)
 	}
 	return e.JSON(http.StatusOK, nil)
 }
