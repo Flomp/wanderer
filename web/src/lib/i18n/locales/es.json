@@ -161,7 +161,7 @@
   "import-hint": "Selecciona o arrastra aquí archivos GPX, FIT, KML o TCX...",
   "include-description": "Incluir descripción",
   "integration-description-komoot": "Sincroniza tus recorridos de Komoot con Wanderer en intervalos regulares.",
-  "integration-description-strava": "Syncs your strava routes & activities with wanderer in regular intervals.",
+  "integration-description-strava": "Sincroniza tus recorridos de Strava con Wanderer en intervalos regulares.",
   "integration-disabled": "integration disabled",
   "integration-enabled": "integration enabled",
   "integrations": "Integrations",
