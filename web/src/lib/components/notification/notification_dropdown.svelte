@@ -64,7 +64,7 @@
             scrollTop + clientHeight >= scrollHeight * 0.8 &&
             pagination.page !== pagination.totalPages &&
             !loadingNextPage
-        ) {
+        ) {            
             await loadNextPage();
         }
     }

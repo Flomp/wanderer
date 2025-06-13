@@ -90,6 +90,8 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 	if includeShares {
 		document["shares"] = []string{}
 		document["likes"] = []string{}
+		document["like_count"] = 0
+
 	}
 
 	return document, nil
@@ -304,8 +306,9 @@ func UpdateTrailShares(trailId string, shares []string, client meilisearch.Servi
 func UpdateTrailLikes(trailId string, likes []string, client meilisearch.ServiceManager) error {
 	documents := []map[string]interface{}{
 		{
-			"id":    trailId,
-			"likes": likes,
+			"id":         trailId,
+			"like_count": len(likes),
+			"likes":      likes,
 		},
 	}
 	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {

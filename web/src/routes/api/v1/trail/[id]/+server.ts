@@ -45,6 +45,8 @@ export async function GET(event: RequestEvent) {
 
             const localTrailId = t.id;
             const localTrailIRI = t.iri;
+            const localLikeCount = t.like_count;
+            const localLikes = t.expand?.trail_like_via_trail;
 
             const response = await event.fetch((t.iri) + '?' + event.url.searchParams, { method: 'GET' })
             if (!response.ok) {
@@ -86,6 +88,8 @@ export async function GET(event: RequestEvent) {
                 t.expand!.author = actor as any
                 t.id = localTrailId
                 t.iri = localTrailIRI
+                t.like_count = localLikeCount
+                t.expand!.trail_like_via_trail = localLikes;
             }
 
             let categoryId: string | undefined;

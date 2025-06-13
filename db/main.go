@@ -99,8 +99,8 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordCreateRequest("trail_share").BindFunc(createTrailShareHandler(client))
 	app.OnRecordDeleteRequest("trail_share").BindFunc(deleteTrailShareHandler(client))
 
-	app.OnRecordCreateRequest("trail_like").BindFunc(createTrailLikeHandler(client))
-	app.OnRecordDeleteRequest("trail_like").BindFunc(deleteTrailLikeHandler(client))
+	app.OnRecordAfterCreateSuccess("trail_like").BindFunc(createTrailLikeHandler(client))
+	app.OnRecordAfterDeleteSuccess("trail_like").BindFunc(deleteTrailLikeHandler(client))
 
 	app.OnRecordAfterCreateSuccess("lists").BindFunc(createListHandler(client))
 	app.OnRecordAfterUpdateSuccess("lists").BindFunc(updateListHandler(client))
@@ -225,7 +225,7 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			// this happens if someone fetches a remote trail
 			// we create a stub trail record for later reference
 			// no need to create an activity for that
-			return nil
+			return e.Next()
 		}
 
 		err = e.Next()
@@ -257,7 +257,7 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			// this happens if someone fetches a remote trail
 			// we create a stub trail record for later reference
 			// no need to create an activity for that
-			return nil
+			return e.Next()
 		}
 
 		err = e.Next()
@@ -422,8 +422,8 @@ func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 	}
 }
 
-func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
-	return func(e *core.RecordRequestEvent) error {
+func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
 		err := e.Next()
 		if err != nil {
 			return err
@@ -432,12 +432,28 @@ func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.Reco
 		record := e.Record
 
 		trailId := record.GetString("trail")
+		actorId := record.GetString("actor")
+		actor, err := e.App.FindRecordById("activitypub_actors", actorId)
+		if err != nil {
+			return err
+		}
+		trail, err := e.App.FindRecordById("trails", trailId)
+		if err != nil {
+			return err
+		}
 		likes, err := e.App.FindAllRecords("trail_like",
 			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trailId}),
 		)
 		if err != nil {
 			return err
 		}
+
+		trail.Set("like_count", len(likes))
+		err = e.App.UnsafeWithoutHooks().Save(trail)
+		if err != nil {
+			return err
+		}
+
 		actorIds := make([]string, len(likes))
 		for i, r := range likes {
 			actorIds[i] = r.GetString("actor")
@@ -445,6 +461,13 @@ func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.Reco
 		err = util.UpdateTrailLikes(trailId, actorIds, client)
 		if err != nil {
 			return err
+		}
+
+		if !actor.GetBool("isLocal") {
+			// this happens if someone likes a remote trail
+			// we create a local copy
+			// no need to create an activity for that
+			return nil
 		}
 
 		err = federation.CreateLikeActivity(e.App, record)
@@ -456,8 +479,8 @@ func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
-	return func(e *core.RecordRequestEvent) error {
+func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
 		err := e.Next()
 		if err != nil {
 			return err
@@ -465,9 +488,36 @@ func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.Reco
 		record := e.Record
 
 		trailId := record.GetString("trail")
+		actorId := record.GetString("actor")
+		actor, err := e.App.FindRecordById("activitypub_actors", actorId)
+		if err != nil {
+			return err
+		}
+		trail, err := e.App.FindRecordById("trails", trailId)
+		if err != nil {
+			return err
+		}
+
+		likes, err := e.App.CountRecords("trail_like", dbx.NewExp("trail={:trail}", dbx.Params{"trail": trailId}))
+		if err != nil {
+			return err
+		}
+		trail.Set("like_count", likes)
+		err = e.App.UnsafeWithoutHooks().Save(trail)
+		if err != nil {
+			return err
+		}
+
 		err = util.UpdateTrailLikes(trailId, []string{}, client)
 		if err != nil {
 			return err
+		}
+
+		if !actor.GetBool("isLocal") {
+			// this happens if someone likes a remote trail
+			// we create a local copy
+			// no need to create an activity for that
+			return nil
 		}
 
 		err = federation.CreateUnlikeActivity(e.App, record)
@@ -496,7 +546,7 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			// this happens if someone fetches a remote list
 			// we create a stub list record for later reference
 			// no need to create an activity for that
-			return nil
+			return e.Next()
 		}
 
 		err = e.Next()
@@ -530,7 +580,7 @@ func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			// this happens if someone fetches a remote list
 			// we create a stub list record for later reference
 			// no need to create an activity for that
-			return nil
+			return e.Next()
 		}
 
 		err = e.Next()
@@ -1098,9 +1148,23 @@ func bootstrapMeilisearchDocuments(app core.App, client meilisearch.ServiceManag
 			actorIds[i] = r.GetString("actor")
 		}
 		err = util.UpdateTrailShares(trail.Id, actorIds, client)
-
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
+			continue
+		}
+		likes, err := app.FindAllRecords("trail_like",
+			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trail.Id}),
+		)
+		if err != nil {
+			return err
+		}
+		actorIds = make([]string, len(likes))
+		for i, r := range likes {
+			actorIds[i] = r.GetString("actor")
+		}
+		err = util.UpdateTrailLikes(trail.Id, actorIds, client)
+		if err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to update trail likes '%s': %v", trail.GetString("name"), err))
 			continue
 		}
 	}

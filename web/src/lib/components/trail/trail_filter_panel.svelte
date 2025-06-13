@@ -62,7 +62,7 @@
 
     let tagItems: ComboboxItem[] = $state([]);
 
-    async function update() {
+    async function update() {        
         onupdate?.(filter);
     }
 
@@ -89,6 +89,11 @@
 
     function setSharedFilter(e: Event) {
         filter.shared = (e.target as HTMLInputElement).checked;
+        update();
+    }
+
+    function setLikedFilter(e: Event) {
+        filter.liked = (e.target as HTMLInputElement).checked;
         update();
     }
 
@@ -334,7 +339,18 @@
                     onchange={update}
                 ></Datepicker>
             </div>
-
+            <hr class="my-4 border-separator" />
+            <p class="text-sm font-medium pb-4">{$_("like-status")}</p>
+            <input
+                id="liked-checkbox"
+                type="checkbox"
+                checked={filter.liked}
+                class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                onchange={setLikedFilter}
+            />
+            <label for="liked-checkbox" class="ms-2 text-sm"
+                >{$_("liked")}</label
+            >
             <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">{$_("completion-status")}</p>
             <RadioGroup

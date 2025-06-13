@@ -470,6 +470,7 @@ export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Pr
             domain: h.domain,
             iri: h.iri,
             thumbnail: 0,
+            like_count: h.like_count,
             expand: {
                 author: {
                     collectionId: "activitypub_actors",
@@ -543,6 +544,10 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
             }
         }
         filterText += ")"
+    }
+
+    if (filter.liked === true) {
+        filterText += ` AND likes = ${user?.actor}`
     }
 
     if (filter.startDate) {

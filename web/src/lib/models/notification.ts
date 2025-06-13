@@ -2,6 +2,7 @@ import type { Actor } from "./activitypub/actor";
 
 enum NotificationType {
     trailShare = "trail_share",
+    trailLike = "trail_like",
     listShare = "list_share",
     newFollower = "new_follower",
     trailComment = "trail_comment",

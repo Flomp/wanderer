@@ -30,6 +30,7 @@ class Trail {
     polyline?: string;
     domain?: string;
     iri?: string;
+    like_count: number;
     expand?: {
         tags?: Tag[]
         category?: Category;
@@ -89,6 +90,7 @@ class Trail {
         this.waypoints = [];
         this.tags = []
         this.gpx = params?.gpx;
+        this.like_count = 0
         this.expand = {
             category: params?.category,
             waypoints: params?.waypoints ?? [],
@@ -127,6 +129,7 @@ interface TrailFilter {
     startDate?: string;
     endDate?: string;
     completed?: boolean;
+    liked?: boolean;
     sort: "name" | "distance" | "elevation_gain" | "created";
     sortOrder: "+" | "-"
 }
@@ -171,6 +174,7 @@ interface TrailSearchResult {
     thumbnail: string;
     polyline?: string;
     likes?: string[];
+    like_count: number;
     shares?: string[];
     tags?: string[]
     domain?: string;
@@ -204,7 +208,7 @@ export const defaultTrailSearchAttributes = [
     "domain",
     "gpx",
     "tags",
-    "likes",
+    "like_count",
     "shares",
     "iri",
     "_geo",]

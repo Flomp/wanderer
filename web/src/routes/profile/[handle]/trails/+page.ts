@@ -16,6 +16,7 @@ export const load: Load = async ({ params, fetch, parent }) => {
         author: actor.id,
         public: true,
         shared: true,
+        liked: false,
         near: {
             radius: 2000,
         },

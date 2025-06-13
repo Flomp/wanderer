@@ -80,9 +80,18 @@
             />
         {/if}
     </div>
-    {#if $currentUser}
-        <div class="absolute top-4 left-4">
-            <LikeButton {trail}></LikeButton>
+    {#if $currentUser && trail.like_count > 0}
+        <div
+            class="flex absolute items-center justify-center top-4 left-4 bg-background w-8 h-8 rounded-full"
+        >
+            <span class="tooltip" data-title={$_("likes")}>
+                <i class="fa fa-heart"></i>
+            </span>
+            <div
+                class="absolute pointer-events-none left-5 -top-1 text-xs rounded-full bg-content text-content-inverse px-1 text-center"
+            >
+                {trail.like_count}
+            </div>
         </div>
     {/if}
     {#if (trail.public || trailIsShared) && $currentUser}

@@ -8,19 +8,15 @@
 
     const notifications = $state(
         (page.data.settings as Settings)?.notifications ?? {
-            list_create: {
-                web: true,
-                email: true,
-            },
             list_share: {
                 web: true,
                 email: true,
             },
-            trail_create: {
+            trail_share: {
                 web: true,
                 email: true,
             },
-            trail_share: {
+            trail_like: {
                 web: true,
                 email: true,
             },
@@ -51,6 +47,10 @@
         {
             text: $_("settings-notification-trail-share"),
             key: NotificationType.trailShare,
+        },
+        {
+            text: $_("settings-notification-trail-like"),
+            key: NotificationType.trailLike,
         },
         {
             text: $_("settings-notification-list-share"),

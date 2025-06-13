@@ -105,8 +105,10 @@ func ProcessLikeActivity(app core.App, actor *core.Record, activity pub.Activity
 	notification := util.Notification{
 		Type: util.TrailLike,
 		Metadata: map[string]string{
-			"trail": trail.GetString("name"),
-			"liker": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+			"trail_id":     trail.Id,
+			"trail_name":   trail.GetString("name"),
+			"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+			"liker":        fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
 		},
 		Seen:   false,
 		Author: actor.Id,

@@ -49,6 +49,7 @@
         { text: $_("difficulty"), value: "difficulty" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
         { text: $_("elevation-loss"), value: "elevation_loss" },
+        { text: $_("likes"), value: "like_count" },
         { text: $_("creation-date"), value: "created" },
         { text: $_("date"), value: "date" },
     ];

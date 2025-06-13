@@ -48,6 +48,13 @@
                         trail: n.metadata?.trail_name,
                     },
                 });
+            case NotificationType.trailLike:
+                return $_("notification-trail-like", {
+                    values: {
+                        user: n.expand.author.username,
+                        trail: n.metadata?.trail_name,
+                    },
+                });
         }
     }
 
@@ -63,6 +70,8 @@
                 return n.metadata?.trail ?? "";
             case NotificationType.trailShare:
                 return "";
+            case NotificationType.trailLike:
+                return "";
         }
     }
 
@@ -77,6 +86,8 @@
             case NotificationType.trailShare:
                 return `/trail/view/${n.metadata?.author}/${n.metadata?.id}`;
             case NotificationType.summitLogCreate:
+                return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}`;
+            case NotificationType.trailLike:
                 return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}`;
         }
     }
