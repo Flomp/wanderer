@@ -1,15 +1,20 @@
 import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
+
 import type { Actor } from '$lib/models/activitypub/actor';
 import type { Follow } from '$lib/models/follow';
-import type { UserAnonymous } from "$lib/models/user";
 import { splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
-import type { APActivity, APOrderedCollectionPage, APRoot } from 'activitypub-types';
+import type { APOrderedCollectionPage, APRoot } from 'activitypub-types';
 import type { ListResult } from 'pocketbase';
 
 
 export async function GET(event: RequestEvent) {
+
+    if (publicEnv.PUBLIC_DISABLE_FEDERATION === "true") {
+        return json({ message: "Federation is disabled" }, { status: 401 })
+    }
 
     try {
         const page = event.url.searchParams.get("page") ?? "1"

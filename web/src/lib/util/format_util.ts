@@ -92,7 +92,7 @@ export function formatTimeSince(date: Date) {
 }
 
 export function formatHTMLAsText(html?: string) {
-    if(!html) {
+    if(!html || !document) {
         return ""
     }
     // Create a temporary DOM element

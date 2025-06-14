@@ -13,6 +13,7 @@
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
+    import { currentUser } from "$lib/stores/user_store";
 
     interface Props {
         list: List;
@@ -42,18 +43,21 @@
 
     <div class="self-start min-w-0 basis-full transition-transform">
         <div class="flex items-center gap-3">
-            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis">
+            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis shrink-0">
                 {list.name}
             </h5>
-            {#if list.public}
-                <span class="tooltip" data-title={$_("public")}>
-                    <i class="fa fa-globe"></i>
-                </span>
-            {/if}
-            {#if list.expand?.list_share_via_list?.length}
-                <span class="tooltip" data-title={$_("shared")}>
-                    <i class="fa fa-share-nodes"></i>
-                </span>
+            <div class="basis-full"></div>
+            {#if $currentUser}
+                {#if list.public}
+                    <span class="tooltip" data-title={$_("public")}>
+                        <i class="fa fa-globe"></i>
+                    </span>
+                {/if}
+                {#if list.expand?.list_share_via_list?.length}
+                    <span class="tooltip" data-title={$_("shared")}>
+                        <i class="fa fa-share-nodes"></i>
+                    </span>
+                {/if}
             {/if}
         </div>
         {#if list.expand?.author}

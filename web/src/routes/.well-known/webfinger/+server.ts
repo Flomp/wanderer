@@ -3,6 +3,8 @@ import type PocketBase from "PocketBase";
 // @ts-ignore
 import { env } from "$env/dynamic/private"
 // @ts-ignore
+import { env as publicEnv } from '$env/dynamic/public';
+// @ts-ignore
 import { handleError } from "$lib/util/api_util";
 // @ts-ignore
 import { splitUsername } from "$lib/util/activitypub_util";
@@ -10,6 +12,11 @@ import { splitUsername } from "$lib/util/activitypub_util";
 import type { WebfingerResponse } from '$lib/models/activitypub/webfinger_response';
 
 export async function GET(event: RequestEvent) {
+
+    if (publicEnv.PUBLIC_DISABLE_FEDERATION === "true") {
+        return json({ message: "Federation is disabled" }, { status: 401 })
+    }
+
     try {
         const resource = event.url.searchParams.get("resource")
 
@@ -47,6 +54,6 @@ export async function GET(event: RequestEvent) {
 
         return json(r)
     } catch (err) {
-        handleError(err)
+        return handleError(err)
     }
 }

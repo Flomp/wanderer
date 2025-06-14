@@ -1,8 +1,14 @@
+import { env as publicEnv } from '$env/dynamic/public';
+
 import { handleError } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { APActivity } from 'activitypub-types';
 
 export async function POST(event: RequestEvent) {
+
+    if (publicEnv.PUBLIC_DISABLE_FEDERATION === "true") {
+        return json({ message: "Federation is disabled" }, { status: 401 })
+    }
 
     try {
         const activity: APActivity = await event.request.json()
@@ -11,7 +17,7 @@ export async function POST(event: RequestEvent) {
         }
 
         const success = await event.locals.pb.send("/activitypub/activity/process", {
-            method: "POST", 
+            method: "POST",
             fetch: event.fetch,
             headers: {
                 'X-Forwarded-Path': event.url.pathname,

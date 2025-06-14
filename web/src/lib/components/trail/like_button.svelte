@@ -73,10 +73,11 @@
 </script>
 
 <button
-    class="like-button rounded-full w-12 py-2 bg-background hover:bg-secondary-hover transition-colors relative"
+    class="like-button rounded-full w-12 py-2 bg-background {$currentUser ? 'hover:bg-secondary-hover' : ''} transition-colors relative"
     aria-label="like"
     type="button"
     bind:this={likeButton}
+    disabled={!$currentUser}
     onclick={like}
     data-title={$_("likes")}
 >

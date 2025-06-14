@@ -13,12 +13,6 @@
     import { _ } from "svelte-i18n";
     import type { MouseEventHandler } from "svelte/elements";
     import Chip from "../base/chip.svelte";
-    import {
-        trail_like_create,
-        trail_like_delete,
-    } from "$lib/stores/trail_like_store";
-    import { TrailLike } from "$lib/models/trail_like";
-    import LikeButton from "./like_button.svelte";
 
     interface Props {
         trail: Trail;
@@ -39,6 +33,7 @@
             ? getFileURL(
                   trail,
                   trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0],
+                  "600x0"
               )
             : $theme === "light"
               ? emptyStateTrailLight

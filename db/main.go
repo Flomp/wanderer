@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -481,10 +482,7 @@ func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.Reco
 
 func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
-		err := e.Next()
-		if err != nil {
-			return err
-		}
+
 		record := e.Record
 
 		trailId := record.GetString("trail")
@@ -493,15 +491,18 @@ func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.Reco
 		if err != nil {
 			return err
 		}
+		// trail might deleted be already if this is called as part of a cascade
 		trail, err := e.App.FindRecordById("trails", trailId)
-		if err != nil {
+		if err != nil && err == sql.ErrNoRows {
+			return nil
+		} else if err != nil {
 			return err
 		}
-
 		likes, err := e.App.CountRecords("trail_like", dbx.NewExp("trail={:trail}", dbx.Params{"trail": trailId}))
 		if err != nil {
 			return err
 		}
+
 		trail.Set("like_count", likes)
 		err = e.App.UnsafeWithoutHooks().Save(trail)
 		if err != nil {
@@ -525,7 +526,7 @@ func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.Reco
 			return err
 		}
 
-		return nil
+		return e.Next()
 	}
 }
 

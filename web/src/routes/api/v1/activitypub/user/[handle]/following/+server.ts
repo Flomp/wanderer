@@ -1,4 +1,6 @@
 import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
+
 import type { Actor } from '$lib/models/activitypub/actor';
 import type { Follow } from '$lib/models/follow';
 import { splitUsername } from '$lib/util/activitypub_util';
@@ -9,6 +11,10 @@ import type { ListResult } from 'pocketbase';
 
 
 export async function GET(event: RequestEvent) {
+
+    if (publicEnv.PUBLIC_DISABLE_FEDERATION === "true") {
+        return json({ message: "Federation is disabled" }, { status: 401 })
+    }
 
     try {
         const page = event.url.searchParams.get("page") ?? "1"

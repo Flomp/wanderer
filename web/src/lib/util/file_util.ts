@@ -1,5 +1,5 @@
 
-export function getFileURL(record: { [key: string]: any; }, filename?: string) {
+export function getFileURL(record: { [key: string]: any; }, filename?: string, thumb?: string) {
     if (!filename) {
         return "";
     }
@@ -7,7 +7,7 @@ export function getFileURL(record: { [key: string]: any; }, filename?: string) {
         return filename;
     }
 
-    return `/api/v1/files/${record.collectionId}/${record.id}/${filename}`
+    return `/api/v1/files/${record.collectionId}/${record.id}/${filename}${thumb ? '?thumb='+thumb : ''}`
 }
 
 export function isURL(value: string) {

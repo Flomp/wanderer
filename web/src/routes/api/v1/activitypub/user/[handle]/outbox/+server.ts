@@ -1,8 +1,9 @@
 import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
+
 import type { Activity } from '$lib/models/activitypub/activity';
 import type { Actor } from '$lib/models/activitypub/actor';
 import { RecordListOptionsSchema } from '$lib/models/api/base_schema';
-import type { UserAnonymous } from "$lib/models/user";
 import { splitUsername } from '$lib/util/activitypub_util';
 import { handleError } from '$lib/util/api_util';
 import { error, json, type RequestEvent } from '@sveltejs/kit';
@@ -11,6 +12,11 @@ import type { ListResult } from 'pocketbase';
 
 
 export async function GET(event: RequestEvent) {
+
+    if (publicEnv.PUBLIC_DISABLE_FEDERATION === "true") {
+        return json({ message: "Federation is disabled" }, { status: 401 })
+    }
+
 
     try {
         const safeSearchParams = RecordListOptionsSchema.parse(Object.fromEntries(event.url.searchParams));
