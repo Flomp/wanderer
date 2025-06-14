@@ -1,7 +1,7 @@
 import { RecordOptionsSchema } from '$lib/models/api/base_schema';
 import { TrailUpdateSchema } from '$lib/models/api/trail_schema';
 import type { Trail } from "$lib/models/trail";
-import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
+import { APIError, Collection, handleError, remove, show, update } from "$lib/util/api_util";
 import { objectToFormData } from "$lib/util/file_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 import type PocketBase from "pocketbase";
@@ -52,7 +52,11 @@ export async function GET(event: RequestEvent) {
             if (!response.ok) {
                 const errorResponse = await response.json()
                 console.error(errorResponse)
-                return json(t)
+                if (t.id) {
+                    return json(t)
+                } else {
+                    throw new ClientResponseError({ status: response.status, response: errorResponse })
+                }
             }
             t = await response.json()
 

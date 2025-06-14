@@ -12,9 +12,8 @@ import { type APActor, type APRoot } from 'activitypub-types';
 export async function GET(event: RequestEvent) {
 
     if (publicEnv.PUBLIC_DISABLE_FEDERATION === "true") {
-        return json({ message: "Federation is disabled" }, { status: 401 })
+        return json({ message: "Federation is disabled" }, { status: 400 })
     }
-
 
     try {
         let fullUsername = event.params.handle;

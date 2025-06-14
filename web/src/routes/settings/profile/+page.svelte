@@ -85,7 +85,7 @@
                 <img
                     class="object-cover h-full"
                     src={getFileURL($currentUser, $currentUser.avatar) ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username?.toLowerCase()}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />
                 <button

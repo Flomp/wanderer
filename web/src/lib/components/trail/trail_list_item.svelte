@@ -27,7 +27,7 @@
             ? getFileURL(
                   trail,
                   trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0],
-                  "600x0"
+                  "600x0",
               )
             : $theme === "light"
               ? emptyStateTrailLight
@@ -56,18 +56,32 @@
         {/if}
     </div>
     <div class="min-w-0 basis-full">
-        <div class="flex items-center gap-4">
+        <div class="flex items-center justify-between">
             <h4 class="font-semibold text-lg">
                 {trail.name}
             </h4>
-            {#if trail.public && $currentUser}
-                <span class="tooltip ml-3" data-title={$_("public")}>
-                    <i class="fa fa-globe"></i>
-                </span>
-            {/if}
-            {#if trail.expand?.trail_share_via_trail?.length}
-                <ShareInfo type="trail" subject={trail}></ShareInfo>
-            {/if}
+            <div class="flex items-center shrink-0  gap-3">
+                {#if trail.public && $currentUser}
+                    <span class="tooltip" data-title={$_("public")}>
+                        <i class="fa fa-globe"></i>
+                    </span>
+                {/if}
+                {#if trail.expand?.trail_share_via_trail?.length}
+                    <ShareInfo type="trail" subject={trail}></ShareInfo>
+                {/if}
+                {#if $currentUser && trail.like_count > 0}
+                    <div class="flex items-start gap-x-[2px]">
+                        <span class="tooltip" data-title={$_("likes")}>
+                            <i class="fa fa-heart"></i>
+                        </span>
+                        <div
+                            class="pointer-events-none left-4 -top-1 text-xs rounded-full bg-content text-content-inverse px-1 text-center"
+                        >
+                            {trail.like_count}
+                        </div>
+                    </div>
+                {/if}
+            </div>
         </div>
         {#if trail.date}
             <p class="text-xs text-gray-500 mb-3">

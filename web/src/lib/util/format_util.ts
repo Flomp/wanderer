@@ -1,3 +1,4 @@
+import { browser } from "$app/environment";
 import { page } from "$app/state";
 import { get } from "svelte/store";
 
@@ -92,7 +93,7 @@ export function formatTimeSince(date: Date) {
 }
 
 export function formatHTMLAsText(html?: string) {
-    if(!html || !document) {
+    if(!html || !browser) {
         return ""
     }
     // Create a temporary DOM element
