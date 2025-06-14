@@ -1,6 +1,5 @@
-@import 'tailwindcss/utilities';
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
+@import 'tailwindcss';
+@reference "./tailwind.css";
 
 .card {
     @apply rounded-xl
