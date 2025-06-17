@@ -5,6 +5,7 @@
     import { fade } from "svelte/transition";
     import TextField from "../base/text_field.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
+    import Editor from "../base/editor.svelte";
 
     interface Props {
         comment: Comment;
@@ -89,15 +90,20 @@
                     type="button"
                     class="btn-icon text-xs"
                     style="font-size: 0.75rem;"
-                    onclick={deleteComment}><i class="fa fa-trash"></i></button
+                    onclick={() => {
+                        if (editing) {
+                            editing = false;
+                        } else {
+                            deleteComment();
+                        }
+                    }}><i class="fa {editing ? 'fa-close' : 'fa-trash'}"></i></button
                 >
             {/if}
         </div>
         {#if editing}
-            <TextField extraClasses="mt-2" bind:value={editedComment}
-            ></TextField>
+            <Editor extraClasses="mt-2" bind:value={editedComment}></Editor>
         {:else}
-            <p class="whitespace-pre-wrap text-sm">{comment.text}</p>
+            {@html comment.text}
         {/if}
     </div>
 </div>

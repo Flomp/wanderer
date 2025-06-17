@@ -398,12 +398,12 @@ func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pu
 	var err error
 	if strings.Contains(activity.Object.GetID().String(), "/api/v1/trail") {
 		err = processCreateOrUpdateTrailActivity(activity, app, actor)
-	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/comment") {
-		err = processCreateOrUpdateCommentActivity(activity, app, actor)
 	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/summit-log") {
 		err = processCreateOrUpdateSummitLogActivity(activity, app, actor)
 	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/list") {
 		err = processCreateOrUpdateListActivity(activity, app, actor)
+	} else {
+		err = processCreateOrUpdateCommentActivity(activity, app, actor)
 	}
 
 	if err != nil {

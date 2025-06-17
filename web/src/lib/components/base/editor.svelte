@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Editor } from "@tiptap/core";
     import { Link } from "@tiptap/extension-link";
+    import Placeholder from "@tiptap/extension-placeholder";
     import { Underline } from "@tiptap/extension-underline";
     import StarterKit from "@tiptap/starter-kit";
     import { onDestroy, onMount, untrack } from "svelte";
@@ -10,7 +11,6 @@
     import { type SelectItem } from "./select.svelte";
     import TextField from "./text_field.svelte";
     import Toggle from "./toggle.svelte";
-
     let element: HTMLElement;
     let editor: Editor | undefined = $state();
 
@@ -20,6 +20,7 @@
         value?: string;
         label?: string;
         error?: string | string[] | null;
+        placeholder?: string;
         extraClasses?: string;
     }
 
@@ -27,6 +28,7 @@
         value = $bindable(""),
         label = "",
         error = "",
+        placeholder = "",
         extraClasses = "",
     }: Props = $props();
 
@@ -58,6 +60,9 @@
         editor = new Editor({
             element: element,
             extensions: [
+                Placeholder.configure({
+                    placeholder: placeholder,
+                }),
                 StarterKit,
                 Underline,
                 Link.configure({
@@ -357,3 +362,13 @@
         </div>
     {/snippet}
 </Modal>
+
+<style>
+    :global(.ProseMirror p.is-editor-empty:first-child::before) {
+        content: attr(data-placeholder);
+        float: left;
+        color: #adb5bd;
+        pointer-events: none;
+        height: 0;
+    }
+</style>

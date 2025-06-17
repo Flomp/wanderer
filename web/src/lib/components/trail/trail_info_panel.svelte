@@ -56,6 +56,7 @@
     import ConfirmModal from "../confirm_modal.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
     import LikeButton from "./like_button.svelte";
+    import Editor from "../base/editor.svelte";
 
     interface Props {
         initTrail: Trail;
@@ -399,7 +400,7 @@
                 </div>
                 {#if ($currentUser && $currentUser.actor == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
                     <div class="flex flex-col items-center gap-y-2">
-                        <LikeButton {trail} large></LikeButton>
+                        <LikeButton {trail}></LikeButton>
                         <TrailDropdown {trail} {mode} {handle}></TrailDropdown>
                     </div>
                 {/if}
@@ -593,15 +594,15 @@
                                         $currentUser,
                                         $currentUser.avatar,
                                     ) ||
-                                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username}&backgroundType=gradientLinear`}
+                                        `https://api.dicebear.com/7.x/initials/svg?seed=${$currentUser.username?.toLowerCase()}&backgroundType=gradientLinear`}
                                     alt="avatar"
                                 />
                                 <div class="basis-full">
-                                    <Textarea
+                                    <Editor
                                         bind:value={newComment.text}
-                                        rows={2}
+                                        extraClasses="min-h-24 max-w-full"
                                         placeholder="Add comment..."
-                                    ></Textarea>
+                                    ></Editor>
                                 </div>
                             </div>
                             <div class="flex justify-end mt-3">

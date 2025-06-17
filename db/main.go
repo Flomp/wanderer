@@ -135,6 +135,7 @@ func sanitizeHTML() func(e *core.RecordRequestEvent) error {
 			"settings":    {"bio"},
 			"summit_logs": {"text"},
 			"trails":      {"description"},
+			"comments":    {"text"},
 			"waypoints":   {"description"},
 		}
 		collection := e.Collection.Name
