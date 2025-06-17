@@ -90,7 +90,6 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 }
 
 func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityVocabularyType) error {
-
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return fmt.Errorf("ORIGIN not set")
@@ -111,34 +110,21 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 		return err
 	}
 
-	commentRecordId := comment.Id
-	if commentRecordId == "" {
-		commentRecordId = security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
-	}
 	activityRecordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
 	to := commentTrailAuthor.GetString("iri")
 
-	trailURL := ""
-	if commentTrailAuthor.GetBool("isLocal") {
-		trailURL = fmt.Sprintf("https://%s/api/v1/%s", commentTrailAuthor.GetString("domain"), comment.GetString("trail"))
-	} else {
-		trailURL = commentTrail.GetString("iri")
-	}
-
 	author := commentAuthor.GetString("iri")
 
-	commentObject := pub.ObjectNew(pub.NoteType)
-	commentObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/comment/%s", origin, commentRecordId))
-	commentObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, comment.GetString("text")))
-	commentObject.Published = comment.GetDateTime("created").Time()
-	commentObject.AttributedTo = pub.IRI(author)
-	commentObject.InReplyTo = pub.IRI(trailURL)
+	commentObject, err := util.ObjectFromComment(app, comment)
+	if err != nil {
+		return err
+	}
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, commentObject)
 	activity.Actor = pub.IRI(author)
-	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.To = pub.ItemCollection{pub.IRI("https://www.w3.org/ns/activitystreams#Public"), pub.IRI(to)}
 	activity.Published = time.Now()
 	activity.Object = commentObject
 
@@ -150,7 +136,7 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 	record := core.NewRecord(collection)
 	record.Set("id", activityRecordId)
 	record.Set("iri", id)
-	record.Set("to", []string{to})
+	record.Set("to", []string{"https://www.w3.org/ns/activitystreams#Public", to})
 	record.Set("type", string(typ))
 	record.Set("object", commentObject)
 	record.Set("actor", author)

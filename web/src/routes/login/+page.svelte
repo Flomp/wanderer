@@ -95,7 +95,7 @@
             <div class="space-y-6 w-80">
                 <TextField
                     name="username"
-                    label="{$_('username')}/${$_('email')}"
+                    label="{$_('username')}/{$_('email')}"
                     error={$errors.username}
                 ></TextField>
                 <div class="flex flex-col">

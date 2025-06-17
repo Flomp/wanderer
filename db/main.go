@@ -1061,7 +1061,34 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 
 		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "private": private, "error": nil})
 	})
+	se.Router.GET("/activitypub/trail/{id}", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
 
+		trail, err := e.App.FindRecordById("trails", id)
+		if err != nil {
+			return err
+		}
+
+		trailObject, err := util.ObjectFromTrail(e.App, trail)
+		if err != nil {
+			return err
+		}
+		return e.JSON(http.StatusOK, trailObject)
+	})
+	se.Router.GET("/activitypub/comment/{id}", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+
+		trail, err := e.App.FindRecordById("comments", id)
+		if err != nil {
+			return err
+		}
+
+		commentObject, err := util.ObjectFromComment(e.App, trail)
+		if err != nil {
+			return err
+		}
+		return e.JSON(http.StatusOK, commentObject)
+	})
 }
 
 func registerCronJobs(app core.App) {
