@@ -152,6 +152,7 @@ func sanitizeHTML() func(e *core.RecordRequestEvent) error {
 		p.AllowElements("b", "strong", "em", "u", "blockquote", "a")
 		p.AllowAttrs("href").OnElements("a")
 		p.AllowAttrs("target").OnElements("a")
+		p.AllowAttrs("class").OnElements("a")
 
 		for _, field := range fields {
 			if val, ok := e.Record.Get(field).(string); ok {

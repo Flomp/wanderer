@@ -125,3 +125,8 @@
         transform: rotate(360deg);
     }
 }
+
+.mention {
+    @apply bg-blue-100 rounded-md;
+    padding: 0.1rem 0.3rem;
+}

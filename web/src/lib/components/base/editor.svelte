@@ -1,16 +1,28 @@
 <script lang="ts">
-    import { Editor } from "@tiptap/core";
+    import { Editor, mergeAttributes } from "@tiptap/core";
     import { Link } from "@tiptap/extension-link";
+    import Mention from "@tiptap/extension-mention";
     import Placeholder from "@tiptap/extension-placeholder";
     import { Underline } from "@tiptap/extension-underline";
     import StarterKit from "@tiptap/starter-kit";
-    import { onDestroy, onMount, untrack } from "svelte";
+    import { mount, onDestroy, onMount, unmount, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { z, ZodError } from "zod";
+    import { type DropdownItem } from "./dropdown.svelte";
     import Modal from "./modal.svelte";
+    import {
+        default as DropdownList,
+        default as SearchList,
+    } from "./search_list.svelte";
     import { type SelectItem } from "./select.svelte";
     import TextField from "./text_field.svelte";
     import Toggle from "./toggle.svelte";
+    import type { SearchItem } from "./search.svelte";
+    import type { SuggestionProps } from "@tiptap/suggestion";
+    import type { Actor } from "$lib/models/activitypub/actor";
+    import { searchActors } from "$lib/stores/search_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
+
     let element: HTMLElement;
     let editor: Editor | undefined = $state();
 
@@ -60,11 +72,124 @@
         editor = new Editor({
             element: element,
             extensions: [
+                StarterKit,
+                Underline,
                 Placeholder.configure({
                     placeholder: placeholder,
                 }),
-                StarterKit,
-                Underline,
+                Mention.configure({
+                    HTMLAttributes: {
+                        class: "mention",
+                    },
+                    renderHTML({ node, options }) {
+                        return [
+                            "a",
+                            mergeAttributes(
+                                { href: `/profile/@${options.HTMLAttributes["data-label"]}` },
+                                options.HTMLAttributes,
+                            ),
+                            options.renderText?.({
+                                options: options,
+                                node,
+                            }),
+                        ];
+                    },
+                    suggestion: {
+                        allowToIncludeChar: true,
+                        items: async ({ query }) => {
+                            try {
+                                const actors: Actor[] = await searchActors(
+                                    query,
+                                    true,
+                                );
+                                return actors.map((a) => ({
+                                    text: a.preferred_username!,
+                                    description: `@${a.username}${a.isLocal ? "" : "@" + a.domain}`,
+                                    value: a,
+                                    icon:
+                                        a.icon ||
+                                        `https://api.dicebear.com/7.x/initials/svg?seed=${a.username}&backgroundType=gradientLinear`,
+                                }));
+                            } catch (e) {
+                                console.error(e);
+                                show_toast({
+                                    type: "error",
+                                    icon: "close",
+                                    text: "Error during search",
+                                });
+                                return [];
+                            }
+                        },
+
+                        render: () => {
+                            let component: DropdownList;
+                            const componentState: any = $state({
+                                items: [],
+                                id: "mention-list",
+                                extraClasses: "max-w-72",
+                            });
+
+                            function updatePosition({
+                                clientRect,
+                            }: SuggestionProps) {
+                                const searchListElement =
+                                    document.getElementById("mention-list");
+                                if (!clientRect || !searchListElement) return;
+                                const box = clientRect();
+                                if (!box) {
+                                    return;
+                                }
+                                searchListElement.style.position = "absolute";
+                                searchListElement.style.top = `${box.bottom + window.scrollY + 4}px`;
+                                searchListElement.style.left = `${box.left + window.scrollX}px`;
+                                searchListElement.style.zIndex = "1001";
+                            }
+
+                            function onActorClick(props: SuggestionProps) {
+                                return (_: Event, item: SearchItem) => {
+                                    props.command({
+                                        id: item.value.iri,
+                                        label: `${item.value.username}${item.value.isLocal ? "" : "@" + item.value.domain}`,
+                                    });
+                                };
+                            }
+                            return {
+                                onStart: (props) => {
+                                    props.clientRect;
+                                    componentState.items = props.items;
+                                    componentState.onclick =
+                                        onActorClick(props);
+
+                                    component = mount(SearchList, {
+                                        target: document.body,
+                                        props: componentState,
+                                    });
+
+                                    updatePosition(props);
+                                },
+                                onUpdate(props) {
+                                    componentState.items = props.items;
+                                    componentState.onclick =
+                                        onActorClick(props);
+                                    updatePosition(props);
+                                },
+
+                                onKeyDown(props) {
+                                    if (props.event.key === "Escape") {
+                                        this.onExit?.({} as unknown as any)
+
+                                        return true;
+                                    }
+
+                                    return false
+                                },
+                                onExit() {
+                                    unmount(component);
+                                },
+                            };
+                        },
+                    },
+                }),
                 Link.configure({
                     openOnClick: false,
                     autolink: true,
@@ -186,8 +311,8 @@
                     ],
                 })
                 .run();
-            console.log(editor?.getHTML());
-            modal.closeModal();
+
+                modal.closeModal();
         } catch (e) {
             if (
                 e instanceof ZodError &&

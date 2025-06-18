@@ -8,10 +8,10 @@
 </script>
 
 <script lang="ts">
-    import { fade } from "svelte/transition";
-    import TextField from "./text_field.svelte";
     import type { Snippet } from "svelte";
-    import { isURL, isVideoURL } from "$lib/util/file_util";
+    import { fade } from "svelte/transition";
+    import SearchList from "./search_list.svelte";
+    import TextField from "./text_field.svelte";
 
     interface Props {
         maxSearchLength?: number;
@@ -119,41 +119,6 @@
     ></TextField>
 
     {#if dropDownOpen}
-        <ul
-            class="menu absolute bg-menu-background border border-input-border rounded-xl shadow-md overflow-x-hidden overflow-y-scroll max-h-72 w-full"
-            class:none={!dropDownOpen}
-            style="z-index: 1001"
-        >
-            {#each items as item}
-                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-                <li
-                    class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
-                    tabindex="0"
-                    onmousedown={(e) => handleItemClick(e, item)}
-                    onkeydown={(e) => handleItemClick(e, item)}
-                >
-                    {#if prepend}{@render prepend({ item })}
-                    {:else if isURL(item.icon)}
-                        <img
-                            class="rounded-full w-8 mr-4 aspect-square"
-                            src={item.icon}
-                            alt="avatar"
-                        />
-                    {:else}
-                        <i class="fa fa-{item.icon} basis-8 shrink-0"></i>
-                    {/if}
-
-                    <div>
-                        <p>{item.text}</p>
-                        {#if item.description}
-                            <p class="text-sm text-gray-500">
-                                {item.description}
-                            </p>
-                        {/if}
-                    </div>
-                </li>
-            {/each}
-        </ul>
+        <SearchList {items} {prepend} onclick={handleItemClick}></SearchList>
     {/if}
 </div>

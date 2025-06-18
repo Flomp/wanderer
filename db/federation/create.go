@@ -113,7 +113,8 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 	activityRecordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
-	to := commentTrailAuthor.GetString("iri")
+	to := "https://www.w3.org/ns/activitystreams#Public"
+	cc := commentTrailAuthor.GetString("iri")
 
 	author := commentAuthor.GetString("iri")
 
@@ -124,7 +125,8 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, commentObject)
 	activity.Actor = pub.IRI(author)
-	activity.To = pub.ItemCollection{pub.IRI("https://www.w3.org/ns/activitystreams#Public"), pub.IRI(to)}
+	activity.To = pub.ItemCollection{pub.IRI(to)}
+	activity.CC = pub.ItemCollection{pub.IRI(cc)}
 	activity.Published = time.Now()
 	activity.Object = commentObject
 
@@ -136,7 +138,8 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 	record := core.NewRecord(collection)
 	record.Set("id", activityRecordId)
 	record.Set("iri", id)
-	record.Set("to", []string{"https://www.w3.org/ns/activitystreams#Public", to})
+	record.Set("to", []string{to})
+	record.Set("cc", []string{cc})
 	record.Set("type", string(typ))
 	record.Set("object", commentObject)
 	record.Set("actor", author)
