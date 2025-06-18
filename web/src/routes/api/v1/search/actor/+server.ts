@@ -15,28 +15,24 @@ export async function GET(event: RequestEvent) {
 
         const [user, domain] = splitUsername(q!)
 
-        let filter = `isLocal=true&&username~'${user}'&&user.settings_via_user.privacy.account != 'private'`;
+        let filter = `username~'${user}'`;
 
-         if (event.url.searchParams.get("includeSelf") == "false" && event.locals.pb.authStore.record) {
+        if (event.url.searchParams.get("includeSelf") == "false" && event.locals.pb.authStore.record) {
             filter += `&& id != "${event.locals.pb.authStore.record.actor}"`
-         }
-
-        const r = await event.fetch(`${domain ? `https://${domain}` : ''}/api/v1/activitypub/actor?` + new URLSearchParams({
-            filter,
-            perPage: "3"
-        }),)
-
-        if (!r.ok) {
-            const errorResponse = await r.json()
-            throw new ClientResponseError({ status: r.status, response: errorResponse });
         }
 
-        const response: ListResult<Actor> = await r.json()
+        const response = await event.locals.pb.collection("activitypub_actors").getList(1, 3, { filter: filter })
 
-        if(domain) {
-            response.items.forEach(i => i.isLocal = false)
+        try {
+            const { actor, error } = await event.locals.pb.send(`/activitypub/actor?resource=acct:${q}&follows=false`, { method: "GET", fetch: event.fetch, });
+
+            if (!response.items.find(i => i.iri == actor.iri)) {
+                response.items.push(actor)
+            }
+
+        } catch (e) {
+
         }
-
 
         return json({ items: response.items })
 

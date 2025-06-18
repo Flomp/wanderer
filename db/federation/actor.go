@@ -40,7 +40,7 @@ func SplitHandle(handle string) (string, string) {
 	return user, domain
 }
 
-func GetActorByHandle(app core.App, handle string, includeFollows bool) (*core.Record, bool, error) {
+func GetActorByHandle(app core.App, handle string, includeFollows bool) (*core.Record, error) {
 	username, domain := SplitHandle(handle)
 
 	filter := "username={:username}&&"
@@ -55,31 +55,31 @@ func GetActorByHandle(app core.App, handle string, includeFollows bool) (*core.R
 	if err != nil && err == sql.ErrNoRows {
 		collection, err := app.FindCollectionByNameOrId("activitypub_actors")
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		dbActor = core.NewRecord(collection)
 		dbActor.Set("isLocal", false)
 		iri, err := iriFromHandle(domain, username)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		dbActor.Set("iri", iri)
 
 	} else if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	return assembleActor(dbActor, app, includeFollows)
 }
 
-func GetActorByIRI(app core.App, iri string, includeFollows bool) (*core.Record, bool, error) {
+func GetActorByIRI(app core.App, iri string, includeFollows bool) (*core.Record, error) {
 	var dbActor *core.Record
 	dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "iri={:iri}", dbx.Params{"iri": iri})
 	if err != nil && err == sql.ErrNoRows {
 		collection, err := app.FindCollectionByNameOrId("activitypub_actors")
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		dbActor = core.NewRecord(collection)
@@ -87,7 +87,7 @@ func GetActorByIRI(app core.App, iri string, includeFollows bool) (*core.Record,
 		dbActor.Set("iri", iri)
 
 	} else if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	return assembleActor(dbActor, app, includeFollows)
@@ -116,20 +116,20 @@ func iriFromHandle(domain string, username string) (string, error) {
 	return "", fmt.Errorf("no iri in response")
 }
 
-func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*core.Record, bool, error) {
+func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*core.Record, error) {
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
-		return nil, false, fmt.Errorf("ORIGIN environment variable not set")
+		return nil, fmt.Errorf("ORIGIN environment variable not set")
 	}
-	private := false
+
 	if dbActor.GetBool("isLocal") {
 		user, err := app.FindRecordById("users", dbActor.GetString("user"))
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		settings, err := app.FindFirstRecordByData("settings", "user", user.Id)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		if user.GetString("avatar") != "" {
@@ -138,12 +138,12 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		dbActor.Set("summary", settings.GetString("bio"))
 		followerCount, err := app.CountRecords("follows", dbx.NewExp("followee={:user}", dbx.Params{"user": dbActor.Id}))
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		dbActor.Set("followerCount", followerCount)
 		followingCount, err := app.CountRecords("follows", dbx.NewExp("follower={:user}", dbx.Params{"user": dbActor.Id}))
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		dbActor.Set("followingCount", followingCount)
 
@@ -153,21 +153,25 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		result := make(map[string]interface{})
 		json.Unmarshal([]byte(privacy), &result)
 
-		private = result["account"] == "private"
+		private := result["account"] == "private"
+
+		if private {
+			return nil, fmt.Errorf("profile is private")
+		}
 
 	} else {
 
 		// check if value is still cached
 		twoHoursAgo := time.Now().Add(-2 * time.Hour)
 		if !includeFollows && dbActor.GetDateTime("last_fetched").Time().After(twoHoursAgo) {
-			return dbActor, false, nil
+			return dbActor, nil
 		}
 		pubActor, followers, following, err := fetchRemoteActor(dbActor.GetString("iri"), includeFollows)
 		if err != nil {
 			if dbActor.Id != "" {
-				return dbActor, false, err
+				return dbActor, err
 			}
-			return nil, false, err
+			return nil, err
 		}
 
 		icon := ""
@@ -180,7 +184,7 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 
 		parsedUrl, err := url.Parse(dbActor.GetString("iri"))
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		domain := strings.TrimPrefix(parsedUrl.Hostname(), "www.")
 
@@ -208,14 +212,14 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 	if err != nil && err.Error() == "iri: Value must be unique." {
 		dbActor, err = app.FindFirstRecordByData("activitypub_actors", "iri", dbActor.GetString("iri"))
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
-		return dbActor, private, nil
+		return dbActor, nil
 	} else if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return dbActor, private, nil
+	return dbActor, nil
 }
 
 // Fetches an AP actor and optionally followers/following collections

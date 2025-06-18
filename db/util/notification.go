@@ -11,12 +11,15 @@ import (
 type NotificationType string
 
 const (
-	TrailShare      NotificationType = "trail_share"
-	ListShare       NotificationType = "list_share"
-	NewFollower     NotificationType = "new_follower"
-	TrailComment    NotificationType = "trail_comment"
-	TrailLike       NotificationType = "trail_like"
-	SummitLogCreate NotificationType = "summit_log_create"
+	TrailShare       NotificationType = "trail_share"
+	ListShare        NotificationType = "list_share"
+	NewFollower      NotificationType = "new_follower"
+	TrailComment     NotificationType = "trail_comment"
+	TrailLike        NotificationType = "trail_like"
+	SummitLogCreate  NotificationType = "summit_log_create"
+	CommentMention   NotificationType = "comment_mention"
+	TrailMention     NotificationType = "trail_mention"
+	SummitLogMention NotificationType = "summit_log_mention"
 )
 
 type Notification struct {

@@ -34,7 +34,7 @@
             const actors = await searchActors(q);
             searchDropdownItems = actors.map((a) => ({
                 text: a.username,
-                description: a.isLocal ? "" : '@' + a.domain,
+                description: `@${a.username}${a.isLocal ? "" : '@' + a.domain}`,
                 value: a,
                 icon:
                     a.icon ||

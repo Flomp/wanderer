@@ -38,7 +38,7 @@ func CreateAnnounceActivity(app core.App, record *core.Record, typ AnnounceType)
 		if err != nil {
 			return err
 		}
-		object, err = util.ObjectFromTrail(app, subject)
+		object, err = util.ObjectFromTrail(app, subject, nil)
 		if err != nil {
 			return err
 		}

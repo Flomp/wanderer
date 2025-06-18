@@ -277,7 +277,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 	return record, app.Save(record)
 }
 
-func ObjectFromTrail(app core.App, trail *core.Record) (*pub.Object, error) {
+func ObjectFromTrail(app core.App, trail *core.Record, mentions *pub.ItemCollection) (*pub.Object, error) {
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return nil, fmt.Errorf("ORIGIN not set")
@@ -303,6 +303,7 @@ func ObjectFromTrail(app core.App, trail *core.Record) (*pub.Object, error) {
 	}
 
 	tagRecords := trail.ExpandedAll("tags")
+
 	tags := pub.ItemCollection{
 		pub.Object{
 			Type:    pub.NoteType,
@@ -334,6 +335,12 @@ func ObjectFromTrail(app core.App, trail *core.Record) (*pub.Object, error) {
 			Name:    pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "duration")),
 			Content: pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, fmt.Sprintf("%fm", trail.GetFloat("duration")))),
 		},
+	}
+
+	if mentions != nil {
+		for _, m := range *mentions {
+			tags.Append(m)
+		}
 	}
 
 	for _, v := range tagRecords {
@@ -380,7 +387,7 @@ func ObjectFromTrail(app core.App, trail *core.Record) (*pub.Object, error) {
 	}
 	trailObject.AttributedTo = pub.IRI(trailAuthor.GetString("iri"))
 	trailObject.Published = trail.GetDateTime("created").Time()
-	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/activitypub/trail/%s", origin, trail.Id))
+	trailObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/trail/%s", origin, trail.Id))
 	trailObject.URL = pub.IRI(activityURL)
 
 	trailObject.StartTime = trail.GetDateTime("date").Time()
@@ -490,7 +497,7 @@ func ObjectFromList(app core.App, list *core.Record) (*pub.Object, error) {
 	return listObject, nil
 }
 
-func ObjectFromComment(app core.App, comment *core.Record) (*pub.Object, error) {
+func ObjectFromComment(app core.App, comment *core.Record, mentions *pub.ItemCollection) (*pub.Object, error) {
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return nil, fmt.Errorf("ORIGIN not set")
@@ -512,17 +519,51 @@ func ObjectFromComment(app core.App, comment *core.Record) (*pub.Object, error) 
 
 	trailURL := ""
 	if commentTrailAuthor.GetBool("isLocal") {
-		trailURL = fmt.Sprintf("https://%s/api/v1/activitypub/trail/%s", commentTrailAuthor.GetString("domain"), comment.GetString("trail"))
+		trailURL = fmt.Sprintf("https://%s/api/v1/trail/%s", commentTrailAuthor.GetString("domain"), comment.GetString("trail"))
 	} else {
 		trailURL = commentTrail.GetString("iri")
 	}
 
 	commentObject := pub.ObjectNew(pub.NoteType)
-	commentObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/activitypub/comment/%s", origin, comment.Id))
+	commentObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/comment/%s", origin, comment.Id))
 	commentObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, comment.GetString("text")))
 	commentObject.Published = comment.GetDateTime("created").Time()
 	commentObject.AttributedTo = pub.IRI(commentAuthor.GetString("iri"))
 	commentObject.InReplyTo = pub.IRI(trailURL)
 
+	if mentions != nil {
+		commentObject.Tag = *mentions
+	}
+
 	return commentObject, nil
+}
+
+func TrailObjectFromIRI(iri string) (*pub.Object, error) {
+	fetchURL := strings.Replace(iri, "api/v1/trail", "api/v1/activitypub/trail", 1)
+
+	client := &http.Client{}
+
+	req, err := http.NewRequest(http.MethodGet, fetchURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var object pub.Object
+	err = json.Unmarshal(body, &object)
+	if err != nil {
+		return nil, err
+	}
+
+	return &object, nil
 }

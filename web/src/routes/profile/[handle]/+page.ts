@@ -1,5 +1,4 @@
 import type { ListFilter } from "$lib/models/list";
-import { lists_index } from "$lib/stores/list_store";
 import { profile_lists_index, profile_timeline_index } from "$lib/stores/profile_store";
 import { error, type Load } from "@sveltejs/kit";
 

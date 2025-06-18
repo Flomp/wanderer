@@ -71,7 +71,7 @@ func CreateTrailDeleteActivity(app core.App, r *core.Record) error {
 		if err != nil {
 			return err
 		}
-		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+		recipients = append(recipients, follower.GetString("inbox"))
 	}
 
 	return PostActivity(app, author, activity, recipients)
@@ -195,11 +195,11 @@ func CreateSummitLogDeleteActivity(app core.App, r *core.Record) error {
 		if err != nil {
 			return err
 		}
-		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+		recipients = append(recipients, follower.GetString("inbox"))
 	}
 
 	if author.Id != summitLogTrailAuthor.Id {
-		recipients = append(recipients, summitLogTrailAuthor.GetString("iri")+"/inbox")
+		recipients = append(recipients, summitLogTrailAuthor.GetString("inbox"))
 	}
 
 	err = PostActivity(app, author, activity, recipients)
@@ -265,7 +265,7 @@ func CreateListDeleteActivity(app core.App, r *core.Record) error {
 		if err != nil {
 			return err
 		}
-		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+		recipients = append(recipients, follower.GetString("inbox"))
 	}
 
 	err = PostActivity(app, author, activity, recipients)

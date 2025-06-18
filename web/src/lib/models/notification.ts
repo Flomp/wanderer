@@ -6,7 +6,10 @@ enum NotificationType {
     listShare = "list_share",
     newFollower = "new_follower",
     trailComment = "trail_comment",
-    summitLogCreate = "summit_log_create"
+    summitLogCreate = "summit_log_create",
+    commentMention = "comment_mention",
+    trailMention = "trail_mention",
+    summitLogMention = "summit_log_mention",
 
 };
 

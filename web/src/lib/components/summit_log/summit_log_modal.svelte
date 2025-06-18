@@ -151,6 +151,7 @@
                         extraClasses="h-28"
                         label={$_("text")}
                         error={$errors.text}
+                        searchListPosition="fixed"
                     ></Editor>
                 </div>
             </div>

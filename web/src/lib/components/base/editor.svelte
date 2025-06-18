@@ -34,6 +34,7 @@
         error?: string | string[] | null;
         placeholder?: string;
         extraClasses?: string;
+        searchListPosition?: string;
     }
 
     let {
@@ -42,6 +43,7 @@
         error = "",
         placeholder = "",
         extraClasses = "",
+        searchListPosition = "absolute"
     }: Props = $props();
 
     const fontSizes: SelectItem[] = [
@@ -139,7 +141,8 @@
                                 if (!box) {
                                     return;
                                 }
-                                searchListElement.style.position = "absolute";
+                                
+                                searchListElement.style.position = searchListPosition;
                                 searchListElement.style.top = `${box.bottom + window.scrollY + 4}px`;
                                 searchListElement.style.left = `${box.left + window.scrollX}px`;
                                 searchListElement.style.zIndex = "1001";
@@ -161,7 +164,7 @@
                                         onActorClick(props);
 
                                     component = mount(SearchList, {
-                                        target: document.body,
+                                        target: element,
                                         props: componentState,
                                     });
 
@@ -330,7 +333,7 @@
     }
 </script>
 
-<div>
+<div id="editor-wrapper">
     {#if label.length}
         <p class="text-sm font-medium mb-1">
             {label}

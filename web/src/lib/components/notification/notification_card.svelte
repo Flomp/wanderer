@@ -55,6 +55,27 @@
                         trail: n.metadata?.trail_name,
                     },
                 });
+            case NotificationType.commentMention:
+                return $_("notification-comment-mention", {
+                    values: {
+                        user: n.expand.author.username,
+                        trail: n.metadata?.trail_name,
+                    },
+                });
+            case NotificationType.trailMention:
+                return $_("notification-trail-mention", {
+                    values: {
+                        user: n.expand.author.username,
+                        trail: n.metadata?.trail_name,
+                    },
+                });
+            case NotificationType.summitLogMention:
+                return $_("notification-summit-log-mention", {
+                    values: {
+                        user: n.expand.author.username,
+                        trail: n.metadata?.trail_name,
+                    },
+                });
         }
     }
 
@@ -64,13 +85,9 @@
                 return n.metadata?.list ?? "";
             case NotificationType.newFollower:
                 return n.expand.author.username ?? "";
-            case NotificationType.trailComment:
-                return "";
             case NotificationType.trailShare:
                 return n.metadata?.trail ?? "";
-            case NotificationType.trailShare:
-                return "";
-            case NotificationType.trailLike:
+            default:
                 return "";
         }
     }
@@ -88,6 +105,12 @@
             case NotificationType.summitLogCreate:
                 return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}`;
             case NotificationType.trailLike:
+                return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}`;
+            case NotificationType.commentMention:
+                return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}?t=2`;
+            case NotificationType.trailMention:
+                return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}`;
+            case NotificationType.summitLogMention:
                 return `/trail/view/${n.metadata?.trail_author}/${n.metadata?.trail_id}`;
         }
     }

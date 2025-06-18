@@ -18,6 +18,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
+	"golang.org/x/net/html"
 )
 
 func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocabularyType) error {
@@ -44,9 +45,27 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 	to := "https://www.w3.org/ns/activitystreams#Public"
-	cc := trailAuthor.GetString("iri") + "/followers"
 
-	trailObject, err := util.ObjectFromTrail(app, trail)
+	mentionedActors, handles, err := ActorsFromMentions(app, trail.GetString("description"))
+	if err != nil {
+		return err
+	}
+
+	mentions := []string{}
+	cc := pub.ItemCollection{pub.IRI(trailAuthor.GetString("followers"))}
+	tags := pub.ItemCollection{}
+	for i, m := range mentionedActors {
+		inbox := m.GetString("inbox")
+		mention := pub.MentionNew(pub.IRI(m.GetString("iri")))
+		mention.Href = pub.IRI(m.GetString("iri"))
+		mention.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, handles[i]))
+		tags.Append(mention)
+
+		mentions = append(mentions, inbox)
+		cc.Append(pub.IRI(inbox))
+	}
+
+	trailObject, err := util.ObjectFromTrail(app, trail, &tags)
 	if err != nil {
 		return err
 	}
@@ -54,14 +73,14 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 	activity := pub.ActivityNew(pub.IRI(id), typ, trailObject)
 	activity.Actor = pub.IRI(trailAuthor.GetString("iri"))
 	activity.To = pub.ItemCollection{pub.IRI(to)}
-	activity.CC = pub.ItemCollection{pub.IRI(cc)}
+	activity.CC = cc
 	activity.Published = time.Now()
 
 	record := core.NewRecord(collection)
 	record.Set("id", recordId)
 	record.Set("iri", id)
 	record.Set("to", []string{to})
-	record.Set("cc", []string{cc})
+	record.Set("cc", cc)
 	record.Set("type", string(typ))
 	record.Set("object", trailObject)
 	record.Set("actor", trailAuthor.GetString("iri"))
@@ -77,13 +96,13 @@ func CreateTrailActivity(app core.App, trail *core.Record, typ pub.ActivityVocab
 		return err
 	}
 
-	recipients := []string{}
+	recipients := mentions
 	for _, f := range follows {
 		follower, err := app.FindRecordById("activitypub_actors", f.GetString("follower"))
 		if err != nil {
 			return err
 		}
-		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+		recipients = append(recipients, follower.GetString("inbox"))
 	}
 
 	return PostActivity(app, trailAuthor, activity, recipients)
@@ -114,11 +133,31 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
 	to := "https://www.w3.org/ns/activitystreams#Public"
-	cc := commentTrailAuthor.GetString("iri")
+
+	mentionedActors, handles, err := ActorsFromMentions(app, comment.GetString("text"))
+	if err != nil {
+		return err
+	}
+	recipients := []string{}
+	tags := pub.ItemCollection{}
+	for i, m := range mentionedActors {
+		mention := pub.MentionNew(pub.IRI(m.GetString("iri")))
+		mention.Href = pub.IRI(m.GetString("iri"))
+		mention.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, handles[i]))
+		tags.Append(mention)
+
+		recipients = append(recipients, m.GetString("inbox"))
+	}
+	recipients = append(recipients, commentTrailAuthor.GetString("inbox"))
+
+	cc := pub.ItemCollection{}
+	for _, r := range recipients {
+		cc.Append(pub.IRI(r))
+	}
 
 	author := commentAuthor.GetString("iri")
 
-	commentObject, err := util.ObjectFromComment(app, comment)
+	commentObject, err := util.ObjectFromComment(app, comment, &tags)
 	if err != nil {
 		return err
 	}
@@ -126,7 +165,7 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 	activity := pub.ActivityNew(pub.IRI(id), typ, commentObject)
 	activity.Actor = pub.IRI(author)
 	activity.To = pub.ItemCollection{pub.IRI(to)}
-	activity.CC = pub.ItemCollection{pub.IRI(cc)}
+	activity.CC = cc
 	activity.Published = time.Now()
 	activity.Object = commentObject
 
@@ -139,7 +178,7 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 	record.Set("id", activityRecordId)
 	record.Set("iri", id)
 	record.Set("to", []string{to})
-	record.Set("cc", []string{cc})
+	record.Set("cc", recipients)
 	record.Set("type", string(typ))
 	record.Set("object", commentObject)
 	record.Set("actor", author)
@@ -150,7 +189,7 @@ func CreateCommentActivity(app core.App, comment *core.Record, typ pub.ActivityV
 		return err
 	}
 
-	return PostActivity(app, commentAuthor, activity, []string{to + "/inbox"})
+	return PostActivity(app, commentAuthor, activity, recipients)
 
 }
 
@@ -200,11 +239,29 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
 	to := pub.ItemCollection{pub.IRI("https://www.w3.org/ns/activitystreams#Public")}
-	cc := pub.ItemCollection{pub.IRI(summitLogAuthor.GetString("iri") + "/followers")}
 
 	// someone else created the summit log on the trail -> inform the trail's author
 	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
 		to.Append(pub.IRI(summitLogTrailAuthor.GetString("iri")))
+	}
+
+	mentionedActors, handles, err := ActorsFromMentions(app, summitLog.GetString("text"))
+	if err != nil {
+		return err
+	}
+
+	mentions := []string{}
+	cc := pub.ItemCollection{pub.IRI(summitLogAuthor.GetString("followers"))}
+	mentionTags := pub.ItemCollection{}
+	for i, m := range mentionedActors {
+		inbox := m.GetString("inbox")
+		mention := pub.MentionNew(pub.IRI(m.GetString("iri")))
+		mention.Href = pub.IRI(m.GetString("iri"))
+		mention.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, handles[i]))
+		mentionTags.Append(mention)
+
+		mentions = append(mentions, inbox)
+		cc.Append(pub.IRI(inbox))
 	}
 
 	photos := summitLog.GetStringSlice("photos")
@@ -255,6 +312,10 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 		},
 	}
 
+	for _, m := range mentionTags {
+		tags.Append(m)
+	}
+
 	logObject := pub.ObjectNew(pub.NoteType)
 
 	logObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, summitLog.GetString("text")))
@@ -279,18 +340,18 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 		return err
 	}
 
-	recipients := []string{}
+	recipients := mentions
 
 	for _, f := range follows {
 		follower, err := app.FindRecordById("activitypub_actors", f.GetString("follower"))
 		if err != nil {
 			return err
 		}
-		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+		recipients = append(recipients, follower.GetString("inbox"))
 	}
 
 	if summitLogAuthor.Id != summitLogTrailAuthor.Id {
-		recipients = append(recipients, summitLogTrailAuthor.GetString("iri")+"/inbox")
+		recipients = append(recipients, summitLogTrailAuthor.GetString("inbox"))
 	}
 
 	err = PostActivity(app, summitLogAuthor, activity, recipients)
@@ -362,7 +423,7 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 		if err != nil {
 			return err
 		}
-		recipients = append(recipients, follower.GetString("iri")+"/inbox")
+		recipients = append(recipients, follower.GetString("inbox"))
 	}
 
 	err = PostActivity(app, listAuthor, activity, recipients)
@@ -410,7 +471,29 @@ func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, act
 		return nil
 	}
 
-	_, err := util.TrailFromActivity(activity, app, actor)
+	trail, err := util.TrailFromActivity(activity, app, actor)
+
+	trailObject, _ := pub.ToObject(activity.Object)
+
+	for _, t := range trailObject.Tag {
+		if t.GetType() == pub.MentionType {
+			mention := t.(*pub.Mention)
+			mentionedActor, err := app.FindFirstRecordByData("activitypub_actors", "iri", mention.Href.GetID().String())
+			if err != nil {
+				continue
+			}
+			notification := util.Notification{
+				Type: util.TrailMention,
+				Metadata: map[string]string{
+					"id":     trail.Id,
+					"author": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+				},
+				Seen:   false,
+				Author: actor.Id,
+			}
+			return util.SendNotification(app, notification, mentionedActor)
+		}
+	}
 
 	return err
 }
@@ -432,11 +515,24 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 	}
 	trailId := path.Base(trailUrl.Path)
 
-	trail, err := app.FindRecordById("trails", trailId)
+	var trail *core.Record
+	trail, err = app.FindFirstRecordByFilter("trails", "iri={:iri} || id={:id}", dbx.Params{"id": trailId, "iri": commentObject.InReplyTo.GetID().String()})
 
-	// if the trail is not present on this instance just ignore it
+	// if the trail is not present on this instance fetch it
 	if err != nil {
-		return nil
+		if err == sql.ErrNoRows {
+			trailObject, err := util.TrailObjectFromIRI(commentObject.InReplyTo.GetLink().String())
+			if err != nil {
+				return err
+			}
+			activity := pub.ActivityNew(pub.IRI("new"), pub.CreateType, trailObject)
+			trail, err = util.TrailFromActivity(*activity, app, actor)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	trailAuthor, err := app.FindRecordById("activitypub_actors", trail.GetString("author"))
@@ -466,28 +562,49 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 	record.Set("iri", commentObject.ID.String())
 	record.Set("text", commentObject.Content.First().Value)
 	record.Set("author", actor.Id)
-	record.Set("trail", trailId)
+	record.Set("trail", trail.Id)
 
 	err = app.Save(record)
 	if err != nil {
 		return err
 	}
 
+	// send notifications to all mentioned actors
+	for _, t := range commentObject.Tag {
+		if t.GetType() == pub.MentionType {
+			mention := t.(*pub.Mention)
+			mentionedActor, err := app.FindFirstRecordByData("activitypub_actors", "iri", mention.Href.GetID().String())
+			if err != nil {
+				continue
+			}
+			notification := util.Notification{
+				Type: util.CommentMention,
+				Metadata: map[string]string{
+					"comment":      commentObject.Content.First().Value.String(),
+					"trail_id":     trail.Id,
+					"trail_name":   trail.GetString("name"),
+					"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
+				},
+				Seen:   false,
+				Author: actor.Id,
+			}
+			return util.SendNotification(app, notification, mentionedActor)
+		}
+	}
 	if activity.Type == pub.CreateType {
 		// send a notification to the trail author
 		notification := util.Notification{
 			Type: util.TrailComment,
 			Metadata: map[string]string{
 				"comment":      commentObject.Content.First().Value.String(),
-				"trail_id":     trailId,
+				"trail_id":     trail.Id,
 				"trail_name":   trail.GetString("name"),
-				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+				"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
 			},
 			Seen:   false,
 			Author: actor.Id,
 		}
 		return util.SendNotification(app, notification, trailAuthor)
-
 	}
 
 	return nil
@@ -506,9 +623,21 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	trailId := path.Base(trailIRI.Path)
 
 	trail, err := app.FindFirstRecordByFilter("trails", "iri={:iri} || id={:id}", dbx.Params{"id": trailId, "iri": logObject.InReplyTo.GetID().String()})
-	// if the trail is not present on this instance just ignore it
+	// if the trail is not present on this instance fetch it
 	if err != nil {
-		return nil
+		if err == sql.ErrNoRows {
+			trailObject, err := util.TrailObjectFromIRI(logObject.InReplyTo.GetLink().String())
+			if err != nil {
+				return err
+			}
+			activity := pub.ActivityNew(pub.IRI("new"), pub.CreateType, trailObject)
+			trail, err = util.TrailFromActivity(*activity, app, actor)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	trailAuthor, err := app.FindRecordById("activitypub_actors", trail.GetString("author"))
@@ -621,6 +750,28 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		return err
 	}
 
+	// send notifications to all mentioned actors
+	for _, t := range logObject.Tag {
+		if t.GetType() == pub.MentionType {
+			mention := t.(*pub.Mention)
+			mentionedActor, err := app.FindFirstRecordByData("activitypub_actors", "iri", mention.Href.GetID().String())
+			if err != nil {
+				continue
+			}
+			notification := util.Notification{
+				Type: util.SummitLogMention,
+				Metadata: map[string]string{
+					"trail_id":     trail.Id,
+					"trail_name":   trail.GetString("name"),
+					"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
+				},
+				Seen:   false,
+				Author: actor.Id,
+			}
+			return util.SendNotification(app, notification, mentionedActor)
+		}
+	}
+
 	if newSummitLog {
 		// send a notification to the trail author
 		notification := util.Notification{
@@ -628,7 +779,7 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 			Metadata: map[string]string{
 				"trail_id":     trail.Id,
 				"trail_name":   trail.GetString("name"),
-				"trail_author": fmt.Sprintf("@%s", trailAuthor.GetString("username")),
+				"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
 			},
 			Seen:   false,
 			Author: actor.Id,
@@ -649,4 +800,49 @@ func processCreateOrUpdateListActivity(activity pub.Activity, app core.App, acto
 	_, err := util.ListFromActivity(activity, app, actor)
 
 	return err
+}
+
+func ActorsFromMentions(app core.App, htmlStr string) ([]*core.Record, []string, error) {
+	doc, err := html.Parse(strings.NewReader(htmlStr))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var handles []string
+	var actors []*core.Record
+
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "a" {
+			var isMention bool
+			for _, attr := range n.Attr {
+				if attr.Key == "class" && strings.Contains(attr.Val, "mention") {
+					isMention = true
+					break
+				}
+			}
+			if isMention && n.FirstChild != nil && n.FirstChild.Type == html.TextNode {
+				handle := strings.TrimSpace(n.FirstChild.Data)
+				if strings.HasPrefix(handle, "@") {
+					handles = append(handles, handle)
+				}
+			}
+		}
+
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+
+	f(doc)
+
+	for _, h := range handles {
+		actor, err := GetActorByHandle(app, h, false)
+		if err != nil {
+			continue
+		}
+		actors = append(actors, actor)
+	}
+
+	return actors, handles, nil
 }

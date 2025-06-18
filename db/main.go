@@ -1043,15 +1043,14 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		follows := e.Request.URL.Query().Get("follows") == "true"
 
 		var actor *core.Record
-		var private bool
 		var err error
 		if resource != "" {
-			actor, private, err = federation.GetActorByHandle(e.App, resource, follows)
+			actor, err = federation.GetActorByHandle(e.App, resource, follows)
 		} else {
-			actor, private, err = federation.GetActorByIRI(e.App, iri, follows)
+			actor, err = federation.GetActorByIRI(e.App, iri, follows)
 		}
 		if err != nil && actor == nil {
-			if strings.HasPrefix(err.Error(), "webfinger") {
+			if strings.HasPrefix(err.Error(), "webfinger") || err.Error() == "profile is private" {
 				return e.NotFoundError("Not found", err)
 			}
 			return err
@@ -1060,7 +1059,7 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 			return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": err.Error()})
 		}
 
-		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "private": private, "error": nil})
+		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": nil})
 	})
 	se.Router.GET("/activitypub/trail/{id}", func(e *core.RequestEvent) error {
 		id := e.Request.PathValue("id")
@@ -1070,7 +1069,7 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 			return err
 		}
 
-		trailObject, err := util.ObjectFromTrail(e.App, trail)
+		trailObject, err := util.ObjectFromTrail(e.App, trail, nil)
 		if err != nil {
 			return err
 		}
@@ -1079,12 +1078,12 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.GET("/activitypub/comment/{id}", func(e *core.RequestEvent) error {
 		id := e.Request.PathValue("id")
 
-		trail, err := e.App.FindRecordById("comments", id)
+		comment, err := e.App.FindRecordById("comments", id)
 		if err != nil {
 			return err
 		}
 
-		commentObject, err := util.ObjectFromComment(e.App, trail)
+		commentObject, err := util.ObjectFromComment(e.App, comment, nil)
 		if err != nil {
 			return err
 		}

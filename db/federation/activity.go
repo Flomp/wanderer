@@ -130,7 +130,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor.GetID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {
-			actor, _, err = GetActorByIRI(e.App, activity.Actor.GetID().String(), false)
+			actor, err = GetActorByIRI(e.App, activity.Actor.GetID().String(), false)
 			if err != nil {
 				return err
 			}
