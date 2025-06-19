@@ -13,12 +13,10 @@
         createPopupFromTrail,
         FontawesomeMarker,
     } from "$lib/util/maplibre_util";
-    import { polylineToGeoJSON } from "$lib/util/polyline_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
     import { StyleSwitcherControl } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
-    import { T } from "@threlte/core";
     import type { Feature, FeatureCollection, GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";

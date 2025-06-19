@@ -141,7 +141,7 @@
         <div class="mt-6 mb-4">
             {#each profileLinks as link, i}
                 <a
-                    class="block mx-2 px-4 py-3 my-1 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors rounded-md"
+                    class="block mx-4 px-4 py-3 my-1 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors rounded-md"
                     class:bg-menu-item-background-hover={i == activeIndex}
                     href={link.value}
                     ><i class="fa fa-{link.icon} mr-2"></i>{link.text}</a
@@ -149,7 +149,7 @@
             {/each}
         </div>
         {#if data.isOwnProfile}
-            <div class="px-6 mb-4 flex flex-col gap-2">
+            <div class="px-4 mb-4 flex flex-col gap-2">
                 <button
                     class="btn-secondary basis-full"
                     onclick={() => profileShareModal.openModal()}
