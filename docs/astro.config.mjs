@@ -44,7 +44,12 @@ export default defineConfig({
           }, {
             label: 'Create a trail',
             link: '/use/create-a-trail/'
-          }, {
+          },
+          {
+            label: 'Interact with the community',
+            link: '/use/community-interaction/'
+          },
+          {
             label: 'Share trails',
             link: '/use/share-trails/'
           }, {

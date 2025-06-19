@@ -5,54 +5,102 @@ description: How to create a trail by uploading or drawing a trail using Valhall
 
 ## What is a trail?
 
-In wanderer a trail is an object that contains both GPS data and various kinds of metadata (like a description, photos, waypoints etc.) that make it easily searchable. 
+In *wanderer*, a trail is a digital route that includes GPS data and descriptive metadata like name, difficulty, category, photos, and waypoints. Trails can be explored by others and searched in the app.
+
+
 
 ## Create a trail
-To create a new trail click the <button class="h-10 text-white rounded-lg px-4 py-2 mx-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-zinc-400 leading-none">+ New Trail</button> button in the top right corner.
 
-### Provide a route
-A route is the GPS data of a trail. There are two main ways that a user can provide a route.
+To start, click the  <button class="h-10 text-white rounded-lg px-4 py-2 mx-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-zinc-400 leading-none">+ New Trail</button> button in the top right corner.
 
-#### Upload a file
 
-Click the `Upload file` button and choose a file. The file must be either in GPX, FIT, TCX, or KML format. Once you have selected a file you will see a couple of things happen: 
-- the map will display and focus on your track. 
-- the elevation profile and speed charts (if your file contains that information) will be updated accordingly. 
-- in the left-hand panel information like the trail name, location, and distance will be displayed.
 
-#### Draw a route
+## Step 1: Pick a route
 
-Instead of clicking the `Upload file` button, you can also click the `Draw a route` button. This will activate the drawing mode. Notice that your cursor is now a cross when hovering over the map. Clicking on the map in drawing mode will create a new waypoint. You can drag and drop it anywhere on the map to update its position. To delete it, click first on the waypoint and then on the red trashcan icon. Creating a second waypoint will create a route between it and the previous one. 
+Each trail must begin with a route. There are two ways to provide one:
 
-![Valhalla routing](../../../assets/guides/valhalla_routing.png)
+### Upload a file
 
-By default, wanderer uses the [valhalla routing engine](https://github.com/valhalla/valhalla) to calculate the route between the two points. Via the menu in the top-left corner of the map, you can choose your preferred mode of transport which will influence the route calculation. If you disable auto-routing wanderer will not use `valhalla`, but instead, simply draw a straight line between the two points. 
+Click the **Upload file** button to select a GPS file. Accepted formats are **GPX**, **FIT**, **TCX**, or **KML**.
 
-When you are done with drawing click the `Stop drawing` button to deactivate the drawing mode.
+After uploading:
+
+- The map centers on the route
+- Elevation profile and speed (if available) are rendered
+- Distance, elevation gain/loss, and other metadata are extracted
+- The form fields on the left will be partially prefilled with data that extracted from the file
+
+### Draw a route
+
+Click the **Draw a route** button to manually define a route on the map. While in drawing mode:
+
+- Click on the map to place waypoints
+- Wanderer will automatically route between points using the [Valhalla routing engine](https://github.com/valhalla/valhalla)
+- You can drag points to reposition them
+- Use the top-left menu to change routing mode (e.g. walking, cycling)
+- To remove a point, click on it and then click the red trash icon
+
+If you disable Valhalla routing, straight lines will be used between points instead.
+
+To finish drawing, click **Stop drawing**.
 
 :::tip
-wanderer uses a public, free `valhalla` server by default. The server is financed by donations. Please consider donating at [https://www.fossgis.de/verein/spenden/](https://www.fossgis.de/verein/spenden/). 
+wanderer uses a public, donation-financed Valhalla server by default. Please consider supporting it at [https://www.fossgis.de/verein/spenden/](https://www.fossgis.de/verein/spenden/).
 :::
+
+
+
+## Step 2: Fill out trail details
 
 ### Basic Info
 
-Most of the data in this section should be self-explanatory. The only required field is the name: every trail needs a name. If you created your route by uploading a file, wanderer tries to infer most of the information directly from the file. However, you are of course free to edit this information afterwards.
-Toggling the public switch to on will make the trail visible for everyone even visitors who are not logged in.
+- **Name** – Required. Every trail needs a name.
+- **Location** – Autofilled if available in the uploaded file.
+- **Date** – Defaults to today.
+- **Description** – Use the editor to describe your trail in as much detail as you want.
+- **Distance / Duration / Elevation** – These are automatically calculated but can be manually adjusted if needed.
+- **Tags** – Add descriptive tags to help categorize and search for your trail (e.g. forest, sunset, dog-friendly). Start typing to add a tag and press Enter to confirm.
+- **Difficulty** – Select the trail's difficulty (e.g. Easy, Moderate, Hard)
+- **Category** – Choose the activity type (e.g. Hiking, Cycling)
 
-### Waypoints
+### Visibility
 
-Waypoints mark points of interest along the route. A trail can have as many waypoints as you like. Click the `+ Add Waypoint` button to start. By default, a waypoint will be positioned in the center of the map. You can change the position either directly by entering a new latitude and longitude or simply moving the waypoint around on the map after saving it first. 
+Toggle the **Private** switch if you do not want the trail to be visible to others. When set to private, only you will be able to view and access this trail.
 
-Additionally, a waypoint has an icon that is displayed in the map marker. wanderer uses fontawsome icons, so any icon from this [list](https://fontawesome.com/search?q=share&o=r&m=free) is available. If you wish, you can also add photos to the waypoint to make it event more recognizable.
+:::note
+Creating a public trail will automatically publish that trail to all your followers.
+:::
 
-### Photos
 
-You can also add photos to the trail itself. If you add more than one photo you can choose which one should be used as the thumbnail. It will be featured in the trail overview.
+## Step 3: Add Waypoints
 
-### Summit book
+Waypoints are points of interest along the trail.
 
-If you do the same trail multiple times but do not want to create a new trail every time, you can simply make a new entry in the summit book to log the completion of the trail. By default a new summit log entry is created automatically when you upload a fail containing GPS data in the trail creation process. For subsequent entries to the summit book you can provide an individual file containing your route data for this particular completion of the trail.
+- Click **+ Add Waypoint** to add one manually. It will appear centered on the map and can be dragged to another location.
+- Each waypoint can have a name, description, icon, and photos.
+- Use Font Awesome icons for map markers. You can browse them at [fontawesome.com](https://fontawesome.com/search?q=share&o=r&m=free).
 
-## Save the trail
+Alternatively, click **From Photos** to upload photos with GPS metadata. Waypoints will be created automatically based on the photo locations.
 
-Once you are done creating your trail simply click the <button class="h-10 text-white rounded-lg px-4 py-2 mx-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-zinc-400 leading-none">Save Trail</button> button. This will save your trail to the database and create a new index entry to make ensure that you will find your trail in the future.
+
+
+## Step 4: Add Photos & Videos
+
+You can attach photos and videos to the trail itself. These will be shown in the trail's detail view. If you upload more than one, you can select one to be the trail’s thumbnail in the overview.
+
+
+
+## Step 5: Add to Summit Book
+
+If you've completed this trail yourself, you can log a summit book entry.
+
+- Click **+ Add Entry**
+- Upload a separate GPS file or just log the date of your completion
+- You can add multiple summit entries over time without creating duplicate trails
+
+
+
+## Step 6: Save the trail
+
+When you're done, click   <button class="h-10 text-white rounded-lg px-4 py-2 mx-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-zinc-400 leading-none">Save Trail</button> to persist your trail to the database. This will also re-index it for search and display it in your trail list.
+

@@ -18,7 +18,7 @@ Once you are done creating your list simply click the <button class="h-10 text-w
 ![Lists edit](../../../assets/guides/wanderer_lists_edit.png)
 
 ## Share a list
-You can also share a list to allow other users access it. To do so select the list in the overview and click "Share" in the ⋮ menu. Everything else works analogous to <a href="/guides/share-trails#share-a-trail">sharing a trail</a>. Depending on the permission you set for the shared list a user can simply view the list or also modify its contents.
+You can also share a list to allow other users access it. To do so select the list in the overview and click "Share" in the <span class="inline-block w-8 h-8 bg-primary rounded-full text-center text-white">⋮</span> menu. Everything else works analogous to <a href="/guides/share-trails#share-a-trail">sharing a trail</a>. Depending on the permission you set for the shared list a user can simply view the list or also modify its contents.
 
 :::caution
 Sharing a list with another user will also automatically share all trails contained in that list with the user. Unsharing a list will _not_ automatically unshare all trails contained in the list.
@@ -26,4 +26,4 @@ Sharing a list with another user will also automatically share all trails contai
 
 ## Edit & delete a list
 
-To edit or delete a list first select it from the overview. Then you can select the respective entry from the ⋮ menu.
+To edit or delete a list first select it from the overview. Then you can select the respective entry from the <span class="inline-block w-8 h-8 bg-primary rounded-full text-center text-white">⋮</span> menu.
