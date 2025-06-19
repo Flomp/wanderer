@@ -24,7 +24,7 @@
 
 <ul
     {id}
-    class="menu absolute bg-menu-background border border-input-border rounded-xl shadow-md overflow-x-hidden overflow-y-scroll max-h-72 w-full {extraClasses}"
+    class="menu absolute bg-menu-background border border-input-border rounded-xl shadow-md overflow-x-hidden overflow-y-scroll max-h-72 {extraClasses}"
     style="z-index: 1001"
 >
     {#if items.length == 0}

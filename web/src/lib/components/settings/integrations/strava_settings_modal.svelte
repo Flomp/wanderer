@@ -46,7 +46,7 @@
 
 <Modal
     id="strava-settings-modal"
-    size="min-w-lg"
+    size="md:min-w-lg"
     title={"strava " + $_("settings")}
     bind:this={modal}
 >

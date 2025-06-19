@@ -101,7 +101,7 @@
 
 <Modal
     id="waypoint-modal"
-    size="min-w-2xl"
+    size="md:min-w-2xl"
     title={$data.id ? $_("edit-waypoint") : $_("add-waypoint")}
     bind:this={modal}
 >

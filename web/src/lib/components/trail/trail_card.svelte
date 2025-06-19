@@ -83,7 +83,7 @@
                 <i class="fa fa-heart"></i>
             </span>
             <div
-                class="absolute pointer-events-none left-5 -top-1 text-xs rounded-full bg-content text-content-inverse px-1 text-center"
+                class="absolute pointer-events-none left-5 -top-1 text-xs rounded-full bg-menu-background px-1 text-center"
             >
                 {trail.like_count}
             </div>

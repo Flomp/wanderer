@@ -72,7 +72,7 @@
 
 <Modal
     id="url-import-modal"
-    size="min-w-sm"
+    size="md:min-w-sm"
     title={$_("from-url")}
     bind:this={modal}
 >

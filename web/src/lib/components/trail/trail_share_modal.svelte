@@ -89,7 +89,7 @@
 <Modal
     id="share-modal"
     title={$_("share-this-trail")}
-    size="min-w-sm overflow-visible"
+    size="md:min-w-sm overflow-visible"
     bind:this={modal}
 >
     {#snippet content()}

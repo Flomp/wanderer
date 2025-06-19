@@ -138,7 +138,7 @@
 {/if}
 <Modal
     id="summit-log-table-map-modal"
-    size="min-w-4xl"
+    size="md:min-w-2xl lg:min-w-4xl"
     title=""
     bind:this={mapModal}
 >
@@ -153,7 +153,7 @@
 </Modal>
 <Modal
     id="summit-log-table-text-modal"
-    size="min-w-xl"
+    size="md:min-w-xl"
     title={$_("description")}
     bind:this={textModal}
 >

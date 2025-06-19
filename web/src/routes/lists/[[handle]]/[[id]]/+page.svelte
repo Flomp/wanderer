@@ -271,7 +271,7 @@
         </div>
         {#if filterExpanded}
             <div
-                class="absolute bg-background z-10 shadow-lg rounded-b-xl w-full px-14"
+                class="absolute bg-background z-10 shadow-lg border-b border-input-border rounded-b-xl w-full px-14"
                 in:slide
                 out:slide
             >

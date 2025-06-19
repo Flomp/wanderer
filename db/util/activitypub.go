@@ -373,7 +373,7 @@ func ObjectFromTrail(app core.App, trail *core.Record, mentions *pub.ItemCollect
 	}
 
 	activityURL := fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id)
-	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", trail.GetString("description"), activityURL, activityURL)
+	activityContent := fmt.Sprintf("<h1>%s</h1>%s<p><a href=\"%s\">%s</a></p>", trail.GetString("name"), trail.GetString("description"), activityURL, activityURL)
 
 	trailObject := pub.ObjectNew(pub.NoteType)
 

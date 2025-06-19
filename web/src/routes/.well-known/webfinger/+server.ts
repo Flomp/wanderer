@@ -13,10 +13,6 @@ import type { WebfingerResponse } from '$lib/models/activitypub/webfinger_respon
 
 export async function GET(event: RequestEvent) {
 
-    if (publicEnv.PUBLIC_DISABLE_FEDERATION === "true") {
-        return json({ message: "Federation is disabled" }, { status: 401 })
-    }
-
     try {
         const resource = event.url.searchParams.get("resource")
 

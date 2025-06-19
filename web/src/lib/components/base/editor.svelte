@@ -128,7 +128,6 @@
                             const componentState: any = $state({
                                 items: [],
                                 id: "mention-list",
-                                extraClasses: "max-w-72",
                             });
 
                             function updatePosition({
@@ -450,7 +449,7 @@
 <Modal
     id="editor-modal"
     title={"Insert/edit link"}
-    size="min-w-lg"
+    size="md:min-w-lg"
     bind:this={modal}
 >
     {#snippet content()}

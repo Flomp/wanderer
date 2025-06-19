@@ -109,7 +109,7 @@
 <Modal
     id="summit-log-modal"
     title={$data.id ? $_("edit-entry") : $_("add-entry")}
-    size="min-w-2xl"
+    size="md:min-w-2xl"
     bind:this={modal}
 >
     {#snippet children({ openModal })}
