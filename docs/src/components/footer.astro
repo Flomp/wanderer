@@ -1,7 +1,7 @@
 ---
-import { version } from '../../package.json';
+import { version } from "../../package.json";
 
-const isNotHomepage = Astro.props.slug !== "";
+const isNotHomepage = Astro.locals.starlightRoute.id !== "";
 ---
 
 {
@@ -121,9 +121,7 @@ const isNotHomepage = Astro.props.slug !== "";
                 <h5 class="font-semibold">Resources</h5>
                 <ul class="mt-4 text-sm">
                     <li>
-                        <a href="https://demo.wanderer.to">
-                            Demo
-                        </a>
+                        <a href="https://demo.wanderer.to">Demo</a>
                     </li>
                     <li>
                         <a href="/api-reference">API Reference</a>
@@ -140,19 +138,13 @@ const isNotHomepage = Astro.props.slug !== "";
                 <h5 class="font-semibold">wanderer</h5>
                 <ul class="mt-4 text-sm">
                     <li>
-                        <a href="/">
-                            About
-                        </a>
+                        <a href="/">About</a>
                     </li>
                     <li>
-                        <a href="#features">
-                            Features
-                        </a>
+                        <a href="#features">Features</a>
                     </li>
                     <li>
-                        <a href="/getting-started/changelog/">
-                            Changelog
-                        </a>
+                        <a href="/getting-started/changelog/">Changelog</a>
                     </li>
                     <li>
                         <a href="https://github.com/Flomp/wanderer/blob/main/LICENSE">
@@ -177,6 +169,9 @@ const isNotHomepage = Astro.props.slug !== "";
                             Contribute
                         </a>
                     </li>
+                    <li>
+                        <a href="https://discord.gg/USSEBY98CP">Discord</a>
+                    </li>
                 </ul>
             </div>
         </footer>
@@ -193,7 +188,7 @@ const isNotHomepage = Astro.props.slug !== "";
         color: var(--sl-color-text);
     }
     footer ul {
-        list-style-type: none;
+        list-style-type: none !important;
         padding: 0;
     }
 </style>

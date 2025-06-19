@@ -5,6 +5,14 @@
     @apply rounded-xl
 }
 
+.content-panel ul {
+    @apply list-disc list-inside ml-4
+}
+
+.content-panel ol {
+    @apply list-decimal list-inside ml-4
+}
+
 
 .card .icon {
     background-color: transparent !important;

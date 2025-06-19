@@ -31,62 +31,85 @@ export default defineConfig({
           },
         ]),
       ],
-      sidebar: [{
-        label: 'Getting Started',
-        items: [{
-          label: 'Installation',
-          link: '/getting-started/installation/'
-        }, {
-          label: 'Configuration',
-          link: '/getting-started/configuration/'
-        }, {
-          label: 'Local development',
-          link: '/getting-started/local-development/'
-        }, {
-          label: 'Changelog',
-          link: '/getting-started/changelog/'
-        }]
-      }, {
-        label: 'Guides',
-        items: [{
-          label: 'Authentication',
-          link: '/guides/authentication/'
-        }, {
-          label: 'Create a trail',
-          link: '/guides/create-a-trail/'
-        }, {
-          label: 'Share trails',
-          link: '/guides/share-trails/'
-        }, {
-          label: 'Lists',
-          link: '/guides/lists/'
+      sidebar: [
+        {
+          label: 'Welcome to wanderer',
+          link: '/welcome'
         },
         {
-          label: 'Statistics',
-          link: '/guides/statistics/'
+          label: 'Using wanderer',
+          items: [{
+            label: 'Authentication',
+            link: '/use/authentication/'
+          }, {
+            label: 'Create a trail',
+            link: '/use/create-a-trail/'
+          }, {
+            label: 'Share trails',
+            link: '/use/share-trails/'
+          }, {
+            label: 'Lists',
+            link: '/use/lists/'
+          },
+          {
+            label: 'Statistics',
+            link: '/use/statistics/'
+          },
+          {
+            label: 'Customize the map',
+            link: '/use/customize-map/'
+          },
+          {
+            label: 'Import/Export',
+            link: '/use/import-export/'
+          },
+          {
+            label: 'Integrations',
+            link: '/use/integrations/'
+          },
+          ]
         },
         {
-          label: 'Custom categories',
-          link: '/guides/custom-categories/'
+          label: 'Running wanderer',
+          items: [
+            {
+              label: 'Installation',
+              link: '/run/installation/'
+            },
+            {
+              label: 'Environment configuration',
+              link: '/run/environment-configuration/'
+            },
+            {
+              label: 'Backend configuration',
+              link: '/run/backend-configuration/'
+            },
+            {
+              label: 'Custom categories',
+              link: '/run/custom-categories/'
+            },
+            {
+              label: 'Backing up your server',
+              link: '/run/backup-server/'
+            },
+            {
+              label: 'Changelog',
+              link: '/run/changelog/'
+            }]
+        }, {
+          label: 'Develop wanderer',
+          items: [
+            {
+              label: 'Local development',
+              link: '/develop/local-development/'
+            },
+            {
+              label: 'API',
+              link: '/develop/api/'
+            },
+          ]
         },
-        {
-          label: 'Customize the map',
-          link: '/guides/customize-map/'
-        },
-        {
-          label: 'Import/Export',
-          link: '/guides/import-export/'
-        },
-        {
-          label: 'Integrations',
-          link: '/guides/integrations/'
-        },
-        {
-          label: 'API',
-          link: '/guides/api/'
-        }]
-      },
-      ...openAPISidebarGroups,],
+        ...openAPISidebarGroups,],
       customCss: ['./src/custom.css', './src/tailwind.css', '@fontsource/ibm-plex-sans/400.css', '@fontsource/ibm-plex-sans/600.css', '@fontsource/ibm-plex-mono/400.css', '@fontsource/ibm-plex-mono/600.css']
     })],
   output: "server",
