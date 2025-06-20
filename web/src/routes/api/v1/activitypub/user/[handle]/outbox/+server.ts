@@ -22,7 +22,7 @@ export async function GET(event: RequestEvent) {
 
         let fullUsername = event.params.handle;
         if (!fullUsername) {
-            return error(400, "Bad request");
+            return json({ message: "Bad request" }, { status: 400 });
         }
 
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
