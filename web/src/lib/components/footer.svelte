@@ -13,7 +13,7 @@
         <h5 class="font-semibold">Resources</h5>
         <ul class="mt-4 text-sm">
             <li>
-                <a href="https://wanderer.to/getting-started/installation/"
+                <a href="https://wanderer.to/run/installation/"
                     >{$_("documentation")}</a
                 >
             </li>
@@ -36,7 +36,7 @@
                 <a href="https://wanderer.to/#features">{$_("features")}</a>
             </li>
             <li>
-                <a href="https://wanderer.to/getting-started/changelog/"
+                <a href="https://wanderer.to/run/changelog/"
                     >{$_("changelog")}</a
                 >
             </li>

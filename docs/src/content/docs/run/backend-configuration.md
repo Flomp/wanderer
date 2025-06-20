@@ -21,7 +21,7 @@ wanderer can send email notifications to users (e.g. when a user gains a new fol
 
 In the pocketbase admin panel go to Settings -> Mail settings an enable "Use SMTP mail server". Enter the details of your SMTP server and send a test email to ensure your configuration is correct. On the same page you can also adjust the email template of the password reset email.
 
-Alternatively, you can set these options via the respective [environment variables](/getting-started/configuration/#pocketbase).
+Alternatively, you can set these options via the respective [environment variables](/run/environment-configuration/#pocketbase).
 
 ## OAuth
 
