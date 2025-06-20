@@ -257,7 +257,7 @@ This release contains breaking changes. Most migrations will happen automaticall
 - Fixes issue with GPX export when using Google Chrome (thanks [@tofublock](https://github.com/tofublock))
 
 ### Miscellaneous
-As the number of contributors to this project continues to grow (which I’m very happy about), I’ve set up a [Discord channel](https://discord.gg/MdpybUHc) for more direct communication. If you’re interested in helping with Wanderer, feel free to join!
+As the number of contributors to this project continues to grow (which I’m very happy about), I’ve set up a [Discord channel](https://discord.gg/MdpybUHc) for more direct communication. If you’re interested in helping with wanderer, feel free to join!
 
 ## v0.11.0
 ### Features

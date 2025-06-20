@@ -1,5 +1,4 @@
 import { env } from '$env/dynamic/private';
-import { env as publicEnv } from '$env/dynamic/public';
 
 import type { Actor } from '$lib/models/activitypub/actor';
 import type { UserAnonymous } from "$lib/models/user";

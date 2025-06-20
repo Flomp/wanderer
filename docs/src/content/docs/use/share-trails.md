@@ -19,5 +19,11 @@ If you want to be more particular about who can see your trail you can instead s
 If you no longer want to share the trail with a user, simply click the red trashcan icon next to their name.
 
 :::note
-It is possible to share trails with users of other instances. However, the trail needs to public to do so. Furthermore, the  user will only be able to view the trail and not edit it. In that sense, it works more like a "Mention" in the fediverse. 
+Wanderer supports trail sharing between users on different instances (servers), thanks to its federated design. However, there are important limitations to be aware of:
+
+- **The trail must be public** in order to be shareable with users on other instances.
+- **Shared trails are view-only**: The user you share it with will be able to view the trail and engage with it (like or comment), but **they cannot edit it**.
+- Sharing a trail with another user is similar to a **mention** in the fediverse—it notifies them and gives them visibility, but does not grant collaborative access.
+
+If you're looking for true collaboration on a trail (such as shared editing), both users must be on the same instance.
 :::

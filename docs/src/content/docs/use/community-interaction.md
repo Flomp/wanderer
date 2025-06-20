@@ -27,7 +27,7 @@ You can follow other wanderer users. Once you follow someone, their new public t
 
 ### How to Find Users
 
-To discover and connect with other Wanderer users, you can use the search bar located on the Wanderer homepage. Simply enter the name or full handle of the user you're looking for—for example, `@bob@trails.social`. The search will return matching profiles from your instance as well as from other federated wanderer servers.
+To discover and connect with other wanderer users, you can use the search bar located on the wanderer homepage. Simply enter the name or full handle of the user you're looking for—for example, `@bob@trails.social`. The search will return matching profiles from your instance as well as from other federated wanderer servers.
 
 Once you've found the profile you're interested in, click on it to view the user's public profile page. From there, you can see their shared trails and lists, and choose to follow them.
 
@@ -50,7 +50,7 @@ Mentions work in:
 
 ## Notifications
 
-Wanderer notifies you about important interactions from the community. Notifications can appear on the website and/or be sent via email, depending on your preferences.
+wanderer notifies you about important interactions from the community. Notifications can appear on the website and/or be sent via email, depending on your preferences.
 
 You can configure which types of notifications you want to receive in your settings. Each notification type can be toggled individually, and you can choose whether to receive it on the website, by email, or both.
 

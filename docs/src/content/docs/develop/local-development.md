@@ -3,7 +3,7 @@ title: Local development
 description: How to install wanderer for local development
 ---
 
-If you would like to set up a development environment on your own machine to work on wanderer please first follow the bare-metal installation steps in the [installation guide](/getting-started/installation#from-source). We will slightly modify the launch script to launch a node server in development mode instead:
+If you would like to set up a development environment on your own machine to work on wanderer please first follow the bare-metal installation steps in the [installation guide](/run/installation#from-source). We will slightly modify the launch script to launch a node server in development mode instead:
 
 ```bash
 trap "kill 0" EXIT
@@ -13,6 +13,7 @@ export MEILI_URL=http://127.0.0.1:7700
 export MEILI_MASTER_KEY=p2gYZAWODOrwTPr4AYoahCZ9CI8y9bUd0yQLGk-E3m8
 export PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
 export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
+export POCKETBASE_ENCRYPTION_KEY=9ada3c93163812101e50e2bf49e880bc
 
 cd search && ./meilisearch --master-key $MEILI_MASTER_KEY &
 cd db && ./pocketbase serve &
@@ -23,9 +24,9 @@ wait
 
 This will bring up a `meilisearch` instance on `http://127.0.0.1:7700`, a `PocketBase` instance on `http://127.0.0.1:8090`, and a `vite` server for the wanderer frontend on `http://localhost:5173`.
 
-## Accessing the backend
+## PocketBase dashboard
 
-Sometimes it can be useful to edit data directly in the database. `PocketBase` offers a convenient web UI to do so. Simply head over to `http://127.0.0.1:8090/_/`. If you access the admin panel for the first time you will be asked to create an admin account. Afterwards, you can create, read, update, and delete data in the respective tables. To learn more about `PocketBase` you can head over to their extensive [documentation](https://pocketbase.io/docs).
+It is highly advisable to create an admin user to access PocketBase's dashboard. To do so, please refer to the [backend configuration](/run/backend-configuration#setup) section of the documentation.
 
 ## Building
 

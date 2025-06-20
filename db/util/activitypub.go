@@ -180,6 +180,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 
 	var distance, duration, elevation_gain, elevation_loss float64
 	var diffculty, category string
+	trailTags := []string{}
 	tags, err := pub.ToItemCollection(t.Tag)
 	if err != nil {
 		return nil, err
@@ -204,6 +205,26 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 			duration, err = strconv.ParseFloat(content[:len(content)-1], 64)
 		case "distance":
 			distance, err = strconv.ParseFloat(content[:len(content)-1], 64)
+		case "tag":
+			existingTag, err := app.FindFirstRecordByData("tags", "name", content)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					collection, err := app.FindCollectionByNameOrId("tags")
+					if err != nil {
+						continue
+					}
+					existingTag = core.NewRecord(collection)
+					existingTag.Set("name", content)
+					err = app.Save(existingTag)
+					if err != nil {
+						continue
+					}
+				} else {
+					continue
+				}
+			}
+
+			trailTags = append(trailTags, existingTag.Id)
 		}
 		if err != nil {
 			continue
@@ -221,6 +242,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 	record.Set("duration", duration)
 	record.Set("difficulty", diffculty)
 	record.Set("date", t.StartTime.Unix())
+	record.Set("tags", trailTags)
 	record.Set("public", true)
 	record.Set("iri", t.ID.String())
 	record.Set("author", actor.Id)
@@ -344,7 +366,11 @@ func ObjectFromTrail(app core.App, trail *core.Record, mentions *pub.ItemCollect
 	}
 
 	for _, v := range tagRecords {
-		tags.Append(pub.IRI(v.GetString("name")))
+		hashtag := pub.ObjectNew(pub.NoteType)
+		hashtag.Name = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, "tag"))
+		hashtag.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, v.GetString("name")))
+
+		tags.Append(hashtag)
 	}
 
 	photos := trail.GetStringSlice("photos")

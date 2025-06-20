@@ -46,6 +46,10 @@ export default defineConfig({
             link: '/use/create-a-trail/'
           },
           {
+            label: 'Summit logs',
+            link: '/use/summit-logs/'
+          },
+          {
             label: 'Interact with the community',
             link: '/use/community-interaction/'
           },
@@ -111,6 +115,10 @@ export default defineConfig({
             {
               label: 'API',
               link: '/develop/api/'
+            },
+            {
+              label: 'Federation',
+              link: '/develop/federation/'
             },
           ]
         },

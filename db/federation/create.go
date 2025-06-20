@@ -392,7 +392,7 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, activityRecordId)
 	to := "https://www.w3.org/ns/activitystreams#Public"
-	cc := listAuthor.GetString("iri") + "/followers"
+	cc := listAuthor.GetString("followers")
 	author := listAuthor.GetString("iri")
 
 	listObject, err := util.ObjectFromList(app, list)
@@ -403,7 +403,7 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 	activity := pub.ActivityNew(pub.IRI(id), typ, listObject)
 	activity.Actor = pub.IRI(author)
 	activity.To = pub.ItemCollection{pub.IRI(to)}
-	activity.To = pub.ItemCollection{pub.IRI(cc)}
+	activity.CC = pub.ItemCollection{pub.IRI(cc)}
 	activity.Published = time.Now()
 	activity.Object = listObject
 
@@ -435,6 +435,7 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 	record.Set("id", activityRecordId)
 	record.Set("iri", id)
 	record.Set("to", []string{to})
+	record.Set("cc", []string{cc})
 	record.Set("type", string(typ))
 	record.Set("object", listObject)
 	record.Set("actor", author)

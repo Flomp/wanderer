@@ -7,7 +7,7 @@ let follows: Actor[] = [];
 
 export async function follows_index(data: { username: string, type: "followers" | "following" }, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
-    const r = await f(`/api/v1/follow/activitypub?` + new URLSearchParams({
+    const r = await f(`/api/v1/follow?` + new URLSearchParams({
         handle: data.username,
         type: data.type,
         page: page.toString(),

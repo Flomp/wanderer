@@ -1,7 +1,7 @@
+import type { Activity } from '$lib/models/activitypub/activity';
 import { Collection, handleError, show } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
-import type { APActivity, APOrderedCollectionPage, APRoot } from 'activitypub-types';
-import type { Activity } from '$lib/models/activitypub/activity';
+import type { APActivity, APRoot } from 'activitypub-types';
 
 export async function GET(event: RequestEvent) {
     try {
@@ -9,6 +9,7 @@ export async function GET(event: RequestEvent) {
 
         const activity: APRoot<APActivity> = {
             id: a.iri,
+            type: a.type,
             actor: a.actor,
             to: a.to,
             cc: a.cc,
@@ -20,7 +21,11 @@ export async function GET(event: RequestEvent) {
         const headers = new Headers()
         headers.append("Content-Type", "application/activity+json")
 
-        return json(activity, { headers })
+        return json({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+            ], ...activity
+        }, { headers })
     } catch (e: any) {
         return handleError(e)
     }

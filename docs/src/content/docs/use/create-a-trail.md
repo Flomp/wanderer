@@ -35,7 +35,7 @@ After uploading:
 Click the **Draw a route** button to manually define a route on the map. While in drawing mode:
 
 - Click on the map to place waypoints
-- Wanderer will automatically route between points using the [Valhalla routing engine](https://github.com/valhalla/valhalla)
+- wanderer will automatically route between points using the [Valhalla routing engine](https://github.com/valhalla/valhalla)
 - You can drag points to reposition them
 - Use the top-left menu to change routing mode (e.g. walking, cycling)
 - To remove a point, click on it and then click the red trash icon
@@ -97,6 +97,8 @@ If you've completed this trail yourself, you can log a summit book entry.
 - Click **+ Add Entry**
 - Upload a separate GPS file or just log the date of your completion
 - You can add multiple summit entries over time without creating duplicate trails
+
+To learn more about summit logs visit the [dedicated section](/use/summit-logs) of the documentation.
 
 
 
