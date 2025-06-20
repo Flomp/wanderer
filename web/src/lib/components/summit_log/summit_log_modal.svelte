@@ -148,7 +148,7 @@
                 <div class="basis-full">
                     <Editor
                         bind:value={$data.text}
-                        extraClasses="h-28"
+                        extraClasses="min-h-28"
                         label={$_("text")}
                         error={$errors.text}
                         searchListPosition="fixed"

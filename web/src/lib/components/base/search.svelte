@@ -119,6 +119,6 @@
     ></TextField>
 
     {#if dropDownOpen}
-        <SearchList extraClasses="w-full" {prepend} onclick={handleItemClick}></SearchList>
+        <SearchList {items} extraClasses="w-full" {prepend} onclick={handleItemClick}></SearchList>
     {/if}
 </div>

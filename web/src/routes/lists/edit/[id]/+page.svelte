@@ -37,6 +37,7 @@
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
     import { z } from "zod";
+    import { onMount } from "svelte";
 
     let { data } = $props();
 
@@ -53,6 +54,8 @@
 
     let shareConfirmModal: ConfirmModal;
     let publishConfirmModal: ConfirmModal;
+
+    let trailsOnMap: Trail[] = $state([]);
 
     const ClientListCreateSchema = ListCreateSchema.extend({
         _photos: z.array(z.instanceof(File)).optional(),
@@ -92,6 +95,10 @@
                 await saveList();
             }
         },
+    });
+
+    onMount(() => {
+        trailsOnMap = [...(data.list.expand?.trails ?? [])];
     });
 
     async function checkPrerequisites() {
@@ -173,7 +180,7 @@
                     description: `${t.location ?? "-"}`,
                     value: t.id,
                     icon: "route",
-                }));
+                }));                
         } catch (e) {
             console.error(e);
         }
@@ -186,6 +193,8 @@
             trails: [...($formData.expand?.trails ?? []), trail],
             list_share_via_list: $formData.expand?.list_share_via_list,
         };
+
+        trailsOnMap = [...($formData.expand?.trails ?? [])];
     }
 
     function deleteTrail(trail: Trail) {
@@ -193,6 +202,8 @@
         $formData.expand!.trails = $formData.expand!.trails!.filter(
             (t) => t.id !== trail.id,
         );
+
+        trailsOnMap = [...($formData.expand?.trails ?? [])];
     }
 
     async function findNewTrailShares() {
@@ -436,7 +447,7 @@
     <div id="trail-map" class="max-h-full">
         <MapWithElevationMaplibre
             fitBounds="animate"
-            trails={$formData.expand?.trails ?? []}
+            trails={trailsOnMap}
             bind:activeTrail={activeTrailIndex}
             bind:this={map}
         ></MapWithElevationMaplibre>
