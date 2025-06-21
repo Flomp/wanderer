@@ -533,21 +533,21 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
 
         if (showPublic === true) {
             filterText += "(public = TRUE";
-            if (showPrivate === true && (!filter.author?.length || filter.author == user?.id)) {
-                filterText += ` OR author = ${user?.id}`;
+            if (showPrivate === true && (!filter.author?.length || filter.author == user?.actor)) {
+                filterText += ` OR author = ${user?.actor}`;
             }
             filterText += ")";
         }
-        else if (!filter.author?.length || filter.author == user?.id) {
+        else if (!filter.author?.length || filter.author == user?.actor) {
             filterText += "public = FALSE";
-            filterText += ` AND author = ${user?.id}`;
+            filterText += ` AND author = ${user?.actor}`;
         }
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${user?.id}`
+                filterText += ` OR shares = ${user?.actor}`
             } else {
-                filterText += ` AND NOT shares = ${user?.id}`
+                filterText += ` AND NOT shares = ${user?.actor}`
 
             }
         }

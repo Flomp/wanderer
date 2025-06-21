@@ -62,7 +62,7 @@
 
     let tagItems: ComboboxItem[] = $state([]);
 
-    async function update() {        
+    async function update() {
         onupdate?.(filter);
     }
 
@@ -231,6 +231,23 @@
                     clearAfterSelect={false}
                     label={$_("author")}
                 ></ActorSearch>
+                <hr class="my-4 border-separator" />
+
+                <p class="text-sm font-medium">{$_("visibilty-status")}</p>
+
+                <div class="flex items-center mt-2 mb-4">
+                    <input
+                        id="private-checkbox"
+                        type="checkbox"
+                        checked={filter.private}
+                        class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                        onchange={setPrivateFilter}
+                    />
+
+                    <label for="private-checkbox" class="ms-2 text-sm"
+                        >{$_("private")}</label
+                    >
+                </div>
                 <div class="flex items-center my-4">
                     <input
                         id="public-checkbox"
