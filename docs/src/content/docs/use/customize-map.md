@@ -4,8 +4,8 @@ description: How to customize the map with user defined tile sets
 ---
 
 <span class="-tracking-[0.075em]">wanderer</span> is compatible with any provider of vector tile maps (e.g. CARTO, mapbox, maptiler, or self-hosted OpenMapTiles). Out of the box it comes with 4 different map styles:
-1. Open Street Maps
-2. Open Topo Maps
+1. OpenFreeMap
+2. OpenTopoMap
 3. CARTO Light
 4. CARTO Dark
 

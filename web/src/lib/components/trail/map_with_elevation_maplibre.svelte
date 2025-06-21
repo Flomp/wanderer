@@ -866,12 +866,12 @@
                     }),
                 ),
                 {
-                    text: "Open Street Maps",
-                    value: "/styles/osm.json",
+                    text: "OpenFreeMap",
+                    value: "https://tiles.openfreemap.org/styles/liberty",
                     thumbnail: "https://tile.openstreetmap.org/1/0/0.png",
                 },
                 {
-                    text: "Open Topo Maps",
+                    text: "OpenTopoMap",
                     value: "/styles/otm.json",
                     thumbnail: "https://tile.opentopomap.org/1/0/0.png",
                 },
@@ -907,7 +907,7 @@
                     mapStyles[preferredMapStyleIndex].value ??
                     mapStyles[0].value,
                 center: [initialState.lng, initialState.lat],
-                zoom: initialState.zoom,
+                zoom: initialState.zoom
             },
             ...mapOptions,
         };

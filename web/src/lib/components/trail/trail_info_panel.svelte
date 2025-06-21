@@ -658,7 +658,7 @@
                         elevationProfileContainer={"epc-container"}
                         showStyleSwitcher={false}
                         showFullscreen={true}
-                        mapOptions={{ attributionControl: false }}
+                        mapOptions={{ attributionControl: {compact: true} }}
                         onfullscreen={toggleMapFullScreen}
                         bind:markers
                     ></MapWithElevationMaplibre>
