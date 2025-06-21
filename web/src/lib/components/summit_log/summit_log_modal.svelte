@@ -15,6 +15,7 @@
     import PhotoPicker from "../trail/photo_picker.svelte";
     import TrailPicker from "../trail/trail_picker.svelte";
     import type { SummitLog } from "$lib/models/summit_log";
+    import Editor from "../base/editor.svelte";
     interface Props {
         children?: Snippet<[any]>;
         onsave?: (summitLog: SummitLog) => void;
@@ -108,6 +109,7 @@
 <Modal
     id="summit-log-modal"
     title={$data.id ? $_("edit-entry") : $_("add-entry")}
+    size="md:min-w-2xl"
     bind:this={modal}
 >
     {#snippet children({ openModal })}
@@ -134,7 +136,7 @@
                     showThumbnailControls={false}
                 ></PhotoPicker>
             </div>
-            <div class="flex gap-4">
+            <div class="flex gap-4 items-end">
                 {#if $data.expand}
                     <TrailPicker
                         bind:trailFile={$data._gpx}
@@ -144,12 +146,13 @@
                     ></TrailPicker>
                 {/if}
                 <div class="basis-full">
-                    <Textarea
-                        name="text"
-                        extraClasses="h-28"
+                    <Editor
+                        bind:value={$data.text}
+                        extraClasses="min-h-28"
                         label={$_("text")}
                         error={$errors.text}
-                    ></Textarea>
+                        searchListPosition="fixed"
+                    ></Editor>
                 </div>
             </div>
         </form>

@@ -1,9 +1,10 @@
+import type { Actor } from "./activitypub/actor";
 import type { Category } from "./category";
 import type { Comment } from "./comment";
 import type { SummitLog } from "./summit_log";
 import type { Tag } from "./tag";
+import type { TrailLike } from "./trail_like";
 import type { TrailShare } from "./trail_share";
-import type { UserAnonymous } from "./user";
 import type { Waypoint } from "./waypoint";
 
 class Trail {
@@ -26,17 +27,21 @@ class Trail {
     category?: string;
     tags: string[];
     waypoints: string[];
-    summit_logs: string[];
     polyline?: string;
+    domain?: string;
+    iri?: string;
+    like_count: number;
     expand?: {
         tags?: Tag[]
         category?: Category;
         waypoints?: Waypoint[]
-        summit_logs?: SummitLog[]
-        author?: UserAnonymous
+        summit_logs_via_trail?: SummitLog[]
+        author?: Actor
         comments_via_trail?: Comment[]
         gpx_data?: string
         trail_share_via_trail?: TrailShare[]
+        trail_like_via_trail?: TrailLike[]
+
     }
     description?: string;
     author: string;
@@ -83,13 +88,13 @@ class Trail {
         this.thumbnail = params?.thumbnail ?? 0;
         this.photos = params?.photos ?? [];
         this.waypoints = [];
-        this.summit_logs = [];
         this.tags = []
         this.gpx = params?.gpx;
+        this.like_count = 0
         this.expand = {
             category: params?.category,
             waypoints: params?.waypoints ?? [],
-            summit_logs: params?.summit_logs ?? [],
+            summit_logs_via_trail: params?.summit_logs ?? [],
             comments_via_trail: params?.comments ?? [],
             trail_share_via_trail: params?.shares ?? []
         }
@@ -125,6 +130,7 @@ interface TrailFilter {
     startDate?: string;
     endDate?: string;
     completed?: boolean;
+    liked?: boolean;
     sort: "name" | "distance" | "elevation_gain" | "created";
     sortOrder: "+" | "-"
 }
@@ -168,8 +174,12 @@ interface TrailSearchResult {
     public: boolean;
     thumbnail: string;
     polyline?: string;
+    likes?: string[];
+    like_count: number;
     shares?: string[];
     tags?: string[]
+    domain?: string;
+    iri?: string;
     gpx: string;
     _geo: {
         lat: number,
@@ -196,12 +206,16 @@ export const defaultTrailSearchAttributes = [
     "created",
     "public",
     "thumbnail",
+    "domain",
     "gpx",
     "tags",
+    "like_count",
     "shares",
+    "iri",
     "_geo",]
 
 
 export { Trail };
 
 export type { TrailBoundingBox, TrailFilter, TrailFilterValues, TrailSearchResult };
+

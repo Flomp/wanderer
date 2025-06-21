@@ -1,8 +1,32 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer base, starlight, theme, components, utilities;
+
+@import '@astrojs/starlight-tailwind';
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@theme {
+    --color-primary: #242734;
+
+    /* Generated accent color palettes. */
+    --color-accent-200: #b3c7ff;
+    --color-accent-600: #364bff;
+    --color-accent-900: #182775;
+    --color-accent-950: #131e4f;
+    /* Generated gray color palettes. */
+    --color-gray-100: #f5f6f8;
+    --color-gray-200: #eceef2;
+    --color-gray-300: #c0c2c7;
+    --color-gray-400: #888b96;
+    --color-gray-500: #545861;
+    --color-gray-700: #353841;
+    --color-gray-800: #24272f;
+    --color-gray-900: #17181c;
+
+    --font-sans: "IBMPlexSans"
+}
 
 /*
-Add additional Tailwind styles to this file, for example with @layer:
-https://tailwindcss.com/docs/adding-custom-styles#using-css-and-layer
+Add additional Tailwind styles to this file:
+https://tailwindcss.com/docs/adding-custom-styles#using-custom-css
 */

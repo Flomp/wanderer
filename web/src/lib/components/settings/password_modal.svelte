@@ -95,7 +95,7 @@
 
 <Modal
     id="password-modal"
-    size="max-w-sm"
+    size="md:min-w-sm"
     title={$_("change-password")}
     bind:this={modal}
 >

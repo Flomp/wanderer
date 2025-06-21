@@ -183,7 +183,7 @@
                             <button
                                 class="underline"
                                 onclick={() =>
-                                    goto(`/trail/view/${u.duplicate!.id}`)}
+                                    goto(`/trail/view/@${u.duplicate?.domain}/${u.duplicate!.id}`)}
                                 >{u.duplicate.name}</button
                             >
                         </p>

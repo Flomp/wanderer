@@ -4,7 +4,7 @@ import { defaultTrailSearchAttributes, Trail, type TrailFilter, type TrailFilter
 import type { Waypoint } from "$lib/models/waypoint";
 import { APIError } from "$lib/util/api_util";
 import { deepEqual } from "$lib/util/deep_util";
-import { getFileURL } from "$lib/util/file_util";
+import { getFileURL, objectToFormData } from "$lib/util/file_util";
 import * as M from "maplibre-gl";
 import type { Hits } from "meilisearch";
 import { type AuthRecord, type ListResult, type RecordModel } from "pocketbase";
@@ -22,7 +22,7 @@ export const editTrail: Writable<Trail> = writable(new Trail(""));
 export async function trails_index(perPage: number = 21, random: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const r = await f('/api/v1/trail?' + new URLSearchParams({
         "perPage": perPage.toString(),
-        expand: "category,waypoints,summit_logs,tags",
+        expand: "category,waypoints,summit_logs_via_trail,tags",
         sort: random ? "@random" : "",
     }), {
         method: 'GET',
@@ -50,9 +50,9 @@ export async function trails_recommend(size: number, f: (url: RequestInfo | URL,
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
-    const response: Trail[] = await r.json()
+    const response: Hits<TrailSearchResult> = await r.json()
 
-    return response;
+    return searchResultToTrailList(response);
 
 }
 
@@ -132,9 +132,12 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 
 }
 
-export async function trails_show(id: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_show(id: string, handle?: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+
     const r = await f(`/api/v1/trail/${id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
+        expand: "category,waypoints,summit_logs_via_trail,summit_logs_via_trail.author,trail_share_via_trail.actor,trail_like_via_trail,tags,author",
+        ...(handle ? { handle } : {})
+
     }), {
         method: 'GET',
     })
@@ -157,7 +160,7 @@ export async function trails_show(id: string, loadGPX?: boolean, f: (url: Reques
         response.expand.gpx_data = gpxData;
 
 
-        for (const log of response.expand.summit_logs ?? []) {
+        for (const log of response.expand.summit_logs_via_trail ?? []) {
             const gpxData: string = await fetchGPX(log, f);
 
             if (!log.expand) {
@@ -188,10 +191,6 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         }, f, user);
         trail.waypoints.push(model.id!);
     }
-    for (const summitLog of trail.expand?.summit_logs ?? []) {
-        const model = await summit_logs_create(summitLog, f);
-        trail.summit_logs.push(model.id!);
-    }
     for (const tag of trail.expand?.tags ?? []) {
         if (!tag.id) {
             const model = await tags_create(tag)
@@ -201,34 +200,22 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         }
     }
 
-    trail.author = user.id
+    trail.author = user.actor
 
-    let r = await f(`/api/v1/trail?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
-    }), {
-        method: 'PUT',
-        body: JSON.stringify({ ...trail }),
-    })
+    const formData = objectToFormData(trail)
 
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-
-    let model: Trail = await r.json();
-
-    const formData = new FormData()
     if (gpx) {
-        formData.append("gpx", gpx);
+        formData.set("gpx", gpx);
     }
 
     for (const photo of photos) {
-        formData.append("photos", photo)
+        formData.set("photos", photo)
     }
 
-    r = await f(`/api/v1/trail/${model.id!}/file`, {
-        method: 'POST',
+    let r = await f(`/api/v1/trail/form?` + new URLSearchParams({
+        expand: "category,waypoints,summit_logs_via_trail,trail_share_via_trail,tags",
+    }), {
+        method: 'PUT',
         body: formData,
     })
 
@@ -237,15 +224,19 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const modelWithFiles: Trail = await r.json();
+    let model: Trail = await r.json();
 
-    model.photos = modelWithFiles.photos;
+    for (const summitLog of trail.expand?.summit_logs_via_trail ?? []) {
+        summitLog.trail = model.id!;
+        await summit_logs_create(summitLog, f);
+    }
 
     return model;
 
 }
 
 export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: File[], gpx?: File | Blob | null) {
+    newTrail.author = oldTrail.author
 
     const waypointUpdates = compareObjectArrays<Waypoint>(oldTrail.expand?.waypoints ?? [], newTrail.expand?.waypoints ?? []);
 
@@ -269,15 +260,15 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         const success = await waypoints_delete(deletedWaypoint);
     }
 
-    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand?.summit_logs ?? [], newTrail.expand?.summit_logs ?? []);
+    const summitLogUpdates = compareObjectArrays<SummitLog>(oldTrail.expand?.summit_logs_via_trail ?? [], newTrail.expand?.summit_logs_via_trail ?? []);
 
     for (const summitLog of summitLogUpdates.added) {
+        summitLog.trail = newTrail.id!
         const model = await summit_logs_create(summitLog);
-        newTrail.summit_logs.push(model.id!);
     }
 
     for (const updatedSummitLog of summitLogUpdates.updated) {
-        const oldSummitLog = oldTrail.expand?.summit_logs?.find(w => w.id == updatedSummitLog.id);
+        const oldSummitLog = oldTrail.expand?.summit_logs_via_trail?.find(w => w.id == updatedSummitLog.id);
 
         const model = await summit_logs_update(oldSummitLog!, updatedSummitLog);
     }
@@ -301,22 +292,8 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         newTrail.tags = newTrail.tags.filter(t => t != tag.id);
     }
 
-    let r = await fetch(`/api/v1/trail/${newTrail.id}?` + new URLSearchParams({
-        expand: "category,waypoints,summit_logs,trail_share_via_trail,tags",
-    }), {
-        method: 'POST',
-        body: JSON.stringify({ ...newTrail, expand: undefined }),
-    })
+    const formData = objectToFormData(newTrail, ["expand"])
 
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-
-    let model: Trail = await r.json();
-
-    const formData = new FormData()
     if (gpx) {
         formData.append("gpx", gpx);
     }
@@ -327,14 +304,16 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         }
     }
 
-
     const deletedPhotos = oldTrail.photos.filter(oldPhoto => !newTrail.photos.find(newPhoto => newPhoto === oldPhoto));
 
     for (const deletedPhoto of deletedPhotos) {
         formData.append("photos-", deletedPhoto.replace(/^.*[\\/]/, ''));
     }
 
-    r = await fetch(`/api/v1/trail/${newTrail.id!}/file`, {
+
+    let r = await fetch(`/api/v1/trail/form/${newTrail.id}?` + new URLSearchParams({
+        expand: "category,waypoints,summit_logs_via_trail,trail_share_via_trail,tags",
+    }), {
         method: 'POST',
         body: formData,
     })
@@ -344,10 +323,14 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const response: Trail = await r.json();
 
-    model.photos = response.photos
-    model.gpx = response.gpx
+    let model: Trail = await r.json();
+
+    for (const log of model.expand?.summit_logs_via_trail ?? []) {
+        if (!log.expand) {
+            log.expand = {};
+        }
+    }
 
     trail.set(model);
 
@@ -361,8 +344,8 @@ export async function trails_delete(trail: Trail) {
             await waypoints_delete(waypoint);
         }
     }
-    if (trail.expand?.summit_logs) {
-        for (const summit_log of trail.expand.summit_logs) {
+    if (trail.expand?.summit_logs_via_trail) {
+        for (const summit_log of trail.expand.summit_logs_via_trail) {
             await summit_logs_delete(summit_log);
         }
     }
@@ -455,14 +438,14 @@ export async function fetchGPX(trail: { gpx?: string } & Record<string, any>, f:
     return gpxData
 }
 
-async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<Trail[]> {
+export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<Trail[]> {
     const trails: Trail[] = []
     for (const h of hits) {
         const t: Trail & RecordModel = {
             collectionId: "trails",
             collectionName: "trails",
             updated: new Date(h.created * 1000).toISOString(),
-            author: h.author,
+            author: h.author_name,
             name: h.name,
             photos: h.thumbnail ? [h.thumbnail] : [],
             public: h.public,
@@ -484,26 +467,35 @@ async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Promise<T
             location: h.location,
             gpx: h.gpx,
             polyline: h.polyline,
+            domain: h.domain,
+            iri: h.iri,
             thumbnail: 0,
+            like_count: h.like_count,
             expand: {
                 author: {
-                    collectionId: "users",
-                    private: false,
+                    collectionId: "activitypub_actors",
+                    isLocal: (h.domain?.length ?? 0) == 0,
                     id: h.author,
-                    avatar: h.author_avatar,
-                    username: h.author_name
+                    icon: h.author_avatar,
+                    username: h.author_name,
+                    domain: h.domain,
                 } as any,
                 trail_share_via_trail: h.shares?.map(s => ({
                     permission: "view",
                     trail: h.id,
-                    user: s,
+                    actor: s,
                 })),
+                trail_like_via_trail: h.likes?.map(l => ({
+                    trail: h.id,
+                    actor: l,
+                }))
             }
         }
 
 
         trails.push(t)
     }
+
     return trails
 }
 
@@ -541,21 +533,21 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
 
         if (showPublic === true) {
             filterText += "(public = TRUE";
-            if (showPrivate === true && (!filter.author?.length || filter.author == user?.id)) {
-                filterText += ` OR author = ${user?.id}`;
+            if (showPrivate === true && (!filter.author?.length || filter.author == user?.actor)) {
+                filterText += ` OR author = ${user?.actor}`;
             }
             filterText += ")";
         }
-        else if (!filter.author?.length || filter.author == user?.id) {
+        else if (!filter.author?.length || filter.author == user?.actor) {
             filterText += "public = FALSE";
-            filterText += ` AND author = ${user?.id}`;
+            filterText += ` AND author = ${user?.actor}`;
         }
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${user?.id}`
+                filterText += ` OR shares = ${user?.actor}`
             } else {
-                filterText += ` AND NOT shares = ${user?.id}`
+                filterText += ` AND NOT shares = ${user?.actor}`
 
             }
         }
@@ -569,23 +561,27 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == user?.id) {
-                filterText += ` OR author = ${user?.id}`
+            if (!filter.author?.length || filter.author == user?.actor) {
+                filterText += ` OR author = ${user?.actor}`
             }
             filterText += ")"
         }
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${user?.id}`
+                filterText += ` OR shares = ${user?.actor}`
             } else {
-                filterText += ` AND NOT shares = ${user?.id}`
+                filterText += ` AND NOT shares = ${user?.actor}`
 
             }
         }
         filterText += ")"
     }
 */
+
+    if (filter.liked === true) {
+        filterText += ` AND likes = ${user?.actor}`
+    }
 
     if (filter.startDate) {
         filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`

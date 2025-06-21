@@ -8,7 +8,7 @@ export async function GET(event: RequestEvent) {
         const r = await show<TrailShare>(event, Collection.trail_share)
         return json(r)
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -17,7 +17,7 @@ export async function POST(event: RequestEvent) {
         const r = await update<TrailShare>(event, TrailShareUpdateSchema, Collection.trail_share)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -26,6 +26,6 @@ export async function DELETE(event: RequestEvent) {
         const r = await remove(event, Collection.trail_share)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

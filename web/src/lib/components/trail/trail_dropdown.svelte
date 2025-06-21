@@ -23,10 +23,11 @@
 
     interface Props {
         trail: Trail;
+        handle: string;
         mode: "overview" | "map" | "list";
     }
 
-    let { trail, mode }: Props = $props();
+    let { trail, handle, mode }: Props = $props();
 
     let confirmModal: ConfirmModal;
     let listSelectModal: ListSelectModal;
@@ -35,8 +36,10 @@
 
     let lists: List[] = $state([]);
 
+    const isOwned: boolean = trail.author == $currentUser?.actor;
+
     const allowEdit =
-        trail.author == $currentUser?.id ||
+        isOwned ||
         trail.expand?.trail_share_via_trail?.some(
             (s) => s.permission == "edit",
         );
@@ -61,16 +64,16 @@
               ]
             : []),
         { text: $_("print"), value: "print", icon: "print" },
-        ...(trail.author != $currentUser?.id
-            ? []
-            : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
-        ...(trail.author != $currentUser?.id
-            ? []
-            : [{ text: $_("share"), value: "share", icon: "share" }]),
+        ...(isOwned
+            ? [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]
+            : []),
+        ...(isOwned
+            ? [{ text: $_("share"), value: "share", icon: "share" }]
+            : []),
         ...(allowEdit
             ? [{ text: $_("edit"), value: "edit", icon: "pen" }]
             : []),
-        ...(trail.author == $currentUser?.id
+        ...(isOwned
             ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
             : []),
     ];
@@ -79,13 +82,13 @@
         if (item.value == "show") {
             goto(
                 mode == "overview"
-                    ? `/map/trail/${trail.id!}`
-                    : `/trail/view/${trail.id!}`,
+                    ? `/map/trail/${handle}/${trail.id!}`
+                    : `/trail/view/${handle}/${trail.id!}`,
             );
         } else if (item.value == "list") {
             lists = (
                 await lists_index(
-                    { q: "", author: $currentUser?.id ?? "" },
+                    { q: "", author: $currentUser?.actor ?? "" },
                     1,
                     -1,
                 )
@@ -99,7 +102,7 @@
                 )
                 ?.focus();
         } else if (item.value == "print") {
-            goto(`/map/trail/${trail.id}/print`);
+            goto(`/map/trail/${handle}/${trail.id}/print`);
         } else if (item.value == "share") {
             trailShareModal.openModal();
         } else if (item.value == "download") {
@@ -155,7 +158,7 @@
                 }
                 if (exportSettings.summitLog) {
                     let summitLogString = "";
-                    for (const summitLog of trail.expand?.summit_logs ?? []) {
+                    for (const summitLog of trail.expand?.summit_logs_via_trail ?? []) {
                         summitLogString += `${summitLog.date},${summitLog.text}\n`;
                     }
                     zip.file(

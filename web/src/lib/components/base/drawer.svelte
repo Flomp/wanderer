@@ -32,7 +32,7 @@
 
 {#if open}
     <div
-        class="fixed drawer-overlay h-screen w-screen backdrop-blur-md z-50 bg-gray-500/50 cursor-pointer"
+        class="fixed drawer-overlay h-screen w-screen backdrop-blur-md z-50 bg-gray-500 opacity-50 cursor-pointer"
         onclick={() => (open = false)}
         onkeydown={(e) => {
             if (e.key == "Escape") open = false;

@@ -1,16 +1,16 @@
-import type { User, UserAnonymous } from "./user";
+import type { Actor } from "./activitypub/actor";
 
 export class TrailShare {
     id?: string;
-    user: string;
+    actor: string;
     trail: string;
     permission: "view" | "edit"
     expand?: {
-        user: UserAnonymous
+        actor: Actor
     }
 
-    constructor(user: string, trail: string, permission: "view" | "edit") {
-        this.user = user;
+    constructor(actor: string, trail: string, permission: "view" | "edit") {
+        this.actor = actor;
         this.trail = trail;
         this.permission = permission
     }

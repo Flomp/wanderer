@@ -8,6 +8,7 @@
     import { getIconForLocation } from "$lib/util/icon_util";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
+    import ActorSearch from "../actor_search.svelte";
     import Combobox, { type ComboboxItem } from "../base/combobox.svelte";
     import Datepicker from "../base/datepicker.svelte";
     import DoubleSlider from "../base/double_slider.svelte";
@@ -17,7 +18,6 @@
     import Search, { type SearchItem } from "../base/search.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Slider from "../base/slider.svelte";
-    import UserSearch from "../user_search.svelte";
 
     interface Props {
         categories: Category[];
@@ -39,7 +39,7 @@
 
     let categorySelectItems = $derived(
         categories.map((c) => ({
-            value: c.id,
+            value: c.name,
             text: c.name,
         })),
     );
@@ -84,6 +84,11 @@
 
     function setSharedFilter(e: Event) {
         filter.shared = (e.target as HTMLInputElement).checked;
+        update();
+    }
+
+    function setLikedFilter(e: Event) {
+        filter.liked = (e.target as HTMLInputElement).checked;
         update();
     }
 
@@ -217,7 +222,7 @@
             <hr class="my-4 border-separator" />
 
             {#if $currentUser}
-                <UserSearch
+                <ActorSearch
                     onclick={(item) => setAuthorFilter(item)}
                     onclear={() => {
                         filter.author = "";
@@ -225,11 +230,11 @@
                     }}
                     clearAfterSelect={false}
                     label={$_("author")}
-                ></UserSearch>
-
+                ></ActorSearch>
                 <hr class="my-4 border-separator" />
 
                 <p class="text-sm font-medium">{$_("visibilty-status")}</p>
+
                 <div class="flex items-center mt-2 mb-4">
                     <input
                         id="private-checkbox"
@@ -238,6 +243,7 @@
                         class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
                         onchange={setPrivateFilter}
                     />
+
                     <label for="private-checkbox" class="ms-2 text-sm"
                         >{$_("private")}</label
                     >
@@ -370,7 +376,18 @@
                     onchange={update}
                 ></Datepicker>
             </div>
-
+            <hr class="my-4 border-separator" />
+            <p class="text-sm font-medium pb-4">{$_("like-status")}</p>
+            <input
+                id="liked-checkbox"
+                type="checkbox"
+                checked={filter.liked}
+                class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                onchange={setLikedFilter}
+            />
+            <label for="liked-checkbox" class="ms-2 text-sm"
+                >{$_("liked")}</label
+            >
             <hr class="my-4 border-separator" />
             <p class="text-sm font-medium pb-4">{$_("completion-status")}</p>
             <RadioGroup

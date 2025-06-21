@@ -7,6 +7,6 @@ export async function POST(event: RequestEvent) {
         const r = await upload<List>(event, Collection.lists);
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

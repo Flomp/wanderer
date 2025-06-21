@@ -6,20 +6,20 @@
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import Button from "$lib/components/base/button.svelte";
+    import Editor from "$lib/components/base/editor.svelte";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
-    import Textarea from "$lib/components/base/textarea.svelte";
     import Toggle from "$lib/components/base/toggle.svelte";
     import ConfirmModal from "$lib/components/confirm_modal.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import { ListCreateSchema } from "$lib/models/api/list_schema.js";
-    import { ListShareCreateSchema } from "$lib/models/api/list_share_schema.js";
     import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
-    import type { Trail } from "$lib/models/trail.js";
+    import type { Trail, TrailSearchResult } from "$lib/models/trail.js";
     import { TrailShare } from "$lib/models/trail_share.js";
     import { lists_create, lists_update } from "$lib/stores/list_store.js";
+    import { searchTrails } from "$lib/stores/search_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import {
@@ -37,10 +37,7 @@
     import { validator } from "@felte/validator-zod";
     import { createForm } from "felte";
     import { z } from "zod";
-    import {
-        searchTrails,
-        type TrailSearchResult,
-    } from "$lib/stores/search_store.js";
+    import { onMount } from "svelte";
 
     let { data } = $props();
 
@@ -58,13 +55,23 @@
     let shareConfirmModal: ConfirmModal;
     let publishConfirmModal: ConfirmModal;
 
+    let trailsOnMap: Trail[] = $state([]);
+
     const ClientListCreateSchema = ListCreateSchema.extend({
         _photos: z.array(z.instanceof(File)).optional(),
         avatar: z.string().or(z.instanceof(File)).optional(),
         expand: z
             .object({
                 trails: z.array(TrailCreateSchema).optional(),
-                list_share_via_list: z.array(ListShareCreateSchema).optional(),
+                list_share_via_list: z
+                    .array(
+                        z.object({
+                            actor: z.string().length(15),
+                            list: z.string().length(15),
+                            permission: z.enum(["view", "edit"]),
+                        }),
+                    )
+                    .optional(),
             })
             .optional(),
     });
@@ -90,6 +97,10 @@
         },
     });
 
+    onMount(() => {
+        trailsOnMap = [...(data.list.expand?.trails ?? [])];
+    });
+
     async function checkPrerequisites() {
         if (
             (data.list?.public === false && $formData.public === true) ||
@@ -103,7 +114,6 @@
             shareConfirmModal.openModal();
             return false;
         }
-
         return true;
     }
 
@@ -156,7 +166,7 @@
     async function search(q: string) {
         try {
             const r = await searchTrails(q, {
-                filter: `author = ${$currentUser?.id} OR public = true`,
+                filter: `author = ${$currentUser?.actor} OR public = true`,
                 sort: ["name:desc"],
                 limit: 3,
             });
@@ -170,19 +180,21 @@
                     description: `${t.location ?? "-"}`,
                     value: t.id,
                     icon: "route",
-                }));
+                }));                
         } catch (e) {
             console.error(e);
         }
     }
 
     async function handleSearchClick(item: SearchItem) {
-        const trail = await trails_show(item.value, true);
+        const trail = await trails_show(item.value, undefined, true);
         $formData.trails?.push(trail.id!);
         $formData.expand = {
             trails: [...($formData.expand?.trails ?? []), trail],
             list_share_via_list: $formData.expand?.list_share_via_list,
         };
+
+        trailsOnMap = [...($formData.expand?.trails ?? [])];
     }
 
     function deleteTrail(trail: Trail) {
@@ -190,20 +202,24 @@
         $formData.expand!.trails = $formData.expand!.trails!.filter(
             (t) => t.id !== trail.id,
         );
+
+        trailsOnMap = [...($formData.expand?.trails ?? [])];
     }
 
     async function findNewTrailShares() {
-        const usersWithAccess: string[] = [
+        const actorsWithAccess: string[] = [
             $formData.author!,
-            ...($formData.expand?.list_share_via_list ?? []).map((s) => s.user),
+            ...($formData.expand?.list_share_via_list ?? []).map(
+                (s) => s.actor!,
+            ),
         ];
-        for (const userId of usersWithAccess) {
+        for (const actorId of actorsWithAccess) {
             const existingTrailShares = await trail_share_index({
-                user: userId,
+                actor: actorId,
             });
             for (const trail of $formData.expand?.trails ?? []) {
                 if (
-                    trail.author == userId ||
+                    trail.author == actorId ||
                     trail.author != $currentUser?.id
                 ) {
                     continue;
@@ -212,7 +228,7 @@
                     (s) => s.trail == trail.id,
                 );
                 if (!trailShare) {
-                    newShares.push(new TrailShare(userId, trail.id!, "view"));
+                    newShares.push(new TrailShare(actorId, trail.id!, "view"));
                 }
             }
         }
@@ -228,7 +244,7 @@
 
     async function publishTrails() {
         for (const trail of $formData.expand?.trails ?? []) {
-            if (trail.author !== $currentUser?.id) {
+            if (trail.author !== $currentUser?.actor) {
                 continue;
             }
             const updatedTrail: Trail = { ...trail, public: true };
@@ -310,11 +326,12 @@
         <TextField name="name" label={$_("name")} error={$errors.name}
         ></TextField>
 
-        <Textarea
-            name="description"
+        <Editor
+            extraClasses="min-h-24"
+            bind:value={$formData.description}
             label={$_("description")}
             error={$errors.description}
-        ></Textarea>
+        ></Editor>
         <Toggle name="public" label={$_("public")}></Toggle>
         <h3 class="text-xl font-semibold">
             {$_("trail", { values: { n: 2 } })}
@@ -340,7 +357,8 @@
                             src={trail.photos.length
                                 ? getFileURL(
                                       trail,
-                                      trail.photos[trail.thumbnail ?? 0],
+                                      trail.photos.at(trail.thumbnail ?? 0) ??
+                                          trail.photos[0],
                                   )
                                 : $theme === "light"
                                   ? emptyStateTrailLight
@@ -429,7 +447,7 @@
     <div id="trail-map" class="max-h-full">
         <MapWithElevationMaplibre
             fitBounds="animate"
-            trails={$formData.expand?.trails ?? []}
+            trails={trailsOnMap}
             bind:activeTrail={activeTrailIndex}
             bind:this={map}
         ></MapWithElevationMaplibre>

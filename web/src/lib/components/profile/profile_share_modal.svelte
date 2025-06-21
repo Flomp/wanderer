@@ -44,7 +44,7 @@
 
 <Modal
     id="password-modal"
-    size="max-w-xl"
+    size="md:max-w-xl"
     title={$_("share-profile")}
     bind:this={modal}
 >

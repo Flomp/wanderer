@@ -9,7 +9,7 @@ export async function GET(event: RequestEvent) {
 
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 
@@ -18,6 +18,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<Tag>(event, TagCreateSchema, Collection.tags)
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

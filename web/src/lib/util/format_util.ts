@@ -1,3 +1,4 @@
+import { browser } from "$app/environment";
 import { page } from "$app/state";
 import { get } from "svelte/store";
 
@@ -89,4 +90,62 @@ export function formatTimeSince(date: Date) {
         return { unit: "minutes", value: Math.floor(interval) };
     }
     return { unit: "seconds", value: seconds };
+}
+
+export function formatHTMLAsText(html?: string) {
+    if(!html || !browser) {
+        return ""
+    }
+    // Create a temporary DOM element
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+
+    // Replace <br> with newlines to preserve line breaks
+    tempDiv.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+
+    // Replace block-level elements with newlines before and after
+    const blockTags = new Set([
+        "DIV",
+        "P",
+        "LI",
+        "SECTION",
+        "ARTICLE",
+        "HEADER",
+        "FOOTER",
+        "ASIDE",
+        "MAIN",
+        "NAV",
+        "FIGURE",
+        "TABLE",
+        "TR",
+        "TD",
+        "TH",
+        "UL",
+        "OL",
+        "PRE",
+    ]);
+    tempDiv.querySelectorAll("*").forEach((el) => {
+        if (blockTags.has(el.tagName)) {
+            el.insertAdjacentText("beforebegin", "\n");
+            el.insertAdjacentText("afterend", "\n");
+        }
+    });
+
+    // Extract the text content
+    let text = tempDiv.textContent;
+
+    if (!text) {
+        return "";
+    }
+
+    // Replace multiple spaces and newlines with a single one if needed
+    // Optional: collapse excessive blank lines to max two
+    text = text
+        .replace(/[ \t]+\n/g, "\n") // trailing spaces
+        .replace(/\n[ \t]+/g, "\n") // leading spaces
+        .replace(/\n{3,}/g, "\n\n") // collapse 3+ newlines
+        .replace(/[ \t]{2,}/g, "  "); // collapse multiple spaces to two
+
+    // Trim the result
+    return text.trim();
 }

@@ -16,17 +16,15 @@
         type Trail,
         type TrailBoundingBox,
         type TrailFilter,
+        type TrailSearchResult,
     } from "$lib/models/trail";
     import { categories } from "$lib/stores/category_store";
     import {
         searchMulti,
         type ListSearchResult,
         type LocationSearchResult,
-        type TrailSearchResult,
     } from "$lib/stores/search_store";
-    import {
-        trails_search_bounding_box
-    } from "$lib/stores/trail_store";
+    import { trails_search_bounding_box } from "$lib/stores/trail_store";
     import { getIconForLocation } from "$lib/util/icon_util";
     import type { Snapshot } from "@sveltejs/kit";
     import * as M from "maplibre-gl";
@@ -89,12 +87,12 @@
         const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
             text: t.name,
             description: `Trail ${t.location.length ? ", " + t.location : ""}`,
-            value: t.id,
+            value: `@${t.author}${t.domain ? `@${t.domain}` : ""}/${t.id}`,
             icon: "route",
         }));
         const listItems = r[1].hits.map((t: ListSearchResult) => ({
             text: t.name,
-            description: `List, ${t.trails.length} ${$_("trail", { values: { n: t.trails.length } })}`,
+            description: `List, ${t.trails} ${$_("trail", { values: { n: t.trails } })}`,
             value: t.id,
             icon: "layer-group",
         }));
@@ -110,7 +108,7 @@
 
     function handleSearchClick(item: SearchItem) {
         if (item.icon == "route") {
-            goto(`/trail/view/${item.value}`);
+            goto(`/map/trail/${item.value}`);
         } else if (item.icon == "layer-group") {
             goto(`/lists?list=${item.value}`);
         } else {
@@ -219,11 +217,19 @@
                 maxBoundingBox.max_lon != 0 ||
                 maxBoundingBox.min_lat != 0)
         ) {
-            const boundingBox: M.LngLatBoundsLike = [
-                [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
-                [maxBoundingBox.max_lon, maxBoundingBox.min_lat],
-            ];
-            map?.fitBounds(boundingBox, { animate: false, padding: 32 });
+            if (
+                maxBoundingBox.min_lon == maxBoundingBox.max_lon &&
+                maxBoundingBox.min_lat == maxBoundingBox.max_lat
+            ) {
+                map?.setZoom(12);
+                map?.setCenter([maxBoundingBox.min_lon, maxBoundingBox.min_lat]);
+            } else {
+                const boundingBox: M.LngLatBoundsLike = [
+                    [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
+                    [maxBoundingBox.max_lon, maxBoundingBox.min_lat],
+                ];
+                map?.fitBounds(boundingBox, { animate: false, padding: 32 });
+            }
         } else if (
             settings &&
             settings.mapFocus == "location" &&
@@ -331,7 +337,11 @@
                     <EmptyStateSearch></EmptyStateSearch>
                 {/if}
                 {#each trails as trail, i}
-                    <a href="map/trail/{trail.id}">
+                    <a
+                        href="/map/trail/@{trail.author}{trail.domain
+                            ? `@${trail.domain}`
+                            : ''}/{trail.id}"
+                    >
                         <TrailCard
                             {trail}
                             fullWidth={true}

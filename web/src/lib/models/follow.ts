@@ -1,16 +1,18 @@
-import type { User, UserAnonymous } from "./user";
+import type { Actor } from "./activitypub/actor";
 
 export class Follow {
     id?: string;
     follower: string;
     followee: string;
+    status: "pending" | "accepted";
     expand?: {
-        follower: UserAnonymous,
-        followee: UserAnonymous
+        follower: Actor,
+        followee: Actor
     }
 
     constructor(follower: string, followee: string) {
         this.follower = follower;
         this.followee = followee;
+        this.status = "pending"
     }
 }
