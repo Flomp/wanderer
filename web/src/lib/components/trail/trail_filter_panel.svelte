@@ -44,7 +44,7 @@
         })),
     );
 
-    const radioGroupItems: RadioItem[] = [
+    const radioGroupCompletenessItems: RadioItem[] = [
         { text: $_("completed"), value: "completed" },
         { text: $_("not-completed"), value: "not_completed" },
         { text: $_("no-preference"), value: "no_preference" },
@@ -82,11 +82,6 @@
         update();
     }
 
-    function setPublicFilter(e: Event) {
-        filter.public = (e.target as HTMLInputElement).checked;
-        update();
-    }
-
     function setSharedFilter(e: Event) {
         filter.shared = (e.target as HTMLInputElement).checked;
         update();
@@ -113,6 +108,16 @@
                 break;
         }
 
+        update();
+    }
+
+    function setPrivateFilter(e: Event) {
+        filter.private = (e.target as HTMLInputElement).checked;
+        update();
+    }
+
+    function setPublicFilter(e: Event) {
+        filter.public = (e.target as HTMLInputElement).checked;
         update();
     }
 
@@ -154,6 +159,20 @@
     function setFilterTags(tags: ComboboxItem[]) {
         filter.tags = tags.map((t) => t.text);
         update();
+    }
+
+    function getVisibiltyStatus(): number {
+        const isPublic = filter.public !== undefined && filter.public === true;
+        const isPrivate =
+            filter.private !== undefined && filter.private === true;
+
+        if (isPublic === true && isPrivate === true) {
+            return 2;
+        } else if (isPublic === true) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 </script>
 
@@ -236,6 +255,7 @@
                         >{$_("shared")}</label
                     >
                 </div>
+
                 <hr class="my-4 border-separator" />
             {/if}
             <MultiSelect
@@ -355,8 +375,12 @@
             <p class="text-sm font-medium pb-4">{$_("completion-status")}</p>
             <RadioGroup
                 name="completed"
-                items={radioGroupItems}
-                selected={2}
+                items={radioGroupCompletenessItems}
+                selected={filter.completed === undefined
+                    ? 2
+                    : filter.completed === true
+                      ? 0
+                      : 1}
                 onchange={(item) => setCompletedFilter(item)}
             ></RadioGroup>
         </div>

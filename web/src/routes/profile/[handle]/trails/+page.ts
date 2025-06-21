@@ -17,6 +17,7 @@ export const load: Load = async ({ params, fetch, parent }) => {
         public: true,
         shared: true,
         liked: false,
+        private: true,
         near: {
             radius: 2000,
         },

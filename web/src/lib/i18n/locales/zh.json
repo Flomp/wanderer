@@ -347,6 +347,7 @@
   "use-roads": "Use Roads",
   "username": "用户名",
   "view": "查看",
+  "visibilty-status": "可性见",
   "walking-speed": "",
   "waypoints": "{n, plural, =1 {路点} other {路点}}",
   "welcome_to": "欢迎",

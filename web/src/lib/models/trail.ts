@@ -112,6 +112,7 @@ interface TrailFilter {
     author?: string;
     public?: boolean;
     shared?: boolean;
+    private?: boolean;
     near: {
         lat?: number,
         lon?: number,

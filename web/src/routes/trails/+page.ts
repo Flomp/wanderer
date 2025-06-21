@@ -15,6 +15,7 @@ export const load: ServerLoad = async ({ params, locals, url, fetch }) => {
         public: true,
         shared: true,
         liked: false,
+        private: true,
         near: {
             radius: 2000,
         },

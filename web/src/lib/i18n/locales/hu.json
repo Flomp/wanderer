@@ -347,6 +347,7 @@
   "use-roads": "Use Roads",
   "username": "Felhasználónév",
   "view": "View",
+  "visibilty-status": "Láthatóság",
   "walking-speed": "",
   "waypoints": "{n, plural, =1 {Waypoint} other {Waypoints}}",
   "welcome_to": "Üdvözöljük a",
