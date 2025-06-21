@@ -347,7 +347,7 @@
   "use-roads": "Использование дорог",
   "username": "Никнейм",
   "view": "Просмотр",
-  "visibilty-status": "Видимость",
+  "visibilty-status": "",
   "walking-speed": "",
   "waypoints": "{n, plural, =1 {Путевая точка} other {Путевые точки}}",
   "welcome_to": "Добро пожаловать в",
