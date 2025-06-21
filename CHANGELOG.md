@@ -1,8 +1,7 @@
 # v0.17.0
-:::caution
+> [!CAUTION]
 This release contains breaking changes. They are marked with a ⚠️.  
 **Please update to version v0.16.5 first before updating to v0.17.0.**
-:::
 
 ## Configuration
 Check the reopsitory's [`docker-compose.yml`](https://github.com/Flomp/wanderer/blob/main/docker-compose.yml) for a valid configuration.
