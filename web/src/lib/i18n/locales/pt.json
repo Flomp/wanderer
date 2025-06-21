@@ -347,7 +347,7 @@
   "use-roads": "Use Roads",
   "username": "Nome de utilizador",
   "view": "Ver",
-  "visibilty-status": "Visibilidade",
+  "visibilty-status": "",
   "walking-speed": "",
   "waypoints": "{n, plural, =1 {Ponto de passagem} other {Pontos de passagem}}",
   "welcome_to": "Bem-vindo ao",

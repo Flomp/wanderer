@@ -347,7 +347,7 @@
   "use-roads": "Use Roads",
   "username": "Gebruikersnaam",
   "view": "View",
-  "visibilty-status": "Zichtbaarheid",
+  "visibilty-status": "",
   "walking-speed": "",
   "waypoints": "{n, plural, =1 {Waypoint} other {Waypoints}}",
   "welcome_to": "Welkom bij",
