@@ -8,6 +8,7 @@ export async function notifications_index(data: { recipient: string, seen?: bool
     const r = await f('/api/v1/notification?' + new URLSearchParams({
         filter: `created<=@month&&recipient='${data.recipient}'` + (data.seen !== undefined ? `&&seen=${data.seen}` : ''),
         sort: '+seen,-created',
+        expand: 'author',
         page: page.toString(),
         "perPage": perPage.toString()
     }), {

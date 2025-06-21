@@ -46,7 +46,10 @@
 
 <div class="my-4" id="slider" bind:this={sliderContainer}></div>
 
-<style>
+<style lang="postcss">
+    @reference "tailwindcss";
+    @reference "../../../css/app.css";
+
     :global(.noUi-horizontal) {
         height: 6px;
     }

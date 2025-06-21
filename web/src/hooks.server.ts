@@ -8,6 +8,7 @@ import { json, redirect, text, type Handle } from '@sveltejs/kit'
 import { sequence } from '@sveltejs/kit/hooks'
 import { MeiliSearch } from 'meilisearch'
 import { locale } from 'svelte-i18n'
+import type { Actor } from '$lib/models/activitypub/actor'
 
 
 function csrf(allowedPaths: string[]): Handle {
@@ -49,6 +50,8 @@ function isFormContentType(request: Request) {
 
 
 const auth: Handle = async ({ event, resolve }) => {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+
   const pb = new PocketBase(envPub.PUBLIC_POCKETBASE_URL)
   // load the store data from the request cookie string
   pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '')
@@ -77,9 +80,11 @@ const auth: Handle = async ({ event, resolve }) => {
 
   let meiliApiKey: string = "";
   let settings: Settings | undefined;
+  let actor: Actor | undefined;
   if (pb.authStore.record) {
     meiliApiKey = pb.authStore.record.token
     settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.record.id}"`, { requestKey: null })
+    actor = await pb.collection("activitypub_actors").getFirstListItem(`user='${pb.authStore.record.id}'`)
   } else {
     const response = await pb.send("/public/search/token", { method: "GET", fetch: event.fetch });
     meiliApiKey = response.token;
@@ -89,6 +94,9 @@ const auth: Handle = async ({ event, resolve }) => {
   event.locals.ms = ms
   event.locals.pb = pb
   event.locals.user = pb.authStore.record
+  if (event.locals.user) {
+    event.locals.user.actor = actor?.id
+  }
   event.locals.settings = settings
 
   const lang = settings?.language ?? event.request.headers.get('accept-language')?.split(',')[0]

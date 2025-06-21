@@ -10,7 +10,7 @@ export async function GET(event: RequestEvent) {
 
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 
@@ -34,7 +34,7 @@ export async function POST(event: RequestEvent) {
             return json(r);
         }
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 
@@ -43,6 +43,6 @@ export async function DELETE(event: RequestEvent) {
         const r = await remove(event, Collection.users)
         return json(r);
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }

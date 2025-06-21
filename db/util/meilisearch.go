@@ -2,12 +2,17 @@ package util
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/url"
+	"path"
 
 	"github.com/meilisearch/meilisearch-go"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/twpayne/go-gpx"
 	"github.com/twpayne/go-polyline"
@@ -31,16 +36,32 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		tags[i] = v.GetString("name")
 	}
 
-	polyline, err := getPolyline(app, r)
+	category := ""
+	trailCategory := r.ExpandedOne("category")
+	if trailCategory != nil {
+		category = trailCategory.GetString("name")
+	}
+
+	// polyline, err := getPolyline(app, r)
+	// if err != nil {
+	// 	polyline = ""
+	// }
+
+	domain := ""
+	if !author.GetBool("isLocal") {
+		domain = author.GetString("domain")
+	}
+
+	logCount, err := app.CountRecords("summit_logs", dbx.NewExp("trail={:id}", dbx.Params{"id": r.Id}))
 	if err != nil {
 		return nil, err
 	}
 
-	document := map[string]interface{}{
+	document := map[string]any{
 		"id":             r.Id,
-		"author":         r.GetString("author"),
+		"author":         author.Id,
 		"author_name":    author.GetString("username"),
-		"author_avatar":  author.GetString("avatar"),
+		"author_avatar":  author.GetString("icon"),
 		"name":           r.GetString("name"),
 		"description":    r.GetString("description"),
 		"location":       r.GetString("location"),
@@ -49,15 +70,17 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		"elevation_loss": r.GetFloat("elevation_loss"),
 		"duration":       r.GetFloat("duration"),
 		"difficulty":     r.Get("difficulty"),
-		"category":       r.Get("category"),
-		"completed":      len(r.GetStringSlice("summit_logs")) > 0,
+		"category":       category,
+		"completed":      logCount > 0,
 		"date":           r.GetDateTime("date").Time().Unix(),
 		"created":        r.GetDateTime("created").Time().Unix(),
 		"public":         r.GetBool("public"),
 		"thumbnail":      thumbnail,
 		"gpx":            r.GetString("gpx"),
 		"tags":           tags,
-		"polyline":       polyline,
+		// "polyline":       polyline,
+		"domain": domain,
+		"iri":    r.GetString("iri"),
 		"_geo": map[string]float64{
 			"lat": r.GetFloat("lat"),
 			"lng": r.GetFloat("lon"),
@@ -66,6 +89,9 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 
 	if includeShares {
 		document["shares"] = []string{}
+		document["likes"] = []string{}
+		document["like_count"] = 0
+
 	}
 
 	return document, nil
@@ -109,28 +135,124 @@ func getPolyline(app core.App, r *core.Record) (string, error) {
 	return string(polyline.EncodeCoords(coordinates)), nil
 }
 
-func documentFromListRecord(r *core.Record, includeShares bool) map[string]interface{} {
+func documentFromListRecord(r *core.Record, author *core.Record, includeShares bool) (map[string]interface{}, error) {
+
+	totalElevationGain := 0.0
+	totalElevationLoss := 0.0
+	totalDistance := 0.0
+	totalDuration := 0.0
+	trails := len(r.GetStringSlice("trails"))
+
+	if r.GetString("iri") != "" {
+		doc, err := documentFromRemoteRecord(r, "lists")
+		if err == nil {
+			totalElevationGain = doc["elevation_gain"].(float64)
+			totalElevationLoss = doc["elevation_loss"].(float64)
+			totalDistance = doc["distance"].(float64)
+			totalDuration = doc["duration"].(float64)
+
+			trails = int(doc["trails"].(float64))
+		}
+
+	} else {
+		allTrails := r.ExpandedAll("trails")
+
+		for _, t := range allTrails {
+			totalElevationGain += t.GetFloat("elevation_gain")
+			totalElevationLoss += t.GetFloat("elevation_loss")
+			totalDistance += t.GetFloat("distance")
+			totalDuration += t.GetFloat("duration")
+
+		}
+	}
+
 	document := map[string]interface{}{
-		"id":          r.Id,
-		"author":      r.GetString("author"),
-		"name":        r.GetString("name"),
-		"description": r.GetString("description"),
-		"public":      r.GetBool("public"),
-		"created":     r.GetDateTime("created").Time().Unix(),
-		"trails":      r.GetStringSlice("trails"),
+		"id":             r.Id,
+		"author":         author.Id,
+		"author_name":    author.GetString("username"),
+		"author_avatar":  author.GetString("icon"),
+		"avatar":         r.GetString("avatar"),
+		"name":           r.GetString("name"),
+		"description":    r.GetString("description"),
+		"elevation_gain": totalElevationGain,
+		"elevation_loss": totalElevationLoss,
+		"distance":       totalDistance,
+		"duration":       totalDuration,
+		"public":         r.GetBool("public"),
+		"created":        r.GetDateTime("created").Time().Unix(),
+		"trails":         trails,
+		"iri":            r.GetString("iri"),
 	}
 
 	if includeShares {
 		document["shares"] = []string{}
 	}
 
-	return document
+	return document, nil
+}
+
+func documentFromRemoteRecord(r *core.Record, index string) (map[string]interface{}, error) {
+	client := &http.Client{}
+
+	if r.GetString("iri") == "" {
+		return nil, fmt.Errorf("record has no iri")
+	}
+
+	iri := r.GetString("iri")
+
+	url, err := url.Parse(iri)
+	if err != nil {
+		return nil, err
+	}
+
+	remoteRecordId := path.Base(url.Path)
+
+	searchURL := fmt.Sprintf("%s://%s/api/v1/search/%s", url.Scheme, url.Host, index)
+	body := []byte(fmt.Sprintf(`{"q": "%s"}`, remoteRecordId))
+
+	req, err := http.NewRequest("POST", searchURL, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch remote record: received status %d", resp.StatusCode)
+	}
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var searchResponse meilisearch.SearchResponse
+	json.Unmarshal(respBytes, &searchResponse)
+
+	if len(searchResponse.Hits) == 0 {
+		return nil, fmt.Errorf("no documents in result set")
+	}
+
+	document, ok := searchResponse.Hits[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected document format")
+	}
+	return document, nil
 }
 
 func IndexTrail(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
 	errs := app.ExpandRecord(r, []string{"tags"}, nil)
 	if len(errs) > 0 {
-		return fmt.Errorf("failed to expand: %v", errs)
+		return fmt.Errorf("failed to expand tags: %v", errs)
+	}
+	errs = app.ExpandRecord(r, []string{"category"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand category: %v", errs)
 	}
 	doc, err := documentFromTrailRecord(app, r, author, true)
 	if err != nil {
@@ -148,10 +270,14 @@ func IndexTrail(app core.App, r *core.Record, author *core.Record, client meilis
 func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
 	errs := app.ExpandRecord(r, []string{"tags"}, nil)
 	if len(errs) > 0 {
-		return fmt.Errorf("failed to expand: %v", errs)
+		return fmt.Errorf("failed to expand tags: %v", errs)
+	}
+	errs = app.ExpandRecord(r, []string{"category"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand category: %v", errs)
 	}
 
-	doc, err := documentFromTrailRecord(app, r, author, true)
+	doc, err := documentFromTrailRecord(app, r, author, false)
 	if err != nil {
 		return err
 	}
@@ -177,20 +303,49 @@ func UpdateTrailShares(trailId string, shares []string, client meilisearch.Servi
 	return nil
 }
 
-func IndexList(r *core.Record, client meilisearch.ServiceManager) error {
-	documents := []map[string]interface{}{documentFromListRecord(r, true)}
+func UpdateTrailLikes(trailId string, likes []string, client meilisearch.ServiceManager) error {
+	documents := []map[string]interface{}{
+		{
+			"id":         trailId,
+			"like_count": len(likes),
+			"likes":      likes,
+		},
+	}
+	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {
+		return err
+	}
+	return nil
+}
 
-	if _, err := client.Index("lists").AddDocuments(documents); err != nil {
+func IndexList(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+	errs := app.ExpandRecord(r, []string{"trails"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand trails: %v", errs)
+	}
+
+	documents, err := documentFromListRecord(r, author, true)
+	if err != nil {
+		return err
+	}
+	if _, err = client.Index("lists").AddDocuments(documents); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func UpdateList(r *core.Record, client meilisearch.ServiceManager) error {
-	documents := documentFromListRecord(r, false)
+func UpdateList(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {
+	errs := app.ExpandRecord(r, []string{"trails"}, nil)
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to expand trails: %v", errs)
+	}
 
-	if _, err := client.Index("lists").UpdateDocuments(documents); err != nil {
+	documents, err := documentFromListRecord(r, author, false)
+	if err != nil {
+		return err
+	}
+
+	if _, err = client.Index("lists").UpdateDocuments(documents); err != nil {
 		return err
 	}
 

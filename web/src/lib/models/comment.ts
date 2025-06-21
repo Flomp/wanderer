@@ -1,20 +1,19 @@
-import type { UserAnonymous } from "./user";
+import type { Actor } from "./activitypub/actor";
 
 export class Comment {
     id?: string;
     text: string;
-    rating?: number;
     author: string;
     trail: string;
     created?: string;
     updated?: string;
+    iri?: string;
     expand?: {
-        author: UserAnonymous
+        author: Actor
     }
 
-    constructor(text: string, rating: number, author: string, trail: string) {
+    constructor(text: string, author: string, trail: string) {
         this.text = text;
-        this.rating = rating;
         this.author = author;
         this.trail = trail;
     }

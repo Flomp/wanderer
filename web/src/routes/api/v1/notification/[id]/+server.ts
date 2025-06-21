@@ -8,6 +8,6 @@ export async function POST(event: RequestEvent) {
         const r = await update<Comment>(event, NotificationUpdateSchema, Collection.notifications)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

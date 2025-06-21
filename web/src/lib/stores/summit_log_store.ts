@@ -3,20 +3,19 @@ import { APIError } from "$lib/util/api_util";
 import { type AuthRecord, type ListResult } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
 import { currentUser } from "./user_store";
+import { isURL, objectToFormData } from "$lib/util/file_util";
 
 export const summitLog: Writable<SummitLog> = writable(new SummitLog(new Date().toISOString().substring(0, 10)));
 export const summitLogs: Writable<SummitLog[]> = writable([]);
 
-export async function summit_logs_index(author: string, filter?: SummitLogFilter, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-
-    let filterText = `author='${author}'`
-    filterText += filter ? "&&" + buildFilterText(filter) : "";
+export async function summit_logs_index(filter?: SummitLogFilter, handle?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const r = await f('/api/v1/summit-log?' + new URLSearchParams({
-        filter: filterText,
+        ...(filter ? { filter: buildFilterText(filter) } : {}),
         perPage: "-1",
-        expand: "trails_via_summit_logs.category",
+        expand: "trail.category,author",
         sort: "+date",
+        ...(handle ? { handle } : {})
     }), {
         method: 'GET',
     })
@@ -27,18 +26,6 @@ export async function summit_logs_index(author: string, filter?: SummitLogFilter
     }
 
     const fetchedSummitLogs: ListResult<SummitLog> = await r.json();
-
-    // for (const log of fetchedSummitLogs.items) {
-    //     if (!log.gpx) {
-    //         continue
-    //     }
-    //     const gpxData: string = await fetchGPX(log as any, f);
-
-    //     if (!log.expand) {
-    //         log.expand = {};
-    //     }
-    //     log.expand.gpx_data = gpxData;
-    // }
 
     summitLogs.set(fetchedSummitLogs.items);
 
@@ -51,11 +38,27 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
         throw Error("Unauthenticated")
     }
 
-    summitLog.author = user.id
+    summitLog.author = user.actor
 
-    let r = await f('/api/v1/summit-log', {
+    const formData = objectToFormData(summitLog, ["expand"])
+
+    if (summitLog._gpx && summitLog._gpx instanceof File) {
+        formData.append("gpx", summitLog._gpx)
+    }
+
+
+    if (summitLog._photos && summitLog._photos.length) {
+
+        for (const photo of summitLog._photos) {
+            formData.append("photos", photo)
+        }
+    }
+
+    let r = await f('/api/v1/summit-log/form?' + new URLSearchParams({
+        expand: "author"
+    }), {
         method: 'PUT',
-        body: JSON.stringify(summitLog),
+        body: formData,
     })
 
     if (!r.ok) {
@@ -64,43 +67,6 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
     }
 
     let model: SummitLog = await r.json();
-
-    if (summitLog._gpx && summitLog._gpx instanceof File) {
-
-        const formData = new FormData()
-
-        formData.append("gpx", summitLog._gpx)
-
-        r = await f(`/api/v1/summit-log/${model.id!}/file`, {
-            method: 'POST',
-            body: formData,
-        })
-
-        if (!r.ok) {
-            const response = await r.json();
-            throw new APIError(r.status, response.message, response.detail)
-        }
-    }
-
-    if (summitLog._photos && summitLog._photos.length) {
-
-        const formData = new FormData()
-
-        for (const photo of summitLog._photos) {
-            formData.append("photos", photo)
-        }
-
-        r = await fetch(`/api/v1/summit-log/${model.id!}/file`, {
-            method: 'POST',
-            body: formData,
-        })
-
-        if (!r.ok) {
-            const response = await r.json();
-            throw new APIError(r.status, response.message, response.detail)
-        }
-    }
-
 
     return model;
 }
@@ -111,19 +77,9 @@ export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: 
         throw Error("Unauthenticated")
     }
 
-    newSummitLog.author = user.id
+    newSummitLog.author = user.actor
 
-    let r = await fetch('/api/v1/summit-log/' + newSummitLog.id, {
-        method: 'POST',
-        body: JSON.stringify(newSummitLog),
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    const formData = new FormData()
+    const formData = objectToFormData(newSummitLog, ["expand"])
 
     for (const photo of newSummitLog._photos ?? []) {
         formData.append("photos", photo)
@@ -139,7 +95,9 @@ export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: 
         formData.append("gpx", newSummitLog._gpx);
     }
 
-    r = await fetch(`/api/v1/summit-log/${newSummitLog.id!}/file`, {
+    let r = await fetch('/api/v1/summit-log/form/' + newSummitLog.id + '?' + new URLSearchParams({
+        expand: "author"
+    }), {
         method: 'POST',
         body: formData,
     })
@@ -165,11 +123,11 @@ export async function summit_logs_delete(summitLog: SummitLog) {
 
 }
 
-function buildFilterText(filter: SummitLogFilter,): string {
+export function buildFilterText(filter: SummitLogFilter,): string {
     let filterText: string = "";
 
     if (filter.category.length > 0) {
-        filterText += `trails_via_summit_logs.category!=null&&'${filter.category.join(",")}'~trails_via_summit_logs.category`;
+        filterText += `trail.category!=null&&'${filter.category.join(",")}'~trail.category`;
     }
 
     if (filter.startDate) {
@@ -178,6 +136,17 @@ function buildFilterText(filter: SummitLogFilter,): string {
 
     if (filter.endDate) {
         filterText += `${filter.category.length || filter.startDate ? '&&' : ''}date<='${filter.endDate}'`
+    }
+
+    if (filter.trail) {
+        if (filter.category.length || filter.startDate || filter.endDate) {
+            filterText += "&&"
+        }
+        if (isURL(filter.trail)) {
+            filterText += `trail='${filter.trail}'||trail.iri='${filter.trail}'||trail='${filter.trail.substring(filter.trail.length - 15)}'`;
+        } else {
+            filterText += `trail='${filter.trail}'`
+        }
     }
 
     return filterText;

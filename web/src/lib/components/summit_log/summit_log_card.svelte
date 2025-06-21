@@ -6,12 +6,18 @@
     import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
 
     import { theme } from "$lib/stores/theme_store";
-    import { getFileURL, isVideoURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import {
+        getFileURL,
+        isVideoURL,
+        readAsDataURLAsync,
+    } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     let thumbnail: string = $state(
         $theme === "light" ? emptyStateTrailLight : emptyStateTrailDark,
@@ -91,6 +97,18 @@
                     <Dropdown items={dropdownItems} {onchange}></Dropdown>
                 {/if}
             </div>
+            {#if log.expand?.author}
+                <p class="text-xs text-gray-500 mb-3">
+                    {$_("by")}
+                    <img
+                        class="rounded-full w-5 aspect-square mx-1 inline"
+                        src={log.expand.author.icon ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.username}&backgroundType=gradientLinear`}
+                        alt="avatar"
+                    />
+                    {handleFromRecordWithIRI(log)}
+                </p>
+            {/if}
             {#if log.distance || log.elevation_gain || log.elevation_loss || log.duration}
                 <div
                     class="flex mt-1 gap-x-4 text-sm text-gray-500 flex-wrap mb-2"
@@ -115,7 +133,7 @@
                     >
                 </div>
             {/if}
-            <span class="whitespace-pre-wrap">{log.text}</span>
+            <span class="whitespace-pre-wrap">{formatHTMLAsText(log.text)}</span>
         </div>
     </div>
 </div>

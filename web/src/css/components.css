@@ -1,6 +1,5 @@
-@import 'tailwindcss/utilities';
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
+@import 'tailwindcss';
+@reference "./app.css";
 
 .btn-primary {
     @apply min-h-10 text-white rounded-lg px-4 py-2 bg-primary font-semibold transition-all hover:bg-primary-hover focus:ring-4 ring-input-ring
@@ -125,4 +124,9 @@
     100% {
         transform: rotate(360deg);
     }
+}
+
+.mention {
+    @apply bg-blue-100 dark:bg-slate-700 rounded-md;
+    padding: 0.1rem 0.3rem;
 }

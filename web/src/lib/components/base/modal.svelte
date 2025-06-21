@@ -42,7 +42,7 @@
     {id}
     tabindex="-1"
     aria-hidden="true"
-    class="w-full {size} max-h-full rounded-xl text-content"
+    class="{size} max-h-full rounded-xl text-content"
 >
     <!-- Modal content -->
     <div class="bg-background shadow rounded-xl">
@@ -73,8 +73,9 @@
     </div>
 </dialog>
 
-<style>
+<style lang="postcss">
+    @reference "tailwindcss";
     dialog::backdrop {
-        @apply bg-gray-500/50;
+        @apply bg-gray-500 opacity-50;
     }
 </style>

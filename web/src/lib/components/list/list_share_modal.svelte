@@ -12,29 +12,27 @@
     } from "$lib/stores/list_share_store";
     import {
         trail_share_create,
-        trail_share_delete,
         trail_share_index,
     } from "$lib/stores/trail_share_store";
-    import { getFileURL } from "$lib/util/file_util";
+    import { currentUser } from "$lib/stores/user_store";
     import { _ } from "svelte-i18n";
+    import ActorSearch from "../actor_search.svelte";
     import Button from "../base/button.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
-    import UserSearch from "../user_search.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         list: List;
-        onsave?: () =>  void,
-        onupdate?: (list: List) => void
+        onsave?: () => void;
+        onupdate?: (list: List) => void;
     }
 
-    let {
-        list,
-        onsave,
-        onupdate
-    }: Props = $props();
+    let { list, onsave, onupdate }: Props = $props();
 
     let modal: Modal;
+
+    let displayShareError = $state(false);
 
     export function openModal() {
         openShareModal();
@@ -56,7 +54,7 @@
 
     function copyURLToClipboard() {
         navigator.clipboard.writeText(
-            window.location.href.split("?")[0] + "?list=" + list.id,
+            `${window.location.origin}/lists/${handleFromRecordWithIRI(list)}/${list.id}`,
         );
 
         copyButtonText = $_("link-copied");
@@ -64,25 +62,36 @@
     }
 
     function close() {
-        onsave?.()
+        onsave?.();
         modal.closeModal!();
     }
 
-    async function shareTrails(userId: string) {
-        const existingTrailShares = await trail_share_index({ user: userId });
+    async function shareTrails(actorIRI: string) {
+        const existingTrailShares = await trail_share_index({
+            actorIRI: actorIRI,
+        });
         const trailIds = existingTrailShares.map((s) => s.trail);
-        for (const trailId of list.trails ?? []) {
-            if (!trailIds.includes(trailId)) {
-                const share = new TrailShare(userId, trailId, "view");
+        for (const trail of list.expand?.trails ?? []) {
+            if (
+                !trailIds.includes(trail.id!) &&
+                !trail.public &&
+                trail.author == $currentUser?.actor
+            ) {
+                const share = new TrailShare(actorIRI, trail.id!, "view");
                 await trail_share_create(share);
             }
         }
     }
 
     async function shareList(item: SelectItem) {
-        const share = new ListShare(item.value.id, list.id!, "view");
+        if (!item.value.isLocal && !list.public) {
+            displayShareError = true;
+            return;
+        }
+        displayShareError = false;
+        const share = new ListShare(item.value.iri, list.id!, "view");
         await list_share_create(share);
-        await shareTrails(item.value.id);
+        await shareTrails(item.value.iri);
         fetchShares();
     }
 
@@ -92,18 +101,6 @@
     ) {
         share.permission = permission;
         await list_share_update(share);
-    }
-
-    async function deleteTrailShares(userId: string) {
-        const existingTrailShares = await trail_share_index({ user: userId });
-        for (const trailId of list.trails ?? []) {
-            const shareToDelete = existingTrailShares.find(
-                (s) => s.trail == trailId,
-            );
-            if (shareToDelete) {
-                await trail_share_delete(shareToDelete);
-            }
-        }
     }
 
     async function deleteShare(share: ListShare) {
@@ -127,18 +124,26 @@
 <Modal
     id="share-modal"
     title={$_("share-this-list")}
-    size="max-w-sm overflow-visible"
+    size="md:min-w-sm overflow-visible"
     bind:this={modal}
 >
     {#snippet content()}
         <div>
-            <p class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500">
+            <p
+                class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500 max-w-sm"
+            >
                 {$_("list-share-warning")}
             </p>
-            <UserSearch
-                includeSelf={false}
-                onclick={(item) => shareList(item)}
-            ></UserSearch>
+            {#if displayShareError}
+                <p class="p-4 bg-red-100 rounded-xl mb-4 text-sm text-gray-500">
+                    <i class="fa fa-warning mr-2"></i>
+                    {$_("object-share-error", {
+                        values: { object: $_("trail", { values: { n: 1 } }) },
+                    })}
+                </p>
+            {/if}
+            <ActorSearch includeSelf={false} onclick={(item) => shareList(item)}
+            ></ActorSearch>
             <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
             {#if $shares.length == 0}
@@ -151,22 +156,26 @@
                         <div class="flex items-center gap-x-2 p-2">
                             <img
                                 class="rounded-full w-8 aspect-square mr-2"
-                                src={getFileURL(
-                                    share.expand.user,
-                                    share.expand.user.avatar,
-                                ) ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.user.username}&backgroundType=gradientLinear`}
+                                src={share.expand.actor.icon ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <p>{share.expand.user.username}</p>
+                            <p>
+                                {`@${share.expand.actor.username}${share.expand.actor.isLocal ? "" : "@" + share.expand.actor.domain}`}
+                            </p>
                             <span
                                 class="basis-full text-sm text-center text-gray-500"
                                 >{$_("can")}</span
                             >
-                            <div class="shrink-0">
+                            <div
+                                class="shrink-0"
+                                class:tooltip={!share.expand.actor.isLocal}
+                                data-title={$_("remote-users-cannot-edit")}
+                            >
                                 <Select
                                     bind:value={share.permission}
                                     items={permissionSelectItems}
+                                    disabled={!share.expand.actor.isLocal}
                                     onchange={(value) =>
                                         updateSharePermission(share, value)}
                                 ></Select>

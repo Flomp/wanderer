@@ -1,0 +1,77 @@
+---
+title: Welcome to wanderer
+description: What is wanderer?
+---
+
+import { LinkCard } from '@astrojs/starlight/components';
+
+<span class="-tracking-[0.075em]">wanderer</span> is a self-hosted, federated trail database built for explorers who want full control over their outdoor data. Whether you're tracking personal hikes or publishing trail networks for a wider community, <span class="-tracking-[0.075em]">wanderer</span> gives you the tools to manage, share, and discover trails all on your own terms.
+
+## What is wanderer?
+
+<span class="-tracking-[0.075em]">wanderer</span> is an open-source web application that allows you to:
+
+- Upload GPS tracks from formats like GPX or TCX
+- Create new trails using a built-in route planner
+- Add metadata such as difficulty, terrain, tags, or region
+- Organize and search your trail collection with advanced filters
+- Follow other users, like and comment on trails
+- Host your own instance, with full data ownership and control
+
+Whether you're a solo adventurer, a local trail group, or building a public archive, <span class="-tracking-[0.075em]">wanderer</span> adapts to your use case and keeps your data in your hands.
+
+## What is federation?
+
+Federation allows <span class="-tracking-[0.075em]">wanderer</span> servers — called instances — to communicate with each other. This means users on different servers can interact, follow one another, and share trails across the network, even if their data lives on separate machines.
+
+But federation is completely optional. You can run <span class="-tracking-[0.075em]">wanderer</span> entirely on your own, as a private trail database with no external connections. All features, from route planning to metadata management and search, work fully in standalone mode. Your server doesn’t need to talk to any others unless you choose to enable it.
+
+When federation is enabled, <span class="-tracking-[0.075em]">wanderer</span> becomes part of a wider decentralized network. You can still control exactly who your instance connects with — or keep it entirely private if you prefer.
+
+This flexible design means <span class="-tracking-[0.075em]">wanderer</span> works equally well for:
+
+- Individuals who want a private, local trail archive
+- Small groups collaborating on a shared server
+- Public communities contributing to a federated network of outdoor explorers
+
+For more detail on how <span class="-tracking-[0.075em]">wanderer</span> uses federation, see the [community interaction guide](/use/community-interaction/).
+
+## What is ActivityPub?
+
+ActivityPub is an open, standardized protocol for decentralized social networking. It was developed by the W3C (World Wide Web Consortium) and is used by platforms like Mastodon (microblogging), PeerTube (video hosting), and WriteFreely (blogging). These platforms form what’s known as the Fediverse — a network of independently hosted services that can talk to each other.
+
+<span class="-tracking-[0.075em]">wanderer</span> uses ActivityPub to enable federation between instances. This allows users on different <span class="-tracking-[0.075em]">wanderer</span> servers to:
+
+- Follow each other
+- View and interact with trails across servers
+- Like and comment on trails, even if they were created elsewhere
+- Receive notifications about new trails or updates from followed users
+
+Because it follows a common standard, <span class="-tracking-[0.075em]">wanderer</span> can also potentially interact with users from entirely different platforms in the Fediverse — for example, someone on Mastodon could follow a <span class="-tracking-[0.075em]">wanderer</span> account and receive updates when new trails are published.
+
+
+## Community and support
+
+<span class="-tracking-[0.075em]">wanderer</span> is open-source and developed in the open. You can help shape its future or get involved in many ways:
+
+- [GitHub repository](https://github.com/Flomp/wanderer)
+- [Issue tracker](https://github.com/Flomp/wanderer/issues)
+- [Translation project on Crowdin](https://crowdin.com/project/wanderer)
+- [Discord server](https://discord.gg/USSEBY98CP)
+
+Want to contribute? Start by checking the [roadmap](https://github.com/users/Flomp/projects/2) or browsing open issues on GitHub.
+
+
+
+## Next steps
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-x-2">
+    <div class="mt-4 flex">
+        <LinkCard href="/use/authentication" title="How to use wanderer" description="Learn how to upload, create, and organize trails in your own instance of wanderer.">
+        </LinkCard>
+    </div>
+    <LinkCard href="/run/installation" title="How to run wanderer" description="Want to host your own instance? This guide covers everything you need to know to deploy wanderer.">
+    </LinkCard>
+    <LinkCard href="/develop/local-development" title="How to develop wanderer" description="This section covers the development environment, architecture overview, and how to get involved in the project.">
+    </LinkCard>
+</div>

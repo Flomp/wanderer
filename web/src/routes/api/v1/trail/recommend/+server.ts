@@ -1,5 +1,4 @@
 import { TrailRecommendSchema } from '$lib/models/api/trail_schema';
-import type { Trail } from '$lib/models/trail';
 import { handleError } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 
@@ -7,27 +6,13 @@ export async function GET(event: RequestEvent) {
     try {
         const searchParams = Object.fromEntries(event.url.searchParams);
         const safeSearchParams = TrailRecommendSchema.parse(searchParams);
-        
-        const r = await event.locals.pb.send("/trail/recommend?" + new URLSearchParams({
-            size: safeSearchParams.size?.toString() ?? ""
-        }), {
-            method: "GET",
-        });
 
-        const result: Trail[] = r;
+        const numberOfTrails = (await event.locals.ms.index("trails").search("", {limit: 1})).estimatedTotalHits
+        const randomOffset = (safeSearchParams.size ?? 0) > numberOfTrails ? 0 : Math.floor(Math.random() * (numberOfTrails - 1) + 1)
+        const response = await event.locals.ms.index("trails").search("", {limit: safeSearchParams.size, offset: randomOffset})
 
-        for (const t of result) {
-            if (!t.author || !event.locals.pb.authStore.record) {
-                continue;
-            }
-            if (!t.expand) {
-                t.expand = {} as any
-            }
-            t.expand!.author = await event.locals.pb.collection("users_anonymous").getOne(t.author);
-        }
-
-        return json(result)
+        return json(response.hits)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }

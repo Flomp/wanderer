@@ -45,14 +45,13 @@ export async function users_show(id: string, f: (url: RequestInfo | URL, config?
     let r = await f(`/api/v1/user/anonymous/${id}`, {
         method: 'GET',
     })
-    const response: UserAnonymous = await r.json()
     if (!r.ok) {
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
+    const response: UserAnonymous = await r.json()
 
     return response;
-
 }
 
 export async function users_auth_methods(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<AuthMethodsList> {

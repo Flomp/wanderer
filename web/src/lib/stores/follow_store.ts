@@ -1,15 +1,17 @@
+import type { Actor } from "$lib/models/activitypub/actor";
 import type { Follow } from "$lib/models/follow";
 import { APIError } from "$lib/util/api_util";
 import { type ListResult } from "pocketbase";
 
-let follows: Follow[] = [];
+let follows: Actor[] = [];
 
-export async function follows_index(data: { follower?: string, followee?: string }, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const r = await f('/api/v1/follow?' + new URLSearchParams({
-        filter: data.follower ? `follower='${data.follower}'` : data.followee ? `followee='${data.followee}'` : '',
+export async function follows_index(data: { username: string, type: "followers" | "following" }, page: number = 1, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+
+    const r = await f(`/api/v1/follow?` + new URLSearchParams({
+        handle: data.username,
+        type: data.type,
         page: page.toString(),
         perPage: perPage.toString(),
-        requestKey: "page"
     }), {
         method: 'GET',
     })
@@ -19,11 +21,11 @@ export async function follows_index(data: { follower?: string, followee?: string
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const fetchedFollows: ListResult<Follow> = await r.json();
+    const fetchedFollows: ListResult<Actor> = await r.json();
 
     const result = page > 1 ? [...follows, ...fetchedFollows.items] : fetchedFollows.items
 
-    follows = result;
+    follows = result;  
 
     return { ...fetchedFollows, items: result };
 }
@@ -45,25 +47,10 @@ export async function follows_a_b(a: string, b: string, f: (url: RequestInfo | U
     return response.items.at(0);
 }
 
-export async function follows_counts(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    const r = await f('/api/v1/follow/count/' + id, {
-        method: 'GET',
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    const response: { followers: number, following: number } = await r.json();
-
-    return response;
-}
-
-export async function follows_create(follow: Follow) {
+export async function follows_create(followee: string) {
     let r = await fetch('/api/v1/follow', {
         method: 'PUT',
-        body: JSON.stringify(follow),
+        body: JSON.stringify({ followee }),
     })
 
     if (!r.ok) {

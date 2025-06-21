@@ -30,11 +30,9 @@
         notifications.reduce((value, n) => (value += n.seen ? 0 : 1), 0),
     );
 
-    onMount(() => {
-        if (!notifications.length && page.data.notifications?.items?.length) {
-            notifications = page.data.notifications.items;
-        }
-    });
+    $effect(() => {
+        notifications = page.data.notifications.items
+    })
 
     async function toggleMenu(e: MouseEvent) {
         e.stopPropagation();
@@ -66,7 +64,7 @@
             scrollTop + clientHeight >= scrollHeight * 0.8 &&
             pagination.page !== pagination.totalPages &&
             !loadingNextPage
-        ) {
+        ) {            
             await loadNextPage();
         }
     }
@@ -79,7 +77,7 @@
         }
         pagination.page += 1;
         const result = await notifications_index(
-            { recipient: $currentUser.id },
+            { recipient: $currentUser.actor },
             pagination.page,
         );
 

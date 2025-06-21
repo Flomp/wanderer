@@ -7,7 +7,6 @@ export type User = AuthRecord & {
     email?: string,
     password: string,
     avatar?: string;
-    bio?: string;
     created?: string;
 }
 
@@ -15,6 +14,7 @@ export type UserAnonymous = {
     id: string,
     username?: string,
     avatar?: string;
+    bio?: string;
     created?: string;
     private: boolean;
 }

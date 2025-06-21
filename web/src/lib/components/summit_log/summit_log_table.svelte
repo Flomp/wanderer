@@ -10,23 +10,32 @@
     import { _ } from "svelte-i18n";
     import MapWithElevationMaplibre from "../trail/map_with_elevation_maplibre.svelte";
     import { fetchGPX } from "$lib/stores/trail_store";
+    import { currentUser } from "$lib/stores/user_store";
 
     interface Props {
         summitLogs?: SummitLog[];
+        handle: string;
         showCategory?: boolean;
         showTrail?: boolean;
         showAuthor?: boolean;
         showRoute?: boolean;
         showPhotos?: boolean;
+        showMenu?: boolean;
+        ondelete?: (summitLog: SummitLog) => void;
+        onedit?: (summitLog: SummitLog) => void;
     }
 
     let {
         summitLogs = [],
+        handle,
         showCategory = false,
         showTrail = false,
         showAuthor = false,
         showRoute = false,
         showPhotos = false,
+        showMenu = false,
+        ondelete,
+        onedit,
     }: Props = $props();
 
     let mapModal: Modal;
@@ -64,7 +73,7 @@
     }
 </script>
 
-<table class="w-full">
+<table class="w-full table-auto">
     <thead class="text-left text-gray-500">
         <tr class="text-sm">
             {#if showPhotos && summitLogs.some((l) => l.photos.length)}
@@ -98,12 +107,16 @@
                     {$_("map")}
                 </th>
             {/if}
+            {#if showMenu}
+                <th> </th>
+            {/if}
         </tr>
     </thead>
     <tbody>
         {#each summitLogs as log, i}
             <SummitLogTableRow
                 {log}
+                {handle}
                 onopen={(log) => openMap(log)}
                 ontext={(log) => openText(log)}
                 {showCategory}
@@ -113,6 +126,9 @@
                     summitLogs.some((l) => l.photos.length)}
                 showDescription={summitLogs.some((l) => l.text?.length)}
                 showRoute={showRoute && summitLogs.some((l) => l.gpx)}
+                showMenu={showMenu && log.author == $currentUser?.actor}
+                {ondelete}
+                {onedit}
             ></SummitLogTableRow>
         {/each}
     </tbody>
@@ -122,7 +138,7 @@
 {/if}
 <Modal
     id="summit-log-table-map-modal"
-    size="max-w-4xl"
+    size="md:min-w-2xl lg:min-w-4xl"
     title=""
     bind:this={mapModal}
 >
@@ -137,17 +153,17 @@
 </Modal>
 <Modal
     id="summit-log-table-text-modal"
-    size="max-w-xl"
+    size="md:min-w-xl"
     title={$_("description")}
     bind:this={textModal}
 >
     {#snippet content()}
-        <p class="whitespace-pre-wrap">{currentText}</p>
+        <div class="prose dark:prose-invert">{@html currentText}</div>
     {/snippet}
 </Modal>
 
 <style>
     th {
-        padding: 0rem 0.5rem;
+        padding: 0.5rem 0.5rem;
     }
 </style>

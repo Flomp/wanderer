@@ -1,9 +1,16 @@
-@import 'tailwindcss/utilities';
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
+@import 'tailwindcss';
+@reference "./tailwind.css";
 
 .card {
     @apply rounded-xl
+}
+
+.content-panel ul {
+    @apply list-disc list-inside ml-4
+}
+
+.content-panel ol {
+    @apply list-decimal list-inside ml-4
 }
 
 
