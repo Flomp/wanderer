@@ -27,6 +27,7 @@ export type ListSearchResult = {
     elevation_loss: number;
     distance: number,
     duration: number,
+    domain?: string,
     public: boolean;
     trails: number
     shares?: string[];

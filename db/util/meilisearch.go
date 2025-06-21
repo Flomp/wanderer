@@ -166,6 +166,11 @@ func documentFromListRecord(r *core.Record, author *core.Record, includeShares b
 		}
 	}
 
+	domain := ""
+	if !author.GetBool("isLocal") {
+		domain = author.GetString("domain")
+	}
+
 	document := map[string]interface{}{
 		"id":             r.Id,
 		"author":         author.Id,
@@ -178,6 +183,7 @@ func documentFromListRecord(r *core.Record, author *core.Record, includeShares b
 		"elevation_loss": totalElevationLoss,
 		"distance":       totalDistance,
 		"duration":       totalDuration,
+		"domain":         domain,
 		"public":         r.GetBool("public"),
 		"created":        r.GetDateTime("created").Time().Unix(),
 		"trails":         trails,

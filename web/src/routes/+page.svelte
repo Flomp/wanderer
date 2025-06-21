@@ -34,7 +34,7 @@
             const actors = await searchActors(q);
             searchDropdownItems = actors.map((a) => ({
                 text: a.username,
-                description: `@${a.username}${a.isLocal ? "" : '@' + a.domain}`,
+                description: `@${a.username}${a.isLocal ? "" : "@" + a.domain}`,
                 value: a,
                 icon:
                     a.icon ||
@@ -64,13 +64,13 @@
             const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
                 text: t.name,
                 description: `Trail ${t.location.length ? ", " + t.location : ""}`,
-                value: `@${t.author}${t.domain ? `@${t.domain}` : ""}/${t.id}`,
+                value: `@${t.author_name}${t.domain ? `@${t.domain}` : ""}/${t.id}`,
                 icon: "route",
             }));
             const listItems = r[1].hits.map((t: ListSearchResult) => ({
                 text: t.name,
                 description: `List, ${t.trails} ${$_("trail", { values: { n: t.trails } })}`,
-                value: t.id,
+                value: `@${t.author_name}${t.domain ? `@${t.domain}` : ""}/${t.id}`,
                 icon: "layer-group",
             }));
             const cityItems = r[2].hits.map((c: LocationSearchResult) => ({
@@ -88,7 +88,7 @@
         if (item.icon == "route") {
             goto(`/trail/view/${item.value}`);
         } else if (item.icon == "layer-group") {
-            goto(`/lists?list=${item.value}`);
+            goto(`/lists/${item.value}`);
         } else if (item.value.username) {
             goto(
                 `/profile/@${item.value.username}${item.value.isLocal ? "" : "@" + item.value.domain}`,
@@ -120,6 +120,7 @@
             onupdate={search}
             onclick={handleSearchClick}
             large={true}
+            clearAfterSelect={false}
             placeholder="{$_('search-for-trails-places')}..."
             items={searchDropdownItems}
         ></Search>
