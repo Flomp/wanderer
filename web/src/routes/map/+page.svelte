@@ -217,11 +217,19 @@
                 maxBoundingBox.max_lon != 0 ||
                 maxBoundingBox.min_lat != 0)
         ) {
-            const boundingBox: M.LngLatBoundsLike = [
-                [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
-                [maxBoundingBox.max_lon, maxBoundingBox.min_lat],
-            ];
-            map?.fitBounds(boundingBox, { animate: false, padding: 32 });
+            if (
+                maxBoundingBox.min_lon == maxBoundingBox.max_lon &&
+                maxBoundingBox.min_lat == maxBoundingBox.max_lat
+            ) {
+                map?.setZoom(12);
+                map?.setCenter([maxBoundingBox.min_lon, maxBoundingBox.min_lat]);
+            } else {
+                const boundingBox: M.LngLatBoundsLike = [
+                    [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
+                    [maxBoundingBox.max_lon, maxBoundingBox.min_lat],
+                ];
+                map?.fitBounds(boundingBox, { animate: false, padding: 32 });
+            }
         } else if (
             settings &&
             settings.mapFocus == "location" &&

@@ -3,7 +3,7 @@ title: Authentication
 description: Authentication with email/password and OAuth
 ---
 
-For the majority of wanderer's features you need an account to interact with them.
+For the majority of <span class="-tracking-[0.075em]">wanderer</span>'s features you need an account to interact with them.
 
 ## Email/Username & Password
 
@@ -16,7 +16,7 @@ The username must be at least 3 characters long, the password at least 8.
 
 ## OAuth2
 
-Alternatively, wanderer supports authenticating via OAuth2. The following providers are supported:
+Alternatively, <span class="-tracking-[0.075em]">wanderer</span> supports authenticating via OAuth2. The following providers are supported:
 
 - GitHub
 - Apple
@@ -43,8 +43,8 @@ Alternatively, wanderer supports authenticating via OAuth2. The following provid
 
 ![wanderer OAuth](../../../assets/guides/wanderer_oauth.png)
 
-If your instance offers OAuth logins, the enabled providers appear in wanderer's login form. Click the button, authorize wanderer, and wait for the authentication to finish. You are now logged in and can use wanderer like any other user.
+If your instance offers OAuth logins, the enabled providers appear in <span class="-tracking-[0.075em]">wanderer</span>'s login form. Click the button, authorize <span class="-tracking-[0.075em]">wanderer</span>, and wait for the authentication to finish. You are now logged in and can use <span class="-tracking-[0.075em]">wanderer</span> like any other user.
 
 ## Forgot your password?
-wanderer offers the option to send password reset emails in case a user forgets his password.
+<span class="-tracking-[0.075em]">wanderer</span> offers the option to send password reset emails in case a user forgets his password.
 You can click the "Forgot password" link in the login form. After requesting the reset the user will receive an email with a unique link to reset their password.

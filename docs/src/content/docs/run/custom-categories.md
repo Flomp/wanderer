@@ -3,7 +3,7 @@ title: Custom categories
 description: How to create custom trail categories
 ---
 
-wanderer uses categories to classify what kind of activity a trail belongs to. Out of the box you get: Biking, Canoeing, Climbing, Hiking, Skiing and Walking. However, you can adapt these categories to your needs or add completely new ones.
+<span class="-tracking-[0.075em]">wanderer</span> uses categories to classify what kind of activity a trail belongs to. Out of the box you get: Biking, Canoeing, Climbing, Hiking, Skiing and Walking. However, you can adapt these categories to your needs or add completely new ones.
 
 ## Modifying categories
 

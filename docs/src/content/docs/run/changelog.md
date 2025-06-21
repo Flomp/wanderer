@@ -2,6 +2,29 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.17.0
+:::caution
+This release contains breaking changes. They are marked with a ⚠️.  
+**Please update to version v0.16.5 first before updating to v0.17.0.**
+:::
+
+### Configuration
+Check the reopsitory's [`docker-compose.yml`](https://github.com/Flomp/wanderer/blob/main/docker-compose.yml) for a valid configuration.
+
+- ⚠️ The PocketBase environment variable `POCKETBASE_ENCRYPTION_KEY` is now required. It requires a valid 32 character AES key as its value. To generate a key, run `openssl rand -hex 16`.
+- ⚠️ The PocketBase environment variable `ORIGIN`is now required. It must be set to the public IP or hostname (including the port) of your wanderer frontend and must equal the value set for the frontend's `ORIGIN` environment variable.
+
+### Features
+- Adds federation
+- Adds rich text editor for descriptions and comments
+  
+### Docs
+- Adds documentation for federation
+- Restructures the documentation in three distinct parts (for users, admins & developers) for better separation of concerns
+
+### Translation
+- New language: Russian (thanks @jeffscrum)
+
 ## v0.16.5
 ### Features
 - Further performance improvements when showing large amount of trails on the map

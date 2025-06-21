@@ -3,7 +3,7 @@ title: Share trails
 description: How to share trails with other users
 ---
 
-wanderer allows you to share your trails with other users. You can either publish you trail making it accessible for everyone or share it with specific users. To get started head over to `/trails` and select the trail you want to share or publish.
+<span class="-tracking-[0.075em]">wanderer</span> allows you to share your trails with other users. You can either publish you trail making it accessible for everyone or share it with specific users. To get started head over to `/trails` and select the trail you want to share or publish.
 
 ## Publish a trail
 
@@ -19,7 +19,7 @@ If you want to be more particular about who can see your trail you can instead s
 If you no longer want to share the trail with a user, simply click the red trashcan icon next to their name.
 
 :::note
-Wanderer supports trail sharing between users on different instances (servers), thanks to its federated design. However, there are important limitations to be aware of:
+<span class="-tracking-[0.075em]">wanderer</span> supports trail sharing between users on different instances (servers), thanks to its federated design. However, there are important limitations to be aware of:
 
 - **The trail must be public** in order to be shareable with users on other instances.
 - **Shared trails are view-only**: The user you share it with will be able to view the trail and engage with it (like or comment), but **they cannot edit it**.

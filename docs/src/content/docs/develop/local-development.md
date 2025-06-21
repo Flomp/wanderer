@@ -1,9 +1,9 @@
 ---
 title: Local development
-description: How to install wanderer for local development
+description: How to install <span class="-tracking-[0.075em]">wanderer</span> for local development
 ---
 
-If you would like to set up a development environment on your own machine to work on wanderer please first follow the bare-metal installation steps in the [installation guide](/run/installation#from-source). We will slightly modify the launch script to launch a node server in development mode instead:
+If you would like to set up a development environment on your own machine to work on <span class="-tracking-[0.075em]">wanderer</span> please first follow the bare-metal installation steps in the [installation guide](/run/installation#from-source). We will slightly modify the launch script to launch a node server in development mode instead:
 
 ```bash
 trap "kill 0" EXIT
@@ -22,7 +22,7 @@ cd web && npm run dev &
 wait
 ```
 
-This will bring up a `meilisearch` instance on `http://127.0.0.1:7700`, a `PocketBase` instance on `http://127.0.0.1:8090`, and a `vite` server for the wanderer frontend on `http://localhost:5173`.
+This will bring up a `meilisearch` instance on `http://127.0.0.1:7700`, a `PocketBase` instance on `http://127.0.0.1:8090`, and a `vite` server for the <span class="-tracking-[0.075em]">wanderer</span> frontend on `http://localhost:5173`.
 
 ## PocketBase dashboard
 
@@ -30,7 +30,7 @@ It is highly advisable to create an admin user to access PocketBase's dashboard.
 
 ## Building
 
-When you are done with development and would like to build wanderer for production there are some steps to follow.
+When you are done with development and would like to build <span class="-tracking-[0.075em]">wanderer</span> for production there are some steps to follow.
 
 ### PocketBase
 
@@ -49,7 +49,7 @@ For the frontend there are no further caveats. Simply run `npm run build`.
 
 ### Docker
 
-To create local docker images of wanderer simply run the script below. These will work as drop-in replacements for the ones hosted on docker hub. This will only work if you have already completed the steps above.
+To create local docker images of <span class="-tracking-[0.075em]">wanderer</span> simply run the script below. These will work as drop-in replacements for the ones hosted on docker hub. This will only work if you have already completed the steps above.
 
 ```bash
 # db

@@ -4,7 +4,7 @@ description: Detailed installation instructions for Docker and bare-metal
 ---
 import { version } from '../../../../package.json';
 
-`wanderer` is composed of three key components:
+<span class="-tracking-[0.075em]">wanderer</span> is composed of three key components:
 
 1. A frontend built with [SvelteKit](https://github.com/sveltejs/kit)  
 2. A backend, which is a custom fork of [PocketBase](https://github.com/pocketbase/pocketbase)  
@@ -16,7 +16,7 @@ You can install these components either via Docker (recommended) or from source.
 
 ## Prerequisites
 
-`wanderer` uses encrypted secrets such as passwords and private keys. To support this, you must set an encryption key using the `POCKETBASE_ENCRYPTION_KEY` [environment variable](/run/environment-configuration#pocketbase). You can generate one using:
+<span class="-tracking-[0.075em]">wanderer</span> uses encrypted secrets such as passwords and private keys. To support this, you must set an encryption key using the `POCKETBASE_ENCRYPTION_KEY` [environment variable](/run/environment-configuration#pocketbase). You can generate one using:
 
 ```bash
 openssl rand -hex 16
@@ -27,11 +27,11 @@ openssl rand -hex 16
 Do not share this key with anyone!
 :::
 
-Once you have set the encryption key, you can proceed to install wanderer.
+Once you have set the encryption key, you can proceed to install <span class="-tracking-[0.075em]">wanderer</span>.
 
 ## Installation via Docker
 
-This is the easiest and most convenient way to install **wanderer**.
+This is the easiest and most convenient way to install <span class="-tracking-[0.075em]">wanderer</span>.
 
 After cloning the repository, you will find a [`docker-compose.yml`](https://github.com/Flomp/wanderer/blob/main/docker-compose.yml) file in the root directory. This file sets up all necessary components. Start everything by running:
 
@@ -41,7 +41,7 @@ docker compose up -d
 
 ### Configuration Notes
 
-If you're not hosting wanderer at `http://localhost:3000`, update the `ORIGIN` environment variable accordingly:
+If you're not hosting <span class="-tracking-[0.075em]">wanderer</span> at `http://localhost:3000`, update the `ORIGIN` environment variable accordingly:
 
 ```env
 ORIGIN=http(s)://<your_domain>:<your_port>
@@ -169,7 +169,7 @@ Always consult the [changelog](/run/changelog) before updating, in case of break
 
 ## Installation from Source
 
-While not as convenient as Docker, you can also install wanderer from source.
+While not as convenient as Docker, you can also install <span class="-tracking-[0.075em]">wanderer</span> from source.
 
 ### Prerequisites
 
@@ -185,7 +185,7 @@ git clone https://github.com/Flomp/wanderer.git --branch v{version} --single-bra
 
 ### meilisearch
 
-wanderer uses a standard Meilisearch binary. Download and install it according to your platform:
+<span class="-tracking-[0.075em]">wanderer</span> uses a standard Meilisearch binary. Download and install it according to your platform:
 
 https://www.meilisearch.com/docs/learn/getting_started/installation
 
@@ -193,7 +193,7 @@ Place the binary in `wanderer/search`. If you choose a different location, updat
 
 ### PocketBase
 
-wanderer uses a customized fork of PocketBase. You must build it before launching:
+<span class="-tracking-[0.075em]">wanderer</span> uses a customized fork of PocketBase. You must build it before launching:
 
 ```bash
 cd wanderer/db
@@ -266,7 +266,7 @@ Then re-run the launch script. Always review the [changelog](/run/changelog) for
 
 ## Verify the Installation
 
-Regardless of the installation method, once everything is running you should be able to access wanderer at:
+Regardless of the installation method, once everything is running you should be able to access <span class="-tracking-[0.075em]">wanderer</span> at:
 
 ```
 http://localhost:3000

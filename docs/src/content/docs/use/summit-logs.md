@@ -10,7 +10,7 @@ A summit log is an entry attached to a trail that records an individual outing. 
 
 ## When to Use a Summit Log
 
-If you are hiking a trail that already exists on wanderer — whether uploaded by you or another user — you can log your hike by creating a summit log instead of uploading the trail again. This helps avoid duplicates and keeps the trail history consolidated. Summit logs are perfect for re-hikes, community contributions, or simply marking your progress over time.
+If you are hiking a trail that already exists on <span class="-tracking-[0.075em]">wanderer</span> — whether uploaded by you or another user — you can log your hike by creating a summit log instead of uploading the trail again. This helps avoid duplicates and keeps the trail history consolidated. Summit logs are perfect for re-hikes, community contributions, or simply marking your progress over time.
 
 ## What You Can Include
 

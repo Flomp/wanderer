@@ -15,7 +15,7 @@ Via the online dashboard, you will now have access with the user "email@example.
 
 ## Configure SMTP settings 
 
-wanderer can send email notifications to users (e.g. when a user gains a new follower). This is also relevant to send password reset notifications. To enable sending email, you need to configure your SMPT settings in PocketBase. 
+<span class="-tracking-[0.075em]">wanderer</span> can send email notifications to users (e.g. when a user gains a new follower). This is also relevant to send password reset notifications. To enable sending email, you need to configure your SMPT settings in PocketBase. 
 
 ![Pocketbase Mail Settings](../../../assets/guides/pocketbase_mail_settings.png)
 
@@ -29,7 +29,7 @@ Alternatively, you can set these options via the respective [environment variabl
 
 This step will vary wildly from provider to provider. Please refer to your provider's documentation for the specific steps. 
 
-No matter your provider, you will need a redirect URL. This redirect URL must have the following format: `$ORIGIN/login/redirect`. `$ORIGIN` refers to the `ORIGIN` environment variable that defines the public host at which your wanderer instance can be reached. So for the default installation, the redirect URL is `http://localhost:3000/login/redirect`. 
+No matter your provider, you will need a redirect URL. This redirect URL must have the following format: `$ORIGIN/login/redirect`. `$ORIGIN` refers to the `ORIGIN` environment variable that defines the public host at which your <span class="-tracking-[0.075em]">wanderer</span> instance can be reached. So for the default installation, the redirect URL is `http://localhost:3000/login/redirect`. 
 
 In any case, once you have successfully created your OAuth app you will receive a Client ID and a Client Secret.
 

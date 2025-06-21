@@ -7,7 +7,7 @@ wanderer is a federated trail-sharing platform built on ActivityPub. It enables 
 
 This technical documentation provides a detailed overview of how federation works in wanderer, including the types of objects exchanged, the structure of those objects, and how interactions such as mentions, likes, and follows are processed across instances.
 
-Below, you’ll find examples of the different JSON representations used in federated communication. These illustrate how wanderer encodes and interprets core actions and content as standardized `Note` objects.
+Below, you’ll find examples of the different JSON representations used in federated communication. These illustrate how <span class="-tracking-[0.075em]">wanderer</span> encodes and interprets core actions and content as standardized `Note` objects.
 
 ## Context
 
@@ -19,7 +19,7 @@ Below, you’ll find examples of the different JSON representations used in fede
 The context is identical for all activities and objects.
 
 ## Actors
-An actor represents a user of wanderer in a federated context.
+An actor represents a user of <span class="-tracking-[0.075em]">wanderer</span> in a federated context.
 
 ### Person
 
@@ -402,7 +402,7 @@ Issued whenever a list is created or updated. Broadcasted to all followers. Edit
 
 ### Follow user
 
-Each actor in wanderer can be followed. The actor being followed will immediately send back an `Accept` activity. Future public trails and lists published by the actor being followed will be broadcasted to the following actors inbox.
+Each actor in <span class="-tracking-[0.075em]">wanderer</span> can be followed. The actor being followed will immediately send back an `Accept` activity. Future public trails and lists published by the actor being followed will be broadcasted to the following actors inbox.
 
 ```json
 {

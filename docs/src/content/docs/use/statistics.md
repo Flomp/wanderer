@@ -3,7 +3,7 @@ title: Statistics
 description: Where can I find statistics and how are they derived?
 ---
 
-wanderer can you show you a wide range of useful statistics about your latest adventures. Head over to the profile page (`/profile`) to get started. wanderer derives the values for your statistics from the [summit logs](/use/summit-logs) of your trails. So make sure to add some entries with GPS data beofre proceeding. 
+<span class="-tracking-[0.075em]">wanderer</span> can you show you a wide range of useful statistics about your latest adventures. Head over to the profile page (`/profile`) to get started. <span class="-tracking-[0.075em]">wanderer</span> derives the values for your statistics from the [summit logs](/use/summit-logs) of your trails. So make sure to add some entries with GPS data beofre proceeding. 
 
 ![Statistics](../../../assets/guides/wanderer_stats.gif)
 

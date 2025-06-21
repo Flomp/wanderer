@@ -24,7 +24,7 @@ http://localhost:3000/api/v1/auth/login
 
 
 ## Upload trails
-One common use case for wanderer's API is bulk uploading GPX files to create new trails. For that, the API provides a separate endpoint: `/trail/upload`. You must first log in to use the endpoint. Afterwards you can send a GPX file to the endpoint to let wanderer parse it an create a new trail in your collection. wanderer will try to infer as much information as possible from the file itself. All additional information can be added to the trail via the UPDATE [endpoint](/api-reference/operations/updatetrail).
+One common use case for wanderer's API is bulk uploading GPX files to create new trails. For that, the API provides a separate endpoint: `/trail/upload`. You must first log in to use the endpoint. Afterwards you can send a GPX file to the endpoint to let <span class="-tracking-[0.075em]">wanderer</span> parse it an create a new trail in your collection. <span class="-tracking-[0.075em]">wanderer</span> will try to infer as much information as possible from the file itself. All additional information can be added to the trail via the UPDATE [endpoint](/api-reference/operations/updatetrail).
 
 ### Example
 ```bash

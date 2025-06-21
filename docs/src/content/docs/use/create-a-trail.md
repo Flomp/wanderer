@@ -5,7 +5,7 @@ description: How to create a trail by uploading or drawing a trail using Valhall
 
 ## What is a trail?
 
-In *wanderer*, a trail is a digital route that includes GPS data and descriptive metadata like name, difficulty, category, photos, and waypoints. Trails can be explored by others and searched in the app.
+In <span class="-tracking-[0.075em]">wanderer</span>, a trail is a digital route that includes GPS data and descriptive metadata like name, difficulty, category, photos, and waypoints. Trails can be explored by others and searched in the app.
 
 
 
@@ -35,7 +35,7 @@ After uploading:
 Click the **Draw a route** button to manually define a route on the map. While in drawing mode:
 
 - Click on the map to place waypoints
-- wanderer will automatically route between points using the [Valhalla routing engine](https://github.com/valhalla/valhalla)
+- <span class="-tracking-[0.075em]">wanderer</span> will automatically route between points using the [Valhalla routing engine](https://github.com/valhalla/valhalla)
 - You can drag points to reposition them
 - Use the top-left menu to change routing mode (e.g. walking, cycling)
 - To remove a point, click on it and then click the red trash icon
@@ -45,7 +45,7 @@ If you disable Valhalla routing, straight lines will be used between points inst
 To finish drawing, click **Stop drawing**.
 
 :::tip
-wanderer uses a public, donation-financed Valhalla server by default. Please consider supporting it at [https://www.fossgis.de/verein/spenden/](https://www.fossgis.de/verein/spenden/).
+<span class="-tracking-[0.075em]">wanderer</span> uses a public, donation-financed Valhalla server by default. Please consider supporting it at [https://www.fossgis.de/verein/spenden/](https://www.fossgis.de/verein/spenden/).
 :::
 
 

@@ -3,7 +3,7 @@ title: Customize the map
 description: How to customize the map with user defined tile sets
 ---
 
-wanderer is compatible with any provider of vector tile maps (e.g. CARTO, mapbox, maptiler, or self-hosted OpenMapTiles). Out of the box it comes with 4 different map styles:
+<span class="-tracking-[0.075em]">wanderer</span> is compatible with any provider of vector tile maps (e.g. CARTO, mapbox, maptiler, or self-hosted OpenMapTiles). Out of the box it comes with 4 different map styles:
 1. Open Street Maps
 2. Open Topo Maps
 3. CARTO Light
@@ -30,7 +30,7 @@ Once added, your custom style will be available in the style switcher menu, allo
 
 ![Custom tilesets](../../../assets/guides/wanderer_terrain.png)
 
-To enhance wanderer's map visualization, you can add two types of data sources to display 3D Terrain and Hillshading. This is achieved by providing URLs pointing to the required `tiles.json` files. Both the terrain and hillshading data must be in Mapbox TileJSON format and accessible through the provided URLs.
+To enhance <span class="-tracking-[0.075em]">wanderer</span>'s map visualization, you can add two types of data sources to display 3D Terrain and Hillshading. This is achieved by providing URLs pointing to the required `tiles.json` files. Both the terrain and hillshading data must be in Mapbox TileJSON format and accessible through the provided URLs.
 
 To add the respective URLs navigate to `Settings -> Display` and add them in the `Terrain` section. After adding the terrain & hillshading source, you can explore the 3D map view by interacting with the compass control on the map.
 
