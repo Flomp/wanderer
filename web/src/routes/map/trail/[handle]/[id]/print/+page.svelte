@@ -353,6 +353,9 @@
             doc.setFont("IBMPlexSans-Regular", "normal");
             doc.text($trail.location || "-", 12, currentHeight);
 
+            // End of page
+            currentHeight = height;
+
             // Logo
             const logo = new Image();
             logo.src = "/imgs/logo_text_dark.png";
@@ -376,11 +379,11 @@
                 currentHeight = 16;
             }
 
-            if ((includeDescription && $trail.description) || (includeWaypoints && $trail.expand?.waypoints)) {
-                newPage();
-            }
-
             if (includeDescription && $trail.description) {
+                let textHeight = getTextHeight($trail.description, doc, width - 32)
+                if (currentHeight + textHeight + 8 > height) {
+                    newPage();
+                }
                 doc.text(formatHTMLAsText($trail.description), 16, currentHeight, {
                     maxWidth: width - 32,
                 });
