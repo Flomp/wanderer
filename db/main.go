@@ -1,13 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand/v2"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,11 +20,15 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/spf13/cast"
 
+	"pocketbase/federation"
 	"pocketbase/integrations/komoot"
 	"pocketbase/integrations/strava"
 
 	_ "pocketbase/migrations"
 	"pocketbase/util"
+
+	pub "github.com/go-ap/activitypub"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
@@ -86,18 +89,29 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("trails").BindFunc(updateTrailHandler(client))
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(deleteTrailHandler(client))
 
-	app.OnRecordAfterCreateSuccess("trail_share").BindFunc(createTrailShareHandler(client))
-	app.OnRecordAfterDeleteSuccess("trail_share").BindFunc(deleteTrailShareHandler(client))
+	app.OnRecordCreateRequest("summit_logs").BindFunc(createSummitLogHandler())
+	app.OnRecordUpdateRequest("summit_logs").BindFunc(updateSummitLogHandler())
+	app.OnRecordDeleteRequest("summit_logs").BindFunc(deleteSummitLogHandler())
+
+	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler())
+	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler())
+	app.OnRecordDeleteRequest("comments").BindFunc(deleteCommentHandler(client))
+
+	app.OnRecordCreateRequest("trail_share").BindFunc(createTrailShareHandler(client))
+	app.OnRecordDeleteRequest("trail_share").BindFunc(deleteTrailShareHandler(client))
+
+	app.OnRecordAfterCreateSuccess("trail_like").BindFunc(createTrailLikeHandler(client))
+	app.OnRecordAfterDeleteSuccess("trail_like").BindFunc(deleteTrailLikeHandler(client))
 
 	app.OnRecordAfterCreateSuccess("lists").BindFunc(createListHandler(client))
 	app.OnRecordAfterUpdateSuccess("lists").BindFunc(updateListHandler(client))
 	app.OnRecordAfterDeleteSuccess("lists").BindFunc(deleteListHandler(client))
 
-	app.OnRecordAfterCreateSuccess("list_share").BindFunc(createListShareHandler(client))
-	app.OnRecordAfterDeleteSuccess("list_share").BindFunc(deleteListShareHandler(client))
+	app.OnRecordCreateRequest("list_share").BindFunc(createListShareHandler(client))
+	app.OnRecordDeleteRequest("list_share").BindFunc(deleteListShareHandler(client))
 
-	app.OnRecordAfterCreateSuccess("follows").BindFunc(createFollowHandler())
-	app.OnRecordAfterCreateSuccess("comments").BindFunc(createCommentHandler())
+	app.OnRecordCreateRequest("follows").BindFunc(createFollowHandler())
+	app.OnRecordDeleteRequest("follows").BindFunc(deleteFollowHandler())
 
 	app.OnRecordsListRequest("integrations").BindFunc(listIntegrationHandler())
 	app.OnRecordCreate("integrations").BindFunc(createIntegrationHandler())
@@ -105,22 +119,72 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordUpdate("integrations").BindFunc(updateIntegrationHandler())
 	app.OnRecordAfterUpdateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 
+	app.OnRecordCreateRequest().BindFunc(sanitizeHTML())
+	app.OnRecordUpdateRequest().BindFunc(sanitizeHTML())
+
 	app.OnRecordRequestEmailChangeRequest("users").BindFunc(changeUserEmailHandler())
 	app.OnServe().BindFunc(onBeforeServeHandler(client))
 
 	app.OnBootstrap().BindFunc(onBootstrapHandler())
 }
 
+func sanitizeHTML() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		fieldsToSanitize := map[string][]string{
+			"lists":       {"description"},
+			"settings":    {"bio"},
+			"summit_logs": {"text"},
+			"trails":      {"description"},
+			"comments":    {"text"},
+			"waypoints":   {"description"},
+		}
+		collection := e.Collection.Name
+		fields, ok := fieldsToSanitize[collection]
+		if !ok {
+			return e.Next()
+		}
+
+		p := bluemonday.NewPolicy()
+		p.AllowStandardAttributes()
+		p.AllowStandardURLs()
+		p.AllowLists()
+		p.AllowElements("br", "div", "hr", "p", "span", "wbr")
+		p.AllowElements("b", "strong", "em", "u", "blockquote", "a")
+		p.AllowAttrs("href").OnElements("a")
+		p.AllowAttrs("target").OnElements("a")
+		p.AllowAttrs("class").OnElements("a")
+
+		for _, field := range fields {
+			if val, ok := e.Record.Get(field).(string); ok {
+				sanitizedValue := p.Sanitize(val)
+				e.Record.Set(field, sanitizedValue)
+			}
+		}
+
+		return e.Next()
+	}
+}
+
 func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		userId := e.Record.Id
 
+		err := createDefaultUserSettings(e.App, e.Record.Id)
+		if err != nil {
+			return err
+		}
+
+		actor, err := util.ActorFromUser(e.App, e.Record)
+		if err != nil {
+			return err
+		}
+
 		searchRules := map[string]interface{}{
 			"lists": map[string]string{
-				"filter": "public = true OR author = " + userId + " OR shares = " + userId,
+				"filter": "public = true OR author = " + actor.Id + " OR shares = " + userId,
 			},
 			"trails": map[string]string{
-				"filter": "public = true OR author = " + userId + " OR shares = " + userId,
+				"filter": "public = true OR author = " + actor.Id + " OR shares = " + userId,
 			},
 		}
 
@@ -133,10 +197,6 @@ func createUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
-		err = createDefaultUserSettings(e.App, e.Record.Id)
-		if err != nil {
-			return err
-		}
 		return e.Next()
 	}
 }
@@ -157,37 +217,38 @@ func createDefaultUserSettings(app core.App, userId string) error {
 func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
 		if err := util.IndexTrail(e.App, record, author, client); err != nil {
 			return err
 		}
-
-		if record.GetBool("public") {
-			notification := util.Notification{
-				Type: util.TrailCreate,
-				Metadata: map[string]string{
-					"id":    record.Id,
-					"trail": record.GetString("name"),
-				},
-				Seen:   false,
-				Author: record.GetString("author"),
-			}
-			err = util.SendNotificationToFollowers(e.App, notification)
-			if err != nil {
-				return err
-			}
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote trail
+			// we create a stub trail record for later reference
+			// no need to create an activity for that
+			return e.Next()
 		}
-		return e.Next()
+
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateTrailActivity(e.App, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
 func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		author, err := e.App.FindRecordById("users", record.GetString(("author")))
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
@@ -195,7 +256,24 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		if err != nil {
 			return err
 		}
-		return e.Next()
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote trail
+			// we create a stub trail record for later reference
+			// no need to create an activity for that
+			return e.Next()
+		}
+
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateTrailActivity(e.App, e.Record, pub.UpdateType)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
@@ -213,12 +291,100 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			log.Fatalf("Error waiting for task completion: %v", err)
 		}
 
+		err = federation.CreateTrailDeleteActivity(e.App, e.Record)
+		if err != nil {
+			return err
+		}
+
 		return e.Next()
 	}
 }
 
-func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func createSummitLogHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateSummitLogActivity(e.App, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
+func updateSummitLogHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateSummitLogActivity(e.App, e.Record, pub.UpdateType)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func deleteSummitLogHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		err := federation.CreateSummitLogDeleteActivity(e.App, e.Record)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+	}
+}
+
+func createCommentHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+
+		e.Next()
+
+		err := federation.CreateCommentActivity(e.App, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func updateCommentHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		err := federation.CreateCommentActivity(e.App, e.Record, pub.UpdateType)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+
+	}
+}
+
+func deleteCommentHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+
+		err := federation.CreateCommentDeleteActivity(e.App, client, e.Record)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+	}
+}
+
+func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
 		record := e.Record
 
 		trailId := record.GetString("trail")
@@ -228,42 +394,26 @@ func createTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 		if err != nil {
 			return err
 		}
-		userIds := make([]string, len(shares))
+		actorIds := make([]string, len(shares))
 		for i, r := range shares {
-			userIds[i] = r.GetString("user")
+			actorIds[i] = r.GetString("actor")
 		}
-		err = util.UpdateTrailShares(trailId, userIds, client)
-
+		err = util.UpdateTrailShares(trailId, actorIds, client)
 		if err != nil {
 			return err
 		}
 
-		if errs := e.App.ExpandRecord(record, []string{"trail", "trail.author"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
-		}
-		shareTrail := record.ExpandedOne("trail")
-		shareTrailAuthor := shareTrail.ExpandedOne("author")
-
-		notification := util.Notification{
-			Type: util.TrailShare,
-			Metadata: map[string]string{
-				"id":     shareTrail.Id,
-				"trail":  shareTrail.GetString("name"),
-				"author": shareTrailAuthor.GetString("username"),
-			},
-			Seen:   false,
-			Author: shareTrailAuthor.Id,
-		}
-		err = util.SendNotification(e.App, notification, record.GetString("user"))
+		err = federation.CreateAnnounceActivity(e.App, record, federation.TrailAnnounceType)
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		return nil
 	}
 }
 
-func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		record := e.Record
 
 		trailId := record.GetString("trail")
@@ -275,42 +425,178 @@ func deleteTrailShareHandler(client meilisearch.ServiceManager) func(e *core.Rec
 	}
 }
 
+func createTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
+		record := e.Record
+
+		trailId := record.GetString("trail")
+		actorId := record.GetString("actor")
+		actor, err := e.App.FindRecordById("activitypub_actors", actorId)
+		if err != nil {
+			return err
+		}
+		trail, err := e.App.FindRecordById("trails", trailId)
+		if err != nil {
+			return err
+		}
+		likes, err := e.App.FindAllRecords("trail_like",
+			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trailId}),
+		)
+		if err != nil {
+			return err
+		}
+
+		trail.Set("like_count", len(likes))
+		err = e.App.UnsafeWithoutHooks().Save(trail)
+		if err != nil {
+			return err
+		}
+
+		actorIds := make([]string, len(likes))
+		for i, r := range likes {
+			actorIds[i] = r.GetString("actor")
+		}
+		err = util.UpdateTrailLikes(trailId, actorIds, client)
+		if err != nil {
+			return err
+		}
+
+		if !actor.GetBool("isLocal") {
+			// this happens if someone likes a remote trail
+			// we create a local copy
+			// no need to create an activity for that
+			return nil
+		}
+
+		err = federation.CreateLikeActivity(e.App, record)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
+func deleteTrailLikeHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+
+		record := e.Record
+
+		trailId := record.GetString("trail")
+		actorId := record.GetString("actor")
+		actor, err := e.App.FindRecordById("activitypub_actors", actorId)
+		if err != nil {
+			return err
+		}
+		// trail might deleted be already if this is called as part of a cascade
+		trail, err := e.App.FindRecordById("trails", trailId)
+		if err != nil && err == sql.ErrNoRows {
+			return nil
+		} else if err != nil {
+			return err
+		}
+		likes, err := e.App.CountRecords("trail_like", dbx.NewExp("trail={:trail}", dbx.Params{"trail": trailId}))
+		if err != nil {
+			return err
+		}
+
+		trail.Set("like_count", likes)
+		err = e.App.UnsafeWithoutHooks().Save(trail)
+		if err != nil {
+			return err
+		}
+
+		err = util.UpdateTrailLikes(trailId, []string{}, client)
+		if err != nil {
+			return err
+		}
+
+		if !actor.GetBool("isLocal") {
+			// this happens if someone likes a remote trail
+			// we create a local copy
+			// no need to create an activity for that
+			return nil
+		}
+
+		err = federation.CreateUnlikeActivity(e.App, record)
+		if err != nil {
+			return err
+		}
+
+		return e.Next()
+	}
+}
+
 func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
 
-		if err := util.IndexList(record, client); err != nil {
-			return err
-		}
-		if !record.GetBool("public") {
-			return e.Next()
-		}
-		notification := util.Notification{
-			Type: util.ListCreate,
-			Metadata: map[string]string{
-				"id":   record.Id,
-				"list": record.GetString("name"),
-			},
-			Seen:   false,
-			Author: record.GetString("author"),
-		}
-		err := util.SendNotificationToFollowers(e.App, notification)
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		if err := util.IndexList(e.App, record, author, client); err != nil {
+			return err
+		}
+
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote list
+			// we create a stub list record for later reference
+			// no need to create an activity for that
+			return e.Next()
+		}
+
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
 func updateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		err := util.UpdateList(record, client)
+		author, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
 		if err != nil {
 			return err
 		}
 
-		return e.Next()
+		err = util.UpdateList(e.App, record, author, client)
+		if err != nil {
+			return err
+		}
+
+		if !author.GetBool("isLocal") {
+			// this happens if someone fetches a remote list
+			// we create a stub list record for later reference
+			// no need to create an activity for that
+			return e.Next()
+		}
+
+		err = e.Next()
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateListActivity(e.App, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
@@ -322,12 +608,22 @@ func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
+		err = federation.CreateListDeleteActivity(e.App, record)
+		if err != nil {
+			return err
+		}
+
 		return e.Next()
 	}
 }
 
-func createListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func createListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		err := e.Next()
+		if err != nil {
+			return err
+		}
+
 		record := e.Record
 		listId := record.GetString("list")
 		shares, err := e.App.FindAllRecords("list_share",
@@ -336,42 +632,27 @@ func createListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 		if err != nil {
 			return err
 		}
-		userIds := make([]string, len(shares))
+		actorIds := make([]string, len(shares))
 		for i, r := range shares {
-			userIds[i] = r.GetString("user")
+			actorIds[i] = r.GetString("actor")
 		}
-		err = util.UpdateListShares(listId, userIds, client)
+		err = util.UpdateListShares(listId, actorIds, client)
 
 		if err != nil {
 			return err
 		}
 
-		if errs := e.App.ExpandRecord(record, []string{"list", "list.author"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
-		}
-		shareList := record.ExpandedOne("list")
-		shareListAuthor := shareList.ExpandedOne("author")
-
-		notification := util.Notification{
-			Type: util.ListShare,
-			Metadata: map[string]string{
-				"id":     shareList.Id,
-				"list":   shareList.GetString("name"),
-				"author": shareListAuthor.GetString("username"),
-			},
-			Seen:   false,
-			Author: shareListAuthor.Id,
-		}
-		err = util.SendNotification(e.App, notification, record.GetString("user"))
+		err = federation.CreateAnnounceActivity(e.App, record, federation.ListAnnounceType)
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		return nil
 	}
 }
 
-func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
+func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
 		record := e.Record
 		listId := record.GetString("list")
 		err := util.UpdateListShares(listId, []string{}, client)
@@ -382,55 +663,56 @@ func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 	}
 }
 
-func createFollowHandler() func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
-		record := e.Record
-		if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
-		}
-		follower := record.ExpandedOne("follower")
+func createFollowHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		// record := e.Record
+		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
+		// 	return fmt.Errorf("failed to expand: %v", errs)
+		// }
+		// follower := record.ExpandedOne("follower")
 
-		notification := util.Notification{
-			Type: util.NewFollower,
-			Metadata: map[string]string{
-				"follower": follower.GetString("username"),
-			},
-			Seen:   false,
-			Author: record.GetString("follower"),
-		}
-		err := util.SendNotification(e.App, notification, record.GetString("followee"))
-		if err != nil {
-			return err
-		}
-		return e.Next()
+		// notification := util.Notification{
+		// 	Type: util.NewFollower,
+		// 	Metadata: map[string]string{
+		// 		"follower": follower.GetString("username"),
+		// 	},
+		// 	Seen:   false,
+		// 	Author: record.GetString("follower"),
+		// }
+		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
+		// if err != nil {
+		// 	return err
+		// }
+		e.Next()
+		federation.CreateFollowActivity(e.App, e.Record)
+
+		return nil
 	}
 }
 
-func createCommentHandler() func(e *core.RecordEvent) error {
-	return func(e *core.RecordEvent) error {
-		record := e.Record
+func deleteFollowHandler() func(e *core.RecordRequestEvent) error {
+	return func(e *core.RecordRequestEvent) error {
+		// record := e.Record
+		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
+		// 	return fmt.Errorf("failed to expand: %v", errs)
+		// }
+		// follower := record.ExpandedOne("follower")
 
-		if errs := e.App.ExpandRecord(record, []string{"trail", "author"}, nil); len(errs) > 0 {
-			return fmt.Errorf("failed to expand: %v", errs)
-		}
-		commentAuthor := record.ExpandedOne("author")
-		commentTrail := record.ExpandedOne("trail")
+		// notification := util.Notification{
+		// 	Type: util.NewFollower,
+		// 	Metadata: map[string]string{
+		// 		"follower": follower.GetString("username"),
+		// 	},
+		// 	Seen:   false,
+		// 	Author: record.GetString("follower"),
+		// }
+		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
+		// if err != nil {
+		// 	return err
+		// }
 
-		notification := util.Notification{
-			Type: util.TrailComment,
-			Metadata: map[string]string{
-				"id":      commentTrail.Id,
-				"author":  commentAuthor.GetString("username"),
-				"trail":   commentTrail.GetString("name"),
-				"comment": record.GetString("text"),
-			},
-			Seen:   false,
-			Author: record.GetString("author"),
-		}
-		err := util.SendNotification(e.App, notification, commentTrail.GetString("author"))
-		if err != nil {
-			return err
-		}
+		federation.CreateUnfollowActivity(e.App, e.Record)
+
 		return e.Next()
 	}
 }
@@ -637,46 +919,6 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		}
 		return e.JSON(http.StatusOK, map[string]string{"token": token})
 	})
-	se.Router.GET("/trail/recommend", func(e *core.RequestEvent) error {
-		qSize := e.Request.URL.Query().Get("size")
-		size, err := strconv.Atoi(qSize)
-		if err != nil {
-			size = 4
-		}
-
-		userId := ""
-		if e.Auth != nil {
-			userId = e.Auth.Id
-		}
-
-		trails, err := e.App.FindRecordsByFilter(
-			"trails",
-			"author = {:userId} || public = true || ({:userId} != '' && trail_share_via_trail.user ?= {:userId})",
-			"",
-			-1,
-			0,
-			dbx.Params{"userId": userId},
-		)
-		if err != nil {
-			return err
-		}
-		for _, t := range trails {
-			errs := e.App.ExpandRecord(t, []string{"tags"}, nil)
-			if len(errs) > 0 {
-				return err
-			}
-		}
-
-		if len(trails) < size {
-			size = len(trails)
-		}
-		rand.Shuffle(len(trails), func(i, j int) {
-			trails[i], trails[j] = trails[j], trails[i]
-		})
-		randomTrails := trails[:size]
-		return e.JSON(http.StatusOK, randomTrails)
-
-	})
 
 	se.Router.POST("/integration/strava/token", func(e *core.RequestEvent) error {
 		encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
@@ -792,6 +1034,61 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 
 		return e.JSON(http.StatusOK, nil)
 	})
+	se.Router.POST("/activitypub/activity/process", federation.ProcessActivity)
+	se.Router.GET("/activitypub/actor", func(e *core.RequestEvent) error {
+		resource := e.Request.URL.Query().Get("resource")
+		resource = strings.TrimPrefix(resource, "acct:")
+
+		iri := e.Request.URL.Query().Get("iri")
+		follows := e.Request.URL.Query().Get("follows") == "true"
+
+		var actor *core.Record
+		var err error
+		if resource != "" {
+			actor, err = federation.GetActorByHandle(e.App, resource, follows)
+		} else {
+			actor, err = federation.GetActorByIRI(e.App, iri, follows)
+		}
+		if err != nil && actor == nil {
+			if strings.HasPrefix(err.Error(), "webfinger") || err.Error() == "profile is private" {
+				return e.NotFoundError("Not found", err)
+			}
+			return err
+		} else if err != nil && actor != nil {
+			// we could not fetch the remote actor so we return our local cached copy
+			return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": err.Error()})
+		}
+
+		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": nil})
+	})
+	se.Router.GET("/activitypub/trail/{id}", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+
+		trail, err := e.App.FindRecordById("trails", id)
+		if err != nil {
+			return err
+		}
+
+		trailObject, err := util.ObjectFromTrail(e.App, trail, nil)
+		if err != nil {
+			return err
+		}
+		return e.JSON(http.StatusOK, trailObject)
+	})
+	se.Router.GET("/activitypub/comment/{id}", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+
+		comment, err := e.App.FindRecordById("comments", id)
+		if err != nil {
+			return err
+		}
+
+		commentObject, err := util.ObjectFromComment(e.App, comment, nil)
+		if err != nil {
+			return err
+		}
+		return e.JSON(http.StatusOK, commentObject)
+	})
 }
 
 func registerCronJobs(app core.App) {
@@ -818,7 +1115,7 @@ func registerCronJobs(app core.App) {
 
 func bootstrapData(app core.App, client meilisearch.ServiceManager) error {
 	bootstrapCategories(app)
-	bootstrapMeilisearchTrails(app, client)
+	go bootstrapMeilisearchDocuments(app, client)
 	return nil
 }
 
@@ -847,7 +1144,7 @@ func bootstrapCategories(app core.App) error {
 	return nil
 }
 
-func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager) error {
+func bootstrapMeilisearchDocuments(app core.App, client meilisearch.ServiceManager) error {
 	query := app.RecordQuery("trails")
 	trails := []*core.Record{}
 
@@ -860,7 +1157,7 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 		return err
 	}
 	for _, trail := range trails {
-		author, err := app.FindRecordById("users", trail.GetString(("author")))
+		author, err := app.FindRecordById("activitypub_actors", trail.GetString(("author")))
 		if err != nil {
 			return err
 		}
@@ -875,14 +1172,65 @@ func bootstrapMeilisearchTrails(app core.App, client meilisearch.ServiceManager)
 		if err != nil {
 			return err
 		}
-		userIds := make([]string, len(shares))
+		actorIds := make([]string, len(shares))
 		for i, r := range shares {
-			userIds[i] = r.GetString("user")
+			actorIds[i] = r.GetString("actor")
 		}
-		err = util.UpdateTrailShares(trail.Id, userIds, client)
-
+		err = util.UpdateTrailShares(trail.Id, actorIds, client)
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
+			continue
+		}
+		likes, err := app.FindAllRecords("trail_like",
+			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trail.Id}),
+		)
+		if err != nil {
+			return err
+		}
+		actorIds = make([]string, len(likes))
+		for i, r := range likes {
+			actorIds[i] = r.GetString("actor")
+		}
+		err = util.UpdateTrailLikes(trail.Id, actorIds, client)
+		if err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to update trail likes '%s': %v", trail.GetString("name"), err))
+			continue
+		}
+	}
+
+	lists, err := app.FindAllRecords("lists")
+	if err != nil {
+		return err
+	}
+	_, err = client.Index("lists").DeleteAllDocuments()
+	if err != nil {
+		return err
+	}
+
+	for _, list := range lists {
+		author, err := app.FindRecordById("activitypub_actors", list.GetString(("author")))
+		if err != nil {
+			return err
+		}
+		if err := util.IndexList(app, list, author, client); err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to index list '%s': %v", list.GetString("name"), err))
+			continue
+		}
+
+		shares, err := app.FindAllRecords("list_share",
+			dbx.NewExp("list = {:listId}", dbx.Params{"listId": list.Id}),
+		)
+		if err != nil {
+			return err
+		}
+		actorIds := make([]string, len(shares))
+		for i, r := range shares {
+			actorIds[i] = r.GetString("actor")
+		}
+		err = util.UpdateListShares(list.Id, actorIds, client)
+
+		if err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to update list shares '%s': %v", list.GetString("name"), err))
 			continue
 		}
 	}

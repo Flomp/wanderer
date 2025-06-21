@@ -12,7 +12,7 @@ export async function POST(event: RequestEvent) {
         const r = await event.locals.pb.collection('users').requestPasswordReset(safeData.email);
         return json(r);
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 
 }

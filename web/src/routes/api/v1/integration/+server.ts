@@ -9,7 +9,7 @@ export async function GET(event: RequestEvent) {
 
         return json(r)
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 
@@ -18,6 +18,6 @@ export async function PUT(event: RequestEvent) {
         const r = await create<Comment>(event, IntegrationCreateSchema, Collection.integrations)
         return json(r);
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

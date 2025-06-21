@@ -36,9 +36,18 @@ func SyncStrava(app core.App) error {
 		}
 
 		userId := i.GetString("user")
+		actor, err := app.FindFirstRecordByData("activitypub_actors", "user", userId)
+		if err != nil {
+			warning := fmt.Sprintf("no actor found for user: %s\n", userId)
+			fmt.Print(warning)
+			app.Logger().Warn(warning)
+			continue
+		}
+		actorId := actor.Id
+
 		stravaString := i.GetString("strava")
 		var stravaIntegration StravaIntegration
-		err := json.Unmarshal([]byte(stravaString), &stravaIntegration)
+		err = json.Unmarshal([]byte(stravaString), &stravaIntegration)
 		if err != nil {
 			return err
 		}
@@ -103,7 +112,7 @@ func SyncStrava(app core.App) error {
 					app.Logger().Warn(warning)
 					break
 				}
-				hasNewRoutes, err = syncTrailsWithRoutes(app, r.AccessToken, userId, routes)
+				hasNewRoutes, err = syncTrailsWithRoutes(app, r.AccessToken, userId, actorId, routes)
 				if err != nil {
 					warning := fmt.Sprintf("error syncing strava routes with trails: %v\n", err)
 					fmt.Print(warning)
@@ -124,7 +133,7 @@ func SyncStrava(app core.App) error {
 					app.Logger().Warn(warning)
 					break
 				}
-				hasNewActivities, err = syncTrailsWithActivities(app, r.AccessToken, userId, activities)
+				hasNewActivities, err = syncTrailsWithActivities(app, r.AccessToken, userId, actorId, activities)
 				if err != nil {
 					warning := fmt.Sprintf("error syncing strava activities with trails: %v", err)
 					fmt.Print(warning)
@@ -226,7 +235,7 @@ func fetchStravaActivities(accessToken string, page int) ([]StravaActivity, erro
 	return activities, nil
 }
 
-func syncTrailsWithRoutes(app core.App, accessToken string, user string, routes []StravaRoute) (bool, error) {
+func syncTrailsWithRoutes(app core.App, accessToken string, user string, actor string, routes []StravaRoute) (bool, error) {
 	hasNewRoutes := false
 	for _, route := range routes {
 		trails, err := app.FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": route.IDStr})
@@ -247,7 +256,7 @@ func syncTrailsWithRoutes(app core.App, accessToken string, user string, routes 
 			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for route '%s': %v", route.Name, err))
 			continue
 		}
-		err = createTrailFromRoute(app, route, gpx, user, wpIds)
+		err = createTrailFromRoute(app, route, gpx, actor, wpIds)
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to create trail for route '%s': %v", route.Name, err))
 			continue
@@ -296,7 +305,7 @@ func fetchRouteGPX(route StravaRoute, accessToken string) (*filesystem.File, err
 	return gpxFile, nil
 }
 
-func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File, user string, wpIds []string) error {
+func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File, actor string, wpIds []string) error {
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
 		return err
@@ -342,7 +351,7 @@ func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File,
 		"waypoints":         wpIds,
 		"difficulty":        "easy",
 		"category":          category,
-		"author":            user,
+		"author":            actor,
 	})
 
 	if gpx != nil {
@@ -383,7 +392,7 @@ func createWaypointsFromRoute(app core.App, route StravaRoute, user string) ([]s
 	return wpIds, nil
 }
 
-func syncTrailsWithActivities(app core.App, accessToken string, user string, activities []StravaActivity) (bool, error) {
+func syncTrailsWithActivities(app core.App, accessToken string, user string, actor string, activities []StravaActivity) (bool, error) {
 	hasNewActivites := false
 	for _, activity := range activities {
 		trails, err := app.FindRecordsByFilter("trails", "external_id = {:id}", "", 1, 0, dbx.Params{"id": strconv.Itoa(int(activity.ID))})
@@ -404,7 +413,7 @@ func syncTrailsWithActivities(app core.App, accessToken string, user string, act
 			app.Logger().Warn(fmt.Sprintf("Unable to fetch GPX for activity '%s': %v", activity.Name, err))
 			continue
 		}
-		err = createTrailFromActivity(app, detailedActivity, gpx, user)
+		err = createTrailFromActivity(app, detailedActivity, gpx, actor)
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to create trail from activity '%s': %v", activity.Name, err))
 			continue

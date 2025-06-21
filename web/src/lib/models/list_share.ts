@@ -1,16 +1,17 @@
+import type { Actor } from "./activitypub/actor";
 import type { User } from "./user";
 
 export class ListShare {
     id?: string;
-    user: string;
+    actor: string;
     list: string;
     permission: "view" | "edit"
     expand?: {
-        user: User
+        actor: Actor
     }
 
     constructor(user: string, list: string, permission: "view" | "edit") {
-        this.user = user;
+        this.actor = user;
         this.list = list;
         this.permission = permission
     }

@@ -49,6 +49,7 @@
         { text: $_("difficulty"), value: "difficulty" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
         { text: $_("elevation-loss"), value: "elevation_loss" },
+        { text: $_("likes"), value: "like_count" },
         { text: $_("creation-date"), value: "created" },
         { text: $_("date"), value: "date" },
     ];
@@ -98,7 +99,7 @@
         onupdate?.(filter);
     }
 
-    function handleSortUpdate(sort: any) {        
+    function handleSortUpdate(sort: any) {
         if (!filter) {
             return;
         }
@@ -190,7 +191,9 @@
                     <a
                         class="max-w-full flex-1"
                         class:basis-full={selectedDisplayOption === "list"}
-                        href="/trail/view/{trail.id}"
+                        href="/trail/view/@{trail.author}{trail.domain
+                            ? `@${trail.domain}`
+                            : ''}/{trail.id}"
                     >
                         {#if selectedDisplayOption === "cards"}
                             <TrailCard fullWidth={fullWidthCards} {trail}

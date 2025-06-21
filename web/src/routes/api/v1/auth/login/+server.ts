@@ -15,7 +15,7 @@ export async function POST(event: RequestEvent) {
         const r = await event.locals.pb.collection('users').authWithPassword(safeData.email ?? safeData.username!, data.password);
         return json(r);
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 
 }
