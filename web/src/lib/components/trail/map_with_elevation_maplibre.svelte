@@ -464,6 +464,9 @@
                 },
                 layout: {
                     "text-field": "{point_count_abbreviated}",
+                    "text-font": [
+                        "Noto Sans Regular",
+                    ],
                     "text-size": 12,
                 },
             });
@@ -867,7 +870,7 @@
                 ),
                 {
                     text: "OpenFreeMap",
-                    value: "https://tiles.openfreemap.org/styles/liberty",
+                    value: "/styles/ofm.json",
                     thumbnail: "https://tile.openstreetmap.org/1/0/0.png",
                 },
                 {
@@ -907,7 +910,7 @@
                     mapStyles[preferredMapStyleIndex].value ??
                     mapStyles[0].value,
                 center: [initialState.lng, initialState.lat],
-                zoom: initialState.zoom
+                zoom: initialState.zoom,
             },
             ...mapOptions,
         };
