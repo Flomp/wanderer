@@ -1050,11 +1050,19 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 			actor, err = federation.GetActorByIRI(e.App, iri, follows)
 		}
 		if err != nil && actor == nil {
-			if strings.HasPrefix(err.Error(), "webfinger") || err.Error() == "profile is private" {
+			if strings.HasPrefix(err.Error(), "webfinger") {
 				return e.NotFoundError("Not found", err)
 			}
 			return err
 		} else if err != nil && actor != nil {
+			if err.Error() == "profile is private" {
+				// this is our own profile
+				if actor.GetString("user") == e.Auth.Id {
+					return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": nil})
+				} else {
+					return e.JSON(http.StatusNotFound, map[string]any{"error": "profile is private"})
+				}
+			}
 			// we could not fetch the remote actor so we return our local cached copy
 			return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": err.Error()})
 		}

@@ -122,6 +122,7 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		return nil, fmt.Errorf("ORIGIN environment variable not set")
 	}
 
+	private := false
 	if dbActor.GetBool("isLocal") {
 		user, err := app.FindRecordById("users", dbActor.GetString("user"))
 		if err != nil {
@@ -153,11 +154,7 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		result := make(map[string]interface{})
 		json.Unmarshal([]byte(privacy), &result)
 
-		private := result["account"] == "private"
-
-		if private {
-			return nil, fmt.Errorf("profile is private")
-		}
+		private = result["account"] == "private"
 
 	} else {
 
@@ -217,6 +214,10 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		return dbActor, nil
 	} else if err != nil {
 		return nil, err
+	}
+
+	if private {
+		return dbActor, fmt.Errorf("profile is private")
 	}
 
 	return dbActor, nil
