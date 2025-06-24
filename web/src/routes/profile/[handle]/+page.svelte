@@ -69,7 +69,7 @@
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">
             {$_("about")}
-            {data.profile.preferredUsername}
+            {data.profile.username}
             {#if data.isOwnProfile && data.profile.bio.length}
                 <a aria-label="Edit bio" class="ml-4" href="/settings/profile"
                     ><i class="fa fa-pen text-base"></i></a

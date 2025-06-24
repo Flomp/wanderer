@@ -60,7 +60,7 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 	document := map[string]any{
 		"id":             r.Id,
 		"author":         author.Id,
-		"author_name":    author.GetString("username"),
+		"author_name":    author.GetString("preferred_username"),
 		"author_avatar":  author.GetString("icon"),
 		"name":           r.GetString("name"),
 		"description":    r.GetString("description"),
@@ -174,7 +174,7 @@ func documentFromListRecord(r *core.Record, author *core.Record, includeShares b
 	document := map[string]interface{}{
 		"id":             r.Id,
 		"author":         author.Id,
-		"author_name":    author.GetString("username"),
+		"author_name":    author.GetString("preferred_username"),
 		"author_avatar":  author.GetString("icon"),
 		"avatar":         r.GetString("avatar"),
 		"name":           r.GetString("name"),

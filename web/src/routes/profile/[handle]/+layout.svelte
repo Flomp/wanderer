@@ -64,13 +64,13 @@
                 <img
                     class="rounded-full w-16 aspect-square overflow-hidden shrink-0"
                     src={data.profile.icon ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${data.profile.username}&backgroundType=gradientLinear`}
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${data.profile.preferredUsername}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />
                 <div>
                     <h4 class="text-2xl font-semibold col-start-2">
-                        {data.profile.preferredUsername ??
-                            data.profile.username}
+                        {data.profile.username ??
+                            "?"}
                     </h4>
                     <p class="text-sm text-gray-500 mb-4 break-all">
                         {data.profile.acct}

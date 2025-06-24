@@ -124,7 +124,7 @@ func ProcessFollowActivity(app core.App, actor *core.Record, activity pub.Activi
 	notification := util.Notification{
 		Type: util.NewFollower,
 		Metadata: map[string]string{
-			"follower": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+			"follower": fmt.Sprintf("@%s@%s", actor.GetString("preferred_username"), actor.GetString("domain")),
 		},
 		Seen:   false,
 		Author: actor.Id,

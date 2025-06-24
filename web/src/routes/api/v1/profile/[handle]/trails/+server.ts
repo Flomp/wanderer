@@ -20,7 +20,7 @@ export async function POST(event: RequestEvent) {
             r = await event.locals.ms.index("trails").search(data.q, { ...data.options, filter: `author = ${actor.id}` });
         } else {
             const origin = new URL(actor.iri).origin
-            const url = `${origin}/api/v1/profile/${actor.username}/trails?` + event.url.searchParams
+            const url = `${origin}/api/v1/profile/${actor.preferred_username}/trails?` + event.url.searchParams
             const response = await event.fetch(url, { method: 'POST', body: JSON.stringify(data) })
 
             if (!response.ok) {

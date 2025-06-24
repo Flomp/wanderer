@@ -34,8 +34,8 @@
         try {
             const actors: Actor[] = await searchActors(q, includeSelf);
             searchItems = actors.map((a) => ({
-                text: a.preferred_username!,
-                description: `@${a.username}${a.isLocal ? "" : "@" + a.domain}`,
+                text: "a.username!",
+                description: `@${a.preferred_username}${a.isLocal ? "" : "@" + a.domain}`,
                 value: a,
                 icon: "user",
             }));
@@ -50,7 +50,7 @@
     }
 
     function onClick(item: SearchItem) {
-        value = item.value.username ?? value;
+        value = item.value.preferred_username ?? value;
 
         onclick?.(item);
         searchItems = [];
@@ -70,7 +70,7 @@
         <img
             class="rounded-full w-8 aspect-square mr-2"
             src={item.value.icon ||
-                `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.username}&backgroundType=gradientLinear`}
+                `https://api.dicebear.com/7.x/initials/svg?seed=${item.value.preferred_username}&backgroundType=gradientLinear`}
             alt="avatar"
         />
     {/snippet}

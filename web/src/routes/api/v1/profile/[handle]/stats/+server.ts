@@ -22,7 +22,7 @@ export async function GET(event: RequestEvent) {
                 .getList<SummitLog>(safeSearchParams.page, safeSearchParams.perPage, { ...safeSearchParams, filter: `author='${actor.id}'` })
         } else {
             const origin = new URL(actor.iri).origin
-            const summitLogURL = `${origin}/api/v1/profile/${actor.username}/stats?` + event.url.searchParams
+            const summitLogURL = `${origin}/api/v1/profile/${actor.preferred_username}/stats?` + event.url.searchParams
             const response = await event.fetch(summitLogURL, { method: 'GET' })
             if (!response.ok) {
                 const errorResponse = await response.json()

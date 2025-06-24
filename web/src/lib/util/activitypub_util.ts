@@ -18,9 +18,9 @@ export function handleFromRecordWithIRI(record: any) {
     }
     
     if (!record.iri) {
-        return `@${record.expand.author.username}`
+        return `@${record.expand.author.preferred_username}`
     }
     const url = new URL(record.iri ?? "")
 
-    return `@${record.expand.author.username}@${url.hostname}`
+    return `@${record.expand.author.preferred_username}@${url.hostname}`
 }

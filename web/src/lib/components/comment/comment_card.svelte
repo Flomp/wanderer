@@ -27,7 +27,7 @@
     let avatarSrc = $derived(
         comment.expand?.author.icon
             ? comment.expand?.author.icon
-            : `https://api.dicebear.com/7.x/initials/svg?seed=${comment.expand?.author.username ?? ""}&backgroundType=gradientLinear`,
+            : `https://api.dicebear.com/7.x/initials/svg?seed=${comment.expand?.author.preferred_username ?? ""}&backgroundType=gradientLinear`,
     );
 
     let timeSince = $derived(formatTimeSince(new Date(comment.created ?? "")));

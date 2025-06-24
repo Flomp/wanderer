@@ -64,7 +64,7 @@
     <ul class="space-y-4">
         {#each follows.items as follow}
             <a
-                href="/profile/@{follow.username}{follow.isLocal
+                href="/profile/@{follow.preferred_username}{follow.isLocal
                     ? ''
                     : '@' + follow.domain}"
             >
@@ -74,15 +74,15 @@
                     <img
                         class="rounded-full w-10 aspect-square overflow-hidden"
                         src={follow.icon ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${follow.username}&backgroundType=gradientLinear`}
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${follow.preferred_username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
                     <div>
                         <p class="text-lg font-medium">
-                            {follow.preferred_username}
+                            {follow.username}
                         </p>
                         <p class="text-sm text-gray-500 break-all">
-                            @{follow.username}@{follow.domain}
+                            @{follow.preferred_username}@{follow.domain}
                         </p>
                     </div>
                 </li>

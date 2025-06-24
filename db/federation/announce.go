@@ -196,7 +196,7 @@ func processTrailAnnounceActivity(app core.App, actor *core.Record, activity pub
 		Metadata: map[string]string{
 			"id":     trail.Id,
 			"trail":  trail.GetString("name"),
-			"author": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+			"author": fmt.Sprintf("@%s@%s", actor.GetString("preferred_username"), actor.GetString("domain")),
 		},
 		Seen:   false,
 		Author: actor.Id,
@@ -261,7 +261,7 @@ func processListAnnounceActivity(app core.App, actor *core.Record, activity pub.
 		Metadata: map[string]string{
 			"id":     list.Id,
 			"list":   list.GetString("name"),
-			"author": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+			"author": fmt.Sprintf("@%s@%s", actor.GetString("preferred_username"), actor.GetString("domain")),
 		},
 		Seen:   false,
 		Author: actor.Id,

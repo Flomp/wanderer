@@ -103,7 +103,7 @@
                     <img
                         class="rounded-full w-5 aspect-square mx-1 inline"
                         src={log.expand.author.icon ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.username}&backgroundType=gradientLinear`}
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.preferred_username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
                     {handleFromRecordWithIRI(log)}

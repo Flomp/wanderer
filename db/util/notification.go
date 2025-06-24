@@ -96,7 +96,7 @@ func SendNotification(app core.App, notification Notification, recipient *core.R
 		if err != nil {
 			return err
 		}
-		html, err := GenerateHTML(app.Settings().Meta.AppURL, recipientActor.GetString("username"), authorActor.GetString("username"), notification.Type, notification.Metadata)
+		html, err := GenerateHTML(app.Settings().Meta.AppURL, recipientActor.GetString("preferred_username"), authorActor.GetString("preferred_username"), notification.Type, notification.Metadata)
 		if err != nil {
 			return err
 		}

@@ -64,7 +64,7 @@ func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	if origin == "" {
 		return nil, fmt.Errorf("ORIGIN environment variable not set")
 	}
-	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, strings.ToLower(u.GetString("username")))
+	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, strings.ToLower(u.GetString("preferred_username")))
 
 	url, err := url.Parse(origin)
 	if err != nil {
@@ -72,8 +72,8 @@ func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	}
 	domain := strings.TrimPrefix(url.Hostname(), "www.")
 
-	record.Set("username", strings.ToLower(u.GetString("username")))
-	record.Set("preferred_username", u.GetString("username"))
+	record.Set("username", u.GetString("username"))
+	record.Set("preferred_username", strings.ToLower(u.GetString("username")))
 	record.Set("domain", domain)
 	record.Set("summary", settings.GetString("bio"))
 	record.Set("published", u.GetDateTime("created"))
@@ -398,7 +398,7 @@ func ObjectFromTrail(app core.App, trail *core.Record, mentions *pub.ItemCollect
 		})
 	}
 
-	activityURL := fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("username"), trail.Id)
+	activityURL := fmt.Sprintf("%s/trail/view/@%s/%s", origin, trailAuthor.GetString("preferred_username"), trail.Id)
 	activityContent := fmt.Sprintf("<h1>%s</h1>%s<p><a href=\"%s\">%s</a></p>", trail.GetString("name"), trail.GetString("description"), activityURL, activityURL)
 
 	trailObject := pub.ObjectNew(pub.NoteType)
@@ -508,7 +508,7 @@ func ObjectFromList(app core.App, list *core.Record) (*pub.Object, error) {
 		}
 	}
 
-	activityURL := fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("username"), list.Id)
+	activityURL := fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("preferred_username"), list.Id)
 	activityContent := fmt.Sprintf("%s<p><a href=\"%s\">%s</a></p>", list.GetString("description"), activityURL, activityURL)
 
 	listObject := pub.ObjectNew(pub.NoteType)

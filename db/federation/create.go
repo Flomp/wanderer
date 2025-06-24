@@ -322,7 +322,7 @@ func CreateSummitLogActivity(app core.App, summitLog *core.Record, typ pub.Activ
 	logObject.AttributedTo = pub.IRI(summitLogAuthor.GetString("iri"))
 	logObject.Published = summitLog.GetDateTime("created").Time()
 	logObject.ID = pub.IRI(fmt.Sprintf("%s/api/v1/summit-log/%s", origin, summitLog.Id))
-	logObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, summitLogTrailAuthor.GetString("username"), summitLog.GetString("trail")))
+	logObject.URL = pub.IRI(fmt.Sprintf("%s/trail/view/@%s/%s", origin, summitLogTrailAuthor.GetString("preferred_username"), summitLog.GetString("trail")))
 	logObject.InReplyTo = trailIRI
 	logObject.Tag = tags
 
@@ -487,7 +487,7 @@ func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, act
 				Type: util.TrailMention,
 				Metadata: map[string]string{
 					"id":     trail.Id,
-					"author": fmt.Sprintf("@%s@%s", actor.GetString("username"), actor.GetString("domain")),
+					"author": fmt.Sprintf("@%s@%s", actor.GetString("preferred_username"), actor.GetString("domain")),
 				},
 				Seen:   false,
 				Author: actor.Id,
@@ -584,7 +584,7 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 					"comment":      commentObject.Content.First().Value.String(),
 					"trail_id":     trail.Id,
 					"trail_name":   trail.GetString("name"),
-					"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
+					"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("preferred_username"), trailAuthor.GetString("domain")),
 				},
 				Seen:   false,
 				Author: actor.Id,
@@ -600,7 +600,7 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 				"comment":      commentObject.Content.First().Value.String(),
 				"trail_id":     trail.Id,
 				"trail_name":   trail.GetString("name"),
-				"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
+				"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("preferred_username"), trailAuthor.GetString("domain")),
 			},
 			Seen:   false,
 			Author: actor.Id,
@@ -764,7 +764,7 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 				Metadata: map[string]string{
 					"trail_id":     trail.Id,
 					"trail_name":   trail.GetString("name"),
-					"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
+					"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("preferred_username"), trailAuthor.GetString("domain")),
 				},
 				Seen:   false,
 				Author: actor.Id,
@@ -780,7 +780,7 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 			Metadata: map[string]string{
 				"trail_id":     trail.Id,
 				"trail_name":   trail.GetString("name"),
-				"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("username"), trailAuthor.GetString("domain")),
+				"trail_author": fmt.Sprintf("@%s@%s", trailAuthor.GetString("preferred_username"), trailAuthor.GetString("domain")),
 			},
 			Seen:   false,
 			Author: actor.Id,

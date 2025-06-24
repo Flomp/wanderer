@@ -41,13 +41,19 @@ export async function GET(event: RequestEvent) {
             remoteComments.items = remoteComments.items.filter(c => {
                 const iriId = c.iri?.substring(c.iri.length - 15) ?? ""
                 if (deduplicationMap[c.id!] != undefined) {
-                    deduplicationMap[c.id!] = {...c, author: deduplicationMap[c.id!].author}
+                    deduplicationMap[c.id!] = { ...c, author: deduplicationMap[c.id!].author }
                     return false
                 } else if (deduplicationMap[iriId] != undefined) {
-                    deduplicationMap[iriId] = {...c, author: deduplicationMap[iriId].author}
+                    deduplicationMap[iriId] = { ...c, author: deduplicationMap[iriId].author }
                     return false
                 }
                 return true
+            })
+
+            remoteComments.items.forEach(c => {
+                if (!c.iri?.length) {
+                    c.iri = `${url}/${c.id}`
+                }
             })
 
             const allCommentItems = <ListResult<Comment>>{

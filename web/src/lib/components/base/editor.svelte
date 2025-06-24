@@ -105,12 +105,12 @@
                                     true,
                                 );
                                 return actors.map((a) => ({
-                                    text: a.preferred_username!,
-                                    description: `@${a.username}${a.isLocal ? "" : "@" + a.domain}`,
+                                    text: a.username!,
+                                    description: `@${a.preferred_username}${a.isLocal ? "" : "@" + a.domain}`,
                                     value: a,
                                     icon:
                                         a.icon ||
-                                        `https://api.dicebear.com/7.x/initials/svg?seed=${a.username}&backgroundType=gradientLinear`,
+                                        `https://api.dicebear.com/7.x/initials/svg?seed=${a.preferred_username}&backgroundType=gradientLinear`,
                                 }));
                             } catch (e) {
                                 console.error(e);

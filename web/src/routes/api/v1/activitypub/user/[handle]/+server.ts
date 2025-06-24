@@ -36,7 +36,7 @@ export async function GET(event: RequestEvent) {
             outbox: id + '/outbox',
             summary: user.bio,
             name: actor.username,
-            preferredUsername: user.username,
+            preferredUsername: actor.preferred_username,
             followers: id + '/followers',
             following: id + '/following',
             url: `${env.ORIGIN}/profile/@${username}`,

@@ -53,7 +53,7 @@
                                     <img
                                         class="rounded-full w-8 aspect-square mr-2"
                                         src={share.expand.actor.icon ||
-                                            `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.username}&backgroundType=gradientLinear`}
+                                            `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.preferred_username}&backgroundType=gradientLinear`}
                                         alt="avatar"
                                     />
                                     <p class="font-semibold text-base">
@@ -82,7 +82,7 @@
                             <img
                                 class="rounded-full w-8 aspect-square mr-2"
                                 src={subject.expand.author.icon ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${subject.expand.author.username}&backgroundType=gradientLinear`}
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${subject.expand.author.preferred_username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
                             <p class="font-semibold">

@@ -157,11 +157,11 @@
                             <img
                                 class="rounded-full w-8 aspect-square mr-2"
                                 src={share.expand.actor.icon ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.username}&backgroundType=gradientLinear`}
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.preferred_username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
                             <p>
-                                {`@${share.expand.actor.username}${share.expand.actor.isLocal ? "" : "@" + share.expand.actor.domain}`}
+                                {`@${share.expand.actor.preferred_username}${share.expand.actor.isLocal ? "" : "@" + share.expand.actor.domain}`}
                             </p>
                             <span
                                 class="basis-full text-sm text-center text-gray-500"

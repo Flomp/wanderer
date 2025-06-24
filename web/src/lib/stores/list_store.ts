@@ -275,7 +275,7 @@ export async function searchResultToLists(hits: Hits<ListSearchResult>): Promise
                 author: {
                     icon: h.author_avatar,
                     id: h.author,
-                    username: h.author_name,
+                    preferred_username: h.author_name,
                 } as any,
                 list_share_via_list: h.shares?.map(s => ({
                     permission: "view",

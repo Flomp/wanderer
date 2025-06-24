@@ -18,7 +18,7 @@
 
     const avatarSrc = notification.expand?.author.icon
         ? notification.expand.author.icon
-        : `https://api.dicebear.com/7.x/initials/svg?seed=${notification.expand?.author.username ?? ""}&backgroundType=gradientLinear`;
+        : `https://api.dicebear.com/7.x/initials/svg?seed=${notification.expand?.author.preferred_username ?? ""}&backgroundType=gradientLinear`;
 
     const timeSince = formatTimeSince(new Date(notification.created ?? ""));
 

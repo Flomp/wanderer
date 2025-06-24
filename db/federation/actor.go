@@ -43,7 +43,7 @@ func SplitHandle(handle string) (string, string) {
 func GetActorByHandle(app core.App, handle string, includeFollows bool) (*core.Record, error) {
 	username, domain := SplitHandle(handle)
 
-	filter := "username={:username}&&"
+	filter := "preferred_username={:username}&&"
 	if domain != "" {
 		filter += "domain={:domain}"
 	} else {

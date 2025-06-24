@@ -23,7 +23,7 @@ export async function GET(event: RequestEvent) {
                 .getList<TimelineItem>(safeSearchParams.page, safeSearchParams.perPage, { ...safeSearchParams, filter: `author='${actor.iri}'` })
         } else {
             const origin = new URL(actor.iri).origin
-            const timelineURL = `${origin}/api/v1/profile/${actor.username}/timeline?` + event.url.searchParams
+            const timelineURL = `${origin}/api/v1/profile/${actor.preferred_username}/timeline?` + event.url.searchParams
 
             const response = await event.fetch(timelineURL, { method: 'GET' })
             if (!response.ok) {

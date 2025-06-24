@@ -34,11 +34,11 @@
             const actors = await searchActors(q);
             searchDropdownItems = actors.map((a) => ({
                 text: a.username,
-                description: `@${a.username}${a.isLocal ? "" : "@" + a.domain}`,
+                description: `@${a.preferred_username}${a.isLocal ? "" : "@" + a.domain}`,
                 value: a,
                 icon:
                     a.icon ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${a.username}&backgroundType=gradientLinear`,
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${a.preferred_username}&backgroundType=gradientLinear`,
             }));
         } else {
             const r = await searchMulti({
@@ -89,9 +89,9 @@
             goto(`/trail/view/${item.value}`);
         } else if (item.icon == "layer-group") {
             goto(`/lists/${item.value}`);
-        } else if (item.value.username) {
+        } else if (item.value.preferred_username) {
             goto(
-                `/profile/@${item.value.username}${item.value.isLocal ? "" : "@" + item.value.domain}`,
+                `/profile/@${item.value.preferred_username}${item.value.isLocal ? "" : "@" + item.value.domain}`,
             );
         } else {
             goto(`/map/?lat=${item.value.lat}&lon=${item.value.lon}`);

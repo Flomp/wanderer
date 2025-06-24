@@ -32,7 +32,8 @@ export async function GET(event: RequestEvent) {
                 }
                 t = {
                     iri: iri,
-                    author: actor.id
+                    author: actor.id,
+                    like_count: 0
                 } as Trail
             }
 

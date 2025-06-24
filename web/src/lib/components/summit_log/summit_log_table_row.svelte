@@ -189,13 +189,13 @@
         <td>
             <p
                 class="tooltip flex justify-center"
-                data-title="{log.expand.author.username}{log.expand.author
+                data-title="@{log.expand.author.preferred_username}{log.expand.author
                     .isLocal
                     ? ''
                     : '@' + log.expand.author.domain}"
             >
                 <a
-                    href="/profile/@{log.expand.author.username?.toLowerCase()}{log
+                    href="/profile/@{log.expand.author.preferred_username?.toLowerCase()}{log
                         .expand.author.isLocal
                         ? ''
                         : '@' + log.expand.author.domain}"
@@ -203,7 +203,7 @@
                     <img
                         class="rounded-full w-7 aspect-square"
                         src={log.expand.author.icon ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.username}&backgroundType=gradientLinear`}
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${log.expand.author.preferred_username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
                 </a>

@@ -477,7 +477,7 @@ export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Pr
                     isLocal: (h.domain?.length ?? 0) == 0,
                     id: h.author,
                     icon: h.author_avatar,
-                    username: h.author_name,
+                    preferred_username: h.author_name,
                     domain: h.domain,
                 } as any,
                 trail_share_via_trail: h.shares?.map(s => ({
