@@ -7,7 +7,7 @@ x-common-env: &cenv
 services:
   search:
     container_name: wanderer-search
-    image: getmeili/meilisearch:v1.11.3
+    image: flomp/wanderer-search:latest
     environment:
       <<: *cenv
       MEILI_NO_ANALYTICS: true
@@ -26,7 +26,7 @@ services:
       timeout: 10s
   db:
     container_name: wanderer-db
-    image: flomp/wanderer-db
+    image: flomp/wanderer-db:latest
     depends_on:
       search:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
       - ./data/pb_data:/pb_data
   web:
     container_name: wanderer-web
-    image: flomp/wanderer-web
+    image: flomp/wanderer-web:latest
     depends_on:
       search:
         condition: service_healthy
