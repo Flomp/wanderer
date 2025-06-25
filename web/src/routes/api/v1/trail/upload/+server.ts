@@ -1,6 +1,7 @@
 import GPX from "$lib/models/gpx/gpx";
 import { haversineDistance } from "$lib/models/gpx/utils";
 import type { Trail, TrailSearchResult } from "$lib/models/trail";
+import { searchLocationReverse } from "$lib/stores/search_store";
 import { trails_create } from "$lib/stores/trail_store";
 import { handleError } from "$lib/util/api_util";
 import { fromFile, gpx2trail } from "$lib/util/gpx_util";
@@ -38,6 +39,11 @@ export async function PUT(event: RequestEvent) {
             if (duplicate !== null) {
                 throw new ClientResponseError({ status: 400, response: { message: `Duplicate trail`, id: duplicate.id, name: duplicate.name, domain: `${duplicate.author_name}${duplicate.domain ? '@' + duplicate.domain : ''}` }, })
             }
+        }
+
+        if (trail.lat && trail.lon) {
+            const location = await searchLocationReverse(trail.lat, trail.lon)
+            trail.location ??= location;
         }
 
         // const log = new SummitLog(trail.date as string, {
