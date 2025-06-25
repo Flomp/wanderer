@@ -58,7 +58,7 @@ services:
       UPLOAD_FOLDER: /app/uploads
       UPLOAD_USER:
       UPLOAD_PASSWORD:
-      PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de
+      PUBLIC_VALHALLA_URL: https://valhalla.openstreetmap.de
       PUBLIC_NOMINATIM_URL: https://nominatim.openstreetmap.org
     volumes:
       - ./data/uploads:/app/uploads
