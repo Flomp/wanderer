@@ -316,7 +316,7 @@
                 ><i class="fa fa-clock mr-3"></i>{$_("duration")}</span
             >
             <p class="text-3xl font-bold">
-                {formatTimeHHMM(totalDuration / 60)}
+                {formatTimeHHMM(totalDuration)}
             </p>
         </div>
         <div

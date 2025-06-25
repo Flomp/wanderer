@@ -274,7 +274,7 @@ func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomoo
 		"distance":          detailedTour.Distance,
 		"elevation_gain":    detailedTour.ElevationUp,
 		"elevation_loss":    detailedTour.ElevationDown,
-		"duration":          detailedTour.Duration / 60,
+		"duration":          detailedTour.Duration,
 		"date":              detailedTour.Date,
 		"external_provider": "komoot",
 		"external_id":       strconv.Itoa(detailedTour.ID),

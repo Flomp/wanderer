@@ -1,16 +1,16 @@
 import { browser } from "$app/environment";
 import { page } from "$app/state";
-import { get } from "svelte/store";
 
-export function formatTimeHHMM(minutes?: number) {
-    if (!minutes) {
+export function formatTimeHHMM(seconds?: number) {
+    if (seconds == null || isNaN(seconds)) {
         return "-";
     }
-    const m = minutes % 60;
 
-    const h = (minutes - m) / 60;
+    const totalMinutes = Math.floor(seconds / 60);
+    const m = totalMinutes % 60;
+    const h = Math.floor(totalMinutes / 60);
 
-    return (h < 10 ? "0" : "") + h.toString() + "h " + (Math.round(m) < 10 ? "0" : "") + Math.round(m).toString() + "m";
+    return (h < 10 ? "0" : "") + h.toString() + "h " + (m < 10 ? "0" : "") + m.toString() + "m";
 }
 
 export function formatDistance(meters?: number) {

@@ -155,7 +155,7 @@
         {formatElevation(log.elevation_loss)}
     </td>
     <td>
-        {formatTimeHHMM(log.duration ? log.duration / 60 : undefined)}
+        {formatTimeHHMM(log.duration ? log.duration : undefined)}
     </td>
     {#if showCategory}
         <td>
