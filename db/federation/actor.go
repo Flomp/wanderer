@@ -1,6 +1,7 @@
 package federation
 
 import (
+	"crypto/x509"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -11,9 +12,11 @@ import (
 	"time"
 
 	pub "github.com/go-ap/activitypub"
+	"github.com/go-fed/httpsig"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/security"
 )
 
 type WebfingerResponse struct {
@@ -40,7 +43,7 @@ func SplitHandle(handle string) (string, string) {
 	return user, domain
 }
 
-func GetActorByHandle(app core.App, handle string, includeFollows bool) (*core.Record, error) {
+func GetActorByHandle(app core.App, actor *core.Record, handle string, includeFollows bool) (*core.Record, error) {
 	username, domain := SplitHandle(handle)
 
 	filter := "preferred_username={:username}&&"
@@ -70,10 +73,10 @@ func GetActorByHandle(app core.App, handle string, includeFollows bool) (*core.R
 		return nil, err
 	}
 
-	return assembleActor(dbActor, app, includeFollows)
+	return assembleActor(actor, dbActor, app, includeFollows)
 }
 
-func GetActorByIRI(app core.App, iri string, includeFollows bool) (*core.Record, error) {
+func GetActorByIRI(app core.App, actor *core.Record, iri string, includeFollows bool) (*core.Record, error) {
 	var dbActor *core.Record
 	dbActor, err := app.FindFirstRecordByFilter("activitypub_actors", "iri={:iri}", dbx.Params{"iri": iri})
 	if err != nil && err == sql.ErrNoRows {
@@ -90,13 +93,13 @@ func GetActorByIRI(app core.App, iri string, includeFollows bool) (*core.Record,
 		return nil, err
 	}
 
-	return assembleActor(dbActor, app, includeFollows)
+	return assembleActor(actor, dbActor, app, includeFollows)
 }
 
 func iriFromHandle(domain string, username string) (string, error) {
 	client := &http.Client{}
 
-	webfingerURL := fmt.Sprintf("https://%s/.well-known/webfinger?resource=acct:%s@%s", domain, username, domain)
+	webfingerURL := fmt.Sprintf("http://%s/.well-known/webfinger?resource=acct:%s@%s", domain, username, domain)
 	resp, err := client.Get(webfingerURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("webfinger request failed: %v", err)
@@ -116,7 +119,7 @@ func iriFromHandle(domain string, username string) (string, error) {
 	return "", fmt.Errorf("no iri in response")
 }
 
-func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*core.Record, error) {
+func assembleActor(actor *core.Record, dbActor *core.Record, app core.App, includeFollows bool) (*core.Record, error) {
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return nil, fmt.Errorf("ORIGIN environment variable not set")
@@ -163,7 +166,7 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 		if !includeFollows && dbActor.GetDateTime("last_fetched").Time().After(twoHoursAgo) {
 			return dbActor, nil
 		}
-		pubActor, followers, following, err := fetchRemoteActor(dbActor.GetString("iri"), includeFollows)
+		pubActor, followers, following, err := fetchRemoteActor(actor, dbActor.GetString("iri"), includeFollows)
 		if err != nil {
 			if dbActor.Id != "" {
 				return dbActor, err
@@ -224,16 +227,54 @@ func assembleActor(dbActor *core.Record, app core.App, includeFollows bool) (*co
 }
 
 // Fetches an AP actor and optionally followers/following collections
-func fetchRemoteActor(iri string, includeFollows bool) (*pub.Actor, *pub.OrderedCollection, *pub.OrderedCollection, error) {
-	client := &http.Client{}
-	headers := map[string]string{
-		"Accept": "application/ld+json",
+func fetchRemoteActor(actor *core.Record, iri string, includeFollows bool) (*pub.Actor, *pub.OrderedCollection, *pub.OrderedCollection, error) {
+	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+	if len(encryptionKey) == 0 {
+		return nil, nil, nil, fmt.Errorf("POCKETBASE_ENCRYPTION_KEY not set")
 	}
 
+	client := &http.Client{}
 	req, _ := http.NewRequest("GET", iri, nil)
-	for k, v := range headers {
-		req.Header.Set(k, v)
+
+	headers := map[string]string{
+		"Accept":       "application/ld+json",
+		"Content-Type": "application/activity+json",
+		"Date":         strings.ReplaceAll(time.Now().UTC().Format(time.RFC1123), "UTC", "GMT"),
+		"Host":         req.Host,
 	}
+
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
+	dbPrivateKey := actor.GetString("private_key")
+	if dbPrivateKey != "" {
+		algs := []httpsig.Algorithm{httpsig.RSA_SHA256}
+		postHeaders := []string{"(request-target)", "Date", "Digest", "Content-Type", "Host"}
+		expiresIn := 60
+
+		signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		decryptedPrivateKey, err := security.Decrypt(dbPrivateKey, encryptionKey)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		privateKey, err := x509.ParsePKCS1PrivateKey(decryptedPrivateKey)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		pubID := actor.GetString("iri") + "#main-key"
+
+		if err := signer.SignRequest(privateKey, pubID, req, []byte{}); err != nil {
+			return nil, nil, nil, err
+		}
+
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("actor fetch failed: %v", err)
@@ -252,12 +293,12 @@ func fetchRemoteActor(iri string, includeFollows bool) (*pub.Actor, *pub.Ordered
 
 	if includeFollows {
 		// Fetch followers
-		if data, err := fetchCollection(pubActor.Followers.GetID().String(), headers); err == nil {
+		if data, err := FetchCollection(actor, pubActor.Followers.GetID().String()); err == nil {
 			followers = *data
 		}
 
 		// Fetch following
-		if data, err := fetchCollection(pubActor.Following.GetID().String(), headers); err == nil {
+		if data, err := FetchCollection(actor, pubActor.Following.GetID().String()); err == nil {
 			following = *data
 		}
 	}
@@ -265,11 +306,53 @@ func fetchRemoteActor(iri string, includeFollows bool) (*pub.Actor, *pub.Ordered
 	return &pubActor, &followers, &following, nil
 }
 
-func fetchCollection(url string, headers map[string]string) (*pub.OrderedCollection, error) {
-	req, _ := http.NewRequest("GET", url, nil)
-	for k, v := range headers {
-		req.Header.Set(k, v)
+func FetchCollection(actor *core.Record, url string) (*pub.OrderedCollection, error) {
+	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
+	if len(encryptionKey) == 0 {
+		return nil, fmt.Errorf("POCKETBASE_ENCRYPTION_KEY not set")
 	}
+
+	req, _ := http.NewRequest("GET", url, nil)
+
+	headers := map[string]string{
+		"Accept":       "application/ld+json",
+		"Content-Type": "application/activity+json",
+		"Date":         strings.ReplaceAll(time.Now().UTC().Format(time.RFC1123), "UTC", "GMT"),
+		"Host":         req.Host,
+	}
+
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
+	dbPrivateKey := actor.GetString("private_key")
+	if dbPrivateKey != "" {
+		algs := []httpsig.Algorithm{httpsig.RSA_SHA256}
+		postHeaders := []string{"(request-target)", "Date", "Digest", "Content-Type", "Host"}
+		expiresIn := 60
+
+		signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
+		if err != nil {
+			return nil, err
+		}
+
+		decryptedPrivateKey, err := security.Decrypt(dbPrivateKey, encryptionKey)
+		if err != nil {
+			return nil, err
+		}
+		privateKey, err := x509.ParsePKCS1PrivateKey(decryptedPrivateKey)
+		if err != nil {
+			return nil, err
+		}
+
+		pubID := actor.GetString("iri") + "#main-key"
+
+		if err := signer.SignRequest(privateKey, pubID, req, []byte{}); err != nil {
+			return nil, err
+		}
+
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("collection fetch failed for %s: %v", url, err)

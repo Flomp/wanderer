@@ -108,9 +108,10 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 				body, _ := io.ReadAll(resp.Body)
 				app.Logger().Error(fmt.Sprintf("Inbox %s responded with %d: %s", inbox, resp.StatusCode, body))
+			} else {
+				app.Logger().Info(fmt.Sprintf("Sent %s to %s", activity.Type, inbox), "activity", activity)
 			}
 
-			app.Logger().Info(fmt.Sprintf("Sent %s to %s", activity.Type, inbox))
 		}(v)
 	}
 
@@ -119,6 +120,10 @@ func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, reci
 }
 
 func ProcessActivity(e *core.RequestEvent) error {
+	origin := os.Getenv("ORIGIN")
+	if origin == "" {
+		return fmt.Errorf("ORIGIN not set")
+	}
 
 	body, err := io.ReadAll(e.Request.Body)
 	if err != nil {
@@ -127,10 +132,17 @@ func ProcessActivity(e *core.RequestEvent) error {
 	var activity pub.Activity
 	activity.UnmarshalJSON(body)
 
+	inbox := fmt.Sprintf("%s%s", origin, e.Request.Header.Get("X-Forwarded-Path"))
+
+	userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "inbox", inbox)
+	if err != nil {
+		return err
+	}
+
 	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor.GetID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {
-			actor, err = GetActorByIRI(e.App, activity.Actor.GetID().String(), false)
+			actor, err = GetActorByIRI(e.App, userActor, activity.Actor.GetID().String(), false)
 			if err != nil {
 				return err
 			}
@@ -140,8 +152,9 @@ func ProcessActivity(e *core.RequestEvent) error {
 		}
 	}
 
-	verified, err := verifySignature(e.Request, actor.GetString("public_key"))
+	verified, err := verifySignature(e.App, e.Request, actor.GetString("public_key"))
 	if err != nil || !verified {
+		e.App.Logger().Error(err.Error())
 		return e.UnauthorizedError("Invalid http signature", err)
 	}
 
@@ -166,7 +179,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, nil)
 }
 
-func verifySignature(req *http.Request, publicKeyPem string) (bool, error) {
+func verifySignature(app core.App, req *http.Request, publicKeyPem string) (bool, error) {
 	origin := os.Getenv("ORIGIN")
 	if origin == "" {
 		return false, fmt.Errorf("ORIGIN not set")
@@ -187,6 +200,8 @@ func verifySignature(req *http.Request, publicKeyPem string) (bool, error) {
 
 	req.Header.Set("Host", url.Host)
 	req.Host = url.Host
+
+	app.Logger().Info(req.Header.Get("signature"))
 
 	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {

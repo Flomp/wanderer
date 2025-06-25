@@ -13,16 +13,19 @@ export async function POST(event: RequestEvent) {
             return json("Bad request", { status: 400 });
         }
 
+        // Clone original headers to ensure no loss
+        const originalHeaders: Record<string, string> = {};
+        event.request.headers.forEach((value, key) => {
+            originalHeaders[key] = value
+        });
+
+        // Add forwarded path
+        originalHeaders['X-Forwarded-Path'] = event.url.pathname;
+
         const success = await event.locals.pb.send("/activitypub/activity/process", {
             method: "POST",
             fetch: event.fetch,
-            headers: {
-                'X-Forwarded-Path': event.url.pathname,
-                'Content-Type': event.request.headers.get("content-type")!,
-                signature: event.request.headers.get("signature")!,
-                date: event.request.headers.get("date")!,
-                digest: event.request.headers.get("digest")!
-            },
+            headers: originalHeaders,
             body: JSON.stringify(activity)
         })
 

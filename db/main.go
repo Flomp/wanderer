@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -236,7 +237,7 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
-		err = federation.CreateTrailActivity(e.App, e.Record, pub.CreateType)
+		err = federation.CreateTrailActivity(e.App, author, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -268,7 +269,7 @@ func updateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
-		err = federation.CreateTrailActivity(e.App, e.Record, pub.UpdateType)
+		err = federation.CreateTrailActivity(e.App, author, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -308,7 +309,12 @@ func createSummitLogHandler() func(e *core.RecordRequestEvent) error {
 			return err
 		}
 
-		err = federation.CreateSummitLogActivity(e.App, e.Record, pub.CreateType)
+		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateSummitLogActivity(e.App, userActor, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -325,7 +331,12 @@ func updateSummitLogHandler() func(e *core.RecordRequestEvent) error {
 			return err
 		}
 
-		err = federation.CreateSummitLogActivity(e.App, e.Record, pub.UpdateType)
+		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateSummitLogActivity(e.App, userActor, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -348,7 +359,12 @@ func createCommentHandler() func(e *core.RecordRequestEvent) error {
 
 		e.Next()
 
-		err := federation.CreateCommentActivity(e.App, e.Record, pub.CreateType)
+		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateCommentActivity(e.App, userActor, e.Record, pub.CreateType)
 		if err != nil {
 			return err
 		}
@@ -358,7 +374,12 @@ func createCommentHandler() func(e *core.RecordRequestEvent) error {
 
 func updateCommentHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		err := federation.CreateCommentActivity(e.App, e.Record, pub.UpdateType)
+		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+		if err != nil {
+			return err
+		}
+
+		err = federation.CreateCommentActivity(e.App, userActor, e.Record, pub.UpdateType)
 		if err != nil {
 			return err
 		}
@@ -1042,12 +1063,16 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		iri := e.Request.URL.Query().Get("iri")
 		follows := e.Request.URL.Query().Get("follows") == "true"
 
+		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+		if err != nil {
+			return err
+		}
+
 		var actor *core.Record
-		var err error
 		if resource != "" {
-			actor, err = federation.GetActorByHandle(e.App, resource, follows)
+			actor, err = federation.GetActorByHandle(e.App, userActor, resource, follows)
 		} else {
-			actor, err = federation.GetActorByIRI(e.App, iri, follows)
+			actor, err = federation.GetActorByIRI(e.App, userActor, iri, follows)
 		}
 		if err != nil && actor == nil {
 			if strings.HasPrefix(err.Error(), "webfinger") {
@@ -1068,6 +1093,41 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		}
 
 		return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": nil})
+	})
+	se.Router.GET("/activitypub/actor/{id}/{follow}", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+		followType := e.Request.PathValue("follow")
+		page := e.Request.URL.Query().Get("page")
+		intPage := 0
+
+		if page != "" {
+			var err error
+			intPage, err = strconv.Atoi(page)
+			if err != nil {
+				return err
+			}
+		}
+
+		actor, err := e.App.FindRecordById("activitypub_actors", id)
+		if err != nil {
+			return err
+		}
+
+		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+		if err != nil {
+			return err
+		}
+
+		url := actor.GetString(followType)
+
+		if url == "" {
+			return e.BadRequestError("unknown type: "+followType, nil)
+		}
+		collection, err := federation.FetchCollection(userActor, fmt.Sprintf("%s?page=%d", url, intPage))
+		if err != nil {
+			return err
+		}
+		return e.JSON(http.StatusOK, collection)
 	})
 	se.Router.GET("/activitypub/trail/{id}", func(e *core.RequestEvent) error {
 		id := e.Request.PathValue("id")
