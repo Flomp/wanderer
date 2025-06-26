@@ -16,10 +16,16 @@ export async function GET(event: RequestEvent) {
         const searchParams = Object.fromEntries(event.url.searchParams);
         const safeSearchParams = RecordListOptionsSchema.parse(searchParams);
 
-        let summitLogs: ListResult<SummitLog>;
+        if(safeSearchParams.filter?.length) {
+            safeSearchParams.filter = safeSearchParams.filter + `&&author='${actor.id}'`
+        }else {
+            safeSearchParams.filter = `author='${actor.id}'`
+        } 
+
+        let summitLogs: SummitLog[];
         if (actor.isLocal) {
             summitLogs = await event.locals.pb.collection(Collection.summit_logs)
-                .getList<SummitLog>(safeSearchParams.page, safeSearchParams.perPage, { ...safeSearchParams, filter: `author='${actor.id}'` })
+                .getFullList<SummitLog>(safeSearchParams.page, { ...safeSearchParams })
         } else {
             const origin = new URL(actor.iri).origin
             const summitLogURL = `${origin}/api/v1/profile/${actor.preferred_username}/stats?` + event.url.searchParams
@@ -30,7 +36,7 @@ export async function GET(event: RequestEvent) {
             }
             summitLogs = await response.json()
 
-            summitLogs.items.forEach(i => {
+            summitLogs.forEach(i => {
                 i.photos = i.photos.map(p =>
                     `${origin}/api/v1/files/summit_logs/${i.id}/${p}`
                 )

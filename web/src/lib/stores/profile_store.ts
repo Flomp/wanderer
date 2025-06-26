@@ -117,7 +117,6 @@ export async function profile_stats_index(handle: string, filter: SummitLogFilte
 
     const r = await f(`/api/v1/profile/${handle}/stats?` + new URLSearchParams({
         filter: filterText,
-        perPage: "-1",
         expand: "trail.category,author",
         sort: "+date",
     }), {
@@ -129,8 +128,8 @@ export async function profile_stats_index(handle: string, filter: SummitLogFilte
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const result: ListResult<SummitLog> = await r.json();
+    const result: SummitLog[] = await r.json();
 
-    return result.items;
+    return result;
 
 }
