@@ -19,9 +19,18 @@
     interface Props {
         trail: Trail;
         showDescription?: boolean;
+        selected: boolean;
+        hovered: boolean;
+        onTrailSelect?: () => void;
     }
 
-    let { trail, showDescription = true }: Props = $props();
+    let {
+        trail,
+        showDescription = true,
+        selected = false,
+        hovered = false,
+        onTrailSelect,
+    }: Props = $props();
 
     let thumbnail = $derived(
         trail.photos.length
@@ -34,6 +43,12 @@
               ? emptyStateTrailLight
               : emptyStateTrailDark,
     );
+
+    function handleInputClick(e: Event) {
+        e.stopPropagation();
+        onTrailSelect?.();
+        hovered = true;
+    }
 
     let expandedTags = $state(false);
 
@@ -64,7 +79,7 @@
             />
         {/if}
     </div>
-    <div class="min-w-0 basis-full">
+    <div class="min-w-0 basis-full relative">
         <div class="flex items-center justify-between">
             <h4 class="font-semibold text-lg">
                 {trail.name}
@@ -139,9 +154,6 @@
             {#if trail.location}
                 <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
             {/if}
-            <h5>
-                <i class="fa fa-gauge mr-3"></i>{$_(trail.difficulty ?? "?")}
-            </h5>
         </div>
 
         <div class="flex flex-wrap mt-1 gap-x-4 gap-y-2 text-sm text-gray-500">
@@ -168,10 +180,23 @@
         </div>
         {#if showDescription}
             <p
-                class="mt-3 text-sm whitespace-nowrap min-w-0 max-w-full overflow-hidden text-ellipsis"
+                class="mt-3 text-sm whitespace-nowrap min-w-0 max-w-full overflow-hidden text-ellipsis basis-full"
             >
                 {formatHTMLAsText(trail.description ?? "")}
             </p>
+        {/if}
+        {#if hovered || selected}
+            <div
+                class="flex absolute bottom-0 right-0 w-8 h-8 rounded-full items-center justify-center bg-background text-content"
+            >
+                <input
+                    id="trail-selected"
+                    type="checkbox"
+                    class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                    bind:checked={selected}
+                    onclick={(e) => handleInputClick(e)}
+                />
+            </div>
         {/if}
     </div>
 </li>

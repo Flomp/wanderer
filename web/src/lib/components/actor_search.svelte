@@ -34,7 +34,7 @@
         try {
             const actors: Actor[] = await searchActors(q, includeSelf);
             searchItems = actors.map((a) => ({
-                text: "a.username!",
+                text: a.username,
                 description: `@${a.preferred_username}${a.isLocal ? "" : "@" + a.domain}`,
                 value: a,
                 icon: "user",

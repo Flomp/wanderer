@@ -16,7 +16,7 @@
     import Select from "../base/select.svelte";
 
     interface Props {
-        trail: Trail;
+        trail?: Trail;
         onsave?: () => void;
     }
 
@@ -56,6 +56,10 @@
     }
 
     async function shareTrail(item: SelectItem) {
+        if (trail === undefined) {
+            return;
+        }
+
         if (!item.value.isLocal && !trail.public) {
             displayShareError = true;
             return;
@@ -80,6 +84,8 @@
     }
 
     async function fetchShares() {
+        if (trail === undefined) return;
+
         sharesLoading = true;
         await trail_share_index({ trail: trail.id! });
         sharesLoading = false;

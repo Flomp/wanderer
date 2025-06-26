@@ -10,6 +10,7 @@
     import SkeletonCard from "../base/skeleton_card.svelte";
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
     import { onMount } from "svelte";
+    import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
 
     interface Props {
         filter?: TrailFilter | null;
@@ -17,7 +18,10 @@
         pagination?: { page: number; totalPages: number };
         loading?: boolean;
         fullWidthCards?: boolean;
-        onupdate?: (filter: TrailFilter | null) => void;
+        onupdate?: (
+            filter: TrailFilter | null,
+            selection: Set<Trail> | undefined,
+        ) => void;
         onpagination?: (page: number) => void;
     }
 
@@ -41,6 +45,9 @@
     ];
 
     let selectedDisplayOption = $state(displayOptions[0].value);
+
+    let selection: Set<Trail> | undefined = $state();
+    let hoveredTrail: Trail | undefined = $state();
 
     const sortOptions: SelectItem[] = [
         { text: $_("name"), value: "name" },
@@ -71,7 +78,7 @@
                 (storedSortOrder as typeof filter.sortOrder | null) ??
                 filter.sortOrder;
         }
-        onupdate?.(filter);
+        onupdate?.(filter, selection);
     });
 
     function setDisplayOption() {
@@ -83,7 +90,7 @@
             return;
         }
         localStorage.setItem("sort", filter.sort);
-        onupdate?.(filter);
+        onupdate?.(filter, selection);
     }
 
     function setSortOrder() {
@@ -96,7 +103,7 @@
             filter.sortOrder = "+";
         }
         localStorage.setItem("sort_order", filter.sortOrder);
-        onupdate?.(filter);
+        onupdate?.(filter, selection);
     }
 
     function handleSortUpdate(sort: any) {
@@ -111,6 +118,96 @@
             setSort();
         }
     }
+
+    function isHovered(trail: Trail): boolean {
+        if (trail === undefined) {
+            return false;
+        }
+
+        if (hoveredTrail === undefined) {
+            return false;
+        }
+
+        return hoveredTrail.id === trail.id;
+    }
+
+    function isSelected(trail: Trail): boolean {
+        if (trail === undefined) {
+            return false;
+        } else {
+            if (selection === undefined) {
+                return false;
+            } else {
+                for (const sTrail of selection) {
+                    if (sTrail !== undefined && sTrail.id === trail.id) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    function handleSelectionUpdate(trail: Trail) {
+        let newSelection = new Set<Trail>();
+
+        if (trail !== undefined) {
+            let isSelected = false;
+
+            if (selection !== undefined && selection.size > 0) {
+                for (const sTrail of selection) {
+                    if (sTrail !== undefined && sTrail.id === trail.id) {
+                        isSelected = true;
+                        continue;
+                    }
+
+                    newSelection.add(sTrail);
+                }
+            }
+
+            if (!isSelected) {
+                newSelection.add(trail);
+            }
+        } else if (
+            selection === undefined ||
+            selection.size === 0 ||
+            (trails !== undefined && selection.size !== trails.length)
+        ) {
+            for (const eTrail of trails) {
+                newSelection.add(eTrail);
+            }
+        }
+
+        selection = newSelection;
+    }
+
+    function handleHoverUpdate(hTrail: Trail) {
+        if (hTrail === undefined) {
+            return;
+        }
+
+        if (hoveredTrail === undefined) hoveredTrail = hTrail;
+        else hoveredTrail = undefined;
+    }
+
+    function handleTrailsEditDone(resetSelection: boolean = false) {
+        if (resetSelection) {
+            selection?.clear();
+            hoveredTrail = undefined;
+        }
+
+        setTimeout(() => {
+            onupdate?.(filter, selection);
+        }, 500);
+    }
+
+    function handleMouseEnter(trail: Trail) {
+        handleHoverUpdate(trail);
+    }
+    function handleMouseLeave(trail: Trail) {
+        handleHoverUpdate(trail);
+    }
 </script>
 
 <div class="min-w-0">
@@ -122,6 +219,15 @@
                 {onpagination}
             ></Pagination>
         </div>
+        {#if selection !== undefined && selection.size > 0}
+            <div class="flex relative flex-shrink-0">
+                <TrailDropdown
+                    trails={selection}
+                    mode={"multi-select"}
+                    onconfirm={handleTrailsEditDone}
+                />
+            </div>
+        {/if}
         {#if filter}
             <div class="shrink-0">
                 {#if selectedDisplayOption !== "table"}
@@ -158,7 +264,10 @@
     <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
         {#if loading}
             {#if selectedDisplayOption === "table"}
-                <TrailTable trails={null} tableHeader={sortOptions}
+                <TrailTable
+                    trails={null}
+                    selection={new Set<Trail>()}
+                    tableHeader={sortOptions}
                 ></TrailTable>
             {:else}
                 {#each { length: 12 } as _, index}
@@ -180,11 +289,13 @@
             {#if selectedDisplayOption === "table"}
                 <TrailTable
                     {trails}
+                    {selection}
                     tableHeader={sortOptions.filter(
                         (option) => option.value !== "elevation_loss",
                     )}
                     {filter}
                     onsort={handleSortUpdate}
+                    onTrailSelect={(t) => handleSelectionUpdate(t)}
                 ></TrailTable>
             {:else}
                 {#each trails as trail}
@@ -194,12 +305,26 @@
                         href="/trail/view/@{trail.author}{trail.domain
                             ? `@${trail.domain}`
                             : ''}/{trail.id}"
+                        onmouseenter={(e) => handleMouseEnter(trail)}
+                        onmouseleave={(e) => handleMouseLeave(trail)}
                     >
                         {#if selectedDisplayOption === "cards"}
-                            <TrailCard fullWidth={fullWidthCards} {trail}
+                            <TrailCard
+                                fullWidth={fullWidthCards}
+                                {trail}
+                                selected={isSelected(trail)}
+                                hovered={isHovered(trail)}
+                                onTrailSelect={() =>
+                                    handleSelectionUpdate(trail)}
                             ></TrailCard>
                         {:else}
-                            <TrailListItem {trail}></TrailListItem>
+                            <TrailListItem
+                                {trail}
+                                selected={isSelected(trail)}
+                                hovered={isHovered(trail)}
+                                onTrailSelect={() =>
+                                    handleSelectionUpdate(trail)}
+                            ></TrailListItem>
                         {/if}
                     </a>
                 {/each}

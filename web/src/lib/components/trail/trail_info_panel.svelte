@@ -401,7 +401,10 @@
                 {#if ($currentUser && $currentUser.actor == trail.author) || trail.expand?.trail_share_via_trail?.length || trail.public}
                     <div class="flex flex-col items-center gap-y-2">
                         <LikeButton {trail}></LikeButton>
-                        <TrailDropdown {trail} {mode} {handle}></TrailDropdown>
+                        <TrailDropdown
+                            trails={new Set<Trail>([trail])}
+                            {mode}
+                        ></TrailDropdown>
                     </div>
                 {/if}
             </div>
@@ -658,7 +661,7 @@
                         elevationProfileContainer={"epc-container"}
                         showStyleSwitcher={false}
                         showFullscreen={true}
-                        mapOptions={{ attributionControl: {compact: true} }}
+                        mapOptions={{ attributionControl: { compact: true } }}
                         onfullscreen={toggleMapFullScreen}
                         bind:markers
                     ></MapWithElevationMaplibre>
