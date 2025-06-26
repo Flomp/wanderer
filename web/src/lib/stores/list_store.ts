@@ -109,7 +109,7 @@ export async function lists_create(list: List, avatar?: File) {
     }
     list.author = user.actor;
 
-    const formData = objectToFormData(list)
+    const formData = objectToFormData(list, ["expand"])
 
     if (avatar) {
         formData.append("avatar", avatar);
