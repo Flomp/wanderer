@@ -22,8 +22,21 @@ export async function GET(event: RequestEvent) {
             const { actor }: { actor: Actor } = await event.locals.pb.send(`/activitypub/actor?resource=acct:${handle}`, { method: "GET", fetch: event.fetch, });
 
             const page = event.url.searchParams.get("page") ?? "1"
-            
-            const followers: APOrderedCollectionPage = await event.locals.pb.send(`/activitypub/actor/${actor.id}/${type}?page=${page}`, { method: "GET", fetch: event.fetch, });
+
+            let followers: APOrderedCollectionPage;
+
+            // fetch followers locally to not run into auth issues with private profiles
+            if (actor.id === event.locals.user.actor) {
+                const r = await event.fetch(actor[type as "followers" | "following"]! + '?' + new URLSearchParams({ page }))
+
+                if (!r.ok) {
+                    const errorResponse = await r.json()
+                    throw new ClientResponseError({ status: r.status, response: errorResponse });
+                }
+                followers = await r.json()
+            } else {
+                followers = await event.locals.pb.send(`/activitypub/actor/${actor.id}/${type}?page=${page}`, { method: "GET", fetch: event.fetch, });
+            }
 
             const followerActors: Actor[] = []
             for (const f of followers.orderedItems ?? []) {
@@ -36,6 +49,7 @@ export async function GET(event: RequestEvent) {
                 }
 
             }
+
 
             const result: ListResult<Actor> = {
                 items: followerActors,

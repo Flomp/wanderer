@@ -373,7 +373,7 @@
             {/if}
         </div>
     </div>
-    <div id="trail-map" class:hidden={!showMap}>
+    <div id="trail-map">
         <MapWithElevationMaplibre
             trails={selectedTrail
                 ? [selectedTrail]
@@ -390,9 +390,6 @@
             showInfoPopup={true}
             showTerrain={true}
         ></MapWithElevationMaplibre>
-    </div>
-    <div class="min-w-0" class:hidden={showMap}>
-        <TrailList trails={selectedList?.expand?.trails ?? []}></TrailList>
     </div>
 
     <ConfirmModal

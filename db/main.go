@@ -1069,9 +1069,13 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		iri := e.Request.URL.Query().Get("iri")
 		follows := e.Request.URL.Query().Get("follows") == "true"
 
-		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
-		if err != nil {
-			return err
+		var userActor *core.Record
+		var err error
+		if e.Auth != nil {
+			userActor, err = e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+			if err != nil {
+				return err
+			}
 		}
 
 		var actor *core.Record
@@ -1088,7 +1092,7 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		} else if err != nil && actor != nil {
 			if err.Error() == "profile is private" {
 				// this is our own profile
-				if actor.GetString("user") == e.Auth.Id {
+				if e.Auth != nil && actor.GetString("user") == e.Auth.Id {
 					return e.JSON(http.StatusOK, map[string]any{"actor": actor, "error": nil})
 				} else {
 					return e.JSON(http.StatusNotFound, map[string]any{"error": "profile is private"})
@@ -1119,9 +1123,12 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 			return err
 		}
 
-		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
-		if err != nil {
-			return err
+		var userActor *core.Record
+		if e.Auth != nil {
+			userActor, err = e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
+			if err != nil {
+				return err
+			}
 		}
 
 		url := actor.GetString(followType)
@@ -1131,6 +1138,9 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 		}
 		collection, err := federation.FetchCollection(userActor, fmt.Sprintf("%s?page=%d", url, intPage))
 		if err != nil {
+			if err.Error() == "profile is private" {
+				return e.JSON(http.StatusNotFound, map[string]any{"error": "profile is private"})
+			}
 			return err
 		}
 		return e.JSON(http.StatusOK, collection)

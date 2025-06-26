@@ -205,7 +205,7 @@
                 onmouseenter={() => handleTrailMouseEnter(trail, i)}
                 onmouseleave={() => handleTrailMouseLeave(trail, i)}
             >
-                <TrailListItem {trail} showDescription={false}></TrailListItem>
+                <TrailListItem selected={false} hovered={false} {trail} showDescription={false}></TrailListItem>
             </div>
         {/each}
     </div>

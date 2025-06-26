@@ -25,7 +25,7 @@ export async function GET(event: RequestEvent) {
 
         const [username, domain] = splitUsername(fullUsername, env.ORIGIN)
 
-        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`username:lower='${username?.toLowerCase()}'&&isLocal=true`)
+        const actor: Actor = await event.locals.pb.collection("activitypub_actors").getFirstListItem(`preferred_username:lower='${username?.toLowerCase()}'&&isLocal=true`)
 
         const followers: ListResult<Follow> = await event.locals.pb.collection("follows").getList(intPage, 10, { sort: "-created", filter: `followee='${actor.id}'&&status='accepted'`, expand: "follower" })
 
@@ -43,7 +43,7 @@ export async function GET(event: RequestEvent) {
             ...(hasNextPage ? { next: `${id}/outbox?page=${intPage + 1}` } : {}),
             partOf: id + "/followers",
             totalItems: followers.totalItems,
-            orderedItems: followers.items.map<string>(f => f.expand!.follower.iri)
+        orderedItems: followers.items.filter(f => f.expand?.follower !== undefined).map<string>(f => f.expand!.follower.iri)
         }
 
         const headers = new Headers()

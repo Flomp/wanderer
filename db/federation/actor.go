@@ -247,8 +247,9 @@ func fetchRemoteActor(actor *core.Record, iri string, includeFollows bool) (*pub
 		req.Header.Add(k, v)
 	}
 
-	dbPrivateKey := actor.GetString("private_key")
-	if dbPrivateKey != "" {
+	if actor != nil && actor.GetString("private_key") != "" {
+		dbPrivateKey := actor.GetString("private_key")
+
 		algs := []httpsig.Algorithm{httpsig.RSA_SHA256}
 		postHeaders := []string{"(request-target)", "Date", "Digest", "Content-Type", "Host"}
 		expiresIn := 60
@@ -311,7 +312,6 @@ func FetchCollection(actor *core.Record, url string) (*pub.OrderedCollection, er
 	if len(encryptionKey) == 0 {
 		return nil, fmt.Errorf("POCKETBASE_ENCRYPTION_KEY not set")
 	}
-
 	req, _ := http.NewRequest("GET", url, nil)
 
 	headers := map[string]string{
@@ -354,8 +354,14 @@ func FetchCollection(actor *core.Record, url string) (*pub.OrderedCollection, er
 	}
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil {
 		return nil, fmt.Errorf("collection fetch failed for %s: %v", url, err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("profile is private")
+		}
+		return nil, fmt.Errorf("collection fetch %s returned: %v", url, resp.StatusCode)
 	}
 	defer resp.Body.Close()
 

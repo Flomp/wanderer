@@ -32,6 +32,9 @@ export async function POST(event: RequestEvent) {
             r.hits.forEach(h => {
                 h.thumbnail = `${origin}/api/v1/files/trails/${h.id}/${h.thumbnail}`;
                 h.domain = actor.domain
+                if(h.iri == '') {
+                    h.iri = `${origin}/api/v1/trails/${h.id}`
+                }
             })
         }
 
