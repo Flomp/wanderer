@@ -164,6 +164,7 @@
   "import": "Importar",
   "import-hint": "Selecciona o arrastra aquí archivos GPX, FIT, KML o TCX...",
   "include-description": "Incluir descripción",
+  "include-waypoints": "Incluir puntos de interés",
   "integration-description-komoot": "Sincroniza tus recorridos de Komoot con Wanderer en intervalos regulares.",
   "integration-description-strava": "Sincroniza tus recorridos de Strava con Wanderer en intervalos regulares.",
   "integration-disabled": "integración deshabilitada",
