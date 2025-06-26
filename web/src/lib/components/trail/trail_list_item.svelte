@@ -14,6 +14,7 @@
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
+    import Chip from "../base/chip.svelte";
 
     interface Props {
         trail: Trail;
@@ -33,6 +34,14 @@
               ? emptyStateTrailLight
               : emptyStateTrailDark,
     );
+
+    let expandedTags = $state(false);
+
+    function toggleExpandTags(e: MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+        expandedTags = !expandedTags;
+    }
 </script>
 
 <li
@@ -60,7 +69,7 @@
             <h4 class="font-semibold text-lg">
                 {trail.name}
             </h4>
-            <div class="flex items-center shrink-0  gap-3">
+            <div class="flex items-center shrink-0 gap-3">
                 {#if trail.public && $currentUser}
                     <span class="tooltip" data-title={$_("public")}>
                         <i class="fa fa-globe"></i>
@@ -104,6 +113,27 @@
                 />
                 {handleFromRecordWithIRI(trail)}
             </p>
+        {/if}
+        {#if trail.tags.length}
+            <div class="flex flex-wrap gap-1 mb-3 items-center">
+                {#each expandedTags ? trail.tags : trail.tags.slice(0, 2) as t}
+                    <Chip text={t} closable={false} primary={false}></Chip>
+                {/each}
+
+                {#if trail.tags.length > 2}
+                    <button
+                        onclick={toggleExpandTags}
+                        class="text-sm text-gray-500 hover:underline focus:outline-none"
+                        type="button"
+                    >
+                        {#if expandedTags}
+                            Show less
+                        {:else}
+                            +{trail.tags.length - 2} more
+                        {/if}
+                    </button>
+                {/if}
+            </div>
         {/if}
         <div class="flex flex-wrap gap-x-8">
             {#if trail.location}
