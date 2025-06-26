@@ -898,6 +898,9 @@ func onBootstrapHandler() func(se *core.BootstrapEvent) error {
 			return err
 		}
 
+		if v := os.Getenv("ORIGIN"); v != "" {
+			e.App.Settings().Meta.AppURL = v
+		}
 		if v := os.Getenv("POCKETBASE_SMTP_SENDER_ADRESS"); v != "" {
 			e.App.Settings().Meta.SenderAddress = v
 		}
