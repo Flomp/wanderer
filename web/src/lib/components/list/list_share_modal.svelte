@@ -113,6 +113,7 @@
         sharesLoading = true;
         const fetchedShares = await list_share_index(list.id!);
         list.expand = {
+            ...list.expand,
             trails: list.expand?.trails ?? [],
             list_share_via_list: fetchedShares.items,
         };
@@ -130,7 +131,7 @@
     {#snippet content()}
         <div>
             <p
-                class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500 max-w-sm"
+                class="p-4 bg-amber-100 rounded-xl mb-4 text-sm text-gray-500"
             >
                 {$_("list-share-warning")}
             </p>
