@@ -174,6 +174,9 @@ export default class MaplibreGraticule {
             "text-size": this.config.labelSize ?? 12,
             "text-anchor": longitudePosition === "top" ? "top" : "bottom",
             "text-offset": this.config.longitudeOffset ?? [0, 0],
+            "text-font": [
+              "Noto Sans Regular",
+            ],
           },
           paint: {
             "text-color": this.config.labelColor ?? "#000000",
@@ -215,6 +218,9 @@ export default class MaplibreGraticule {
             "text-size": this.config.labelSize ?? 12,
             "text-anchor": latitudePosition === "left" ? "left" : "right",
             "text-offset": this.config.latitudeOffset ?? [0, 0],
+            "text-font": [
+              "Noto Sans Regular",
+            ],
           },
           paint: {
             "text-color": this.config.labelColor ?? "#000000",
