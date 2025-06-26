@@ -422,7 +422,7 @@
                     if (name) {
                         doc.setFont("IBMPlexSans-SemiBold", "bold");
                         doc.text(name, 24, currentHeight);
-                        currentHeight += getTextHeight(name, doc, width - 32);
+                        currentHeight += getTextHeight(name, doc, width - 32) + 2;
                         doc.setFont("IBMPlexSans-Regular", "normal");
                     }
 
