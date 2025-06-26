@@ -13,7 +13,7 @@ export const load: Load = async ({ params, fetch }) => {
         return error(400, "Bad Request")
     }
     const categories = await categories_index(fetch)
-    const lists = await lists_index({ q: "", author: user?.id ?? "" }, 1, -1, fetch)
+    const lists = await lists_index({ q: "", author: user?.actor ?? "" }, 1, -1, fetch)
 
     let trail: Trail;
     if (params.id === "new") {
