@@ -20,12 +20,12 @@
     import ListSelectModal from "../list/list_select_modal.svelte";
     import TrailExportModal from "./trail_export_modal.svelte";
     import TrailShareModal from "./trail_share_modal.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         trails?: Set<Trail> | undefined;
-        handle: string;
-        mode: "overview" | "map" | "list";
-        onconfirm?: () => void;
+        mode: "overview" | "map" | "list" | "multi-select";
+        onconfirm?: (resetSelection?: boolean) => void;
     }
 
     let { trails, mode, onconfirm }: Props = $props();
@@ -37,73 +37,83 @@
 
     let lists: List[] = $state([]);
 
-    function allowEdit() : boolean {
-        return hasTrail() && !isMultiselectMode() &&
-        (           
-            trail()!.author === $currentUser?.actor ||
-            trail()!.expand?.trail_share_via_trail?.some(
-                (s) => s.permission == "edit",
-            )
-        )!;
+    function allowEdit(): boolean {
+        return (
+            hasTrail() &&
+            !isMultiselectMode() &&
+            (trail()!.expand?.author?.id === $currentUser?.actor ||
+                trail()!.expand?.trail_share_via_trail?.some(
+                    (s) => s.permission == "edit",
+                ))!
+        );
     }
 
     function dropdownItems(): DropdownItem[] {
         return [
-                ...(!isMultiselectMode()
-                    ? [
-                        mode == "overview"
-                        ? { text: $_("show-on-map"), value: "show", icon: "map" }
-                        : {
-                            text: $_("show-in-overview"),
-                            value: "show",
-                            icon: "table-columns",
-                        },
-                    ]
-                    : []
-                    ),
-                ...(!isMultiselectMode()
-                    ? [
-                        { text: $_("directions"), value: "direction", icon: "car" }
-                    ] : []
-                    ),
-                ...(canExport()
-                    ? [
-                        {
-                            text: $_("export"),
-                            value: "download",
-                            icon: "download",
-                        },
-                    ]
-                    : []),
-                ...(!isMultiselectMode()
-                    ? [
-                        { text: $_("print"), value: "print", icon: "print" },
-                    ]
-                    : []),
-                ...(!isFromCurrentUser()
-                    ? []
-                    : [{ text: $_("add-to-list"), value: "list", icon: "bookmark" }]),
-                ...(isMultiselectMode() || !isFromCurrentUser()
-                    ? []
-                    : [{ text: $_("share"), value: "share", icon: "share" }]),
-                ...(allowEdit()
-                    ? [{ text: $_("edit"), value: "edit", icon: "pen" }]
-                    : []),
-                ...(allowDelete()
-                    ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
-                    : []),
-            ];
+            ...(!isMultiselectMode()
+                ? [
+                      mode == "overview" || mode == "multi-select"
+                          ? {
+                                text: $_("show-on-map"),
+                                value: "show",
+                                icon: "map",
+                            }
+                          : {
+                                text: $_("show-in-overview"),
+                                value: "show",
+                                icon: "table-columns",
+                            },
+                  ]
+                : []),
+            ...(!isMultiselectMode()
+                ? [{ text: $_("directions"), value: "direction", icon: "car" }]
+                : []),
+            ...(canExport()
+                ? [
+                      {
+                          text: $_("export"),
+                          value: "download",
+                          icon: "download",
+                      },
+                  ]
+                : []),
+            ...(!isMultiselectMode()
+                ? [{ text: $_("print"), value: "print", icon: "print" }]
+                : []),
+            ...(!isFromCurrentUser()
+                ? []
+                : [
+                      {
+                          text: $_("add-to-list"),
+                          value: "list",
+                          icon: "bookmark",
+                      },
+                  ]),
+            ...(isMultiselectMode() || !isFromCurrentUser()
+                ? []
+                : [{ text: $_("share"), value: "share", icon: "share" }]),
+            ...(allowEdit()
+                ? [{ text: $_("edit"), value: "edit", icon: "pen" }]
+                : []),
+            ...(allowDelete()
+                ? [{ text: $_("delete"), value: "delete", icon: "trash" }]
+                : []),
+        ];
     }
 
-    function isMultiselectMode() : boolean { 
+    function isMultiselectMode(): boolean {
         return trails !== undefined && trails.size > 1;
     }
-        
-    function hasTrail() : boolean {
-        return trails !== undefined && trails.size > 0 && [...trails][0] !== undefined;
+
+    function hasTrail(): boolean {
+        return (
+            trails !== undefined &&
+            trails.size > 0 &&
+            [...trails][0] !== undefined
+        );
     }
 
-    function hasGpx() : boolean {
+    function hasGpx(): boolean {
         if (!hasTrail()) return false;
 
         for (const gTrail of trails!) {
@@ -112,29 +122,29 @@
 
         return false;
     }
-        
-    function canExport() : boolean {
+
+    function canExport(): boolean {
         return hasGpx();
     }
-        
-    function trailId() : string | undefined {
+
+    function trailId(): string | undefined {
         return trail()?.id;
     }
 
-    function getTrails() : Set<Trail> | undefined {
+    function getTrails(): Set<Trail> | undefined {
         return trails;
     }
 
-    function trail() : Trail | undefined {
+    function trail(): Trail | undefined {
         return hasTrail() ? [...trails!][0] : undefined;
     }
 
-    function isFromCurrentUser(uTrail?: Trail) : boolean {
+    function isFromCurrentUser(uTrail?: Trail): boolean {
         if (uTrail !== undefined) {
-            return uTrail.author === $currentUser?.actor;
+            return uTrail.expand?.author?.id === $currentUser?.actor;
         } else if (trails !== undefined && trails.size > 0) {
             for (const sTrail of trails) {
-                if (sTrail.author === $currentUser?.actor){
+                if (sTrail.expand?.author?.id === $currentUser?.actor) {
                     return true;
                 }
             }
@@ -152,12 +162,18 @@
     }
 
     async function handleDropdownClick(item: { text: string; value: any }) {
+        if (!trail()) {
+            return;
+        }
+
+        const handle = handleFromRecordWithIRI(trail());
+
         if (item.value == "show") {
             if (hasTrail()) {
                 goto(
-                    mode == "overview"
-                        ? `/map/trail/${trailId()}`
-                        : `/trail/view/${trailId()}`,
+                    mode == "overview" || mode == "multi-select"
+                        ? `/map/trail/${handle}/${trailId()}`
+                        : `/trail/view/${handle}/${trailId()}`,
                 );
             }
         } else if (item.value == "list") {
@@ -180,7 +196,7 @@
             }
         } else if (item.value == "print") {
             if (hasTrail()) {
-                goto(`/map/trail/${trailId()}/print`);
+                goto(`/map/trail/${handle}/${trailId()}/print`);
             }
         } else if (item.value == "share") {
             trailShareModal.openModal();
@@ -207,11 +223,14 @@
         }
     }
 
-    async function doExportTrail(exportSettings: {
-        fileFormat: "gpx" | "json";
-        photos: boolean;
-        summitLog: boolean;
-    }, eTrail: Trail) {
+    async function doExportTrail(
+        exportSettings: {
+            fileFormat: "gpx" | "json";
+            photos: boolean;
+            summitLog: boolean;
+        },
+        eTrail: Trail,
+    ) {
         try {
             if (eTrail !== undefined) {
                 let fileData: string = await trail2gpx(eTrail, $currentUser);
@@ -247,12 +266,15 @@
                                 (response) => response.blob(),
                             );
                             const photoData = new File([photoBlob], photo);
-                            photoFolder?.file(photo, photoData, { base64: true });
+                            photoFolder?.file(photo, photoData, {
+                                base64: true,
+                            });
                         }
                     }
                     if (exportSettings.summitLog) {
                         let summitLogString = "";
-                        for (const summitLog of eTrail.expand?.summit_logs_via_trail ?? []) {
+                        for (const summitLog of eTrail.expand
+                            ?.summit_logs_via_trail ?? []) {
                             summitLogString += `${summitLog.date},${summitLog.text}\n`;
                         }
                         zip.file(
@@ -280,13 +302,13 @@
                 await doDeleteTrail(dTrail);
             }
 
-            onconfirm?.();
+            onconfirm?.(true);
         }
     }
 
     async function doDeleteTrail(dTrail: Trail) {
         if (dTrail === undefined) return;
-        
+
         if (!allowDeleteTrail(dTrail)) return;
 
         await trails_delete(dTrail);
@@ -314,14 +336,17 @@
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: multiple ? `${$_("removed-trails-from")} "${list.name}"` : `${$_("removed-trail-from")} "${list.name}"`,
+                    text: multiple
+                        ? `${$_("removed-trails-from")} "${list.name}"`
+                        : `${$_("removed-trail-from")} "${list.name}"`,
                 });
-            }
-            else {
+            } else {
                 show_toast({
                     type: "success",
                     icon: "check",
-                    text: multiple ? `${$_("added-trails-to")} "${list.name}"` : `${$_("added-trail-to")} "${list.name}"`,
+                    text: multiple
+                        ? `${$_("added-trails-to")} "${list.name}"`
+                        : `${$_("added-trail-to")} "${list.name}"`,
                 });
             }
         } catch (e) {
@@ -335,7 +360,10 @@
         }
     }
 
-    async function doHandleListSelection(list: List, lTrail: Trail): Promise<boolean> {        
+    async function doHandleListSelection(
+        list: List,
+        lTrail: Trail,
+    ): Promise<boolean> {
         if (list.trails?.includes(lTrail.id!)) {
             if (listContainsAllTrails(list)) {
                 await lists_remove_trail(list, lTrail);
@@ -347,7 +375,7 @@
 
         return false;
     }
-    function listContainsAllTrails(list: List) : boolean {
+    function listContainsAllTrails(list: List): boolean {
         if (trails === undefined) {
             return false;
         } else if (list.trails !== undefined) {
@@ -364,13 +392,26 @@
 
 <Dropdown items={dropdownItems()} onchange={(item) => handleDropdownClick(item)}
     >{#snippet children({ toggleMenu: openDropdown })}
-        <button
-            aria-label="Open dropdown"
-            class=" btn-primary !rounded-full h-12 w-12"
-            onclick={openDropdown}
-        >
-            <i class="fa fa-ellipsis-vertical"></i>
-        </button>
+        {#if mode == "multi-select"}
+            <button
+                aria-label="Open dropdown"
+                class="btn-primary flex-shrink-0 !font-medium"
+                onclick={openDropdown}
+            >
+                <span
+                    >{trails?.size}
+                    {$_("selected")} <i class="fa fa-caret-down ml-1"></i></span
+                >
+            </button>
+        {:else}
+            <button
+                aria-label="Open dropdown"
+                class=" btn-primary !rounded-full h-12 w-12"
+                onclick={openDropdown}
+            >
+                <i class="fa fa-ellipsis-vertical"></i>
+            </button>
+        {/if}
     {/snippet}
 </Dropdown>
 
@@ -380,7 +421,7 @@
     onconfirm={deleteTrails}
 ></ConfirmModal>
 <ListSelectModal
-    lists={lists}
+    {lists}
     trails={getTrails()}
     bind:this={listSelectModal}
     onchange={(list) => handleListSelection(list)}
@@ -389,4 +430,8 @@
     bind:this={trailExportModal}
     onexport={(settings) => exportTrails(settings)}
 ></TrailExportModal>
-<TrailShareModal trail={trail()} onsave={handleShareUpdate} bind:this={trailShareModal}></TrailShareModal>
+<TrailShareModal
+    trail={trail()}
+    onsave={handleShareUpdate}
+    bind:this={trailShareModal}
+></TrailShareModal>

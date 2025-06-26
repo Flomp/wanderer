@@ -24,7 +24,7 @@
         onTrailSelect?: () => void;
     }
 
-    let { 
+    let {
         trail,
         showDescription = true,
         selected = false,
@@ -49,7 +49,7 @@
         onTrailSelect?.();
         hovered = true;
     }
-    
+
     let expandedTags = $state(false);
 
     function toggleExpandTags(e: MouseEvent) {
@@ -79,7 +79,7 @@
             />
         {/if}
     </div>
-    <div class="min-w-0 basis-full">
+    <div class="min-w-0 basis-full relative">
         <div class="flex items-center justify-between">
             <h4 class="font-semibold text-lg">
                 {trail.name}
@@ -154,51 +154,7 @@
             {#if trail.location}
                 <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
             {/if}
-            </div>
-        <div class="flex relative basis-full">
-            {#if hovered || selected}
-            <div class="flex absolute top-1 right-1 w-8 h-8 rounded-full items-center justify-center bg-background text-content">
-                <input
-                    id="trail-selected"
-                    type="checkbox"
-                    class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-                    bind:checked={selected}
-                    onclick={(e) => handleInputClick(e)}
-                />
-            </div>
-            {/if}
-        <div class="min-w-0 basis-full">
-            <div class="flex items-center gap-4">
-                <h4 class="font-semibold text-lg">
-                    {trail.name}
-                </h4>
-                {#if trail.public && $currentUser}
-                    <span class="tooltip ml-3" data-title={$_("public")}>
-                        <i class="fa fa-globe"></i>
-                    </span>
-                {/if}
-                {#if trail.expand?.trail_share_via_trail?.length}
-                    <ShareInfo type="trail" subject={trail}></ShareInfo>
-                {/if}
-            </div>
-            {#if trail.date}
-                <p class="text-xs text-gray-500 mb-3">
-                    {new Date(trail.date).toLocaleDateString(undefined, {
-                        month: "long",
-                        day: "2-digit",
-                        year: "numeric",
-                        timeZone: "UTC",
-                    })}
-                </p>
-            {/if}
-            <div class="flex flex-wrap gap-x-8">
-                {#if trail.location}
-                    <h5><i class="fa fa-location-dot mr-3"></i>{trail.location}</h5>
-                {/if}
-                <h5>
-                    <i class="fa fa-gauge mr-3"></i>{$_(trail.difficulty ?? "?")}
-                </h5>
-            </div>
+        </div>
 
         <div class="flex flex-wrap mt-1 gap-x-4 gap-y-2 text-sm text-gray-500">
             <span
@@ -224,10 +180,23 @@
         </div>
         {#if showDescription}
             <p
-                class="mt-3 text-sm whitespace-nowrap min-w-0 max-w-full overflow-hidden text-ellipsis"
+                class="mt-3 text-sm whitespace-nowrap min-w-0 max-w-full overflow-hidden text-ellipsis basis-full"
             >
                 {formatHTMLAsText(trail.description ?? "")}
             </p>
+        {/if}
+        {#if hovered || selected}
+            <div
+                class="flex absolute bottom-0 right-0 w-8 h-8 rounded-full items-center justify-center bg-background text-content"
+            >
+                <input
+                    id="trail-selected"
+                    type="checkbox"
+                    class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                    bind:checked={selected}
+                    onclick={(e) => handleInputClick(e)}
+                />
+            </div>
         {/if}
     </div>
 </li>

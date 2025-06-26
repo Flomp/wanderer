@@ -191,7 +191,12 @@
         else hoveredTrail = undefined;
     }
 
-    function handleTrailsEditDone() {
+    function handleTrailsEditDone(resetSelection: boolean = false) {
+        if (resetSelection) {
+            selection?.clear();
+            hoveredTrail = undefined;
+        }
+
         setTimeout(() => {
             onupdate?.(filter, selection);
         }, 500);
@@ -215,10 +220,10 @@
             ></Pagination>
         </div>
         {#if selection !== undefined && selection.size > 0}
-            <div class="flex relative top-1">
+            <div class="flex relative flex-shrink-0">
                 <TrailDropdown
                     trails={selection}
-                    mode={"overview"}
+                    mode={"multi-select"}
                     onconfirm={handleTrailsEditDone}
                 />
             </div>

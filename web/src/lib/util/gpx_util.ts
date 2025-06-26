@@ -15,6 +15,7 @@ import type { AuthRecord } from "pocketbase";
 import * as xmldom from 'xmldom';
 import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 import { trails_show } from "$lib/stores/trail_store";
+import { handleFromRecordWithIRI } from "./activitypub_util";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -77,7 +78,7 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
     if (!trail.expand?.gpx_data) {
         // no gpx_data -> empty trail?
         // or just not expanded? -> expand now
-        const response = await trails_show(trail.id!, true);
+        const response = await trails_show(trail.id!, handleFromRecordWithIRI(trail), true);
 
         if (!response.expand?.gpx_data) {
             throw Error("Trail has no GPX data")

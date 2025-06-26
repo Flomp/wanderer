@@ -11,8 +11,4 @@ run.sh
 build*.sh
 start.*
 
-<<<<<<< HEAD
 data*/
-=======
-data*/
->>>>>>> origin/main

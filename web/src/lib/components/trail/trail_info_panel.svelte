@@ -404,7 +404,6 @@
                         <TrailDropdown
                             trails={new Set<Trail>([trail])}
                             {mode}
-                            {handle}
                         ></TrailDropdown>
                     </div>
                 {/if}
