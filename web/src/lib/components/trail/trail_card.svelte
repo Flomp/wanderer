@@ -13,6 +13,7 @@
     import { _ } from "svelte-i18n";
     import type { MouseEventHandler } from "svelte/elements";
     import Chip from "../base/chip.svelte";
+    import { fade, slide } from "svelte/transition";
 
     interface Props {
         trail: Trail;
@@ -33,7 +34,7 @@
             ? getFileURL(
                   trail,
                   trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0],
-                  "600x0"
+                  "600x0",
               )
             : $theme === "light"
               ? emptyStateTrailLight
@@ -45,11 +46,11 @@
     );
 
     // expand and collapse the tags
-    let tags = trail.expand?.tags ?? [];
-    // svelte-ignore non_reactive_update
-    let expandedTags = false;
+    let expandedTags = $state(false);
 
-    function toggleExpandTags() {
+    function toggleExpandTags(e: MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
         expandedTags = !expandedTags;
     }
 </script>
@@ -142,35 +143,31 @@
                             `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.preferred_username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                    {trail.expand.author.preferred_username}{trail.expand.author.isLocal
+                    {trail.expand.author.preferred_username}{trail.expand.author
+                        .isLocal
                         ? ""
                         : "@" + trail.expand.author.domain}
                 </p>
             {/if}
-            {#if trail.expand?.tags?.length}
+            {#if trail.tags.length}
                 <div class="flex flex-wrap gap-1 mb-3 items-center">
-                    {#each (expandedTags ? tags : tags.slice(0, 2)) as t}
-                        <Chip text={t.name} closable={false} primary={false}></Chip>
+                    {#each expandedTags ? trail.tags : trail.tags.slice(0, 2) as t}
+                        <Chip text={t} closable={false} primary={false}></Chip>
                     {/each}
 
-                    {#if tags.length > 2}
+                    {#if trail.tags.length > 2}
                         <button
                             onclick={toggleExpandTags}
-                            class="text-sm text-blue-600 hover:underline focus:outline-none"
+                            class="text-sm text-gray-500 hover:underline focus:outline-none"
+                            type="button"
                         >
                             {#if expandedTags}
-                                Show less
+                                {$_('show-less')}
                             {:else}
-                                +{tags.length - 2} more
+                                +{trail.tags.length - 2} {$_('more')}
                             {/if}
                         </button>
                     {/if}
-                </div>
-            {:else if trail.tags?.length}
-                <div class="flex flex-wrap gap-1 mb-3">
-                    {#each trail.tags ?? [] as t}
-                        <Chip text={t} closable={false} primary={false}></Chip>
-                    {/each}
                 </div>
             {/if}
             <div class="flex gap-x-4">
