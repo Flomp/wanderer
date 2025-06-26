@@ -898,6 +898,9 @@ func onBootstrapHandler() func(se *core.BootstrapEvent) error {
 			return err
 		}
 
+		if e.App.Settings().Meta.AppName == "Acme" {
+			e.App.Settings().Meta.AppName = "wanderer"
+		}
 		if v := os.Getenv("ORIGIN"); v != "" {
 			e.App.Settings().Meta.AppURL = v
 		}
