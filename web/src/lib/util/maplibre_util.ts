@@ -10,6 +10,7 @@ import { get } from "svelte/store";
 import { getFileURL } from "./file_util";
 import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
 import { icons } from "./icon_util";
+import { handleFromRecordWithIRI } from "./activitypub_util";
 
 export class FontawesomeMarker extends M.Marker {
     constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
@@ -167,14 +168,14 @@ export function createEditTrailMapPopup(lnglat: M.LngLat, onCreateWaypointClick:
 
 export function createPopupFromTrail(trail: Trail) {
     const thumbnail = trail.photos.length
-        ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+        ? getFileURL(trail, trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0])
         : get(theme) === "light"
             ? emptyStateTrailLight
             : emptyStateTrailDark;
     const popup = new M.Popup({ maxWidth: "420px" });
     // Create a container element for the popup content
     const linkElement = document.createElement("a");
-    linkElement.href = `/map/trail/${trail.id}`; // Set href safely
+    linkElement.href = `/map/trail/${handleFromRecordWithIRI(trail)}/${trail.id}`; // Set href safely
     linkElement.setAttribute("data-sveltekit-preload-data", "off");
 
     // Create a list item element

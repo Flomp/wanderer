@@ -1,12 +1,16 @@
-import type { UserAnonymous } from "./user";
+import type { Actor } from "./activitypub/actor";
 
 enum NotificationType {
-    trailCreate = "trail_create",
     trailShare = "trail_share",
-    listCreate = "list_create",
+    trailLike = "trail_like",
     listShare = "list_share",
     newFollower = "new_follower",
-    trailComment = "trail_comment"
+    trailComment = "trail_comment",
+    summitLogCreate = "summit_log_create",
+    commentMention = "comment_mention",
+    trailMention = "trail_mention",
+    summitLogMention = "summit_log_mention",
+
 };
 
 interface Notification {
@@ -18,9 +22,9 @@ interface Notification {
     author: string
     created: string;
     expand: {
-        recipient: UserAnonymous;
-        author: UserAnonymous;
+        recipient: Actor;
+        author: Actor;
     }
 }
 
-export { type Notification, NotificationType }
+export { NotificationType, type Notification };

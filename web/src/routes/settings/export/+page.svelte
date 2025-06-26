@@ -107,7 +107,7 @@
                 }
                 if (exportSettings.summitLog) {
                     let summitLogString = "";
-                    for (const summitLog of trail.expand?.summit_logs ?? []) {
+                    for (const summitLog of trail.expand?.summit_logs_via_trail ?? []) {
                         summitLogString += `${summitLog.date},${summitLog.text}\n`;
                     }
                     trailFolder?.file(

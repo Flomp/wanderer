@@ -50,7 +50,7 @@
 
 <Modal
     id="komoot-settings-modal"
-    size="max-w-lg"
+    size="md:max-w-lg"
     title={"komoot " + $_("settings")}
     bind:this={modal}
 >

@@ -3,6 +3,7 @@ FROM alpine:3.16
 WORKDIR /
 
 COPY migrations ./migrations
+COPY templates ./templates
 
 ARG TARGETARCH
 RUN echo ${TARGETARCH}

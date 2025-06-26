@@ -7,10 +7,13 @@
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import ShareInfo from "../share_info.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
+    import { currentUser } from "$lib/stores/user_store";
 
     interface Props {
         list: List;
@@ -19,27 +22,9 @@
 
     let { list, active = false }: Props = $props();
 
-    let cumulativeDistance = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.distance!,
-        0,
-    ));
-
-    let cumulativeElevationGain = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.elevation_gain!,
-        0,
-    ));
-
-    let cumulativeElevationLoss = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.elevation_loss!,
-        0,
-    ));
-
-    let cumulativeDuration = $derived(list.expand?.trails?.reduce(
-        (s, b) => s + b.duration!,
-        0,
-    ));
-
-    let listIsShared = $derived((list.expand?.list_share_via_list?.length ?? 0) > 0);
+    let listIsShared = $derived(
+        (list.expand?.list_share_via_list?.length ?? 0) > 0,
+    );
 </script>
 
 <div
@@ -58,16 +43,21 @@
 
     <div class="self-start min-w-0 basis-full transition-transform">
         <div class="flex items-center gap-3">
-            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis">
+            <h5 class="text-xl font-semibold overflow-hidden overflow-ellipsis shrink-0 max-w-3/4 whitespace-nowrap">
                 {list.name}
             </h5>
-            {#if list.public}
-                <span class="tooltip" data-title={$_("public")}>
-                    <i class="fa fa-globe"></i>
-                </span>
-            {/if}
-            {#if listIsShared}
-                <ShareInfo type="list" subject={list}></ShareInfo>
+            <div class="basis-full"></div>
+            {#if $currentUser}
+                {#if list.public}
+                    <span class="tooltip" data-title={$_("public")}>
+                        <i class="fa fa-globe"></i>
+                    </span>
+                {/if}
+                {#if list.expand?.list_share_via_list?.length}
+                    <span class="tooltip" data-title={$_("shared")}>
+                        <i class="fa fa-share-nodes"></i>
+                    </span>
+                {/if}
             {/if}
         </div>
         {#if list.expand?.author}
@@ -75,14 +65,11 @@
                 {$_("by")}
                 <img
                     class="rounded-full w-5 aspect-square mx-1 inline"
-                    src={getFileURL(
-                        list.expand.author,
-                        list.expand.author.avatar,
-                    ) ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.username}&backgroundType=gradientLinear`}
+                    src={list.expand.author.icon ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${list.expand.author.preferred_username}&backgroundType=gradientLinear`}
                     alt="avatar"
                 />
-                {list.expand?.author.username}
+                {handleFromRecordWithIRI(list)}
             </p>
         {/if}
         <div
@@ -90,27 +77,27 @@
         >
             <span
                 ><i class="fa fa-left-right mr-2"></i>{formatDistance(
-                    cumulativeDistance,
+                    list.distance,
                 )}</span
             >
             <span
                 ><i class="fa fa-clock mr-2"></i>{formatTimeHHMM(
-                    cumulativeDuration,
+                    list.duration,
                 )}</span
             >
             <span
                 ><i class="fa fa-arrow-trend-up mr-2"></i>{formatElevation(
-                    cumulativeElevationGain,
+                    list.elevation_gain,
                 )}</span
             >
             <span
                 ><i class="fa fa-arrow-trend-down mr-2"></i>{formatElevation(
-                    cumulativeElevationLoss,
+                    list.elevation_loss,
                 )}</span
             >
         </div>
         <p class="text-sm text-gray-500 mb-2">
-            {list.expand?.trails?.length ?? 0}
+            {list.trails?.length ?? 0}
             {$_("trail", {
                 values: { n: list.expand?.trails?.length ?? 0 },
             })}
@@ -120,7 +107,11 @@
                 ? ''
                 : 'max-h-24 overflow-hidden text-ellipsis'}"
         >
-            {!active ? list.description?.substring(0, 100) : list.description}
+            {formatHTMLAsText(
+                !active
+                    ? list.description?.substring(0, 100)
+                    : list.description,
+            )}
             {#if (list.description?.length ?? 0) > 100 && !active}
                 ...
             {/if}

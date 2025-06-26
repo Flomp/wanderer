@@ -30,7 +30,11 @@
 
     let thumbnail = $derived(
         trail.photos.length
-            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            ? getFileURL(
+                  trail,
+                  trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0],
+                  "600x0"
+              )
             : $theme === "light"
               ? emptyStateTrailLight
               : emptyStateTrailDark,
@@ -80,6 +84,20 @@
             />
         {/if}
     </div>
+    {#if $currentUser && trail.like_count > 0}
+        <div
+            class="flex absolute items-center justify-center top-4 left-4 bg-background w-8 h-8 rounded-full"
+        >
+            <span class="tooltip" data-title={$_("likes")}>
+                <i class="fa fa-heart"></i>
+            </span>
+            <div
+                class="absolute pointer-events-none left-5 -top-1 text-xs rounded-full bg-menu-background px-1 text-center"
+            >
+                {trail.like_count}
+            </div>
+        </div>
+    {/if}
     {#if (trail.public || trailIsShared) && $currentUser}
         <div
             class="flex absolute top-4 right-4 {trail.public && trailIsShared
@@ -120,14 +138,13 @@
                     {$_("by")}
                     <img
                         class="rounded-full w-5 aspect-square mx-1 inline"
-                        src={getFileURL(
-                            trail.expand.author,
-                            trail.expand.author.avatar,
-                        ) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                        src={trail.expand.author.icon ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.preferred_username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                    {trail.expand.author.username}
+                    {trail.expand.author.preferred_username}{trail.expand.author.isLocal
+                        ? ""
+                        : "@" + trail.expand.author.domain}
                 </p>
             {/if}
             {#if trail.expand?.tags?.length}

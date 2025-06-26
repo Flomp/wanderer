@@ -3,11 +3,12 @@
 
 db/pocketbase*
 
-search/meilisearch
+search/meilisearch*
 search/data.ms*
 search/dumps
 
 run.sh
 build*.sh
+start.*
 
-data/
+data*/

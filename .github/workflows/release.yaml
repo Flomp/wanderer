@@ -86,7 +86,7 @@ jobs:
           # docker buildx build db/ --no-cache -t flomp/wanderer-db:$VERSION -t flomp/wanderer-db:latest --platform=linux/amd64,linux/arm64 --push
 
           # Build web image
-          export PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de
+          export PUBLIC_VALHALLA_URL=https://valhalla.openstreetmap.de
           cd web
           npm ci && npm run build
           cd ..

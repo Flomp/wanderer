@@ -21,7 +21,7 @@ export async function PUT(event: RequestEvent) {
 
         return json(r);
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }
 

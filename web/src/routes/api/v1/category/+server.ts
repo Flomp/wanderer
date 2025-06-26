@@ -7,7 +7,7 @@ export async function GET(event: RequestEvent) {
         const r = await list<Category>(event, Collection.categories);
         return json(r)
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 
 }

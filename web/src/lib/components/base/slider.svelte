@@ -44,13 +44,16 @@
     });
 
     export function set(value: number) {
-        sliderContainer.noUiSlider.set(value)
+        sliderContainer.noUiSlider.set(value);
     }
 </script>
 
 <div class="my-4" id="slider" bind:this={sliderContainer}></div>
 
-<style>
+<style lang="postcss">
+    @reference "tailwindcss";
+    @reference "../../../css/app.css";
+
     :global(.noUi-target) {
         @apply border border-input-border shadow-none;
     }

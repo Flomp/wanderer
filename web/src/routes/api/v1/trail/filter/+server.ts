@@ -14,9 +14,9 @@ export async function GET(event: RequestEvent) {
         });
     }
     try {
-        const r = await event.locals.pb.collection('trails_filter').getOne<TrailFilterValues>(event.locals.pb.authStore.record!.id)
+        const r = await event.locals.pb.collection('trails_filter').getOne<TrailFilterValues>(event.locals.user.actor)
         return json(r)
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 }

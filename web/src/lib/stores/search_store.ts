@@ -1,7 +1,9 @@
 import { env } from "$env/dynamic/public";
-import { defaultTrailSearchAttributes } from "$lib/models/trail";
+import type { Actor } from "$lib/models/activitypub/actor";
+import { defaultTrailSearchAttributes, type TrailSearchResult } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits, MultiSearchParams, MultiSearchResponse, MultiSearchResult, SearchParams, SearchResponse } from "meilisearch";
+import type { ListResult } from "pocketbase";
 
 export type LocationSearchResult = {
     name: string;
@@ -12,37 +14,24 @@ export type LocationSearchResult = {
     type: string;
 }
 
-export type TrailSearchResult = {
-    id: string;
-    _geo: {
-        lat: number,
-        lon: number
-    }
-    author: string;
-    category: string;
-    completed: boolean;
-    created: number;
-    date: number;
-    description: string;
-    difficulty: "easy" | "moderate" | "difficult"
-    distance: number;
-    duration: number
-    elevation_gain: number;
-    elevation_loss: number
-    location: string;
-    name: string;
-    public: boolean;
-    polyline?: string;
-}
-
 export type ListSearchResult = {
     id: string;
     author: string;
+    author_name: string;
+    author_avatar: string;
+    avatar?: string;
     created: number;
     description: string;
     name: string;
+    elevation_gain: number;
+    elevation_loss: number;
+    distance: number,
+    duration: number,
+    domain?: string,
     public: boolean;
-    trails: string[]
+    trails: number
+    shares?: string[];
+    iri?: string;
 }
 
 type NominatimResponse = {
@@ -202,4 +191,21 @@ export async function searchMulti(options: MultiSearchParams): Promise<MultiSear
 
 
     return response.results
+}
+
+export async function searchActors(q: string, includeSelf: boolean = true): Promise<Actor[]> {
+    try {
+        const r = await fetch(`/api/v1/search/actor?q=${q}&includeSelf=${includeSelf}`,)
+
+        if (!r.ok) {
+            return []
+        }
+        const response: ListResult<Actor> = await r.json()
+
+        return response.items
+    } catch (e) {
+        console.log(e);
+
+        return []
+    }
 }
