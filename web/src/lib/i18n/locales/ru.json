@@ -164,6 +164,7 @@
   "import": "Импорт",
   "import-hint": "Перетащите GPX, FIT, KML или TCX файлы сюда...",
   "include-description": "Добавить описание",
+  "include-waypoints": "Include waypoints",
   "integration-description-komoot": "Синхронизирует ваши данные с Komoot.",
   "integration-description-strava": "Синхронизирует ваши данные со Strava.",
   "integration-disabled": "интеграция отключена",
