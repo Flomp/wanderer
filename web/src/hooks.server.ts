@@ -50,8 +50,6 @@ function isFormContentType(request: Request) {
 
 
 const auth: Handle = async ({ event, resolve }) => {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
-
   const pb = new PocketBase(envPub.PUBLIC_POCKETBASE_URL)
   // load the store data from the request cookie string
   pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '')
