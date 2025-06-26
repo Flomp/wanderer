@@ -164,6 +164,7 @@
   "import": "导入",
   "import-hint": "在此选择或拖拽GPX、FIT、KML或TCX文件...",
   "include-description": "包含描述",
+  "include-waypoints": "包括航点",
   "integration-description-komoot": "Syncs your komoot tours with wanderer in regular intervals.",
   "integration-description-strava": "Syncs your strava routes & activities with wanderer in regular intervals.",
   "integration-disabled": "integration disabled",

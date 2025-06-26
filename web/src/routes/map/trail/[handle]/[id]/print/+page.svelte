@@ -81,6 +81,7 @@
     let printLoading: boolean = $state(false);
 
     let includeDescription: boolean = $state(false);
+    let includeWaypoints: boolean = $state(false);
 
     onMount(() => {
         let qrcode = new QrCodeWithLogo({
@@ -91,6 +92,30 @@
             },
         });
     });
+
+    function faUnicode(name: string) {
+        var testI = document.createElement('i');
+        var char;
+
+        testI.className = 'fa fa-' + name;
+        document.body.appendChild(testI);
+
+        char = window.getComputedStyle( testI, ':before' )
+                .content.replace(/'|"/g, '');
+
+        testI.remove();
+
+        return char.charCodeAt(0);
+    }
+
+    function getTextHeight(text: string, doc: jsPDF, width: number) {
+        let numLines = doc.splitTextToSize(text, width).length;
+
+        return (numLines * doc.getFontSize() * doc.getLineHeightFactor() -
+                doc.getFontSize() * (doc.getLineHeightFactor() - 1)) /
+            doc.internal.scaleFactor;
+
+    }
 
     async function print() {
         if (!map) {
@@ -328,25 +353,17 @@
             doc.setFont("IBMPlexSans-Regular", "normal");
             doc.text($trail.location || "-", 12, currentHeight);
 
+            // End of page
+            currentHeight = height;
+
             // Logo
             const logo = new Image();
             logo.src = "/imgs/logo_text_dark.png";
             const logoRatio = 64 / 212;
             const logoWidth = 32;
             const logoHeight = logoWidth * logoRatio;
-            doc.addImage(
-                logo,
-                width - 8 - logoWidth,
-                height - 4 - logoHeight,
-                logoWidth,
-                logoHeight,
-            );
 
-            if (includeDescription && $trail.description) {
-                doc.addPage();
-                doc.text(formatHTMLAsText($trail.description), 16, 16, {
-                    maxWidth: width - 32,
-                });
+            function addLogo() {
                 doc.addImage(
                     logo,
                     width - 8 - logoWidth,
@@ -355,6 +372,68 @@
                     logoHeight,
                 );
             }
+
+            function newPage() {
+                addLogo();
+                doc.addPage();
+                currentHeight = 16;
+            }
+
+            if (includeDescription && $trail.description) {
+                let textHeight = getTextHeight($trail.description, doc, width - 32)
+                if (currentHeight + textHeight + 8 > height) {
+                    newPage();
+                }
+                doc.text(formatHTMLAsText($trail.description), 16, currentHeight, {
+                    maxWidth: width - 32,
+                });
+                currentHeight += getTextHeight($trail.description, doc, width - 32) + 8;
+            }
+
+            if (includeWaypoints && $trail.expand?.waypoints) {
+                const header = $_("waypoints", { values: { n: 2 } })
+                let textHeight = getTextHeight(header, doc, width - 32)
+                if (currentHeight + textHeight + 8 > height) {
+                    newPage();
+                }
+                doc.setFont("IBMPlexSans-SemiBold", "bold");
+                doc.text(header, 16, currentHeight);
+                currentHeight += textHeight + 8;
+                doc.setFont("IBMPlexSans-Regular", "normal");
+
+                ($trail.expand.waypoints || []).forEach(waypoint => {
+                    let description = waypoint.description || "";
+                    let name = waypoint.name || "";
+
+                    let content = description;
+                    if (name) {
+                        content = `${name}\n${description}`;
+                    }
+
+                    let textHeight = getTextHeight(content, doc, width - 32)
+                    if (currentHeight + textHeight + 16 > height) {
+                        newPage();
+                    }
+
+                    doc.setFont("fa-solid-900", "normal");
+                    doc.text(String.fromCharCode(faUnicode(waypoint.icon || "circle")), 16, currentHeight);
+                    doc.setFont("IBMPlexSans-Regular", "normal");
+
+                    if (name) {
+                        doc.setFont("IBMPlexSans-SemiBold", "bold");
+                        doc.text(name, 24, currentHeight);
+                        currentHeight += getTextHeight(name, doc, width - 32) + 2;
+                        doc.setFont("IBMPlexSans-Regular", "normal");
+                    }
+
+                    doc.text(description, 24, currentHeight, {
+                        maxWidth: width - 32 - 8
+                    });
+                    currentHeight += textHeight + 8;
+                });
+            }
+
+            addLogo();
 
             doc.save($trail.name + ".pdf");
             printLoading = false;
@@ -502,6 +581,17 @@
             />
             <label for="description-checkbox" class="ms-2 text-sm"
                 >{$_("include-description")}</label
+            >
+        </div>
+        <div>
+            <input
+                id="waypoints-checkbox"
+                type="checkbox"
+                bind:checked={includeWaypoints}
+                class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+            />
+            <label for="waypoints-checkbox" class="ms-2 text-sm"
+                >{$_("include-waypoints")}</label
             >
         </div>
 
