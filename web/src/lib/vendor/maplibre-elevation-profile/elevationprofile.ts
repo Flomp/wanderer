@@ -959,7 +959,7 @@ export class ElevationProfile {
 
                 if (time) {
                     const timePrevious = this.times[i - 1];
-                    const timeDelta = (time.getTime() - timePrevious.getTime()) / (1000 * 60);
+                    const timeDelta = (time.getTime() - timePrevious.getTime()) / (1000);
                     cumulatedTime += timeDelta;
                     this.cumulatedTime.push(cumulatedTime)
                 }

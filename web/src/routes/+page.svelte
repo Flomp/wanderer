@@ -8,13 +8,16 @@
     import CategoryCard from "$lib/components/category_card.svelte";
     import Scene from "$lib/components/scene.svelte";
     import TrailCard from "$lib/components/trail/trail_card.svelte";
-    import { defaultTrailSearchAttributes } from "$lib/models/trail.js";
+    import {
+        defaultTrailSearchAttributes,
+        type TrailSearchResult,
+    } from "$lib/models/trail.js";
     import { categories } from "$lib/stores/category_store";
     import {
+        searchActors,
         searchMulti,
         type ListSearchResult,
         type LocationSearchResult,
-        type TrailSearchResult,
     } from "$lib/stores/search_store.js";
     import { theme } from "$lib/stores/theme_store";
     import { currentUser } from "$lib/stores/user_store";
@@ -27,54 +30,69 @@
     let searchDropdownItems: SearchItem[] = $state([]);
 
     async function search(q: string) {
-        const r = await searchMulti({
-            queries: [
-                {
-                    indexUid: "trails",
-                    attributesToRetrieve: defaultTrailSearchAttributes,
-                    q: q,
-                    limit: 3,
-                },
-                {
-                    indexUid: "lists",
-                    q: q,
-                    limit: 3,
-                },
-                {
-                    indexUid: "locations",
-                    q: q,
-                    limit: 5,
-                },
-            ],
-        });
+        if (q.startsWith("@")) {
+            const actors = await searchActors(q);
+            searchDropdownItems = actors.map((a) => ({
+                text: a.username,
+                description: `@${a.preferred_username}${a.isLocal ? "" : "@" + a.domain}`,
+                value: a,
+                icon:
+                    a.icon ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${a.preferred_username}&backgroundType=gradientLinear`,
+            }));
+        } else {
+            const r = await searchMulti({
+                queries: [
+                    {
+                        indexUid: "trails",
+                        attributesToRetrieve: defaultTrailSearchAttributes,
+                        q: q,
+                        limit: 3,
+                    },
+                    {
+                        indexUid: "lists",
+                        q: q,
+                        limit: 3,
+                    },
+                    {
+                        indexUid: "locations",
+                        q: q,
+                        limit: 5,
+                    },
+                ],
+            });
+            const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
+                text: t.name,
+                description: `Trail ${t.location.length ? ", " + t.location : ""}`,
+                value: `@${t.author_name}${t.domain ? `@${t.domain}` : ""}/${t.id}`,
+                icon: "route",
+            }));
+            const listItems = r[1].hits.map((t: ListSearchResult) => ({
+                text: t.name,
+                description: `List, ${t.trails} ${$_("trail", { values: { n: t.trails } })}`,
+                value: `@${t.author_name}${t.domain ? `@${t.domain}` : ""}/${t.id}`,
+                icon: "layer-group",
+            }));
+            const cityItems = r[2].hits.map((c: LocationSearchResult) => ({
+                text: c.name,
+                description: c.description,
+                value: c,
+                icon: getIconForLocation(c),
+            }));
 
-        const trailItems = r[0].hits.map((t: TrailSearchResult) => ({
-            text: t.name,
-            description: `Trail ${t.location.length ? ", " + t.location : ""}`,
-            value: t.id,
-            icon: "route",
-        }));
-        const listItems = r[1].hits.map((t: ListSearchResult) => ({
-            text: t.name,
-            description: `List, ${t.trails.length} ${$_("trail", { values: { n: t.trails.length } })}`,
-            value: t.id,
-            icon: "layer-group",
-        }));
-        const cityItems = r[2].hits.map((c: LocationSearchResult) => ({
-            text: c.name,
-            description: c.description,
-            value: c,
-            icon: getIconForLocation(c),
-        }));
-
-        searchDropdownItems = [...trailItems, ...listItems, ...cityItems];
+            searchDropdownItems = [...trailItems, ...listItems, ...cityItems];
+        }
     }
 
     function handleSearchClick(item: SearchItem) {
         if (item.icon == "route") {
             goto(`/trail/view/${item.value}`);
         } else if (item.icon == "layer-group") {
-            goto(`/lists?list=${item.value}`);
+            goto(`/lists/${item.value}`);
+        } else if (item.value.preferred_username) {
+            goto(
+                `/profile/@${item.value.preferred_username}${item.value.isLocal ? "" : "@" + item.value.domain}`,
+            );
         } else {
             goto(`/map/?lat=${item.value.lat}&lon=${item.value.lon}`);
         }
@@ -102,6 +120,7 @@
             onupdate={search}
             onclick={handleSearchClick}
             large={true}
+            clearAfterSelect={false}
             placeholder="{$_('search-for-trails-places')}..."
             items={searchDropdownItems}
         ></Search>
@@ -130,7 +149,12 @@
             />
         {:else}
             {#each data.trails as trail}
-                <a class="w-full md:max-w-72" href="/trail/view/{trail.id}">
+                <a
+                    class="w-full md:max-w-72"
+                    href="/trail/view/@{trail.author}{trail.domain
+                        ? '@' + trail.domain
+                        : ''}/{trail.id}"
+                >
                     <TrailCard {trail} fullWidth></TrailCard></a
                 >
             {/each}

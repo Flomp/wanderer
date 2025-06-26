@@ -16,6 +16,6 @@ export async function POST(event: RequestEvent) {
             },
         });
     } catch (e) {
-        throw handleError(e)
+        return handleError(e)
     }
 }

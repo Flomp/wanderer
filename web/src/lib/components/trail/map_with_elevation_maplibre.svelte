@@ -13,12 +13,10 @@
         createPopupFromTrail,
         FontawesomeMarker,
     } from "$lib/util/maplibre_util";
-    import { polylineToGeoJSON } from "$lib/util/polyline_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
     import { StyleSwitcherControl } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
-    import { T } from "@threlte/core";
     import type { Feature, FeatureCollection, GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
@@ -466,6 +464,9 @@
                 },
                 layout: {
                     "text-field": "{point_count_abbreviated}",
+                    "text-font": [
+                        "Noto Sans Regular",
+                    ],
                     "text-size": 12,
                 },
             });
@@ -868,12 +869,12 @@
                     }),
                 ),
                 {
-                    text: "Open Street Maps",
-                    value: "/styles/osm.json",
+                    text: "OpenFreeMap",
+                    value: "/styles/ofm.json",
                     thumbnail: "https://tile.openstreetmap.org/1/0/0.png",
                 },
                 {
-                    text: "Open Topo Maps",
+                    text: "OpenTopoMap",
                     value: "/styles/otm.json",
                     thumbnail: "https://tile.opentopomap.org/1/0/0.png",
                 },
@@ -1135,6 +1136,17 @@
     });
 
     function handleKeydown(e: KeyboardEvent) {
+        const target = e.target as HTMLElement;
+
+        const isInputField =
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable;
+
+        if (isInputField) {
+            return;
+        }
+
         if (e.key == "m") {
             if (trails.length === 1) {
                 removeCaretLayer();
@@ -1144,6 +1156,17 @@
     }
 
     function handleKeyup(e: KeyboardEvent) {
+        const target = e.target as HTMLElement;
+
+        const isInputField =
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable;
+
+        if (isInputField) {
+            return;
+        }
+
         if (e.key == "m") {
             if (trails.length === 1) {
                 addTrailLayer(trails[0], trails[0].id!, 0, data[0]);
@@ -1160,7 +1183,10 @@
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
 <div id="map" bind:this={mapContainer}></div>
 
-<style>
+<style lang="postcss">
+    @reference "tailwindcss";
+    @reference "../../../css/app.css";
+
     #map {
         width: 100%;
         height: 100%;

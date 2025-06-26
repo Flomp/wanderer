@@ -37,7 +37,7 @@
     }
 </script>
 
-<Modal id="export-modal" {title} size="max-w-sm" bind:this={modal}>
+<Modal id="export-modal" {title} size="md:min-w-sm" bind:this={modal}>
     {#snippet content()}
         <div>
             <div class="mb-3">

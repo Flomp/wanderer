@@ -13,6 +13,7 @@
     import { _ } from "svelte-i18n";
     import type { MouseEventHandler } from "svelte/elements";
     import Chip from "../base/chip.svelte";
+    import { fade, slide } from "svelte/transition";
 
     interface Props {
         trail: Trail;
@@ -34,10 +35,13 @@
         onTrailSelect,
     }: Props = $props();
 
-
     let thumbnail = $derived(
         trail.photos.length
-            ? getFileURL(trail, trail.photos[trail.thumbnail ?? 0])
+            ? getFileURL(
+                  trail,
+                  trail.photos.at(trail.thumbnail ?? 0) ?? trail.photos[0],
+                  "600x0",
+              )
             : $theme === "light"
               ? emptyStateTrailLight
               : emptyStateTrailDark,
@@ -51,6 +55,14 @@
         e.stopPropagation();
         onTrailSelect?.();
         hovered = true;
+    }
+    // expand and collapse the tags
+    let expandedTags = $state(false);
+
+    function toggleExpandTags(e: MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+        expandedTags = !expandedTags;
     }
 </script>
 
@@ -85,15 +97,31 @@
         {/if}
     </div>
     {#if hovered || selected}
-    <div class="flex absolute top-4 left-4 w-8 h-8 rounded-full items-center justify-center bg-background text-content">
-        <input
-            id="trail-selected"
-            type="checkbox"
-            class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
-            bind:checked={selected}
-            onclick={(e) => handleInputClick(e)}
-        />
-    </div>
+        <div
+            class="flex absolute top-4 left-4 w-8 h-8 rounded-full items-center justify-center bg-background text-content"
+        >
+            <input
+                id="trail-selected"
+                type="checkbox"
+                class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                bind:checked={selected}
+                onclick={(e) => handleInputClick(e)}
+            />
+        </div>
+    {/if}
+    {#if $currentUser && trail.like_count > 0}
+        <div
+            class="flex absolute items-center justify-center top-4 left-4 bg-background w-8 h-8 rounded-full"
+        >
+            <span class="tooltip" data-title={$_("likes")}>
+                <i class="fa fa-heart"></i>
+            </span>
+            <div
+                class="absolute pointer-events-none left-5 -top-1 text-xs rounded-full bg-menu-background px-1 text-center"
+            >
+                {trail.like_count}
+            </div>
+        </div>
     {/if}
     {#if (trail.public || trailIsShared) && $currentUser}
         <div
@@ -135,27 +163,35 @@
                     {$_("by")}
                     <img
                         class="rounded-full w-5 aspect-square mx-1 inline"
-                        src={getFileURL(
-                            trail.expand.author,
-                            trail.expand.author.avatar,
-                        ) ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                        src={trail.expand.author.icon ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.preferred_username}&backgroundType=gradientLinear`}
                         alt="avatar"
                     />
-                    {trail.expand.author.username}
+                    {trail.expand.author.preferred_username}{trail.expand.author
+                        .isLocal
+                        ? ""
+                        : "@" + trail.expand.author.domain}
                 </p>
             {/if}
-            {#if trail.expand?.tags?.length}
-                <div class="flex flex-wrap gap-1 mb-3">
-                    {#each trail.expand?.tags ?? [] as t}
-                        <Chip text={t.name} closable={false} primary={false}></Chip>
-                    {/each}
-                </div>
-            {:else if trail.tags?.length}
-                <div class="flex flex-wrap gap-1 mb-3">
-                    {#each trail.tags ?? [] as t}
+            {#if trail.tags.length}
+                <div class="flex flex-wrap gap-1 mb-3 items-center">
+                    {#each expandedTags ? trail.tags : trail.tags.slice(0, 2) as t}
                         <Chip text={t} closable={false} primary={false}></Chip>
                     {/each}
+
+                    {#if trail.tags.length > 2}
+                        <button
+                            onclick={toggleExpandTags}
+                            class="text-sm text-gray-500 hover:underline focus:outline-none"
+                            type="button"
+                        >
+                            {#if expandedTags}
+                                {$_("show-less")}
+                            {:else}
+                                +{trail.tags.length - 2} {$_("more")}
+                            {/if}
+                        </button>
+                    {/if}
                 </div>
             {/if}
             <div class="flex gap-x-4">

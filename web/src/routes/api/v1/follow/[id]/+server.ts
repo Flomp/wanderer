@@ -7,7 +7,7 @@ export async function DELETE(event: RequestEvent) {
         const r = await remove(event, Collection.follows)
         return json(r);
     } catch (e: any) {
-        throw handleError(e)
+        return handleError(e)
     }
 }
 

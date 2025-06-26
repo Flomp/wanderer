@@ -11,14 +11,17 @@
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
     import { onMount } from "svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
-    
+
     interface Props {
         filter?: TrailFilter | null;
         trails: Trail[];
         pagination?: { page: number; totalPages: number };
         loading?: boolean;
         fullWidthCards?: boolean;
-        onupdate?: (filter: TrailFilter | null, selection: Set<Trail> | undefined) => void;
+        onupdate?: (
+            filter: TrailFilter | null,
+            selection: Set<Trail> | undefined,
+        ) => void;
         onpagination?: (page: number) => void;
     }
 
@@ -53,6 +56,7 @@
         { text: $_("difficulty"), value: "difficulty" },
         { text: $_("elevation-gain"), value: "elevation_gain" },
         { text: $_("elevation-loss"), value: "elevation_loss" },
+        { text: $_("likes"), value: "like_count" },
         { text: $_("creation-date"), value: "created" },
         { text: $_("date"), value: "date" },
     ];
@@ -102,7 +106,7 @@
         onupdate?.(filter, selection);
     }
 
-    function handleSortUpdate(sort: any) {        
+    function handleSortUpdate(sort: any) {
         if (!filter) {
             return;
         }
@@ -130,54 +134,53 @@
     function isSelected(trail: Trail): boolean {
         if (trail === undefined) {
             return false;
-        }
-        else {
+        } else {
             if (selection === undefined) {
                 return false;
-            }
-            else {
+            } else {
                 for (const sTrail of selection) {
-                if (sTrail !== undefined && sTrail.id === trail.id) {
-                    return true;
+                    if (sTrail !== undefined && sTrail.id === trail.id) {
+                        return true;
+                    }
                 }
             }
-            }
-
         }
 
         return false;
     }
 
-function handleSelectionUpdate(trail: Trail) {
-    
-    let newSelection = new Set<Trail>();
+    function handleSelectionUpdate(trail: Trail) {
+        let newSelection = new Set<Trail>();
 
-    if (trail !== undefined) {
-        let isSelected = false;
+        if (trail !== undefined) {
+            let isSelected = false;
 
-        if (selection !== undefined && selection.size > 0)
-        {
-            for (const sTrail of selection) {
-                if (sTrail !== undefined && sTrail.id === trail.id) {
-                    isSelected = true;
-                    continue;
+            if (selection !== undefined && selection.size > 0) {
+                for (const sTrail of selection) {
+                    if (sTrail !== undefined && sTrail.id === trail.id) {
+                        isSelected = true;
+                        continue;
+                    }
+
+                    newSelection.add(sTrail);
                 }
-
-                newSelection.add(sTrail);
             }
-        } 
 
-        if (!isSelected) {
-            newSelection.add(trail);
+            if (!isSelected) {
+                newSelection.add(trail);
+            }
+        } else if (
+            selection === undefined ||
+            selection.size === 0 ||
+            (trails !== undefined && selection.size !== trails.length)
+        ) {
+            for (const eTrail of trails) {
+                newSelection.add(eTrail);
+            }
         }
-    } else if (selection === undefined || selection.size === 0 || (trails !== undefined && selection.size !== trails.length)) {
-        for (const eTrail of trails){
-            newSelection.add(eTrail);
-        }
+
+        selection = newSelection;
     }
-                
-    selection = newSelection;
-}
 
     function handleHoverUpdate(hTrail: Trail) {
         if (hTrail === undefined) {
@@ -191,7 +194,7 @@ function handleSelectionUpdate(trail: Trail) {
     function handleTrailsEditDone() {
         setTimeout(() => {
             onupdate?.(filter, selection);
-            }, 500);
+        }, 500);
     }
 
     function handleMouseEnter(trail: Trail) {
@@ -213,10 +216,11 @@ function handleSelectionUpdate(trail: Trail) {
         </div>
         {#if selection !== undefined && selection.size > 0}
             <div class="flex relative top-1">
-                    <TrailDropdown 
-                        trails={selection} 
-                        mode={"overview"}
-                        onconfirm={handleTrailsEditDone}/>
+                <TrailDropdown
+                    trails={selection}
+                    mode={"overview"}
+                    onconfirm={handleTrailsEditDone}
+                />
             </div>
         {/if}
         {#if filter}
@@ -255,7 +259,10 @@ function handleSelectionUpdate(trail: Trail) {
     <div id="trails" class="flex items-start flex-wrap gap-8 py-8 max-w-full">
         {#if loading}
             {#if selectedDisplayOption === "table"}
-                <TrailTable trails={null} selection={new Set<Trail>} tableHeader={sortOptions}
+                <TrailTable
+                    trails={null}
+                    selection={new Set<Trail>()}
+                    tableHeader={sortOptions}
                 ></TrailTable>
             {:else}
                 {#each { length: 12 } as _, index}
@@ -290,18 +297,29 @@ function handleSelectionUpdate(trail: Trail) {
                     <a
                         class="max-w-full flex-1"
                         class:basis-full={selectedDisplayOption === "list"}
-                        href="/trail/view/{trail.id}"
+                        href="/trail/view/@{trail.author}{trail.domain
+                            ? `@${trail.domain}`
+                            : ''}/{trail.id}"
                         onmouseenter={(e) => handleMouseEnter(trail)}
                         onmouseleave={(e) => handleMouseLeave(trail)}
                     >
                         {#if selectedDisplayOption === "cards"}
-                            <TrailCard 
-                            fullWidth={fullWidthCards} {trail} selected={isSelected(trail)} hovered={isHovered(trail)}
-                            onTrailSelect={() => handleSelectionUpdate(trail)}
+                            <TrailCard
+                                fullWidth={fullWidthCards}
+                                {trail}
+                                selected={isSelected(trail)}
+                                hovered={isHovered(trail)}
+                                onTrailSelect={() =>
+                                    handleSelectionUpdate(trail)}
                             ></TrailCard>
                         {:else}
-                            <TrailListItem {trail} selected={isSelected(trail)} hovered={isHovered(trail)}
-                            onTrailSelect={() => handleSelectionUpdate(trail)}></TrailListItem>
+                            <TrailListItem
+                                {trail}
+                                selected={isSelected(trail)}
+                                hovered={isHovered(trail)}
+                                onTrailSelect={() =>
+                                    handleSelectionUpdate(trail)}
+                            ></TrailListItem>
                         {/if}
                     </a>
                 {/each}

@@ -23,6 +23,7 @@
 
     interface Props {
         trails?: Set<Trail> | undefined;
+        handle: string;
         mode: "overview" | "map" | "list";
         onconfirm?: () => void;
     }
@@ -39,7 +40,7 @@
     function allowEdit() : boolean {
         return hasTrail() && !isMultiselectMode() &&
         (           
-            trail()!.author === $currentUser?.id ||
+            trail()!.author === $currentUser?.actor ||
             trail()!.expand?.trail_share_via_trail?.some(
                 (s) => s.permission == "edit",
             )
@@ -130,10 +131,10 @@
 
     function isFromCurrentUser(uTrail?: Trail) : boolean {
         if (uTrail !== undefined) {
-            return uTrail.author === $currentUser?.id;
+            return uTrail.author === $currentUser?.actor;
         } else if (trails !== undefined && trails.size > 0) {
             for (const sTrail of trails) {
-                if (sTrail.author === $currentUser?.id){
+                if (sTrail.author === $currentUser?.actor){
                     return true;
                 }
             }
@@ -162,7 +163,7 @@
         } else if (item.value == "list") {
             lists = (
                 await lists_index(
-                    { q: "", author: $currentUser?.id ?? "" },
+                    { q: "", author: $currentUser?.actor ?? "" },
                     1,
                     -1,
                 )
@@ -251,7 +252,7 @@
                     }
                     if (exportSettings.summitLog) {
                         let summitLogString = "";
-                        for (const summitLog of eTrail.expand?.summit_logs ?? []) {
+                        for (const summitLog of eTrail.expand?.summit_logs_via_trail ?? []) {
                             summitLogString += `${summitLog.date},${summitLog.text}\n`;
                         }
                         zip.file(

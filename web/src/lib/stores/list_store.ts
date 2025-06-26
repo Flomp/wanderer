@@ -1,21 +1,22 @@
-import { ExpandType, ExpandTypeToString, List, type ListFilter } from "$lib/models/list";
+import { List, type ListFilter } from "$lib/models/list";
 import type { Trail } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits } from "meilisearch";
-import { type AuthRecord, type ListResult } from "pocketbase";
+import { type AuthRecord, type ListResult, type RecordModel } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
+import type { ListSearchResult } from "./search_store";
 import { fetchGPX } from "./trail_store";
 import { currentUser } from "./user_store";
+import { objectToFormData } from "$lib/util/file_util";
 
 let lists: List[] = []
 export const list: Writable<List | null> = writable(null)
 export const listTrail: Writable<Trail | null> = writable(null);
 
 export async function lists_index(filter?: ListFilter, page: number = 1, perPage: number = 5,
-    f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch,
-    e: ExpandType = ExpandType.All) {
+    f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const user = get(currentUser)
-    
+
     const filterText = filter ? buildFilterText(user, filter) : ""
 
     const r = await f('/api/v1/list?' + new URLSearchParams({
@@ -23,7 +24,6 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
         perPage: perPage.toString(),
         page: page.toString(),
         filter: filterText,
-        expand: ExpandTypeToString(e),
     }), {
         method: 'GET',
     })
@@ -43,8 +43,8 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
 }
 
 
-export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch): Promise<ListResult<List>> {
-    const user = get(currentUser)
+export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+    user ??= get(currentUser)
 
     const filterText = buildSearchFilterText(user, filter)
 
@@ -65,43 +65,21 @@ export async function lists_search_filter(filter: ListFilter, page: number = 1, 
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const searchResult: { page: number, totalPages: number, hits: Hits<Record<string, any>> } = await r.json();
+    const result: { page: number, totalPages: number, hits: Hits<ListSearchResult> } = await r.json();
 
 
-    const listIds = searchResult.hits.map((h: Record<string, any>) => h.id);
+    const resultLists: List[] = await searchResultToLists(result.hits)
 
-    if (listIds.length == 0) {
-        return { items: [], page: searchResult.page, perPage, totalItems: 0, totalPages: searchResult.totalPages };
-    }
+    return { items: resultLists, ...result };
 
-    r = await f('/api/v1/list?' + new URLSearchParams({
-        expand: "trails,trails.waypoints,trails.category,list_share_via_list",
-        filter: `'${listIds.join(',')}'~id`,
-        sort: filter.sort && filter.sortOrder ? `${filter.sortOrder}${filter.sort}` : ''
-    }), {
-        method: 'GET',
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    const fetchedLists: ListResult<List> = await r.json();
-
-    const result = page > 1 ? [...lists, ...fetchedLists.items] : fetchedLists.items
-
-    lists = result;
-
-    return { ...fetchedLists, items: result };
 
 }
 
-export async function lists_show(id: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch
-    , e: ExpandType = ExpandType.All) {
+export async function lists_show(id: string, handle?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const r = await f(`/api/v1/list/${id}?` + new URLSearchParams({
-        expand: ExpandTypeToString(e)
+        expand: "author,trails,trails.author,list_share_via_list.actor",
+        ...(handle ? { handle } : {})
     }), {
         method: 'GET',
     })
@@ -118,9 +96,6 @@ export async function lists_show(id: string, f: (url: RequestInfo | URL, config?
         trail.expand.gpx_data = gpxData;
     }
 
-
-
-
     list.set(response);
 
     return response;
@@ -132,11 +107,17 @@ export async function lists_create(list: List, avatar?: File) {
     if (!user) {
         throw Error("Unauthenticated")
     }
-    list.author = user.id;
+    list.author = user.actor;
 
-    let r = await fetch('/api/v1/list', {
+    const formData = objectToFormData(list, ["expand"])
+
+    if (avatar) {
+        formData.append("avatar", avatar);
+    }
+
+    let r = await fetch('/api/v1/list/form', {
         method: 'PUT',
-        body: JSON.stringify(list),
+        body: formData,
     })
 
     if (!r.ok) {
@@ -146,45 +127,18 @@ export async function lists_create(list: List, avatar?: File) {
 
     const model: List = await r.json();
 
-    const formData = new FormData();
-
-    if (avatar) {
-        formData.append("avatar", avatar);
-    }
-
-    r = await fetch(`/api/v1/list/${model.id!}/file`, {
-        method: 'POST',
-        body: formData,
-    })
-
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    return await r.json();
+    return model;
 }
 
 export async function lists_update(list: List, avatar?: File) {
-    let r = await fetch('/api/v1/list/' + list.id, {
-        method: 'POST',
-        body: JSON.stringify(list),
-    })
 
-    if (!r.ok) {
-        const response = await r.json();
-        throw new APIError(r.status, response.message, response.detail)
-    }
-
-    const model: List = await r.json();
-
-    const formData = new FormData();
+    const formData = objectToFormData(list)
 
     if (avatar) {
         formData.append("avatar", avatar);
     }
 
-    r = await fetch(`/api/v1/list/${model.id!}/file`, {
+    let r = await fetch('/api/v1/list/form/' + list.id, {
         method: 'POST',
         body: formData,
     })
@@ -193,6 +147,9 @@ export async function lists_update(list: List, avatar?: File) {
         const response = await r.json();
         throw new APIError(r.status, response.message, response.detail)
     }
+
+    const model: List = await r.json();
+    return model;
 }
 
 export async function lists_add_trail(list: List, trail: Trail) {
@@ -275,17 +232,17 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
         if (filter.public !== undefined) {
             filterText += `(public = ${filter.public}`
 
-            if (!filter.author?.length || filter.author == user?.id) {
-                filterText += ` OR author = ${user?.id}`
+            if (!filter.author?.length || filter.author == user?.actor) {
+                filterText += ` OR author = ${user?.actor}`
             }
             filterText += ")"
         }
 
         if (filter.shared !== undefined) {
             if (filter.shared === true) {
-                filterText += ` OR shares = ${user?.id}`
+                filterText += ` OR shares = ${user?.actor}`
             } else {
-                filterText += ` AND NOT shares = ${user?.id}`
+                filterText += ` AND NOT shares = ${user?.actor}`
 
             }
         }
@@ -293,4 +250,44 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
     }
 
     return filterText
+}
+
+export async function searchResultToLists(hits: Hits<ListSearchResult>): Promise<List[]> {
+    const lists: List[] = []    
+    for (const h of hits) {
+        const l: List & RecordModel = {
+            collectionId: "lists",
+            collectionName: "lists",
+            updated: new Date(h.created * 1000).toISOString(),
+            author: h.author,
+            name: h.name,
+            public: h.public,
+            description: h.description,
+            id: h.id,
+            trails: Array(h.trails).fill("000000000000000"),
+            avatar: h.avatar,
+            elevation_gain: h.elevation_gain,
+            elevation_loss: h.elevation_loss,
+            distance: h.distance,
+            duration: h.duration,
+            iri: h.iri,
+            expand: {
+                author: {
+                    icon: h.author_avatar,
+                    id: h.author,
+                    preferred_username: h.author_name,
+                } as any,
+                list_share_via_list: h.shares?.map(s => ({
+                    permission: "view",
+                    list: h.id,
+                    actor: s,
+                })),
+            }
+        }
+
+
+        lists.push(l)
+    }
+
+    return lists
 }

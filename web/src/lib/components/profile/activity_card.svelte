@@ -1,39 +1,34 @@
 <script lang="ts">
-    import type { Activity } from "$lib/models/activity";
-    import type { UserAnonymous } from "$lib/models/user";
+    import type { Actor } from "$lib/models/activitypub/actor";
+    import type { TimelineItem } from "$lib/models/timeline";
     import { getFileURL, isVideoURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
+        formatHTMLAsText,
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     interface Props {
-        activity: Activity;
-        user: UserAnonymous;
+        activity: TimelineItem;
+        actor: Actor;
     }
 
-    let { activity, user }: Props = $props();
+    let { activity, actor }: Props = $props();
 
     let fullDescription: boolean = $state(false);
 </script>
 
-<div class="activity-card p-6 space-y-6 rounded-xl border border-input-border">
+<div class="activity-card p-6 ounded-xl border border-input-border">
     <div class="flex gap-x-4 items-start">
         <img
             class="rounded-full w-10 aspect-square overflow-hidden"
-            src={getFileURL(user, user.avatar) ||
-                `https://api.dicebear.com/7.x/initials/svg?seed=${user.username}&backgroundType=gradientLinear`}
+            src={actor.icon ||
+                `https://api.dicebear.com/7.x/initials/svg?seed=${actor.preferred_username}&backgroundType=gradientLinear`}
             alt="avatar"
         />
         <div>
-            {#if !user.private}
-                <a class="underline" href="/profile/{user.id}"
-                    >{user.username}</a
-                >
-            {:else}
-                <span>{user.username}</span>
-            {/if}
+            <span class="font-semibold">{actor.preferred_username}</span>
             {activity.type === "trail"
                 ? $_("planned-a-trail")
                 : $_("completed-a-trail")}
@@ -74,9 +69,9 @@
         <div
             class="grid gap-[1px] {activity.photos.length > 1
                 ? 'grid-cols-[8fr_5fr]'
-                : 'grid-cols-1'}"
+                : 'grid-cols-1'} mt-6"
         >
-            {#each activity.photos.slice(0,3) as photo, i}
+            {#each activity.photos.slice(0, 3) as photo, i}
                 {#if isVideoURL(photo)}
                     <!-- svelte-ignore a11y_media_has_caption -->
                     <video
@@ -109,10 +104,12 @@
         </div>
     {/if}
     {#if activity.description.length}
-        <p class="text-sm whitespace-pre-wrap">
-            {!fullDescription
-                ? activity.description?.substring(0, 100)
-                : activity.description}
+        <p class="text-sm whitespace-pre-wrap mt-6">
+            {formatHTMLAsText(
+                !fullDescription
+                    ? activity.description?.substring(0, 100)
+                    : activity.description,
+            )}
             {#if (activity.description?.length ?? 0) > 100 && !fullDescription}
                 <button
                     onclick={(e) => {

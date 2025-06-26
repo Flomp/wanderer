@@ -1,4 +1,4 @@
-import { error, type RequestEvent } from "@sveltejs/kit";
+import { error, json, type RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
 
 export async function GET(event: RequestEvent) {
@@ -10,7 +10,15 @@ export async function GET(event: RequestEvent) {
     }).safeParse(event.params)
 
     if (!safeParams.success) {
-        throw error(400, safeParams.error)
+        throw json({ message: safeParams.error }, { status: 400 })
+    }
+
+    const safeSearchParams = z.object({
+        thumb: z.string().regex(/[0-9]*x[0-9]*[tbf]?/).optional()
+    }).safeParse(Object.fromEntries(event.url.searchParams))
+
+    if (!safeSearchParams.success) {
+        throw json({ message: safeSearchParams.error }, { status: 400 })
     }
 
     const parts = [];
@@ -20,7 +28,7 @@ export async function GET(event: RequestEvent) {
     parts.push(encodeURIComponent(safeParams.data.record));
     parts.push(encodeURIComponent(safeParams.data.file));
 
-    let fileURL = event.locals.pb.buildURL(parts.join("/"));
+    let fileURL = event.locals.pb.buildURL(parts.join("/") + '?' + new URLSearchParams(safeSearchParams.data));
 
     try {
         const r = await event.fetch(fileURL)

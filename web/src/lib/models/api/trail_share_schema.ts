@@ -2,7 +2,7 @@ import { z, ZodType } from "zod";
 import type { TrailShare } from "../trail_share";
 
 const TrailShareCreateSchema = z.object({
-    user: z.string().length(15),
+    actor: z.string().url(),
     trail: z.string().length(15),
     permission: z.enum(["view", "edit"])
 

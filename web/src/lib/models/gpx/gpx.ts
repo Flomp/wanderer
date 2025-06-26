@@ -72,19 +72,19 @@ export default class GPX {
       if (!Array.isArray(object.wpt)) {
         object.wpt = [object.wpt];
       }
-      this.wpt = object.wpt.map(wpt => new Waypoint(wpt))
+      this.wpt = object.wpt.filter(trk => typeof trk === 'object').map(wpt => new Waypoint(wpt))
     }
     if (object.rte) {
       if (!Array.isArray(object.rte)) {
         object.rte = [object.rte];
       }
-      this.rte = object.rte.map(rte => new Route(rte))
+      this.rte = object.rte.filter(trk => typeof trk === 'object').map(rte => new Route(rte))
     }
     if (object.trk) {
       if (!Array.isArray(object.trk)) {
         object.trk = [object.trk];
       }
-      this.trk = object.trk.map(trk => new Track(trk))
+      this.trk = object.trk.filter(trk => typeof trk === 'object').map(trk => new Track(trk))
     }
 
     this.features = this.getTotals();

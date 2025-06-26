@@ -113,10 +113,7 @@
 	}
 
 	function colorKey(a: typeof currentMonthArray, i: number) {
-		return $_(
-			a[i]?.log?.expand?.trails_via_summit_logs?.at(0)?.expand?.category
-				?.name ?? "",
-		);
+		return $_(a[i]?.log?.expand?.trail?.expand?.category?.name ?? "");
 	}
 
 	function handleDateClick(date?: Date) {
@@ -170,7 +167,10 @@
 	</div>
 </div>
 
-<style>
+<style lang="postcss">
+	@reference "tailwindcss";
+    @reference "../../../css/app.css";
+
 	.calendar-weekday {
 		font-weight: 600;
 	}

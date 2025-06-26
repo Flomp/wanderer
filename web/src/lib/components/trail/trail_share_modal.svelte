@@ -9,12 +9,11 @@
         trail_share_index,
         trail_share_update,
     } from "$lib/stores/trail_share_store";
-    import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
+    import ActorSearch from "../actor_search.svelte";
     import Button from "../base/button.svelte";
     import type { SelectItem } from "../base/select.svelte";
     import Select from "../base/select.svelte";
-    import UserSearch from "../user_search.svelte";
 
     interface Props {
         trail?: Trail;
@@ -24,6 +23,8 @@
     let { trail, onsave }: Props = $props();
 
     let modal: Modal;
+
+    let displayShareError = $state(false);
 
     export function openModal() {
         openShareModalLocal();
@@ -55,10 +56,17 @@
     }
 
     async function shareTrail(item: SelectItem) {
-        if (trail === undefined) return;
+        if (trail === undefined) {
+            return;
+        }
 
-        const share = new TrailShare(item.value.id, trail.id!, "view");
-            await trail_share_create(share);
+        if (!item.value.isLocal && !trail.public) {
+            displayShareError = true;
+            return;
+        }
+        displayShareError = false;
+        const share = new TrailShare(item.value.iri, trail.id!, "view");
+        await trail_share_create(share);
         fetchShares();
     }
 
@@ -87,13 +95,23 @@
 <Modal
     id="share-modal"
     title={$_("share-this-trail")}
-    size="max-w-sm overflow-visible"
+    size="md:min-w-sm overflow-visible"
     bind:this={modal}
 >
     {#snippet content()}
         <div>
-            <UserSearch includeSelf={false} onclick={(item) => shareTrail(item)}
-            ></UserSearch>
+            {#if displayShareError}
+                <p class="p-4 bg-red-100 rounded-xl mb-4 text-sm text-gray-500">
+                    <i class="fa fa-warning mr-2"></i>
+                    {$_("object-share-error", {
+                        values: { object: $_("trail", { values: { n: 1 } }) },
+                    })}
+                </p>
+            {/if}
+            <ActorSearch
+                includeSelf={false}
+                onclick={(item) => shareTrail(item)}
+            ></ActorSearch>
             <h4 class="font-semibold mt-4">{$_("shared-with")}</h4>
 
             {#if $shares.length == 0}
@@ -106,22 +124,26 @@
                         <div class="flex items-center gap-x-2 p-2">
                             <img
                                 class="rounded-full w-8 aspect-square mr-2"
-                                src={getFileURL(
-                                    share.expand.user,
-                                    share.expand.user.avatar,
-                                ) ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.user.username}&backgroundType=gradientLinear`}
+                                src={share.expand.actor.icon ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
-                            <p>{share.expand.user.username}</p>
+                            <p>
+                                {`@${share.expand.actor.username}${share.expand.actor.isLocal ? "" : "@" + share.expand.actor.domain}`}
+                            </p>
                             <span
-                                class="basis-full text-sm text-center text-gray-500"
+                                class="basis-full text-sm text-gray-500 text-end"
                                 >{$_("can")}</span
                             >
-                            <div class="shrink-0">
+                            <div
+                                class="shrink-0"
+                                class:tooltip={!share.expand.actor.isLocal}
+                                data-title={$_("remote-users-cannot-edit")}
+                            >
                                 <Select
                                     value={share.permission}
                                     items={permissionSelectItems}
+                                    disabled={!share.expand.actor.isLocal}
                                     onchange={(value) =>
                                         updateSharePermission(share, value)}
                                 ></Select>

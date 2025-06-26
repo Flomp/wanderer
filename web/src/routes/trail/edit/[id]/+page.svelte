@@ -89,6 +89,8 @@
     import { backInOut } from "svelte/easing";
     import { scale } from "svelte/transition";
     import { z } from "zod";
+    import { currentUser } from "$lib/stores/user_store.js";
+    import Editor from "$lib/components/base/editor.svelte";
 
     let { data } = $props();
 
@@ -119,7 +121,9 @@
         expand: z
             .object({
                 gpx_data: z.string().optional(),
-                summit_logs: z.array(SummitLogCreateSchema).optional(),
+                summit_logs_via_trail: z
+                    .array(SummitLogCreateSchema)
+                    .optional(),
                 waypoints: z
                     .array(
                         WaypointCreateSchema.extend({
@@ -469,20 +473,26 @@
     }
 
     function beforeSummitLogModalOpen() {
-        summitLog.set(new SummitLog(new Date().toISOString().split("T")[0]));
+        const newSummitLog = new SummitLog(
+            new Date().toISOString().split("T")[0],
+        );
+        newSummitLog.author = $currentUser?.actor;
+        summitLog.set(newSummitLog);
         summitLogModal.openModal();
     }
 
     function saveSummitLog(log: SummitLog) {
-        let editedSummitLogIndex = $formData.expand!.summit_logs?.findIndex(
-            (s) => s.id == log.id,
-        );
+        let editedSummitLogIndex =
+            $formData.expand!.summit_logs_via_trail?.findIndex(
+                (s) => s.id == log.id,
+            );
         if ((editedSummitLogIndex ?? -1) >= 0) {
-            $formData.expand!.summit_logs![editedSummitLogIndex!] = log;
+            $formData.expand!.summit_logs_via_trail![editedSummitLogIndex!] =
+                log;
         } else {
             log.id = cryptoRandomString({ length: 15 });
-            $formData.expand!.summit_logs = [
-                ...($formData.expand!.summit_logs ?? []),
+            $formData.expand!.summit_logs_via_trail = [
+                ...($formData.expand!.summit_logs_via_trail ?? []),
                 log,
             ];
         }
@@ -497,9 +507,9 @@
             summitLog.set(currentSummitLog);
             summitLogModal.openModal();
         } else if (item.value === "delete") {
-            $formData.expand!.summit_logs?.splice(index, 1);
-            $formData.summit_logs.splice(index, 1);
-            $formData.expand!.summit_logs = $formData.expand!.summit_logs;
+            $formData.expand!.summit_logs_via_trail?.splice(index, 1);
+            $formData.expand!.summit_logs_via_trail =
+                $formData.expand!.summit_logs_via_trail;
         }
     }
 
@@ -604,7 +614,7 @@
             );
             insertIntoRoute(routeWaypoints);
             updateTrailWithRouteData();
-            normalizeRouteTime()
+            normalizeRouteTime();
         } catch (e) {
             console.error(e);
             show_toast({
@@ -768,7 +778,7 @@
             if ($formData.expand?.gpx_data) {
                 updateTrailWithRouteData();
             }
-            normalizeRouteTime()
+            normalizeRouteTime();
         } catch (e) {
             console.error(e);
             show_toast({
@@ -830,7 +840,7 @@
 
             editRoute(data.segment, previousRouteSegment);
             insertIntoRoute(nextRouteSegment, data.segment + 1);
-            normalizeRouteTime()
+            normalizeRouteTime();
             updateTrailWithRouteData();
         } catch (e) {
             console.error(e);
@@ -848,7 +858,7 @@
         overwriteGPX = true;
         const totals = route.features;
         $formData.distance = totals.distance;
-        $formData.duration = totals.duration / 1000 / 60;
+        $formData.duration = totals.duration / 1000;
         $formData.elevation_gain = totals.elevationGain;
         $formData.elevation_loss = totals.elevationLoss;
         $formData.expand!.gpx_data = route.toString();
@@ -1109,8 +1119,11 @@
             error={$errors.location}
         ></TextField>
         <Datepicker label={$_("date")} bind:value={$formData.date}></Datepicker>
-        <Textarea name="description" label={$_("describe-your-trail")}
-        ></Textarea>
+        <Editor
+        extraClasses="min-h-24"
+            bind:value={$formData.description}
+            label={$_("describe-your-trail")}
+        ></Editor>
         <Combobox
             bind:value={getTrailTags, setTrailTags}
             onupdate={searchTags}
@@ -1195,11 +1208,13 @@
         <hr class="border-separator" />
         <h3 class="text-xl font-semibold">{$_("summit-book")}</h3>
         <ul>
-            {#each $formData.expand?.summit_logs ?? [] as log, i}
+            {#each $formData.expand?.summit_logs_via_trail ?? [] as log, i}
                 <li>
                     <SummitLogCard
                         {log}
-                        mode="edit"
+                        mode={log.author == $currentUser?.actor
+                            ? "edit"
+                            : "show"}
                         onchange={(item) =>
                             handleSummitLogMenuClick(log, i, item)}
                     ></SummitLogCard>

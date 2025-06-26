@@ -6,7 +6,8 @@
             "tiles": [
                 "https://tile.opentopomap.org/{z}/{x}/{y}.png"
             ],
-            "tileSize": 256
+            "tileSize": 256,
+            "attribution": "© OpenTopoMap"
         }
     },
     "glyphs": "https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf",

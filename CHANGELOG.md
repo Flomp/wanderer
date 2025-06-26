@@ -1,3 +1,25 @@
+# v0.17.0
+> [!CAUTION]
+This release contains breaking changes. They are marked with a ⚠️.  
+**Please update to version v0.16.5 first before updating to v0.17.0.**
+
+## Configuration
+Check the reopsitory's [`docker-compose.yml`](https://github.com/Flomp/wanderer/blob/main/docker-compose.yml) for a valid configuration.
+
+- ⚠️ The PocketBase environment variable `POCKETBASE_ENCRYPTION_KEY` is now required. It requires a valid 32 character AES key as its value. To generate a key, run `openssl rand -hex 16`.
+- ⚠️ The PocketBase environment variable `ORIGIN`is now required. It must be set to the public IP or hostname (including the port) of your wanderer frontend and must equal the value set for the frontend's `ORIGIN` environment variable.
+
+## Features
+- Adds federation
+- Adds rich text editor for descriptions and comments
+  
+## Docs
+- Adds documentation for federation
+- Restructures the documentation in three distinct parts (for users, admins & developers) for better separation of concerns
+
+## Translation
+- New language: Russian (thanks @jeffscrum)
+
 # v0.16.5
 
 ## Features
@@ -251,7 +273,7 @@ This release contains breaking changes. Most migrations will happen automaticall
 - Fixes issue with GPX export when using Google Chrome (thanks [@tofublock](https://github.com/tofublock))
 
 ## Miscellaneous
-As the number of contributors to this project continues to grow (which I’m very happy about), I’ve set up a [Discord channel](https://discord.gg/MdpybUHc) for more direct communication. If you’re interested in helping with Wanderer, feel free to join!
+As the number of contributors to this project continues to grow (which I’m very happy about), I’ve set up a [Discord channel](https://discord.gg/MdpybUHc) for more direct communication. If you’re interested in helping with wanderer, feel free to join!
 
 # v0.11.0
 ## Features

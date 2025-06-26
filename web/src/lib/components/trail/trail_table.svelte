@@ -59,10 +59,6 @@
         onselect?.(undefined)
     }
 
-    function viewTrail(trail: Trail) {
-        goto(`/trail/view/${trail.id}`)
-    }
-
     function isSelected(trail: Trail): boolean {
         if (selection === undefined) {
             return false;
@@ -133,7 +129,12 @@
                 {#each trails as trail}
                     <tr
                         class="border-t border-input-border cursor-pointer hover:bg-secondary-hover transition-colors"
-                        onclick={() => viewTrail(trail)}
+                        onclick={() =>
+                            goto(
+                                `/trail/view/@${trail.author}${
+                                    trail.domain ? `@${trail.domain}` : ""
+                                }/${trail.id}`,
+                            )}
                     >
                         <td class="p-4 text-sm">
                             <div class="flex items-center">
@@ -155,13 +156,10 @@
                                 {#if trail.expand && trail.expand.author}
                                     <div class="author-icon">
                                         <img
-                                            title={`${trail.public ? $_("public") + " " : ""}${$_("by")} ${trail.expand.author.username}`}
+                                            title={`${trail.public ? $_("public") + " " : ""}${$_("by")} @${trail.expand.author.preferred_username}${trail.expand.author.isLocal ? "" : "@" + trail.expand.author.domain}`}
                                             class="rounded-full w-5 aspect-square mx-1 inline"
-                                            src={getFileURL(
-                                                trail.expand.author,
-                                                trail.expand.author.avatar,
-                                            ) ||
-                                                `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.username}&backgroundType=gradientLinear`}
+                                            src={trail.expand.author.icon ||
+                                                `https://api.dicebear.com/7.x/initials/svg?seed=${trail.expand.author.preferred_username}&backgroundType=gradientLinear`}
                                             alt="avatar"
                                         />
                                     </div>
@@ -193,6 +191,9 @@
                         </td>
                         <td class="p-4 text-sm">
                             {formatElevation(trail.elevation_gain)}
+                        </td>
+                        <td class="p-4 text-sm">
+                            {trail.like_count}
                         </td>
                         <td class="p-4 text-sm">
                             {#if trail.created}

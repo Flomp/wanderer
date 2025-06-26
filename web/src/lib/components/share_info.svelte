@@ -1,8 +1,10 @@
 <script lang="ts">
+    import type { Actor } from "$lib/models/activitypub/actor";
     import type { List } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import type { UserAnonymous } from "$lib/models/user";
     import { currentUser, users_show } from "$lib/stores/user_store";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
     import { getFileURL } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
     import { fly } from "svelte/transition";
@@ -22,29 +24,7 @@
 
     let showInfo: boolean = $state(false);
     let loading: boolean = $state(false);
-    let infoLoaded: boolean = $state(false);
-    let subjectIsOwned: boolean = subject.author == $currentUser?.id;
-    let author: UserAnonymous | undefined = $state();
-
-    async function fetchInfo() {
-        if (!infoLoaded) {
-            loading = true;
-            loading = false;
-            if (subjectIsOwned) {
-                for (const share of shareData ?? []) {
-                    share.expand = {
-                        user: await users_show(share.user),
-                    };
-                }
-            } else {
-                author = await users_show(subject.author!);
-            }
-
-            infoLoaded = true;
-        }
-
-        showInfo = true;
-    }
+    let subjectIsOwned: boolean = subject.author == $currentUser?.actor;
 </script>
 
 <div class="relative trail-share-info">
@@ -53,18 +33,18 @@
         class:text-xl={large}
         role="button"
         tabindex="0"
-        onmouseenter={fetchInfo}
+        onmouseenter={() => (showInfo = true)}
         onmouseleave={() => (showInfo = false)}
     ></i>
     {#if showInfo}
         <ul
-            class="menu absolute z-10 top-8 bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden p-3 space-y-3 text-content -translate-x-3/4"
+            class="menu absolute z-10 top-8 bg-menu-background border border-input-border rounded-xl shadow-md overflow-hidden p-3 space-y-3 text-content"
             in:fly={{ y: -10, duration: 150 }}
             out:fly={{ y: -10, duration: 150 }}
         >
             {#if loading}
                 <div class="spinner spinner-dark"></div>
-            {:else if infoLoaded && shareData}
+            {:else if shareData}
                 {#if subjectIsOwned}
                     {#each shareData as share}
                         {#if share.expand}
@@ -72,15 +52,12 @@
                                 <div class="flex items-center mr-8">
                                     <img
                                         class="rounded-full w-8 aspect-square mr-2"
-                                        src={getFileURL(
-                                            share.expand.user,
-                                            share.expand.user.avatar,
-                                        ) ||
-                                            `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.user.username}&backgroundType=gradientLinear`}
+                                        src={share.expand.actor.icon ||
+                                            `https://api.dicebear.com/7.x/initials/svg?seed=${share.expand.actor.preferred_username}&backgroundType=gradientLinear`}
                                         alt="avatar"
                                     />
                                     <p class="font-semibold text-base">
-                                        {share.expand.user.username}
+                                        {`@${share.expand.actor.username}${share.expand.actor.isLocal ? "" : "@" + share.expand.actor.domain}`}
                                     </p>
                                     <span class="mx-2 text-sm text-gray-500"
                                         >{$_("can")}</span
@@ -96,7 +73,7 @@
                             </li>
                         {/if}
                     {/each}
-                {:else if author}
+                {:else if subject.expand?.author}
                     <li>
                         <p class="text-xs text-gray-500 mb-2">
                             {$_("shared-by")}
@@ -104,12 +81,12 @@
                         <div class="flex items-center mr-8">
                             <img
                                 class="rounded-full w-8 aspect-square mr-2"
-                                src={getFileURL(author, author.avatar) ||
-                                    `https://api.dicebear.com/7.x/initials/svg?seed=${author.username}&backgroundType=gradientLinear`}
+                                src={subject.expand.author.icon ||
+                                    `https://api.dicebear.com/7.x/initials/svg?seed=${subject.expand.author.preferred_username}&backgroundType=gradientLinear`}
                                 alt="avatar"
                             />
                             <p class="font-semibold">
-                                {author.username}
+                                {handleFromRecordWithIRI(subject)}
                             </p>
                         </div>
                         <p class="text-xs text-gray-500 mt-2">

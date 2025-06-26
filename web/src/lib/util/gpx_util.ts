@@ -63,7 +63,7 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, f: (ur
             .substring(0, 10);
     }
 
-    trail.duration = totals.duration / 1000 / 60
+    trail.duration = totals.duration / 1000
     trail.elevation_gain = totals.elevationGain;
     trail.elevation_loss = totals.elevationLoss;
     trail.distance = totals.distance

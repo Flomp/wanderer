@@ -13,7 +13,7 @@ export async function POST(event: RequestEvent) {
         const r = await event.locals.pb.collection('users').confirmPasswordReset(safeData.token, safeData.password, safeData.passwordConfirm);
         return json(r);
     } catch (e: any) {
-        throw handleError(e);
+        return handleError(e);
     }
 
 }

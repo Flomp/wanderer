@@ -22,13 +22,6 @@
     let { data: pageData }: PageProps = $props();
 
     const authProviders = pageData.authMethods.oauth2.providers;
-    let loginLabel = $state("");
-
-    if (pageData.authMethods.password) {
-        loginLabel = `${$_("username")}/${$_("email")}`;
-    }else if (pageData.authMethods.password) {
-        loginLabel = `${$_("username")}/${$_("email")}`;
-    }
 
     const { form, errors, data } = createForm<User>({
         initialValues: {
@@ -98,11 +91,11 @@
             <LogoTextTwoLineLight></LogoTextTwoLineLight>
         {/if}
         <h4 class="text-xl font-semibold">{$_("slogan")}</h4>
-        {#if page.data.authMethods.password}
+        {#if page.data.authMethods.password.enabled}
             <div class="space-y-6 w-80">
                 <TextField
                     name="username"
-                    label={loginLabel}
+                    label="{$_('username')}/{$_('email')}"
                     error={$errors.username}
                 ></TextField>
                 <div class="flex flex-col">
