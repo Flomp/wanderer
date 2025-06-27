@@ -1,0 +1,80 @@
+name: Build Docker Images (DB)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_multistage:
+    name: Build Multi-Stage Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Multi-Stage Docker Image
+        working-directory: ./db
+        run: |
+          docker build -f Dockerfile -t pocketbase:multistage .
+
+  build_local_binary:
+    name: Build Docker Image with Precompiled Binary (Static)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build binary externally
+        working-directory: ./db
+        run: |
+          # Build the binary and output it as "pocketbase_amd64"
+          env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o pocketbase_amd64 .
+
+      - name: Build Docker Image with Local Binary
+        working-directory: ./db
+        run: |
+          # Pass TARGETARCH build arg (here "amd64") so the Dockerfile picks up the right file
+          docker build -f Dockerfile.pre_compiled --build-arg TARGETARCH=amd64 -t pocketbase:local .
+
+  build_non_static_binary:
+    name: Build Docker Image with Precompiled Binary (Non‑Static)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build binary without static linking (default CGO)
+        working-directory: ./db
+        run: |
+          # This build does not set CGO_ENABLED=0 so the binary will be dynamically linked.
+          go build -v -o pocketbase_amd64 .
+
+      - name: Attempt to Build Docker Image with Non‑Static Binary and Verify Failure
+        working-directory: ./db
+        run: |
+          set +e
+          docker build -f Dockerfile.pre_compiled --build-arg TARGETARCH=amd64 -t pocketbase:nonstatic .
+          EXIT_CODE=$?
+          echo "Docker build exit code: $EXIT_CODE"
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "Non‑static binary build unexpectedly succeeded"
+            exit 1
+          else
+            echo "Non‑static binary build failed as expected"
+            exit 0
+          fi
