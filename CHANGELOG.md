@@ -1,3 +1,25 @@
+# v0.17.1
+
+## Features
+
+- Adds batch actions for trails. You can now select multiple trails from the list and add them to a list, for example. Big thanks to @slothful-vassal for the PR
+- If a trail has more than two tags they are now toggleable on trail cards for less visual clutter. Thank to @briannelson95 for the PR
+- The wanderer.to homepage now contains a dedicated "Servers" section where public instances are listed
+
+## Bug fixes
+- Searching for a trail on the homepage does no longer result in 404
+- An actor's username and preferred username are no longer switched
+- Accesing your own private profile no longer throws an error
+- Reverse geocoding location lookup now also properly works when uploading a trail through the API
+- Both trail's and summit log's duration is now stored in seconds for consistency
+- All federated requests are now properly signed
+- Fixes GPX parser to deal with empty tags
+- Fixes bug that caused only 30 entries to be displayed in the statistics
+- The "Add to list" button is available again when creating a trail
+- Fixes bug that prevented saving lists with a large number of trails
+- Fixes "Copy link" button when sharing lists
+- Adds missing namespace to activitypub actor endpoint
+
 # v0.17.0
 > [!CAUTION]
 This release contains breaking changes. They are marked with a ⚠️.  
@@ -118,7 +140,7 @@ This release contains breaking changes. The necessary migrations will happen aut
 - Waypoints can now be created by clicking on the map when creating a new trail
 - Adds support for videos
 
-## Bugfixes
+## Bug fixes
 - Fixes map trail bounding box to include public and shared trails
 - Fixes bug that caused orphan waypoints and summit logs
 - The default language is now set correctly after registering
