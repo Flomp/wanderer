@@ -1,0 +1,11 @@
+[
+    {
+        "name": "Demo Server",
+        "url": "https://demo.wanderer.to",
+        "description": "A public demo instance of wanderer. Everyone can log in and try out all features—upload trails, create lists, explore the interface, and test federation. Data is reset periodically, so feel free to experiment.",
+        "image": "/server/imgs/demo-logo.png",
+        "region": "World",
+        "language": "English",
+        "category": "General"
+    }
+]

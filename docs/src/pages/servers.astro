@@ -1,0 +1,16 @@
+---
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+
+import ServerList from "../components/server_list.svelte";
+import servers from "../../public/server/servers.json";
+---
+
+<StarlightPage
+    frontmatter={{
+        title: "Discover wanderer Servers",
+        description: "A list of wanderer servers",
+        template: "splash",
+    }}
+>
+    <ServerList {servers} client:load />
+</StarlightPage>

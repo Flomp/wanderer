@@ -5,8 +5,83 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css";
 
+/* Dark mode colors. */
+:root {
+    --primary: 36, 39, 52;
+    --primary-hover: 55, 60, 80;
+    --secondary-hover: 55, 65, 81;
+    --secondary-hover-inverse: 243, 244, 246;
+
+    --background: 18, 20, 28;
+    --background-inverse: 255, 255, 255;
+
+    --content: 255, 255, 255;
+    --content-inverse: 0, 0, 0;
+
+    --input-background: 38, 40, 49;
+    --input-background-error: 76, 17, 17;
+    --input-border: 50, 54, 64;
+    --input-border-focus: 148, 163, 184;
+    --input-ring: 148, 163, 184;
+
+    --menu-background: 30, 32, 40;
+    --menu-item-background-hover: 55, 65, 81;
+    --menu-item-background-focus: 75, 85, 99;
+
+    --footer-background: 24, 26, 36;
+
+    --separator: 55, 65, 81;
+}
+
+/* Light mode colors. */
+:root[data-theme='light'] {
+    --primary: 36, 39, 52;
+    --primary-hover: 17, 24, 39;
+    --secondary-hover: 243, 244, 246;
+    --secondary-hover-inverse: 36, 39, 52;
+
+    --background: 255, 255, 255;
+    --background-inverse: 7, 10, 36;
+
+    --content: 0, 0, 0;
+    --content-inverse: 255, 255, 255;
+
+    --input-background: 249, 250, 251;
+    --input-background-error: 254, 242, 242;
+    --input-border: 209, 213, 219;
+    --input-border-focus: 36, 39, 52;
+    --input-ring: 148, 163, 184;
+
+    --menu-background: 255, 255, 255;
+    --menu-item-background-hover: 243, 244, 246;
+    --menu-item-background-focus: 229, 231, 235;
+
+    --footer-background: 36, 39, 52;
+
+    --separator: 209, 213, 219;
+}
+
 @theme {
-    --color-primary: #242734;
+    /* wanderer theme */
+    --color-primary: rgba(var(--primary));
+    --color-background: rgba(var(--background));
+    --color-background-inverse: rgba(var(--background-inverse));
+    --color-content: rgba(var(--content));
+    --color-content-inverse: rgba(var(--content-inverse));
+
+    --color-primary: rgba(var(--primary));
+    --color-primary-hover: rgba(var(--primary-hover));
+    --color-secondary-hover: rgba(var(--secondary-hover));
+    --color-input-background: rgba(var(--input-background));
+    --color-input-background-error: rgba(var(--input-background-error));
+    --color-input-border: rgba(var(--input-border));
+    --color-input-border-focus: rgba(var(--input-border-focus));
+    --color-input-ring: rgba(var(--input-ring));
+    --color-menu-background: rgba(var(--menu-background));
+    --color-menu-item-background-hover: rgba(var(--menu-item-background-hover));
+    --color-menu-item-background-focus: rgba(var(--menu-item-background-focus));
+    --color-footer-background: rgba(var(--footer-background));
+    --color-separator: rgba(var(--separator));
 
     /* Generated accent color palettes. */
     --color-accent-200: #b3c7ff;

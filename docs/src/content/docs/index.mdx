@@ -10,12 +10,12 @@ hero:
     html: |
       <video class="rounded-xl hidden md:block" poster="/favicon.svg" width="100%" src="/trailer.mp4" controls autoplay />
   actions:
-    - text: Try the demo
-      link: https://demo.wanderer.to
-      icon: rocket
+    - text: Join a server
+      link: /servers
+      icon: right-arrow
     - text: Read the docs
       link: /welcome
-      icon: right-arrow
+      icon: open-book
       variant: secondary
     
 ---
@@ -23,7 +23,7 @@ hero:
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-16">
-  <div>
+  <div class="order-">
     ![Mockups of wanderer on laptop, tablet and phone](../../assets/hero.png)
   </div>
   <div>
@@ -39,10 +39,10 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     </p>
   </div>
   <div>
-    ![Shocase of wanderer integrations](../../assets/integrations.png)
+    ![Showcase of wanderer integrations](../../assets/integrations.png)
   </div>
   <div>
-    ![Shocase of wanderer's social features](../../assets/social.png)
+    ![Showcase of wanderer's social features](../../assets/social.png)
   </div>
   <div>
     <h1>Explore together, even apart</h1>
