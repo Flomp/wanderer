@@ -99,7 +99,7 @@ func GetActorByIRI(app core.App, actor *core.Record, iri string, includeFollows 
 func iriFromHandle(domain string, username string) (string, error) {
 	client := &http.Client{}
 
-	webfingerURL := fmt.Sprintf("http://%s/.well-known/webfinger?resource=acct:%s@%s", domain, username, domain)
+	webfingerURL := fmt.Sprintf("https://%s/.well-known/webfinger?resource=acct:%s@%s", domain, username, domain)
 	resp, err := client.Get(webfingerURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("webfinger request failed: %v", err)
@@ -140,12 +140,12 @@ func assembleActor(actor *core.Record, dbActor *core.Record, app core.App, inclu
 			dbActor.Set("icon", fmt.Sprintf("%s/api/v1/files/users/%s/%s", origin, user.Id, user.GetString("avatar")))
 		}
 		dbActor.Set("summary", settings.GetString("bio"))
-		followerCount, err := app.CountRecords("follows", dbx.NewExp("followee={:user}", dbx.Params{"user": dbActor.Id}))
+		followerCount, err := app.CountRecords("follows", dbx.NewExp("followee={:user} AND status='accepted'", dbx.Params{"user": dbActor.Id}))
 		if err != nil {
 			return nil, err
 		}
 		dbActor.Set("followerCount", followerCount)
-		followingCount, err := app.CountRecords("follows", dbx.NewExp("follower={:user}", dbx.Params{"user": dbActor.Id}))
+		followingCount, err := app.CountRecords("follows", dbx.NewExp("follower={:user} AND status='accepted'", dbx.Params{"user": dbActor.Id}))
 		if err != nil {
 			return nil, err
 		}

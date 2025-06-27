@@ -29,6 +29,7 @@ export async function GET(event: RequestEvent) {
         const r: APRoot<APActor & { publicKey: { id: string, owner: string, publicKeyPem: string } }> = {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
             ],
             id: id,
             type: "Person",

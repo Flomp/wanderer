@@ -127,6 +127,6 @@
 }
 
 .mention {
-    @apply bg-blue-100 dark:bg-slate-700 rounded-md;
+    @apply bg-blue-100 dark:bg-slate-700 rounded-md text-sm;
     padding: 0.1rem 0.3rem;
 }

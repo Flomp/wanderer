@@ -19,7 +19,7 @@ type EmailData struct {
 var notificationTemplates = map[NotificationType]string{
 	TrailShare:       "{{.Author}} has shared a trail with you: {{.trail}}.",
 	ListShare:        "{{.Author}} has shared a list with you: {{.list}}.",
-	NewFollower:      "Good news! You have a new follower: {{.Author}}.",
+	NewFollower:      "Good news! You have a new follower: {{.follower}}.",
 	TrailComment:     "{{.Author}} commented on your trail '{{.trail_name}}': '{{.comment}}'.",
 	SummitLogCreate:  "{{.Author}} created a summit log on your trail '{{.trail_name}}'.",
 	TrailLike:        "{{.Author}} liked your trail '{{.trail_name}}'.",
@@ -59,7 +59,7 @@ func GenerateHTML(appUrl string, recipientName string, authorName string, notifi
 	}
 
 	html, err := registry.LoadFiles(
-		"db/templates/mail/notification.html",
+		"templates/mail/notification.html",
 	).Render(content)
 
 	if err != nil {

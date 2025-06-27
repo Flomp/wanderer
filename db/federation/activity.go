@@ -160,23 +160,23 @@ func ProcessActivity(e *core.RequestEvent) error {
 
 	switch activity.Type {
 	case pub.FollowType:
-		ProcessFollowActivity(e.App, actor, activity)
+		err = ProcessFollowActivity(e.App, actor, activity)
 	case pub.AcceptType:
-		ProcessAcceptActivity(e.App, actor, activity)
+		err = ProcessAcceptActivity(e.App, actor, activity)
 	case pub.UndoType:
-		ProcessUndoActivity(e.App, actor, activity)
+		err = ProcessUndoActivity(e.App, actor, activity)
 	case pub.UpdateType:
 		fallthrough
 	case pub.CreateType:
-		ProcessCreateOrUpdateActivity(e.App, actor, activity)
+		err = ProcessCreateOrUpdateActivity(e.App, actor, activity)
 	case pub.DeleteType:
-		ProcessDeleteActivity(e.App, actor, activity)
+		err = ProcessDeleteActivity(e.App, actor, activity)
 	case pub.AnnounceType:
-		ProcessAnnounceActivity(e.App, actor, activity)
+		err = ProcessAnnounceActivity(e.App, actor, activity)
 	case pub.LikeType:
-		ProcessLikeActivity(e.App, actor, activity)
+		err = ProcessLikeActivity(e.App, actor, activity)
 	}
-	return e.JSON(http.StatusOK, nil)
+	return e.JSON(http.StatusOK, err)
 }
 
 func verifySignature(app core.App, req *http.Request, publicKeyPem string) (bool, error) {

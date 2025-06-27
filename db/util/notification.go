@@ -92,11 +92,15 @@ func SendNotification(app core.App, notification Notification, recipient *core.R
 		if err != nil {
 			return err
 		}
+		recipientUser, err := app.FindRecordById("users", recipientActor.GetString("user"))
+		if err != nil {
+			return err
+		}
 		authorActor, err := app.FindRecordById("activitypub_actors", notification.Author)
 		if err != nil {
 			return err
 		}
-		html, err := GenerateHTML(app.Settings().Meta.AppURL, recipientActor.GetString("preferred_username"), authorActor.GetString("preferred_username"), notification.Type, notification.Metadata)
+		html, err := GenerateHTML(app.Settings().Meta.AppURL, recipientActor.GetString("username"), authorActor.GetString("username"), notification.Type, notification.Metadata)
 		if err != nil {
 			return err
 		}
@@ -106,7 +110,7 @@ func SendNotification(app core.App, notification Notification, recipient *core.R
 				Address: app.Settings().Meta.SenderAddress,
 				Name:    app.Settings().Meta.SenderName,
 			},
-			To:      []mail.Address{{Address: recipientActor.Email()}},
+			To:      []mail.Address{{Address: recipientUser.Email()}},
 			Subject: "wanderer - New Notification",
 			HTML:    html,
 		}
