@@ -53,12 +53,12 @@
     ActivityPub, servers can interact—so you can follow users, view trails, and
     share content across instances.
 </p>
-<p class="max-w-3xl mb-12">
+<p class="max-w-3xl">
     You can join an existing server or host your own. This page helps you
     discover publicly listed wanderer servers you might want to explore or
     become part of.
 </p>
-
+<p class="mb-12">Learn how to add your server to the list <a href="https://github.com/Flomp/wanderer/discussions/361">here</a>.</p>
 <div
     class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] justify-end gap-4 mb-8"
 >
@@ -88,23 +88,23 @@
 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
     {#each filteredServers as server}
         <div
-            class="mt-0 rounded-lg border border-input-border transition overflow-hidden"
+            class="mt-0 rounded-lg border border-input-border transition overflow-hidden flex flex-col"
         >
             <img
                 src={server.image}
                 alt={server.name}
                 class="w-full h-40 object-cover"
             />
-            <div class="flex items-center gap-x-1 px-4">
+            <div class="flex items-center gap-1 flex-wrap px-4">
                 {#each ["category", "region", "language"] as key}
                     <div
-                        class="mt-0 text-xs border border-input-border bg-menu-item-background-hover' px-2 py-1 rounded-full flex items-center gap-1"
+                        class="mt-0 flex-shrink-0 text-xs border border-input-border bg-menu-item-background-hover' px-2 py-1 rounded-full flex items-center gap-1"
                     >
                         {(server as any)[key]}
                     </div>
                 {/each}
             </div>
-            <div class="p-4 -mt-2">
+            <div class="p-4 -mt-2 flex-grow">
                 <h4 class="mb-1">{server.name}</h4>
                 <p class="text-sm">{server.description}</p>
             </div>
