@@ -64,7 +64,7 @@ func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	if origin == "" {
 		return nil, fmt.Errorf("ORIGIN environment variable not set")
 	}
-	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, strings.ToLower(u.GetString("preferred_username")))
+	id := fmt.Sprintf("%s/api/v1/activitypub/user/%s", origin, strings.ToLower(u.GetString("username")))
 
 	url, err := url.Parse(origin)
 	if err != nil {
