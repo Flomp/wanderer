@@ -9,12 +9,21 @@
         "category": "General"
     },
     {
+        "name": "..:: tchncs :: wanderer ::..",
+        "url": "https://trails.tchncs.de",
+        "description": "General purpose instance by tchncs.de, not bound to a specific area. It is supported by voluntary donations from users of tchncs.",
+        "image": "/server/imgs/tchncs.de.png",
+        "region": "Germany",
+        "language": "German, English",
+        "category": "General Outdoor"
+    },
+    {
         "name": "Trails by Softwerke Magdeburg",
         "url": "https://trails.magdeburg.jetzt",
         "description": "Find and share cool places & tours near Magdeburg & Saxony-Anhalt on this public instance. It is run by Softwerke Magdeburg, a non-profit association that's locally providing various free & open services to the public.",
         "image": "/server/imgs/magdeburg.jetzt.png",
         "region": "Magdeburg & Saxony-Anhalt",
         "language": "German",
-        "category": "General Outdoor / Regional"
+        "category": "General Outdoor"
     }
 ]
