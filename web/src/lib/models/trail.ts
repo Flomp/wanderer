@@ -24,6 +24,7 @@ class Trail {
     photos: string[];
     gpx?: string;
     created?: string;
+    updated?: string;
     category?: string;
     tags: string[];
     waypoints: string[];

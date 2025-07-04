@@ -9,9 +9,7 @@
     import { profile_timeline_index } from "$lib/stores/profile_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
-    import { HTML } from "@threlte/extras";
     import { _ } from "svelte-i18n";
-    import { temp } from "three/examples/jsm/nodes/Nodes.js";
 
     let { data } = $props();
 

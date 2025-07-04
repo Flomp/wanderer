@@ -10,6 +10,7 @@
     import { _ } from "svelte-i18n";
     import errorDark from "$lib/assets/svgs/empty_states/error_dark.svg";
     import errorLight from "$lib/assets/svgs/empty_states/error_light.svg";
+    import MetaTags from "$lib/components/base/meta_tags.svelte";
 
     let { data, children } = $props();
 
@@ -55,6 +56,26 @@
     }
 </script>
 
+<MetaTags
+    title={`${$_("profile")} | wanderer`}
+    openGraph={{
+        title: data.profile.username,
+        description: data.profile.bio,
+        url: `${page.url.origin}/profile/@${data.profile.preferredUsername}`,
+        type: "profile",
+        profile: {
+            username: data.profile.preferredUsername,
+        },
+        images: [
+            {
+                url:
+                    data.profile.icon ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${data.profile.preferredUsername}&backgroundType=gradientLinear`,
+            },
+        ],
+    }}
+/>
+
 <div
     class="grid grid-cols-1 md:grid-cols-[356px_minmax(0,_1fr)] gap-6 max-w-6xl mx-4 md:mx-auto items-start"
 >
@@ -69,8 +90,7 @@
                 />
                 <div>
                     <h4 class="text-2xl font-semibold col-start-2">
-                        {data.profile.username ??
-                            "?"}
+                        {data.profile.username ?? "?"}
                     </h4>
                     <p class="text-sm text-gray-500 mb-4 break-all">
                         {data.profile.acct}
