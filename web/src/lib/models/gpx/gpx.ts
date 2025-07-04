@@ -148,7 +148,7 @@ export default class GPX {
       distance: totalDistance,
       elevationGain: totalElevationGain,
       elevationLoss: totalElevationLoss,
-      duration: totalDuration,
+      duration: Math.abs(totalDuration),
       hash: this.generateMinHash(allPoints)
     }
   }

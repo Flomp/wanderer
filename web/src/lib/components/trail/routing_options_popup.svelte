@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {
         RoutingOptions,
-        ValhallaBicycleCostingOptions
+        ValhallaBicycleCostingOptions,
     } from "$lib/models/valhalla";
     import { formatSpeed } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
@@ -11,9 +11,11 @@
     import Toggle from "../base/toggle.svelte";
     interface Props {
         options: RoutingOptions;
+        onReverse: () => void;
+        onReset: () => void;
     }
 
-    let { options = $bindable() }: Props = $props();
+    let { options = $bindable(), onReverse, onReset }: Props = $props();
 
     const modesOfTransport: SelectItem[] = [
         { text: $_("hiking"), value: "pedestrian" },
@@ -59,10 +61,10 @@
     }
 
     $effect(() => {
-        if(!options.autoRouting) {
+        if (!options.autoRouting) {
             showSettings = false;
         }
-    })
+    });
 
     let showSettings = $state(false);
 
@@ -92,7 +94,7 @@
     }
 </script>
 
-<div class="p-4 my-2 rounded-xl bg-background space-y-4">
+<div class="px-6 py-4 my-2 rounded-xl bg-background space-y-4">
     <Toggle bind:value={options.autoRouting} label={$_("enable-auto-routing")}
     ></Toggle>
     <div class="flex items-center gap-4">
@@ -107,10 +109,27 @@
             disabled={!options.autoRouting}
             onclick={() => (showSettings = !showSettings)}
             aria-label="Toggle routing settings"
-            ><i class="fa fa-cogs" class:text-gray-500={!options.autoRouting}></i></button
+            ><i class="fa fa-cogs" class:text-gray-500={!options.autoRouting}
+            ></i></button
         >
     </div>
-
+    <div class="flex items-center gap-4">
+        <button
+            class="btn-icon tooltip"
+            type="button"
+            onclick={() => onReverse()}
+            aria-label="Reverse trail direction"
+            data-title={$_("reverse-direction")}
+            ><i class="fa fa-arrow-right-arrow-left"></i></button
+        >
+        <button
+            class="btn-icon tooltip"
+            type="button"
+            onclick={() => onReset()}
+            aria-label="Reset route"
+            data-title={$_("reset")}><i class="fa fa-trash"></i></button
+        >
+    </div>
     {#if showSettings}
         <div in:slide out:slide>
             {#if options.modeOfTransport === "pedestrian" && options.pedestrianOptions}

@@ -42,6 +42,8 @@
         editRoute,
         insertIntoRoute,
         normalizeRouteTime,
+        resetRoute,
+        reverseRoute,
         route,
         setRoute,
     } from "$lib/stores/valhalla_store";
@@ -854,6 +856,18 @@
         }
     }
 
+    function reverseTrail() {
+        reverseRoute();
+
+        updateTrailWithRouteData();
+    }
+
+    function resetTrail() {
+        resetRoute();
+        
+        updateTrailWithRouteData();
+    }
+
     function updateTrailWithRouteData() {
         overwriteGPX = true;
         const totals = route.features;
@@ -1120,7 +1134,7 @@
         ></TextField>
         <Datepicker label={$_("date")} bind:value={$formData.date}></Datepicker>
         <Editor
-        extraClasses="min-h-24"
+            extraClasses="min-h-24"
             bind:value={$formData.description}
             label={$_("describe-your-trail")}
         ></Editor>
@@ -1276,9 +1290,12 @@
             <div
                 in:scale={{ easing: backInOut }}
                 out:scale={{ easing: backInOut }}
-                class="absolute top-0 left-16 z-50"
+                class="absolute top-8 left-2 z-50"
             >
-                <RoutingOptionsPopup bind:options={routingOptions}
+                <RoutingOptionsPopup
+                    bind:options={routingOptions}
+                    onReverse={reverseTrail}
+                    onReset={resetTrail}
                 ></RoutingOptionsPopup>
             </div>
         {/if}

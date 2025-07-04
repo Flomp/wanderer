@@ -5,6 +5,8 @@ import Waypoint from "$lib/models/gpx/waypoint";
 import { type RoutingOptions, type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
 import { APIError } from "$lib/util/api_util";
 import { decodePolyline, encodePolyline } from "$lib/util/polyline_util";
+import { get } from "svelte/store";
+import { _ } from "svelte-i18n";
 
 
 const emtpyTrack: Track = { trkseg: [] }
@@ -100,6 +102,49 @@ export function deleteFromRoute(index: number) {
     route.features = route.getTotals();
 }
 
+export function reverseRoute() {
+    for (const trk of route.trk ?? []) {
+        for (const seg of trk.trkseg ?? []) {
+            seg.trkpt?.reverse()
+        }
+        trk.trkseg?.reverse()
+    }
+    route.trk?.reverse()
+
+    route.features = route.getTotals();
+
+    anchors.reverse();
+
+    anchors.forEach((a, i) => {
+        if (!a.marker) {
+            return;
+        }
+        a.marker.getElement().textContent = "" + (i + 1);
+
+        const anchorPopupHeading = a.marker
+            .getPopup()
+            ._content.getElementsByTagName("h5")[0];
+        if (anchorPopupHeading) {
+            anchorPopupHeading.textContent =
+                get(_)("route-point") + " #" + (i + 1);
+        }
+    });
+}
+
+export function resetRoute() {
+    route = new GPX({ trk: [emtpyTrack] });
+
+    anchors.forEach((a) => {
+        if(!a.marker) {
+            return;
+        }
+
+        a.marker.remove();
+    })
+
+    anchors = []
+}
+
 export function normalizeRouteTime() {
     let currentTime = new Date();
 
@@ -114,8 +159,8 @@ export function normalizeRouteTime() {
             const offset = (wp.time?.getTime() ?? 0) - baseTime;
             const adjustedTime = new Date(currentTime.getTime() + offset);
 
-            wp.time = adjustedTime            
+            wp.time = adjustedTime
         }
         currentTime = new Date(seg.trkpt[seg.trkpt.length - 1].time!.getTime());
-    }    
+    }
 }
