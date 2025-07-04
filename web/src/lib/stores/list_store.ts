@@ -43,7 +43,7 @@ export async function lists_index(filter?: ListFilter, page: number = 1, perPage
 }
 
 
-export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 5, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
+export async function lists_search_filter(filter: ListFilter, page: number = 1, perPage: number = 30, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch, user?: AuthRecord) {
     user ??= get(currentUser)
 
     const filterText = buildSearchFilterText(user, filter)
@@ -65,14 +65,15 @@ export async function lists_search_filter(filter: ListFilter, page: number = 1, 
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const result: { page: number, totalPages: number, hits: Hits<ListSearchResult> } = await r.json();
+    const fetchedLists: { page: number, totalPages: number, hits: Hits<ListSearchResult> } = await r.json();
 
+    const resultLists: List[] = await searchResultToLists(fetchedLists.hits)
 
-    const resultLists: List[] = await searchResultToLists(result.hits)
+    const result = page > 1 ? [...lists, ...resultLists] : resultLists
 
-    return { items: resultLists, ...result };
+    lists = result;
 
-
+    return { items: result, ...fetchedLists };
 }
 
 export async function lists_show(id: string, handle?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -253,7 +254,7 @@ function buildSearchFilterText(user: AuthRecord, filter: ListFilter): string {
 }
 
 export async function searchResultToLists(hits: Hits<ListSearchResult>): Promise<List[]> {
-    const lists: List[] = []    
+    const lists: List[] = []
     for (const h of hits) {
         const l: List & RecordModel = {
             collectionId: "lists",

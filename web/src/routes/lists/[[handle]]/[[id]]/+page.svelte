@@ -16,7 +16,6 @@
     import ListShareModal from "$lib/components/list/list_share_modal.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
     import TrailInfoPanel from "$lib/components/trail/trail_info_panel.svelte";
-    import TrailList from "$lib/components/trail/trail_list.svelte";
     import { List, type ListFilter } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
     import {
@@ -55,7 +54,6 @@
     let map: M.Map | undefined = $state();
     let mapWithElevation: MapWithElevationMaplibre | undefined = $state();
     let markers: M.Marker[] = $state([]);
-    let showMap: boolean = true;
 
     let selectedList: List | null = $state(
         page.params.handle && page.params.id ? data.lists.items[0] : null,
