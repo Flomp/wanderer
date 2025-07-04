@@ -99,7 +99,7 @@
         </div>
 
         {#if waypoint.description}
-            <p>{waypoint.description}</p>
+            <p>{@html waypoint.description}</p>
         {/if}
 
         <span class="text-sm text-gray-500"

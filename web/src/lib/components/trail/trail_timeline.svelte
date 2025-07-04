@@ -88,7 +88,7 @@
                     {wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span
                 >
                 <p class="whitespace-pre-line">
-                    {wp.description}
+                    {@html wp.description}
                 </p>
             </div>
         </div>
