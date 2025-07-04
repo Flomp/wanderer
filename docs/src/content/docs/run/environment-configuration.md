@@ -42,7 +42,7 @@ Since we use an unmodified installation of meilisearch you can use all variables
 | BODY_SIZE_LIMIT         | Maximum allowed upload size                                                      | Infinity                            |
 | PUBLIC_POCKETBASE_URL   | IP or hostname (including the port) of your pocketbase instance                  | http://db:8090                      |
 | PUBLIC_DISABLE_SIGNUP   | Disables signup option for new users                                             | false                               |
-| PUBLIC_VALHALLA_URL     | Public IP or hostname (including the port) of a valhalla instance                | https://valhalla.openstreetmap.de  |
+| PUBLIC_VALHALLA_URL     | Public IP or hostname (including the port) of a valhalla instance                | https://valhalla1.openstreetmap.de  |
 | PUBLIC_NOMINATIM_URL    | Public IP or hostname (including the port) of a nominatim instance               | https://nominatim.openstreetmap.org |
 | PUBLIC_PRIVATE_INSTANCE | Setting this to true will block visitors from viewing content without an account | false                               |
 | UPLOAD_FOLDER           | Folder from which <span class="-tracking-[0.075em]">wanderer</span> auto-uploads trails                                   | /app/uploads                        |
