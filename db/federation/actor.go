@@ -325,32 +325,34 @@ func FetchCollection(actor *core.Record, url string) (*pub.OrderedCollection, er
 		req.Header.Add(k, v)
 	}
 
-	dbPrivateKey := actor.GetString("private_key")
-	if dbPrivateKey != "" {
-		algs := []httpsig.Algorithm{httpsig.RSA_SHA256}
-		postHeaders := []string{"(request-target)", "Date", "Digest", "Content-Type", "Host"}
-		expiresIn := 60
+	if actor != nil && actor.GetString("private_key") != "" {
+		dbPrivateKey := actor.GetString("private_key")
+		if dbPrivateKey != "" {
+			algs := []httpsig.Algorithm{httpsig.RSA_SHA256}
+			postHeaders := []string{"(request-target)", "Date", "Digest", "Content-Type", "Host"}
+			expiresIn := 60
 
-		signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
-		if err != nil {
-			return nil, err
+			signer, _, err := httpsig.NewSigner(algs, httpsig.DigestSha256, postHeaders, httpsig.Signature, int64(expiresIn))
+			if err != nil {
+				return nil, err
+			}
+
+			decryptedPrivateKey, err := security.Decrypt(dbPrivateKey, encryptionKey)
+			if err != nil {
+				return nil, err
+			}
+			privateKey, err := x509.ParsePKCS1PrivateKey(decryptedPrivateKey)
+			if err != nil {
+				return nil, err
+			}
+
+			pubID := actor.GetString("iri") + "#main-key"
+
+			if err := signer.SignRequest(privateKey, pubID, req, []byte{}); err != nil {
+				return nil, err
+			}
+
 		}
-
-		decryptedPrivateKey, err := security.Decrypt(dbPrivateKey, encryptionKey)
-		if err != nil {
-			return nil, err
-		}
-		privateKey, err := x509.ParsePKCS1PrivateKey(decryptedPrivateKey)
-		if err != nil {
-			return nil, err
-		}
-
-		pubID := actor.GetString("iri") + "#main-key"
-
-		if err := signer.SignRequest(privateKey, pubID, req, []byte{}); err != nil {
-			return nil, err
-		}
-
 	}
 
 	resp, err := http.DefaultClient.Do(req)

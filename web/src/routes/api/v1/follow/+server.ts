@@ -26,7 +26,7 @@ export async function GET(event: RequestEvent) {
             let followers: APOrderedCollectionPage;
 
             // fetch followers locally to not run into auth issues with private profiles
-            if (actor.id === event.locals.user.actor) {
+            if (actor.id === event.locals.user?.actor) {
                 const r = await event.fetch(actor[type as "followers" | "following"]! + '?' + new URLSearchParams({ page }))
 
                 if (!r.ok) {

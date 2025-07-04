@@ -44,7 +44,7 @@ export async function follows_a_b(a: string, b: string, f: (url: RequestInfo | U
 
     const response: ListResult<Follow> = await r.json();
 
-    return response.items.at(0);
+    return response.items.at(0) ?? null;
 }
 
 export async function follows_create(followee: string) {

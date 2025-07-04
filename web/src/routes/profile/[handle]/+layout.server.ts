@@ -12,9 +12,9 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
     try {
         const { actor, profile } = await profile_show(params.handle, fetch);
 
-        const isOwnProfile = profile.id === locals.user.actor;
+        const isOwnProfile = profile.id === locals.user?.actor;
 
-        const follow = await follows_a_b(locals.user.actor!, profile.id, fetch) ?? null
+        const follow = locals.user?.actor ? await follows_a_b(locals.user.actor!, profile.id, fetch) : null
         return { profile, isOwnProfile, follow: follow, actor }
 
     } catch (e) {

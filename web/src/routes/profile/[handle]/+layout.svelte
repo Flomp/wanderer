@@ -134,7 +134,7 @@
                 <p class="font-semibold">{data.profile.following}</p>
                 <p>{$_("following")}</p>
             </a>
-            {#if !data.isOwnProfile}
+            {#if !data.isOwnProfile && data.user}
                 <div class="px-6 mt-2">
                     <Button
                         loading={followLoading}

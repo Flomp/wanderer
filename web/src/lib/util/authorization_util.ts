@@ -3,7 +3,6 @@ import { env } from "$env/dynamic/public";
 const privateRoutes = [
   "/settings",
   "/trail/edit/new",
-  "/profile",
   "/lists/edit/new",
 ]
 
