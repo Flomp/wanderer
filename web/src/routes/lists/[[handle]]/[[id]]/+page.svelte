@@ -117,10 +117,6 @@
     }
 
     async function back() {
-        if (loadAllListsOnNextBack) {
-            await updateFilter();
-            loadAllListsOnNextBack = false;
-        }
         if (selectedTrail) {
             selectedTrail = null;
         } else if (selectedList) {
@@ -130,6 +126,10 @@
                 zoom: 1,
                 center: [0, 0],
             });
+        }
+        if (loadAllListsOnNextBack) {
+            await updateFilter(false);
+            loadAllListsOnNextBack = false;
         }
     }
 
@@ -178,10 +178,10 @@
         pagination.totalPages = response.totalPages;
     }
 
-    async function updateFilter() {
+    async function updateFilter(resetMap: boolean = true) {
         loading = true;
 
-        if (selectedList || selectedTrail) {
+        if ((selectedList || selectedTrail) && resetMap) {
             selectedList = null;
             selectedTrail = null;
             map?.flyTo({
@@ -251,7 +251,7 @@
                 disabled={!selectedList}
                 onclick={back}><i class="fa fa-arrow-left"></i></button
             >
-            <Search bind:value={filter.q} onupdate={updateFilter}></Search>
+            <Search bind:value={filter.q} onupdate={() => updateFilter()}></Search>
             <button
                 aria-label="Toggle filter"
                 class="btn-icon"
