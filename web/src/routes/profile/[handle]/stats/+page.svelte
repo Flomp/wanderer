@@ -404,8 +404,9 @@
             ><i class="fa fa-table mr-3"></i>{$_("all-activities")}</span
         >
         <div class=" overflow-x-auto">
+            {data.logs.length}
             <SummitLogTable
-                summitLogs={data.logs}
+                {summitLogs}
                 handle={page.params.handle}
                 showCategory
                 showTrail
