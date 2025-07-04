@@ -22,7 +22,7 @@ class Settings {
   location?: { name: string, lat: number, lon: number } | null;
   category?: string;
   tilesets?: ({ name: string, url: string }[]) | null
-  terrain?: { terrain: string, hillshading: string } | null;
+  terrain?: { terrain?: string, hillshading?: string } | null;
   user?: string;
   privacy?: { account: "public" | "private", trails: "public" | "private", lists: "public" | "private" } | null
   notifications?: Record<NotificationType, { web: boolean, email: boolean }> | null

@@ -464,9 +464,7 @@
                 },
                 layout: {
                     "text-field": "{point_count_abbreviated}",
-                    "text-font": [
-                        "Noto Sans Regular",
-                    ],
+                    "text-font": ["Noto Sans Regular"],
                     "text-size": 12,
                 },
             });
@@ -1013,7 +1011,7 @@
             );
         }
 
-        if (showTerrain) {
+        if (showTerrain && page.data.settings?.terrain?.terrain) {
             map!.addControl(
                 new M.TerrainControl({
                     source: "terrain",
