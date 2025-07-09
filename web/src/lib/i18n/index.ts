@@ -17,4 +17,11 @@ register('zh', () => import('./locales/zh.json'))
 init({
     fallbackLocale: defaultLocale,
     initialLocale: browser ? getPb().authStore.record?.language ?? window.navigator.language : defaultLocale,
+    formats: {
+        date: {
+            monthName: { month: 'long' }
+        },
+        number: {},
+        time: {}
+    },
 })
