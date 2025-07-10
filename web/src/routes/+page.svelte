@@ -155,7 +155,7 @@
                         ? '@' + trail.domain
                         : ''}/{trail.id}"
                 >
-                    <TrailCard {trail} fullWidth></TrailCard></a
+                    <TrailCard {trail} fullWidth selected={false} hovered={false}></TrailCard></a
                 >
             {/each}
         {/if}
@@ -202,7 +202,7 @@
         class="grid grid-cols-1 lg:grid-cols-2 justify-items-center gap-8 py-8"
     >
         {#each $categories as category}
-            <a href="/trails?category={category.id}">
+            <a href="/trails?category={category.name}">
                 <CategoryCard {category}></CategoryCard>
             </a>
         {/each}
