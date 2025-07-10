@@ -361,5 +361,16 @@
   "welcome_to": "Benvenuti a",
   "width": "Width",
   "wrong-username-or-password": "Nome utente o password errati",
-  "you-can": "Puoi"
+  "you-can": "Puoi",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  }
 }
