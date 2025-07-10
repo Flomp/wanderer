@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { SummitLog } from "$lib/models/summit_log";
+    import { range } from "$lib/util/array_util";
 	import { isSameDay, isToday } from "../../util/date_util";
-	import { _ } from "svelte-i18n";
+	import { _, date } from "svelte-i18n";
 	interface Props {
 		logs?: SummitLog[];
 		colorMap?: Record<string, string>;
@@ -18,21 +19,6 @@
 		onclick,
 	}: Props = $props();
 
-	const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-	const months = [
-		"Januar",
-		"Februar",
-		"März",
-		"April",
-		"Mai",
-		"Juni",
-		"Juli",
-		"August",
-		"September",
-		"Oktober",
-		"November",
-		"Dezember",
-	];
 	const today = new Date();
 	let currentMonth = $state(today.getMonth());
 	let currentYear = $state(today.getFullYear());
@@ -126,7 +112,7 @@
 
 <div class="calendar-header w-full flex items-center justify-between mb-6">
 	<div class="calendar-month-year basis-full">
-		<span class="text-lg">{months[currentMonth]}</span>
+		<span class="text-lg">{$date(new Date(currentYear, currentMonth, 1, 0, 0), { format: 'monthName' } )}</span>
 		<span>{currentYear}</span>
 	</div>
 	<button
@@ -140,11 +126,11 @@
 </div>
 <div class="calendar-body">
 	<div class="grid grid-cols-7">
-		{#each weekdays as weekday, i}
+		{#each range(7), i}
 			<div
 				class="calendar-weekday flex items-center justify-center h-10 text-gray-500"
 			>
-				{weekday}
+				{$_("calendar.weekdays." + i)}
 			</div>
 		{/each}
 	</div>
