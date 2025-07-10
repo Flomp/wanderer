@@ -5,6 +5,8 @@
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
+    import type { SelectItem } from "$lib/components/base/select.svelte";
+    import Select from "$lib/components/base/select.svelte";
     import SkeletonCard from "$lib/components/base/skeleton_card.svelte";
     import EmptyStateSearch from "$lib/components/empty_states/empty_state_search.svelte";
     import MapWithElevationMaplibre from "$lib/components/trail/map_with_elevation_maplibre.svelte";
@@ -53,6 +55,18 @@
         page: 1,
         totalPages: 1,
     };
+
+    const sortOptions: SelectItem[] = [
+        { text: $_("name"), value: "name" },
+        { text: $_("distance"), value: "distance" },
+        { text: $_("duration"), value: "duration" },
+        { text: $_("difficulty"), value: "difficulty" },
+        { text: $_("elevation-gain"), value: "elevation_gain" },
+        { text: $_("elevation-loss"), value: "elevation_loss" },
+        { text: $_("likes"), value: "like_count" },
+        { text: $_("creation-date"), value: "created" },
+        { text: $_("date"), value: "date" },
+    ];
 
     export const snapshot: Snapshot<TrailFilter> = {
         capture: () => filter,
@@ -126,6 +140,8 @@
             pagination.page = 1;
             loading = true;
         }
+
+        console.log(filter);
         const trailsInBox = await trails_search_bounding_box(
             northEast,
             southWest,
@@ -144,6 +160,27 @@
 
     function handleTrailCardMouseLeave(trail: Trail) {
         mapWithElevation?.unHighlightCluster();
+    }
+
+    function setSort() {
+        if (!filter) {
+            return;
+        }
+        localStorage.setItem("sort", filter.sort);
+        handleFilterUpdate();
+    }
+
+    function setSortOrder() {
+        if (!filter) {
+            return;
+        }
+        if (filter.sortOrder === "+") {
+            filter.sortOrder = "-";
+        } else {
+            filter.sortOrder = "+";
+        }
+        localStorage.setItem("sort_order", filter.sortOrder);
+        handleFilterUpdate();
     }
 
     async function handleFilterUpdate() {
@@ -222,7 +259,10 @@
                 maxBoundingBox.min_lat == maxBoundingBox.max_lat
             ) {
                 map?.setZoom(12);
-                map?.setCenter([maxBoundingBox.min_lon, maxBoundingBox.min_lat]);
+                map?.setCenter([
+                    maxBoundingBox.min_lon,
+                    maxBoundingBox.min_lat,
+                ]);
             } else {
                 const boundingBox: M.LngLatBoundsLike = [
                     [maxBoundingBox.min_lon, maxBoundingBox.max_lat],
@@ -288,7 +328,7 @@
         class="flex flex-col items-stretch gap-4 px-3 md:px-8 overflow-y-scroll"
         onscroll={onListScroll}
     >
-        <div class="sticky top-0 z-10 bg-background pb-4 space-y-4">
+        <div class="sticky top-0 z-10 bg-background pb-4">
             <div class="flex items-center gap-2 md:gap-4">
                 <Search
                     extraClasses="w-full"
@@ -298,12 +338,6 @@
                     items={searchDropdownItems}
                 ></Search>
                 <button
-                    aria-label="Open filter"
-                    class="btn-icon"
-                    onclick={() => (showFilter = !showFilter)}
-                    ><i class="fa fa-sliders"></i></button
-                >
-                <button
                     aria-label="Toggle map"
                     class="btn-icon md:hidden"
                     onclick={() => (showMap = !showMap)}
@@ -312,6 +346,28 @@
                             ? 'rectangle-list'
                             : 'map'}"
                     ></i></button
+                >
+            </div>
+            <div class="flex items-center gap-2 mt-2 mb-4">
+                <Select
+                    bind:value={filter.sort}
+                    items={sortOptions}
+                    onchange={setSort}
+                ></Select>
+                <button
+                    aria-label="Change sort order"
+                    id="sort-order-btn"
+                    class="btn-icon"
+                    class:rotated={filter.sortOrder == "-"}
+                    onclick={() => setSortOrder()}
+                    ><i class="fa fa-arrow-up"></i></button
+                >
+                <div class="basis-full"></div>
+                <button
+                    aria-label="Open filter"
+                    class="btn-icon"
+                    onclick={() => (showFilter = !showFilter)}
+                    ><i class="fa fa-sliders"></i></button
                 >
             </div>
             {#if showFilter}
@@ -345,6 +401,8 @@
                         <TrailCard
                             {trail}
                             fullWidth={true}
+                            hovered={false}
+                            selected={false}
                             onmouseenter={() =>
                                 handleTrailCardMouseEnter(trail)}
                             onmouseleave={() =>
@@ -383,5 +441,12 @@
         #trail-list {
             height: calc(100vh - 124px);
         }
+    }
+
+    #sort-order-btn {
+        transition: transform 0.5s ease;
+    }
+    :global(.rotated) {
+        transform: rotate(180deg);
     }
 </style>

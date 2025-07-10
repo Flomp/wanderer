@@ -30,7 +30,7 @@ export const load: ServerLoad = async ({ params, locals, fetch }) => {
         elevationLossMax: filterValues.max_elevation_loss,
         elevationLossLimit: filterValues.max_elevation_gain,
         sort: "created",
-        sortOrder: "+",
+        sortOrder: "-",
     };
 
     await categories_index(fetch)

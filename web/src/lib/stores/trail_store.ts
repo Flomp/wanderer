@@ -92,7 +92,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
 
 }
 
-export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter?: TrailFilter, page: number = 1, includePolyline: boolean = true) {
+export async function trails_search_bounding_box(northEast: M.LngLat, southWest: M.LngLat, filter: TrailFilter, page: number = 1, includePolyline: boolean = true) {
     const user = get(currentUser)
 
     let filterText: string = "";
@@ -110,6 +110,7 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
                     `_geoBoundingBox([${northEast.lat}, ${northEast.lng}], [${southWest.lat}, ${southWest.lng}])`,
                     filterText
                 ],
+                sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`,],
                 attributesToRetrieve: [...defaultTrailSearchAttributes, ...(includePolyline ? ["polyline"] : [])],
                 hitsPerPage: 500,
                 page: page
@@ -527,9 +528,9 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
     if (filter.public !== undefined || filter.private !== undefined || filter.shared !== undefined) {
         filterText += " AND ("
 
-         const showPublic = filter.public === undefined || filter.public === true;
-         const showPrivate = filter.private === undefined || filter.private === true;
-         const showShared = filter.shared !== undefined && filter.shared === true;
+        const showPublic = filter.public === undefined || filter.public === true;
+        const showPrivate = filter.private === undefined || filter.private === true;
+        const showShared = filter.shared !== undefined && filter.shared === true;
 
         if (showPublic === true) {
             filterText += "(public = TRUE";
@@ -551,7 +552,7 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
 
             }
         }
-        
+
         filterText += ")";
     }
 
