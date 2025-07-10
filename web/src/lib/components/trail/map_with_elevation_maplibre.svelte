@@ -116,8 +116,6 @@
 
     let hoveringTrail: boolean = false;
 
-    let loadedAfterStyleSwitch = false;
-
     const trailColors = [
         "#3549BB",
         "#592E9E",
@@ -938,7 +936,6 @@
                 layers = {};
                 map?.setStyle(style.value);
                 localStorage.setItem("layer", style.text);
-                loadedAfterStyleSwitch = true;
             },
             selectedIndex:
                 preferredMapStyleIndex !== -1 ? preferredMapStyleIndex : 0,
@@ -1046,16 +1043,19 @@
                         });
                     }
 
-                    if (loadedAfterStyleSwitch) {
-                        trails.forEach((t, i) => {
-                            const layerId = t.id!;
-                            addTrailLayer(t, layerId, i, data[i]);
-                        });
-                        if (activeTrail !== null) {
-                            addCaretLayer(trails[activeTrail].id!);
-                        }
+                    trails.forEach((t, i) => {
+                        const layerId = t.id!;
 
-                        loadedAfterStyleSwitch = false;
+                        if (map?.getLayer(layerId)) {
+                            return;
+                        }
+                        addTrailLayer(t, layerId, i, data[i]);
+                    });
+                    if (
+                        activeTrail !== null &&
+                        !map?.getLayer("direction-carets")
+                    ) {
+                        addCaretLayer(trails[activeTrail].id!);
                     }
                 } catch (e) {}
             }
