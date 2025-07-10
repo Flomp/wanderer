@@ -1,3 +1,20 @@
+# v0.17.2
+## Features
+- Trails in the map view can now be sorted
+- Adds ogp metadata tags for SEO
+- Public profiles are now accessible by anonymous users
+- A trail's direction can now be reversed in the editor
+
+## Bug fixes
+- Waypoint descriptions are now properly formatted
+- The summit log table on the statistics page shows data again
+- Fixes bug that caused lists to disappear when having more than 5 lists
+- Removing the hillshading URL is now possible
+- Clicking on a category on the homepage links to the correct trails page again
+- Fixes bug that caused trail to disappear when switching map style to OpenTopoMap
+- Trails are now correctly marked as "(Not) Completed" when adding (deleting) a summit log
+- Allow links to other sites when hosting a private instance
+
 # v0.17.1
 
 ## Features
