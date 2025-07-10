@@ -58,7 +58,7 @@ const auth: Handle = async ({ event, resolve }) => {
 
 
   // validate the user existence and if the path is acceesible
-  if (!pb.authStore.record && isRouteProtected(url.pathname)) {
+  if (!pb.authStore.record && isRouteProtected(url)) {
     throw redirect(302, '/login?r=' + url.pathname);
   } else if (pb.authStore.record && url.pathname === "/login") {
     throw redirect(302, '/');

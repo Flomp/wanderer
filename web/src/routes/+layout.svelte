@@ -29,7 +29,7 @@
     let { data, children }: Props = $props();
     
     beforeNavigate((n) => {
-        if (!$currentUser && isRouteProtected(n.to?.url?.pathname ?? "")) {
+        if (!$currentUser && isRouteProtected(n.to?.url)) {
             n.cancel();
             goto("/login?r=" + n.to?.url?.pathname);
         }
