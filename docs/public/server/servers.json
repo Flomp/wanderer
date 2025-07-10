@@ -4,26 +4,44 @@
         "url": "https://demo.wanderer.to",
         "description": "A public demo instance of wanderer. Everyone can log in and try out all features—upload trails, create lists, explore the interface, and test federation. Data is reset periodically, so feel free to experiment.",
         "image": "/server/imgs/wanderer.to.png",
-        "region": "World",
-        "language": "English",
-        "category": "General"
+        "region": ["World"],
+        "language": ["English"],
+        "category": ["General"]
     },
     {
         "name": "..:: tchncs :: wanderer ::..",
         "url": "https://trails.tchncs.de",
         "description": "General purpose instance by tchncs.de, not bound to a specific area. It is supported by voluntary donations from users of tchncs.",
         "image": "/server/imgs/tchncs.de.png",
-        "region": "Germany",
-        "language": "German, English",
-        "category": "General Outdoor"
+        "region": ["Germany"],
+        "language":[ "German", "English"],
+        "category": ["General"]
     },
     {
         "name": "Trails by Softwerke Magdeburg",
         "url": "https://trails.magdeburg.jetzt",
         "description": "Find and share cool places & tours near Magdeburg & Saxony-Anhalt on this public instance. It is run by Softwerke Magdeburg, a non-profit association that's locally providing various free & open services to the public.",
         "image": "/server/imgs/magdeburg.jetzt.png",
-        "region": "Magdeburg & Saxony-Anhalt",
-        "language": "German",
-        "category": "General Outdoor"
+        "region": ["Germany", "Magdeburg", "Saxony-Anhalt"],
+        "language": ["German"],
+        "category": ["General"]
+    },
+    {
+        "name": "Further Heights",
+        "url": "https://furtherheights.com",
+        "description": "An instance for those wanting to map trails and joining a community in the Pacific Northwest of North America.",
+        "image": "/server/imgs/furtherheights.com.png",
+        "region": ["North America"],
+        "language": ["English"],
+        "category": ["Hiking", "Biking", "4x4"]
+    },
+    {
+        "name": "Giretti",
+        "url": "https://giretti.gatti.ninja",
+        "description": "An instance for Italy, with motorcycle category added.",
+        "image": "/server/imgs/gatti.ninja.jpg",
+        "region": ["Italy"],
+        "language": ["Itlian"],
+        "category": ["Biking", "Motorcycling", "General"]
     }
 ]

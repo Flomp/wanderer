@@ -15,33 +15,37 @@
     let language = $state("");
     let category = $state("");
 
-    const uniqueValues = (key: keyof Server) => [
-        ...new Set(servers.map((s) => s[key])),
-    ];
+    function uniqueValues(key: "region" | "language" | "category") {
+        const allValues = servers.flatMap((s) => s[key]);
+        const uniqueValues = [...new Set(allValues)];
+        return uniqueValues;
+    }
 
     const regionItems: SelectItem[] = [
         { text: "All regions", value: "" },
         ...uniqueValues("region").map((v) => ({ text: v, value: v })),
-    ];
+    ].toSorted((a, b) => a.text.localeCompare(b.text));
 
     const languageItems: SelectItem[] = [
         { text: "All languages", value: "" },
         ...uniqueValues("language").map((v) => ({ text: v, value: v })),
-    ];
+    ].toSorted((a, b) => a.text.localeCompare(b.text));
 
     const categoryItems: SelectItem[] = [
         { text: "All categories", value: "" },
         ...uniqueValues("category").map((v) => ({ text: v, value: v })),
-    ];
+    ].toSorted((a, b) => a.text.localeCompare(b.text));
 
     const filteredServers = $derived(
         servers.filter(
             (server) =>
                 (server.name.toLowerCase().includes(search.toLowerCase()) ||
-                    server.description.toLowerCase().includes(search.toLowerCase())) &&
-                (!region || server.region === region) &&
-                (!language || server.language === language) &&
-                (!category || server.category === category),
+                    server.description
+                        .toLowerCase()
+                        .includes(search.toLowerCase())) &&
+                (!region || server.region.includes(region)) &&
+                (!language || server.language.includes(language)) &&
+                (!category || server.category.includes(category)),
         ),
     );
 </script>
@@ -58,7 +62,11 @@
     discover publicly listed wanderer servers you might want to explore or
     become part of.
 </p>
-<p class="mb-12">Learn how to add your server to the list <a href="https://github.com/Flomp/wanderer/discussions/361">here</a>.</p>
+<p class="mb-12">
+    Learn how to add your server to the list <a
+        href="https://github.com/Flomp/wanderer/discussions/361">here</a
+    >.
+</p>
 <div
     class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] justify-end gap-4 mb-8"
 >
@@ -96,12 +104,14 @@
                 class="w-full h-40 object-cover"
             />
             <div class="flex items-center gap-1 flex-wrap px-4">
-                {#each ["category", "region", "language"] as key}
-                    <div
-                        class="mt-0 flex-shrink-0 text-xs border border-input-border bg-menu-item-background-hover' px-2 py-1 rounded-full flex items-center gap-1"
-                    >
-                        {(server as any)[key]}
-                    </div>
+                {#each ["region", "language", "category"] as key}
+                    {#each (server as any)[key] as item}
+                        <div
+                            class="mt-0 flex-shrink-0 text-xs border border-input-border bg-menu-item-background-hover' px-2 py-1 rounded-full flex items-center gap-1"
+                        >
+                            {item}
+                        </div>
+                    {/each}
                 {/each}
             </div>
             <div class="p-4 -mt-2 flex-grow">

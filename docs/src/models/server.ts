@@ -3,7 +3,7 @@ export interface Server {
     url: string;
     description: string;
     image: string;
-    region: string;
-    language: string;
-    category: string;
+    region: string[];
+    language: string[];
+    category: string[];
 }
