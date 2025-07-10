@@ -361,5 +361,16 @@
   "welcome_to": "Welkom bij",
   "width": "Breedte",
   "wrong-username-or-password": "Onjuiste gebruikersnaam of wachtwoord",
-  "you-can": "Jij kunt"
+  "you-can": "Jij kunt",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  }
 }
