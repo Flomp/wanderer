@@ -90,9 +90,9 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("trails").BindFunc(updateTrailHandler(client))
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(deleteTrailHandler(client))
 
-	app.OnRecordCreateRequest("summit_logs").BindFunc(createSummitLogHandler())
+	app.OnRecordCreateRequest("summit_logs").BindFunc(createSummitLogHandler(client))
 	app.OnRecordUpdateRequest("summit_logs").BindFunc(updateSummitLogHandler())
-	app.OnRecordDeleteRequest("summit_logs").BindFunc(deleteSummitLogHandler())
+	app.OnRecordDeleteRequest("summit_logs").BindFunc(deleteSummitLogHandler(client))
 
 	app.OnRecordCreateRequest("comments").BindFunc(createCommentHandler())
 	app.OnRecordUpdateRequest("comments").BindFunc(updateCommentHandler())
@@ -301,7 +301,7 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 	}
 }
 
-func createSummitLogHandler() func(e *core.RecordRequestEvent) error {
+func createSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
 		err := e.Next()
@@ -311,6 +311,20 @@ func createSummitLogHandler() func(e *core.RecordRequestEvent) error {
 
 		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
 		if err != nil {
+			return err
+		}
+
+		trail, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err != nil {
+			return err
+		}
+
+		trailAuthor, err := e.App.FindFirstRecordByData("activitypub_actors", "id", trail.GetString("author"))
+		if err != nil {
+			return err
+		}
+
+		if err := util.IndexTrail(e.App, trail, trailAuthor, client); err != nil {
 			return err
 		}
 
@@ -344,13 +358,32 @@ func updateSummitLogHandler() func(e *core.RecordRequestEvent) error {
 	}
 }
 
-func deleteSummitLogHandler() func(e *core.RecordRequestEvent) error {
+func deleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		err := federation.CreateSummitLogDeleteActivity(e.App, e.Record)
+		err := e.Next()
 		if err != nil {
 			return err
 		}
-		return e.Next()
+
+		trail, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
+		if err != nil {
+			return err
+		}
+
+		trailAuthor, err := e.App.FindFirstRecordByData("activitypub_actors", "id", trail.GetString("author"))
+		if err != nil {
+			return err
+		}
+
+		if err := util.IndexTrail(e.App, trail, trailAuthor, client); err != nil {
+			return err
+		}
+
+		err = federation.CreateSummitLogDeleteActivity(e.App, e.Record)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 }
 
