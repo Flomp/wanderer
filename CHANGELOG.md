@@ -4,6 +4,7 @@
 - Adds ogp metadata tags for SEO
 - Public profiles are now accessible by anonymous users
 - A trail's direction can now be reversed in the editor
+- Adds localization for the calendar component (thanks @james-geiger)
 
 ## Bug fixes
 - Waypoint descriptions are now properly formatted
