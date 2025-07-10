@@ -361,5 +361,16 @@
   "welcome_to": "Bem-vindo ao",
   "width": "Width",
   "wrong-username-or-password": "Nome de utilizador ou palavra-passe errados",
-  "you-can": "Podes"
+  "you-can": "Podes",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  }
 }
