@@ -31,6 +31,17 @@
   "before": "Prima",
   "bike-type": "Bike Type",
   "by": "di",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  },
   "can": "può",
   "cancel": "Annulla",
   "car": "Car",
@@ -102,6 +113,8 @@
   "email-verified": "Email verified",
   "empty-activities": "{username} non ha ancora attività",
   "empty-bio": "{username} non ha ancora aggiunto una biografia",
+  "empty-feed": "Your feed is empty",
+  "empty-feed-explanation": "Activities by you or people you follow will appear here",
   "empty-lists": "{username} non ha liste pubbliche",
   "enable-auto-routing": "Enable auto-routing",
   "english": "Inglese",
@@ -361,16 +374,5 @@
   "welcome_to": "Benvenuti a",
   "width": "Width",
   "wrong-username-or-password": "Nome utente o password errati",
-  "you-can": "Puoi",
-  "calendar": {
-    "weekdays": {
-      "0": "Mo",
-      "1": "Tu",
-      "2": "We",
-      "3": "Th",
-      "4": "Fr",
-      "5": "Sa",
-      "6": "Su"
-    }
-  }
+  "you-can": "Puoi"
 }
