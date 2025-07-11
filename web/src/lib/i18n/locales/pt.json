@@ -31,6 +31,17 @@
   "before": "Antes",
   "bike-type": "Bike Type",
   "by": "by",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  },
   "can": "pode",
   "cancel": "Cancelar",
   "car": "Car",
@@ -102,6 +113,8 @@
   "email-verified": "Email verified",
   "empty-activities": "{username} has no activity yet",
   "empty-bio": "{username} has not added a bio yet",
+  "empty-feed": "Your feed is empty",
+  "empty-feed-explanation": "Activities by you or people you follow will appear here",
   "empty-lists": "{username} has no public lists",
   "enable-auto-routing": "Enable auto-routing",
   "english": "Inglês",
@@ -361,16 +374,5 @@
   "welcome_to": "Bem-vindo ao",
   "width": "Width",
   "wrong-username-or-password": "Nome de utilizador ou palavra-passe errados",
-  "you-can": "Podes",
-  "calendar": {
-    "weekdays": {
-      "0": "Mo",
-      "1": "Tu",
-      "2": "We",
-      "3": "Th",
-      "4": "Fr",
-      "5": "Sa",
-      "6": "Su"
-    }
-  }
+  "you-can": "Podes"
 }
