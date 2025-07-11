@@ -31,6 +31,17 @@
   "before": "Avant le",
   "bike-type": "Bike Type",
   "by": "par",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  },
   "can": "peut",
   "cancel": "Annuler",
   "car": "Car",
@@ -102,6 +113,8 @@
   "email-verified": "Email vérifié",
   "empty-activities": "{username} n'a encore aucune activité",
   "empty-bio": "{username} n'a pas encore de description",
+  "empty-feed": "Your feed is empty",
+  "empty-feed-explanation": "Activities by you or people you follow will appear here",
   "empty-lists": "{username} n'a pas de liste publique",
   "enable-auto-routing": "Enable auto-routing",
   "english": "Anglais",
@@ -223,7 +236,7 @@
   "no-comments-so-far": "Aucun commentaire pour l'instant",
   "no-data": "Pas de données",
   "no-description-for-now": "Pas de description pour le moment",
-  "no-gps-data-in-image": "No GPS data in image",
+  "no-gps-data-in-image": "Aucune donnée GPS dans l'image",
   "no-grid": "Aucune grille",
   "no-notifications": "Pas de notifications",
   "no-photos-here": "Aucune photo ici",
@@ -253,7 +266,7 @@
   "or": "ou",
   "orientation": "Orientation",
   "paper-size": "Taille de papier",
-  "paragraph": "Paragraph",
+  "paragraph": "Paragraphe",
   "password": "Mot de passe",
   "password-confirm": "Confirmer le mot de passe",
   "password-reset-sent": "Un e-mail de réinitialisation de votre mot de passe a été envoyé",
@@ -278,9 +291,9 @@
   "removed-trail-from": "Enlever l'itinéraire de",
   "removed-trails-from": "Enlever les itinéraires de",
   "required": "Requis",
-  "reset": "Reset",
+  "reset": "Réinitialiser",
   "reset-password": "Réinitialiser le mot de passe",
-  "reverse-direction": "Reverse direction",
+  "reverse-direction": "Inverser la direction",
   "road": "Route",
   "route": "{n, plural, =1 {Itinéraire} other {Itinéraires}}",
   "route-point": "Étape",
@@ -361,16 +374,5 @@
   "welcome_to": "Bienvenue sur",
   "width": "Largeur",
   "wrong-username-or-password": "Nom d'utilisateur ou mot de passe incorrect",
-  "you-can": "Vous pouvez",
-  "calendar": {
-    "weekdays": {
-      "0": "Mo",
-      "1": "Tu",
-      "2": "We",
-      "3": "Th",
-      "4": "Fr",
-      "5": "Sa",
-      "6": "Su"
-    }
-  }
+  "you-can": "Vous pouvez"
 }
