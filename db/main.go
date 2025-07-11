@@ -120,6 +120,8 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordUpdate("integrations").BindFunc(updateIntegrationHandler())
 	app.OnRecordAfterUpdateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 
+	app.OnRecordsListRequest("feed").BindFunc(listFeedHandler())
+
 	app.OnRecordCreateRequest().BindFunc(sanitizeHTML())
 	app.OnRecordUpdateRequest().BindFunc(sanitizeHTML())
 
@@ -238,6 +240,11 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		}
 
 		err = federation.CreateTrailActivity(e.App, author, e.Record, pub.CreateType)
+		if err != nil {
+			return err
+		}
+
+		_, err = util.InsertIntoFeed(e.App, author.Id, author.Id, record.Id, util.TrailFeed)
 		if err != nil {
 			return err
 		}
@@ -616,6 +623,11 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
+		_, err = util.InsertIntoFeed(e.App, author.Id, author.Id, record.Id, util.ListFeed)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 }
@@ -874,6 +886,31 @@ func changeUserEmailHandler() func(e *core.RecordRequestEmailChangeRequestEvent)
 			return err
 		}
 		return nil
+	}
+}
+
+func listFeedHandler() func(e *core.RecordsListRequestEvent) error {
+	return func(e *core.RecordsListRequestEvent) error {
+
+		for _, r := range e.Records {
+			var item *core.Record
+			var err error
+			switch r.GetString("type") {
+			case string(util.TrailFeed):
+				item, err = e.App.FindRecordById("trails", r.GetString("item"))
+			case string(util.ListFeed):
+				item, err = e.App.FindRecordById("lists", r.GetString("item"))
+			case string(util.SummitLogFeed):
+				item, err = e.App.FindRecordById("summit_logs", r.GetString("item"))
+			}
+
+			if err != nil {
+				return err
+			}
+
+			r.MergeExpand(map[string]any{"item": item})
+		}
+		return e.Next()
 	}
 }
 

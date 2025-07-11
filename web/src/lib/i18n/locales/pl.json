@@ -31,6 +31,17 @@
   "before": "Przed",
   "bike-type": "Typ roweru",
   "by": "przez",
+  "calendar": {
+    "weekdays": {
+      "0": "",
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "6": ""
+    }
+  },
   "can": "może",
   "cancel": "Anuluj",
   "car": "Samochód",
@@ -102,6 +113,8 @@
   "email-verified": "Adres e-mail został zweryfikowany",
   "empty-activities": "{username} nie ma jeszcze aktywności",
   "empty-bio": "{username} jeszcze nie dodał biogramu",
+  "empty-feed": "",
+  "empty-feed-explanation": "",
   "empty-lists": "{username} nie ma publicznych list",
   "enable-auto-routing": "Włącz auto-trasowanie",
   "english": "Angielski",

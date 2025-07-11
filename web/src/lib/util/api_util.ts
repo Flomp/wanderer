@@ -23,6 +23,7 @@ export enum Collection {
     activitypub_actors = "activitypub_actors",
     categories = "categories",
     comments = "comments",
+    feed = "feed",
     follows = "follows",
     integrations = "integrations",
     list_share = "list_share",
@@ -39,6 +40,7 @@ export enum Collection {
     trails_bounding_box = "trails_bounding_box",
     trails_filter = "trails_filter",
     users_anonymous = "users_anonymous",
+
 }
 
 export async function list<T>(event: RequestEvent, collection: Collection) {

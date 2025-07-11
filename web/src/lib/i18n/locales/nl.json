@@ -31,6 +31,17 @@
   "before": "Voor",
   "bike-type": "Fiets Type",
   "by": "door",
+  "calendar": {
+    "weekdays": {
+      "0": "",
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "6": ""
+    }
+  },
   "can": "kan",
   "cancel": "Annuleren",
   "car": "Wagen",
@@ -102,6 +113,8 @@
   "email-verified": "Email geverifieerd",
   "empty-activities": "{username} heeft nog geen activiteit",
   "empty-bio": "{username} heeft nog geen bio toegevoegd",
+  "empty-feed": "",
+  "empty-feed-explanation": "",
   "empty-lists": "{username} heeft geen publieke lijsten",
   "enable-auto-routing": "Automatische routering inschakelen",
   "english": "Engels",

@@ -31,6 +31,17 @@
   "before": "До",
   "bike-type": "Тип велосипеда",
   "by": "От",
+  "calendar": {
+    "weekdays": {
+      "0": "",
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "6": ""
+    }
+  },
   "can": "можно",
   "cancel": "Отмена",
   "car": "Автомобиль:",
@@ -102,6 +113,8 @@
   "email-verified": "Email подтверждён",
   "empty-activities": "у {username} ещё нет активностей",
   "empty-bio": "{username} ещё не рассказал(а) о себе",
+  "empty-feed": "",
+  "empty-feed-explanation": "",
   "empty-lists": "у {username} нет публичных списков",
   "enable-auto-routing": "Авто-маршрутизация",
   "english": "Английский",

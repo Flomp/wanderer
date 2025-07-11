@@ -466,13 +466,20 @@ func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pu
 }
 
 func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-
-	// no need to do anything if the actor is local
-	if actor.GetBool("isLocal") {
-		return nil
+	trail, err := util.TrailFromActivity(activity, app, actor)
+	if err != nil {
+		return err
 	}
 
-	trail, err := util.TrailFromActivity(activity, app, actor)
+	trailAuthor, err := app.FindRecordById("activitypub_actors", trail.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	_, err = util.InsertIntoFeed(app, actor.Id, trailAuthor.Id, trail.Id, util.TrailFeed)
+	if err != nil {
+		return err
+	}
 
 	trailObject, _ := pub.ToObject(activity.Object)
 
@@ -792,13 +799,20 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 }
 
 func processCreateOrUpdateListActivity(activity pub.Activity, app core.App, actor *core.Record) error {
-
-	// no need to do anything if the actor is local
-	if actor.GetBool("isLocal") {
-		return nil
+	list, err := util.ListFromActivity(activity, app, actor)
+	if err != nil {
+		return err
 	}
 
-	_, err := util.ListFromActivity(activity, app, actor)
+	listAuthor, err := app.FindRecordById("activitypub_actors", list.GetString("author"))
+	if err != nil {
+		return err
+	}
+
+	_, err = util.InsertIntoFeed(app, actor.Id, listAuthor.Id, list.Id, util.ListFeed)
+	if err != nil {
+		return err
+	}
 
 	return err
 }

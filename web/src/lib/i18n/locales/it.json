@@ -31,6 +31,17 @@
   "before": "Prima",
   "bike-type": "Bike Type",
   "by": "di",
+  "calendar": {
+    "weekdays": {
+      "0": "",
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "6": ""
+    }
+  },
   "can": "può",
   "cancel": "Annulla",
   "car": "Car",
@@ -102,6 +113,8 @@
   "email-verified": "Email verified",
   "empty-activities": "{username} non ha ancora attività",
   "empty-bio": "{username} non ha ancora aggiunto una biografia",
+  "empty-feed": "",
+  "empty-feed-explanation": "",
   "empty-lists": "{username} non ha liste pubbliche",
   "enable-auto-routing": "Enable auto-routing",
   "english": "Inglese",

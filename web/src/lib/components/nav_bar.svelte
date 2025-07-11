@@ -185,7 +185,7 @@
     </div>
 </Drawer>
 
-<nav class="flex justify-between items-center p-6">
+<nav class="flex justify-between items-center p-6 {page.url.pathname === '/' ? 'sticky top-0 z-10 bg-background' : ''}">
     <a href="/">
         {#if $theme == "light"}
             <LogoText></LogoText>

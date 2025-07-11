@@ -31,6 +31,17 @@
   "before": "Antes",
   "bike-type": "Tipo de bici",
   "by": "de",
+  "calendar": {
+    "weekdays": {
+      "0": "",
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "6": ""
+    }
+  },
   "can": "puede",
   "cancel": "Borrar",
   "car": "Coche",
@@ -102,6 +113,8 @@
   "email-verified": "Correo verificado",
   "empty-activities": "{username} todavía no tiene actividad",
   "empty-bio": "{username} no ha añadido ninguna Bio todavía",
+  "empty-feed": "",
+  "empty-feed-explanation": "",
   "empty-lists": "{username} no tiene listas públicas",
   "enable-auto-routing": "Habilitar auto-ruta",
   "english": "Inglés",

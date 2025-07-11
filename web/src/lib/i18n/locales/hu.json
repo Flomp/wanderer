@@ -31,6 +31,17 @@
   "before": "Before",
   "bike-type": "Bike Type",
   "by": "by",
+  "calendar": {
+    "weekdays": {
+      "0": "",
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "6": ""
+    }
+  },
   "can": "can",
   "cancel": "Mégsem",
   "car": "Car",
@@ -102,6 +113,8 @@
   "email-verified": "Email verified",
   "empty-activities": "{username} has no activity yet",
   "empty-bio": "{username} has not added a bio yet",
+  "empty-feed": "",
+  "empty-feed-explanation": "",
   "empty-lists": "{username} has no public lists",
   "enable-auto-routing": "Enable auto-routing",
   "english": "Angol",
