@@ -172,13 +172,17 @@
                 <EmptyStateFeed></EmptyStateFeed>
             {/if}
             {#each feed.items as f}
-                <a
-                    class="block"
-                    href={(f.type === "trail" ? "/trail/view/" : "/lists/") +
-                        `@${f.expand.author?.preferred_username}@${f.expand.author?.domain}/${f.item}`}
-                >
-                    <FeedCard feedItem={f}></FeedCard>
-                </a>
+                {#if f.expand.item}
+                    <a
+                        class="block"
+                        href={(f.type === "trail"
+                            ? "/trail/view/"
+                            : "/lists/") +
+                            `@${f.expand.author?.preferred_username}@${f.expand.author?.domain}/${f.item}`}
+                    >
+                        <FeedCard feedItem={f}></FeedCard>
+                    </a>
+                {/if}
             {/each}
         </div>
     {/if}

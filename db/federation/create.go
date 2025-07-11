@@ -444,15 +444,15 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 	return app.Save(record)
 }
 
-func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pub.Activity) error {
+func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, recipient *core.Record, activity pub.Activity) error {
 
 	var err error
 	if strings.Contains(activity.Object.GetID().String(), "/api/v1/trail") {
-		err = processCreateOrUpdateTrailActivity(activity, app, actor)
+		err = processCreateOrUpdateTrailActivity(activity, app, actor, recipient)
 	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/summit-log") {
 		err = processCreateOrUpdateSummitLogActivity(activity, app, actor)
 	} else if strings.Contains(activity.Object.GetID().String(), "/api/v1/list") {
-		err = processCreateOrUpdateListActivity(activity, app, actor)
+		err = processCreateOrUpdateListActivity(activity, app, actor, recipient)
 	} else {
 		err = processCreateOrUpdateCommentActivity(activity, app, actor)
 	}
@@ -465,18 +465,13 @@ func ProcessCreateOrUpdateActivity(app core.App, actor *core.Record, activity pu
 
 }
 
-func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+func processCreateOrUpdateTrailActivity(activity pub.Activity, app core.App, actor *core.Record, recipient *core.Record) error {
 	trail, err := util.TrailFromActivity(activity, app, actor)
 	if err != nil {
 		return err
 	}
 
-	trailAuthor, err := app.FindRecordById("activitypub_actors", trail.GetString("author"))
-	if err != nil {
-		return err
-	}
-
-	_, err = util.InsertIntoFeed(app, actor.Id, trailAuthor.Id, trail.Id, util.TrailFeed)
+	_, err = util.InsertIntoFeed(app, recipient.Id, actor.Id, trail.Id, util.TrailFeed)
 	if err != nil {
 		return err
 	}
@@ -798,18 +793,13 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	return nil
 }
 
-func processCreateOrUpdateListActivity(activity pub.Activity, app core.App, actor *core.Record) error {
+func processCreateOrUpdateListActivity(activity pub.Activity, app core.App, actor *core.Record, recipient *core.Record) error {
 	list, err := util.ListFromActivity(activity, app, actor)
 	if err != nil {
 		return err
 	}
 
-	listAuthor, err := app.FindRecordById("activitypub_actors", list.GetString("author"))
-	if err != nil {
-		return err
-	}
-
-	_, err = util.InsertIntoFeed(app, actor.Id, listAuthor.Id, list.Id, util.ListFeed)
+	_, err = util.InsertIntoFeed(app, recipient.Id, actor.Id, list.Id, util.ListFeed)
 	if err != nil {
 		return err
 	}

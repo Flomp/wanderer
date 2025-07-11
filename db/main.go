@@ -304,6 +304,11 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
+		err = util.DeleteFromFeed(e.App, record.Id)
+		if err != nil {
+			return err
+		}
+
 		return e.Next()
 	}
 }
@@ -679,6 +684,11 @@ func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
+		err = util.DeleteFromFeed(e.App, record.Id)
+		if err != nil {
+			return err
+		}
+
 		return e.Next()
 	}
 }
@@ -905,7 +915,7 @@ func listFeedHandler() func(e *core.RecordsListRequestEvent) error {
 			}
 
 			if err != nil {
-				return err
+				continue
 			}
 
 			r.MergeExpand(map[string]any{"item": item})
