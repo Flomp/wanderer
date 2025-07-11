@@ -719,24 +719,6 @@ func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 
 func createFollowHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		// record := e.Record
-		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
-		// 	return fmt.Errorf("failed to expand: %v", errs)
-		// }
-		// follower := record.ExpandedOne("follower")
-
-		// notification := util.Notification{
-		// 	Type: util.NewFollower,
-		// 	Metadata: map[string]string{
-		// 		"follower": follower.GetString("username"),
-		// 	},
-		// 	Seen:   false,
-		// 	Author: record.GetString("follower"),
-		// }
-		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
-		// if err != nil {
-		// 	return err
-		// }
 		e.Next()
 		federation.CreateFollowActivity(e.App, e.Record)
 
@@ -746,25 +728,6 @@ func createFollowHandler() func(e *core.RecordRequestEvent) error {
 
 func deleteFollowHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		// record := e.Record
-		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
-		// 	return fmt.Errorf("failed to expand: %v", errs)
-		// }
-		// follower := record.ExpandedOne("follower")
-
-		// notification := util.Notification{
-		// 	Type: util.NewFollower,
-		// 	Metadata: map[string]string{
-		// 		"follower": follower.GetString("username"),
-		// 	},
-		// 	Seen:   false,
-		// 	Author: record.GetString("follower"),
-		// }
-		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
-		// if err != nil {
-		// 	return err
-		// }
-
 		federation.CreateUnfollowActivity(e.App, e.Record)
 
 		return e.Next()

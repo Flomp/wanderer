@@ -13,13 +13,13 @@
 
     let { data } = $props();
 
-    let timeline = $derived(data.timeline);
+    let timeline = $state(data.timeline);
 
     let loading: boolean = false;
 
     let pagination = $derived({
-        page: 1,
-        totalPages: data.timeline.totalItems,
+        page: timeline.page,
+        totalPages: timeline.totalItems,
     });
 
     async function onListScroll(e: Event) {
@@ -37,17 +37,14 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.timeline = await profile_timeline_index(
-            data.actor.iri,
+        timeline = await profile_timeline_index(
+            page.params.handle,
             pagination.page,
         );
     }
 
     function handleTimeLineItemClick(item: TimelineItem) {
         if (item.trail_iri.length) {
-            const originalTrailId = item.trail_iri.substring(
-                item.trail_iri.length - 15,
-            );
             goto(
                 `/trail/view/@${item.trail_author_username}@${item.trail_author_domain}/${item.trail_id}`,
             );

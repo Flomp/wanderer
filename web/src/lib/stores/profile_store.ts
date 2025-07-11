@@ -1,14 +1,14 @@
+import type { ListFilter } from "$lib/models/list";
+import type { SummitLog, SummitLogFilter } from "$lib/models/summit_log";
 import type { TimelineItem } from "$lib/models/timeline";
 import { defaultTrailSearchAttributes, Trail, type TrailFilter, type TrailSearchResult } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits } from "meilisearch";
 import type { ListResult } from "pocketbase";
-import { searchResultToTrailList } from "./trail_store";
-import type { SummitLog, SummitLogFilter } from "$lib/models/summit_log";
-import { buildFilterText } from "./summit_log_store";
-import type { ListFilter } from "$lib/models/list";
-import type { ListSearchResult } from "./search_store";
 import { searchResultToLists } from "./list_store";
+import type { ListSearchResult } from "./search_store";
+import { buildFilterText } from "./summit_log_store";
+import { searchResultToTrailList } from "./trail_store";
 
 let timeline: TimelineItem[] = []
 
@@ -58,7 +58,7 @@ export async function profile_lists_index(handle: string, filter: ListFilter, pa
 }
 
 
-export async function profile_timeline_index(handle: string, page: number, perPage: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function profile_timeline_index(handle: string, page: number, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     let r = await f(`/api/v1/profile/${handle}/timeline?` + new URLSearchParams({
         page: page.toString(),
         perPage: perPage.toString(),
