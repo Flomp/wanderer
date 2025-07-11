@@ -361,5 +361,16 @@
   "welcome_to": "Witaj w",
   "width": "Szerokość",
   "wrong-username-or-password": "Zła nazwa użytkownika lub hasło",
-  "you-can": "Możesz"
+  "you-can": "Możesz",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  }
 }

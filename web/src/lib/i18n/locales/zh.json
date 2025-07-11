@@ -361,5 +361,16 @@
   "welcome_to": "欢迎",
   "width": "Width",
   "wrong-username-or-password": "用户名或密码无效",
-  "you-can": "你可以"
+  "you-can": "你可以",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  }
 }

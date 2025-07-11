@@ -361,5 +361,16 @@
   "welcome_to": "Bienvenid@ a",
   "width": "Anchura",
   "wrong-username-or-password": "Usuario o contraseña no correctas",
-  "you-can": "Puedes"
+  "you-can": "Puedes",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  }
 }

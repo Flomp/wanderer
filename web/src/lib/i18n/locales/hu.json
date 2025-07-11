@@ -361,5 +361,16 @@
   "welcome_to": "Üdvözöljük a",
   "width": "Width",
   "wrong-username-or-password": "Helytelen felhasználónév vagy jelszó",
-  "you-can": "You can"
+  "you-can": "You can",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  }
 }
