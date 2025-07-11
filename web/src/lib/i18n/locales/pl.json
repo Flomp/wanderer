@@ -31,6 +31,17 @@
   "before": "Przed",
   "bike-type": "Typ roweru",
   "by": "przez",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  },
   "can": "może",
   "cancel": "Anuluj",
   "car": "Samochód",
@@ -102,6 +113,8 @@
   "email-verified": "Adres e-mail został zweryfikowany",
   "empty-activities": "{username} nie ma jeszcze aktywności",
   "empty-bio": "{username} jeszcze nie dodał biogramu",
+  "empty-feed": "Your feed is empty",
+  "empty-feed-explanation": "Activities by you or people you follow will appear here",
   "empty-lists": "{username} nie ma publicznych list",
   "enable-auto-routing": "Włącz auto-trasowanie",
   "english": "Angielski",
@@ -361,16 +374,5 @@
   "welcome_to": "Witaj w",
   "width": "Szerokość",
   "wrong-username-or-password": "Zła nazwa użytkownika lub hasło",
-  "you-can": "Możesz",
-  "calendar": {
-    "weekdays": {
-      "0": "Mo",
-      "1": "Tu",
-      "2": "We",
-      "3": "Th",
-      "4": "Fr",
-      "5": "Sa",
-      "6": "Su"
-    }
-  }
+  "you-can": "Możesz"
 }
