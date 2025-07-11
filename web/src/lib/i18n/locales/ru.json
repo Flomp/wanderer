@@ -31,6 +31,17 @@
   "before": "До",
   "bike-type": "Тип велосипеда",
   "by": "От",
+  "calendar": {
+    "weekdays": {
+      "0": "Mo",
+      "1": "Tu",
+      "2": "We",
+      "3": "Th",
+      "4": "Fr",
+      "5": "Sa",
+      "6": "Su"
+    }
+  },
   "can": "можно",
   "cancel": "Отмена",
   "car": "Автомобиль:",
@@ -102,6 +113,8 @@
   "email-verified": "Email подтверждён",
   "empty-activities": "у {username} ещё нет активностей",
   "empty-bio": "{username} ещё не рассказал(а) о себе",
+  "empty-feed": "Your feed is empty",
+  "empty-feed-explanation": "Activities by you or people you follow will appear here",
   "empty-lists": "у {username} нет публичных списков",
   "enable-auto-routing": "Авто-маршрутизация",
   "english": "Английский",
@@ -361,16 +374,5 @@
   "welcome_to": "Добро пожаловать в",
   "width": "Ширина",
   "wrong-username-or-password": "Неверный логин или пароль",
-  "you-can": "Вы можете",
-  "calendar": {
-    "weekdays": {
-      "0": "Mo",
-      "1": "Tu",
-      "2": "We",
-      "3": "Th",
-      "4": "Fr",
-      "5": "Sa",
-      "6": "Su"
-    }
-  }
+  "you-can": "Вы можете"
 }
