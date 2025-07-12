@@ -9,18 +9,24 @@
     import { findStartAndEndPoints } from "$lib/util/geojson_util";
     import { toGeoJson } from "$lib/util/gpx_util";
     import {
+        baseMapStyles,
         createMarkerFromWaypoint,
         createPopupFromTrail,
         FontawesomeMarker,
+        overlayLayers,
     } from "$lib/util/maplibre_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
-    import { StyleSwitcherControl } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
+    import {
+        StyleSwitcherControl,
+        type StyleSwitcherControlOptions,
+    } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
     import type { Feature, FeatureCollection, GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
     import { onDestroy, onMount, untrack } from "svelte";
+    import type { RadioItem } from "../base/radio_group.svelte";
 
     interface Props {
         trails?: Trail[];
@@ -91,6 +97,8 @@
     let mapContainer: HTMLDivElement;
     let epc: ElevationProfileControl;
     let graticule: MaplibreGraticule;
+
+    let mapState: StyleSwitcherControlOptions["state"];
 
     let layers: Record<
         string,
@@ -236,6 +244,16 @@
                 removeTrailLayer(layerId);
             }
         });
+
+        if (mapLoaded) {
+            for (const [k, v] of Object.entries(mapState.selectedLayers)) {
+                if (v) {
+                    const layer = overlayLayers.find((l) => l.text === k);
+                    if (!layer) continue;
+                    addOverlayLayer(layer);
+                }
+            }
+        }
 
         if (
             !drawing &&
@@ -864,36 +882,13 @@
                         value: t.url,
                     }),
                 ),
-                {
-                    text: "OpenFreeMap",
-                    value: "/styles/ofm.json",
-                    thumbnail: "https://tile.openstreetmap.org/1/0/0.png",
-                },
-                {
-                    text: "OpenTopoMap",
-                    value: "/styles/otm.json",
-                    thumbnail: "https://tile.opentopomap.org/1/0/0.png",
-                },
-                {
-                    text: "Carto Light",
-                    value: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-                    thumbnail:
-                        "https://basemaps.cartocdn.com/light_all/1/0/0@2x.png",
-                },
-                {
-                    text: "Carto Dark",
-                    value: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-                    thumbnail:
-                        "https://basemaps.cartocdn.com/dark_all/1/0/0@2x.png",
-                },
+                ...baseMapStyles,
             ];
-        let preferredMapStyleIndex = mapStyles.findIndex(
-            (s) => s.text === localStorage.getItem("layer"),
-        );
 
-        if (preferredMapStyleIndex == -1) {
-            preferredMapStyleIndex = 0;
-        }
+        mapState = JSON.parse(
+            localStorage.getItem("map-state") ??
+                '{"selectedLayers": {}, "selectedStyle": 0}',
+        );
 
         if (!mapContainer) {
             return;
@@ -902,9 +897,7 @@
         const finalMapOptions: M.MapOptions = {
             ...{
                 container: mapContainer,
-                style:
-                    mapStyles[preferredMapStyleIndex].value ??
-                    mapStyles[0].value,
+                style: mapStyles[mapState.selectedStyle].value,
                 center: [initialState.lng, initialState.lat],
                 zoom: initialState.zoom,
             },
@@ -932,14 +925,26 @@
 
         const switcherControl = new StyleSwitcherControl({
             styles: mapStyles,
-            onSwitch: (style) => {
+            layers: overlayLayers,
+            onMapStyleSwitch: (i, style) => {
                 layers = {};
                 map?.setStyle(style.value);
-                localStorage.setItem("layer", style.text);
+                mapState.selectedStyle = i;
+                localStorage.setItem("map-state", JSON.stringify(mapState));
             },
-            selectedIndex:
-                preferredMapStyleIndex !== -1 ? preferredMapStyleIndex : 0,
+            onLayerChange: (checked, layer) => {
+                mapState.selectedLayers[layer.text] = checked;
+                localStorage.setItem("map-state", JSON.stringify(mapState));
+
+                if (checked) {
+                    addOverlayLayer(layer);
+                } else {
+                    removeOverlayLayer(layer);
+                }
+            },
+            state: mapState,
         });
+
         map.addControl(
             new M.NavigationControl({ visualizePitch: showTerrain }),
         );
@@ -1175,6 +1180,26 @@
                 epc?.toggleProfile();
             }
         }
+    }
+
+    function addOverlayLayer(layer: RadioItem) {
+        map?.addSource(layer.text + "overlay-source", {
+            type: "raster",
+            tiles: [layer.value],
+            tileSize: 256,
+        });
+
+        map?.addLayer({
+            id: layer.text + "overlay-layer",
+            type: "raster",
+            source: layer.text + "overlay-source",
+            minzoom: 4,
+        });
+    }
+
+    function removeOverlayLayer(layer: RadioItem) {
+        map?.removeLayer(layer.text + "overlay-layer");
+        map?.removeSource(layer.text + "overlay-source");
     }
 </script>
 
