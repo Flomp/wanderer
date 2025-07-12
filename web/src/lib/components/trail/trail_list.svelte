@@ -9,7 +9,7 @@
     import TrailTable from "./trail_table.svelte";
     import SkeletonCard from "../base/skeleton_card.svelte";
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
 
     interface Props {
@@ -191,15 +191,13 @@
         else hoveredTrail = undefined;
     }
 
-    function handleTrailsEditDone(resetSelection: boolean = false) {
+    async function handleTrailsEditDone(resetSelection: boolean = false) {
         if (resetSelection) {
             selection?.clear();
             hoveredTrail = undefined;
         }
-
-        setTimeout(() => {
-            onupdate?.(filter, selection);
-        }, 500);
+        await tick();
+        onupdate?.(filter, selection);
     }
 
     function handleMouseEnter(trail: Trail) {
@@ -224,7 +222,8 @@
                 <TrailDropdown
                     trails={selection}
                     mode={"multi-select"}
-                    onconfirm={handleTrailsEditDone}
+                    onDelete={() => handleTrailsEditDone(true)}
+                    onShare={() => handleTrailsEditDone(false)}
                 />
             </div>
         {/if}

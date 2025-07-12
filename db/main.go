@@ -120,7 +120,7 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordUpdate("integrations").BindFunc(updateIntegrationHandler())
 	app.OnRecordAfterUpdateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 
-	app.OnRecordsListRequest("feed").BindFunc(listFeedHandler())
+	app.OnRecordsListRequest("feed", "profile_feed").BindFunc(listFeedHandler())
 
 	app.OnRecordCreateRequest().BindFunc(sanitizeHTML())
 	app.OnRecordUpdateRequest().BindFunc(sanitizeHTML())
@@ -905,17 +905,33 @@ func listFeedHandler() func(e *core.RecordsListRequestEvent) error {
 		for _, r := range e.Records {
 			var item *core.Record
 			var err error
-			switch r.GetString("type") {
+
+			typ := r.GetString("type")
+			typ = strings.Trim(typ, "\"")
+
+			itemId := r.GetString("item")
+			itemId = strings.Trim(itemId, "\"")
+
+			switch typ {
 			case string(util.TrailFeed):
-				item, err = e.App.FindRecordById("trails", r.GetString("item"))
+				item, err = e.App.FindRecordById("trails", itemId)
 			case string(util.ListFeed):
-				item, err = e.App.FindRecordById("lists", r.GetString("item"))
+				item, err = e.App.FindRecordById("lists", itemId)
 			case string(util.SummitLogFeed):
-				item, err = e.App.FindRecordById("summit_logs", r.GetString("item"))
+				item, err = e.App.FindRecordById("summit_logs", itemId)
 			}
 
 			if err != nil {
 				continue
+			}
+
+			if item == nil {
+				continue
+			}
+
+			errs := e.App.ExpandRecord(item, []string{"author"}, nil)
+			if len(errs) > 0 {
+				return fmt.Errorf("failed to expand: %v", errs)
 			}
 
 			r.MergeExpand(map[string]any{"item": item})

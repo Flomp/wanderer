@@ -403,6 +403,10 @@
                         <LikeButton {trail}></LikeButton>
                         <TrailDropdown
                             trails={new Set<Trail>([trail])}
+                            onDelete={() =>
+                                history.length
+                                    ? history.back()
+                                    : goto("/trails")}
                             {mode}
                         ></TrailDropdown>
                     </div>

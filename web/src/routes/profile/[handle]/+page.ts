@@ -1,5 +1,5 @@
 import type { ListFilter } from "$lib/models/list";
-import { profile_lists_index, profile_timeline_index } from "$lib/stores/profile_store";
+import { profile_lists_index, profile_feed_index } from "$lib/stores/profile_store";
 import { error, type Load } from "@sveltejs/kit";
 
 export const load: Load = async ({ params, fetch, parent }) => {
@@ -19,10 +19,10 @@ export const load: Load = async ({ params, fetch, parent }) => {
 
     try {
         const lists = await profile_lists_index(params.handle, filter, 1, 6, fetch)
-        const timeline = await profile_timeline_index(params.handle, 1, 10, fetch);
-        return { lists: lists.items, timeline }
+        const feed = await profile_feed_index(params.handle, 1, 10, fetch);
+        return { lists: lists.items, feed }
     } catch(e) {
-        return {lists: [], timeline: {items: [], page: 1, perPage: 1, totalItems: 0, totalPages: 0}}
+        return {lists: [], feed: {items: [], page: 1, perPage: 1, totalItems: 0, totalPages: 0}}
     } 
     
     

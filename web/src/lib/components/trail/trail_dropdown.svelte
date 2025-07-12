@@ -21,14 +21,17 @@
     import TrailExportModal from "./trail_export_modal.svelte";
     import TrailShareModal from "./trail_share_modal.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
+    import type { Snippet } from "svelte";
 
     interface Props {
         trails?: Set<Trail> | undefined;
         mode: "overview" | "map" | "list" | "multi-select";
-        onconfirm?: (resetSelection?: boolean) => void;
+        toggle?: Snippet<[any]>;
+        onDelete?: () => void;
+        onShare?: () => void;
     }
 
-    let { trails, mode, onconfirm }: Props = $props();
+    let { trails, mode, toggle, onDelete, onShare }: Props = $props();
 
     let confirmModal: ConfirmModal;
     let listSelectModal: ListSelectModal;
@@ -302,7 +305,7 @@
                 await doDeleteTrail(dTrail);
             }
 
-            onconfirm?.(true);
+            onDelete?.();
         }
     }
 
@@ -315,7 +318,7 @@
     }
 
     async function handleShareUpdate() {
-        onconfirm?.();
+        onShare?.();
     }
 
     async function handleListSelection(list: List) {
@@ -390,9 +393,14 @@
     }
 </script>
 
-<Dropdown items={dropdownItems()} onchange={(item) => handleDropdownClick(item)}
-    >{#snippet children({ toggleMenu: openDropdown })}
-        {#if mode == "multi-select"}
+<Dropdown
+    items={dropdownItems()}
+    onchange={(item) => handleDropdownClick(item)}
+>
+    {#snippet children({ toggleMenu: openDropdown })}
+        {#if toggle}{@render toggle({
+                toggleMenu: openDropdown,
+            })}{:else if mode == "multi-select"}
             <button
                 aria-label="Open dropdown"
                 class="btn-primary flex-shrink-0 !font-medium"
@@ -400,7 +408,8 @@
             >
                 <span
                     >{trails?.size}
-                    {$_("selected")} <i class="fa fa-caret-down ml-1"></i></span
+                    {$_("selected")}
+                    <i class="fa fa-caret-down ml-1"></i></span
                 >
             </button>
         {:else}

@@ -218,6 +218,7 @@
   "must-be-at-least-n-characters-long": "Tiene que tener por lo menos {n} caracteres",
   "must-be-at-most-n-characters-long": "Must be at most {n} characters long",
   "my-account": "Mi cuenta",
+  "my-trails": "",
   "n-days-ago": "hace {n} días",
   "n-hours-ago": "hace {n} horas",
   "n-minutes-ago": "hace {n} minutos",

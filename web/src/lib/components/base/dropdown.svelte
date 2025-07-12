@@ -21,16 +21,16 @@
 
     let isOpen = $state(false);
 
-    let dropdownElement: HTMLUListElement;
+    let dropdownElement: HTMLUListElement | undefined = $state();
     let dropdownToggleElement: HTMLDivElement;
 
-    export async function toggleMenu(e: MouseEvent) {
+    export async function toggleMenu(e: MouseEvent) {        
         e.stopPropagation();
         e.preventDefault();
 
         isOpen = !isOpen;
 
-        if (isOpen) {
+        if (isOpen && dropdownElement) {
             await tick();
 
             const toggleRect = dropdownToggleElement.getBoundingClientRect();
@@ -81,7 +81,8 @@
         isOpen = false;
     }
 
-    function handleItemClick(e: Event, item: { text: string; value: any }) {
+    function handleItemClick(e: MouseEvent, item: { text: string; value: any }) {
+        e.preventDefault();
         e.stopPropagation();
         onchange?.(item);
         closeMenu();
@@ -129,7 +130,7 @@
                 <li
                     class="menu-item flex items-center px-4 py-3 cursor-pointer hover:bg-menu-item-background-hover focus:bg-menu-item-background-focus transition-colors"
                     role="presentation"
-                    onmousedown={(e) => handleItemClick(e, item)}
+                    onclick={(e) => handleItemClick(e, item)}
                 >
                     {#if item.icon}
                         <i class="fa fa-{item.icon} mr-3"></i>

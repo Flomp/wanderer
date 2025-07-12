@@ -218,6 +218,7 @@
   "must-be-at-least-n-characters-long": "Doit être composé d'au moins {n} caractères",
   "must-be-at-most-n-characters-long": "Doit être au maximum de {n} caractères",
   "my-account": "Mon profil",
+  "my-trails": "",
   "n-days-ago": "il y a {n} jours",
   "n-hours-ago": "il y a {n} heures",
   "n-minutes-ago": "il y a {n} minutes",

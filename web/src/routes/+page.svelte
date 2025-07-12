@@ -139,11 +139,12 @@
 <svelte:window onscroll={onScroll} />
 
 <section
-    class="hero grid grid-cols-1 lg:grid-cols-2 md:px-8 md:gap-8"
+    class="hero grid grid-cols-1 lg:grid-cols-2 md:px-8 gap-4 md:gap-8"
     style="min-height: calc(100vh - 112px)"
 >
     <div
-        class="flex flex-col justify-center gap-8 max-w-md mx-8 sm:mx-auto mt-0 lg:-mt-24 md:mt-24 max-h-screen md:sticky top-0"
+        class="flex flex-col justify-center gap-8 max-w-md mx-8 sm:mx-auto mt-0 lg:sticky"
+        style="max-height: calc(100vh - 112px); top: 112px;"
     >
         <h2 class="text-5xl sm:text-6xl md:text-7xl font-bold">
             {$_("welcome_to")} <span class="-tracking-[0.075em]">wanderer</span>
@@ -172,16 +173,8 @@
                 <EmptyStateFeed></EmptyStateFeed>
             {/if}
             {#each feed.items as f}
-                {#if f.expand.item}
-                    <a
-                        class="block"
-                        href={(f.type === "trail"
-                            ? "/trail/view/"
-                            : "/lists/") +
-                            `@${f.expand.author?.preferred_username}@${f.expand.author?.domain}/${f.item}`}
-                    >
-                        <FeedCard feedItem={f}></FeedCard>
-                    </a>
+                {#if f.expand?.item}
+                    <FeedCard feedItem={f}></FeedCard>
                 {/if}
             {/each}
         </div>

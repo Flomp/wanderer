@@ -30,6 +30,8 @@
 
     const dropdownItems = [
         { text: $_("profile"), value: "profile", icon: "user" },
+        { text: $_("my-trails"), value: "trails", icon: "route" },
+
         { text: $_("settings"), value: "settings", icon: "cog" },
         { text: $_("logout"), value: "logout", icon: "right-from-bracket" },
     ];
@@ -97,6 +99,8 @@
     function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "profile") {
             goto(`/profile/@${$currentUser?.username?.toLowerCase()}`);
+        } else if (item.value == "trails") {
+            goto(`/profile/@${$currentUser?.username?.toLowerCase()}/trails`);
         } else if (item.value == "logout") {
             logout();
             window.location.href = "/";
@@ -185,7 +189,11 @@
     </div>
 </Drawer>
 
-<nav class="flex justify-between items-center p-6 {page.url.pathname === '/' ? 'sticky top-0 z-10 bg-background' : ''}">
+<nav
+    class="flex justify-between items-center p-6 {page.url.pathname === '/'
+        ? 'sticky top-0 z-10 bg-background'
+        : ''}"
+>
     <a href="/">
         {#if $theme == "light"}
             <LogoText></LogoText>

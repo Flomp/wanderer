@@ -7,7 +7,6 @@ let feed: FeedItem[] = []
 
 export async function feed_index(page: number, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     let r = await f(`/api/v1/feed?` + new URLSearchParams({
-        expand: "author",
         page: page.toString(),
         perPage: perPage.toString(),
         sort: '-created'
