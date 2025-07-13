@@ -1,7 +1,6 @@
 <script lang="ts">
     import { page } from "$app/state";
     import directionCaret from "$lib/assets/svgs/caret-right-solid.svg";
-    import type { Settings } from "$lib/models/settings";
     import type { Trail } from "$lib/models/trail";
     import type { Waypoint } from "$lib/models/waypoint";
     import { theme } from "$lib/stores/theme_store";
@@ -9,15 +8,19 @@
     import { findStartAndEndPoints } from "$lib/util/geojson_util";
     import { toGeoJson } from "$lib/util/gpx_util";
     import {
-        baseMapStyles,
         createMarkerFromWaypoint,
         createPopupFromTrail,
         FontawesomeMarker,
-        overlayLayers,
     } from "$lib/util/maplibre_util";
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
+    import {
+        baseMapStyles,
+        overlays,
+        pois,
+    } from "$lib/vendor/maplibre-layer-manager/layers";
+    import { LayerManager } from "$lib/vendor/maplibre-layer-manager/maplibre-layer-manager";
     import {
         StyleSwitcherControl,
         type StyleSwitcherControlOptions,
@@ -98,7 +101,7 @@
     let epc: ElevationProfileControl;
     let graticule: MaplibreGraticule;
 
-    let mapState: StyleSwitcherControlOptions["state"];
+    let layerManager: LayerManager;
 
     let layers: Record<
         string,
@@ -244,16 +247,6 @@
                 removeTrailLayer(layerId);
             }
         });
-
-        if (mapLoaded) {
-            for (const [k, v] of Object.entries(mapState.selectedLayers)) {
-                if (v) {
-                    const layer = overlayLayers.find((l) => l.text === k);
-                    if (!layer) continue;
-                    addOverlayLayer(layer);
-                }
-            }
-        }
 
         if (
             !drawing &&
@@ -874,36 +867,25 @@
             )
         ).ElevationProfileControl;
 
-        const mapStyles: { text: string; value: string; thumbnail?: string }[] =
-            [
-                ...((page.data.settings as Settings)?.tilesets ?? []).map(
-                    (t) => ({
-                        text: t.name,
-                        value: t.url,
-                    }),
-                ),
-                ...baseMapStyles,
-            ];
-
-        mapState = JSON.parse(
-            localStorage.getItem("map-state") ??
-                '{"selectedLayers": {}, "selectedStyle": 0}',
-        );
-
         if (!mapContainer) {
             return;
+        }
+
+        for (const tileset of page.data.settings?.tilesets ?? []) {
+            baseMapStyles[tileset.name] = tileset.url;
         }
 
         const finalMapOptions: M.MapOptions = {
             ...{
                 container: mapContainer,
-                style: mapStyles[mapState.selectedStyle].value,
                 center: [initialState.lng, initialState.lat],
                 zoom: initialState.zoom,
             },
             ...mapOptions,
         };
         map = new M.Map(finalMapOptions);
+
+        layerManager = new LayerManager(map);
 
         elevationMarker = new FontawesomeMarker(
             {
@@ -924,25 +906,11 @@
         img.src = directionCaret;
 
         const switcherControl = new StyleSwitcherControl({
-            styles: mapStyles,
-            layers: overlayLayers,
-            onMapStyleSwitch: (i, style) => {
-                layers = {};
-                map?.setStyle(style.value);
-                mapState.selectedStyle = i;
-                localStorage.setItem("map-state", JSON.stringify(mapState));
+            styles: baseMapStyles,
+            onchange: (state) => {
+                layerManager.update(JSON.parse(JSON.stringify(state)));
             },
-            onLayerChange: (checked, layer) => {
-                mapState.selectedLayers[layer.text] = checked;
-                localStorage.setItem("map-state", JSON.stringify(mapState));
-
-                if (checked) {
-                    addOverlayLayer(layer);
-                } else {
-                    removeOverlayLayer(layer);
-                }
-            },
-            state: mapState,
+            state: JSON.parse(JSON.stringify(layerManager.state)),
         });
 
         map.addControl(
@@ -1128,6 +1096,7 @@
 
         map.on("load", () => {
             initMap(true);
+            layerManager.init();
             oninit?.(map!);
         });
 
@@ -1180,26 +1149,6 @@
                 epc?.toggleProfile();
             }
         }
-    }
-
-    function addOverlayLayer(layer: RadioItem) {
-        map?.addSource(layer.text + "overlay-source", {
-            type: "raster",
-            tiles: [layer.value],
-            tileSize: 256,
-        });
-
-        map?.addLayer({
-            id: layer.text + "overlay-layer",
-            type: "raster",
-            source: layer.text + "overlay-source",
-            minzoom: 4,
-        });
-    }
-
-    function removeOverlayLayer(layer: RadioItem) {
-        map?.removeLayer(layer.text + "overlay-layer");
-        map?.removeSource(layer.text + "overlay-source");
     }
 </script>
 

@@ -11,43 +11,6 @@ import { handleFromRecordWithIRI } from "./activitypub_util";
 import { getFileURL } from "./file_util";
 import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
 import { icons } from "./icon_util";
-import type { RadioItem } from "$lib/components/base/radio_group.svelte";
-
-
-export const baseMapStyles: RadioItem[] = [
-    {
-        text: "OpenFreeMap",
-        value: "/styles/ofm.json",
-    },
-    {
-        text: "OpenTopoMap",
-        value: "/styles/otm.json",
-    },
-    {
-        text: "Carto Light",
-        value: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-    },
-    {
-        text: "Carto Dark",
-        value: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-    },
-]
-
-export const overlayLayers: RadioItem[] = [
-    {
-        text: "hiking",
-        value: "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",
-    },
-    {
-        text: "cycling",
-        value: "https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png",
-    },
-    {
-        text: "MTB",
-        value: "https://tile.waymarkedtrails.org/mtb/{z}/{x}/{y}.png",
-    },
-]
-
 
 export class FontawesomeMarker extends M.Marker {
     constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {

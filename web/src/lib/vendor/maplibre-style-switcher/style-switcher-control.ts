@@ -1,21 +1,15 @@
-import type { RadioItem } from "$lib/components/base/radio_group.svelte";
 import StyleSwitcher from "$lib/components/map/style_switcher.svelte";
-import { type ControlPosition, type IControl } from "maplibre-gl";
+import { type ControlPosition, type IControl, type StyleSpecification } from "maplibre-gl";
 import { mount } from "svelte";
+import type { MapState, pois } from "../maplibre-layer-manager/layers";
 /**
  * Style switcher control options
  */
 
 export type StyleSwitcherControlOptions = {
-    styles: RadioItem[];
-    layers: RadioItem[];
-    onMapStyleSwitch: (index: number, style: RadioItem) => void
-    onLayerChange: (checked: boolean, layer: RadioItem) => void
-
-    state: {
-        selectedStyle: number;
-        selectedLayers: Record<string, boolean>
-    };
+    styles: Record<string, string | StyleSpecification>;
+    onchange: (state: MapState) => void
+    state: MapState;
 };
 
 export class StyleSwitcherControl implements IControl {

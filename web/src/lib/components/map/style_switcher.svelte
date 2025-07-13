@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { StyleSwitcherControlOptions } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
-    import RadioGroup from "../base/radio_group.svelte";
     import { _ } from "svelte-i18n";
+    import RadioGroup, { type RadioItem } from "../base/radio_group.svelte";
 
     interface Props {
         settings: StyleSwitcherControlOptions;
@@ -9,9 +9,20 @@
 
     let { settings }: Props = $props();
 
+    let mapState = $state(settings.state);
+
     let container: HTMLDivElement;
 
-    const mapStyles = $derived(settings.styles);
+    let styleItems: RadioItem[] = $derived(
+        Object.entries(settings.styles).map<RadioItem>(([name, style]) => ({
+            text: name,
+            value: style,
+        })),
+    );
+
+    let selectedStyle: number = $derived(
+        styleItems.findIndex((i) => i.text === mapState.base),
+    );
 
     let showSwitcher: boolean = $state(false);
 
@@ -37,13 +48,13 @@
     </button>
 
     <div
-        class="absolute bg-menu-background rounded-lg px-4 py-2 mt-2 shadow-xl space-y-3"
+        class="absolute bg-menu-background rounded-lg px-4 py-2 mt-2 shadow-xl space-y-3 max-h-96 overflow-y-scroll"
         class:hidden={!showSwitcher}
         style="transform: translateX(calc(-100% + 29px))"
     >
         <div class="flex items-center gap-x-12">
             <span class="font-semibold whitespace-nowrap text-base"
-                >Map style</span
+                >{$_("map-style")}</span
             >
             <button
                 class="fa fa-close !rounded-full"
@@ -53,29 +64,55 @@
         </div>
         <RadioGroup
             name="completed"
-            items={mapStyles}
-            bind:selected={settings.state.selectedStyle}
-            onchange={(style) => settings.onMapStyleSwitch(settings.styles.indexOf(style), style)}
+            items={styleItems}
+            selected={selectedStyle}
+            onchange={(style) => {
+                mapState.base = style.text;
+                settings.onchange(mapState);
+            }}
         ></RadioGroup>
         <hr class="border-input-border" />
-        <span class="font-semibold whitespace-nowrap text-base">Layers</span>
-        {#each settings.layers as l, i}
+        <span class="font-semibold whitespace-nowrap text-base"
+            >{$_("layer", { values: { n: 2 } })}</span
+        >
+        {#each Object.keys(settings.state.overlays) as overlay}
             <div class="flex items-center mt-2 mb-4">
                 <input
-                    id="{l.text}-layer-checkbox"
+                    id="{overlay}-layer-checkbox"
                     type="checkbox"
-                    checked={settings.state.selectedLayers[l.text]}
+                    bind:checked={mapState.overlays[overlay]}
                     class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
                     onchange={(e) => {
-                        const checked = (e.target as HTMLInputElement).checked;
-                        settings.onLayerChange(checked, l);
+                        settings.onchange(mapState);
                     }}
                 />
 
-                <label for="{l.text}-layer-checkbox" class="ms-2 text-sm"
-                    >{$_(l.text)}</label
+                <label for="{overlay}-layer-checkbox" class="ms-2 text-sm"
+                    >{$_(overlay)}</label
                 >
             </div>
+        {/each}
+        <hr class="border-input-border" />
+        <p class="font-semibold whitespace-nowrap text-base">{$_("pois")}</p>
+        {#each Object.entries(settings.state.pois) as [category, pois]}
+            <p class="text-sm font-medium whitespace-nowrap">{$_(category)}</p>
+            {#each Object.keys(pois) as poi}
+                <div class="flex items-center mt-2 mb-4">
+                    <input
+                        id="{poi}-poi-checkbox"
+                        type="checkbox"
+                        bind:checked={mapState.pois[category][poi]}
+                        class="w-4 h-4 bg-input-background accent-primary border-input-border focus:ring-input-ring focus:ring-2"
+                        onchange={(e) => {
+                            settings.onchange(mapState);
+                        }}
+                    />
+
+                    <label for="{poi}-layer-checkbox" class="ms-2 text-sm"
+                        >{$_(poi)}</label
+                    >
+                </div>
+            {/each}
         {/each}
     </div>
 </div>

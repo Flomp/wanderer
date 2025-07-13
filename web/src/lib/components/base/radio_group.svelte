@@ -1,7 +1,7 @@
 <script module lang="ts">
     export type RadioItem = {
         text: string;
-        value: string;
+        value: any;
         icon?: string;
         description?: string;
     };
