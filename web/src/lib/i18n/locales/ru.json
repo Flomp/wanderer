@@ -33,13 +33,13 @@
   "by": "От",
   "calendar": {
     "weekdays": {
-      "0": "Mo",
-      "1": "Tu",
-      "2": "We",
-      "3": "Th",
-      "4": "Fr",
-      "5": "Sa",
-      "6": "Su"
+      "0": "Пн",
+      "1": "Вт",
+      "2": "Ср",
+      "3": "Чт",
+      "4": "Пт",
+      "5": "Сб",
+      "6": "Вс"
     }
   },
   "can": "можно",
@@ -113,7 +113,7 @@
   "email-verified": "Email подтверждён",
   "empty-activities": "у {username} ещё нет активностей",
   "empty-bio": "{username} ещё не рассказал(а) о себе",
-  "empty-feed": "Your feed is empty",
+  "empty-feed": "Ваша лента пуста",
   "empty-feed-explanation": "Activities by you or people you follow will appear here",
   "empty-lists": "у {username} нет публичных списков",
   "enable-auto-routing": "Авто-маршрутизация",
@@ -373,7 +373,7 @@
   "username": "Никнейм",
   "view": "Просмотр",
   "visibilty-status": "Статус видимости",
-  "walking-speed": "Walking speed",
+  "walking-speed": "Пешая скорость",
   "waypoints": "{n, plural, =1 {Путевая точка} other {Путевые точки}}",
   "welcome_to": "Добро пожаловать в",
   "width": "Ширина",
