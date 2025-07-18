@@ -64,8 +64,7 @@ export class OverpassLayer implements BaseLayer {
     private openPopup(e: MapMouseEvent) {
         const features = (e as any).features as GeoJSON.Feature[];
         const point = features[0].geometry as GeoJSON.Point;
-        const tags = JSON.parse(features[0].properties?.tags);
-        const content = createOverpassPopup(tags, point.coordinates);
+        const content = createOverpassPopup(features[0], point.coordinates);
 
         this.currentPopupCoordinates = point.coordinates;
         this.popup
@@ -263,8 +262,8 @@ export class OverpassLayer implements BaseLayer {
                 const svg = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
                     <circle cx="20" cy="20" r="20" fill="${pois[q].icon.bg}" />
-                    <g transform="translate(8 8) scale(0.05)">
-                    ${pois[q].icon.svg}
+                    <g transform="translate(8 8)">
+                    ${transformFontAwesomeIcon(pois[q].icon.svg)}
                     </g>
                 </svg>
                 `
@@ -318,3 +317,37 @@ function boundsToPolygonFeature(bounds: M.LngLatBounds): GeoJSON.Feature<GeoJSON
         properties: {},
     };
 }
+
+function transformFontAwesomeIcon(svgText: string): string {
+    const viewBoxMatch = svgText.match(/viewBox="0 0 (\d+) (\d+)"/);
+    if (!viewBoxMatch) throw new Error("SVG viewBox not found");
+
+    const originalWidth = parseFloat(viewBoxMatch[1]);
+    const originalHeight = parseFloat(viewBoxMatch[2]);
+
+    const maxDim = Math.max(originalWidth, originalHeight);
+    const scale = 24 / maxDim;
+
+    const scaledWidth = originalWidth * scale;
+    const scaledHeight = originalHeight * scale;
+
+    const dx = (24 - scaledWidth) / 2;
+    const dy = (24 - scaledHeight) / 2;
+
+    let innerContent = svgText
+        .replace(/<svg[^>]*>/, '')
+        .replace(/<\/svg>/, '')
+        .trim();
+
+    innerContent = innerContent.replace(
+        /<path/g,
+        '<path fill="white"'
+    );
+
+    return `
+    <g transform="translate(${dx.toFixed(2)} ${dy.toFixed(2)}) scale(${scale.toFixed(6)})">
+      ${innerContent}
+    </g>
+  `;
+}
+

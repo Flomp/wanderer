@@ -257,8 +257,9 @@ export function createPopupFromTrail(trail: Trail) {
     return popup;
 }
 
-export function createOverpassPopup(tags: Record<string, string>, coordinates: GeoJSON.Position) {
-    const name = tags.name ?? "?"
+export function createOverpassPopup(feature: GeoJSON.Feature, coordinates: GeoJSON.Position) {
+    const tags: Record<string, string> = JSON.parse(feature.properties?.tags);
+    const name = tags.name ?? get(_)(feature.properties?.query) ?? "?"
 
     const popupContainer = document.createElement("div");
     popupContainer.className = "p-4"

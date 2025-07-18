@@ -1,4 +1,32 @@
 import Bakery from "$lib/assets/svgs/pois/bakery.svg?raw"
+import GroceryStore from "$lib/assets/svgs/pois/grocery-store.svg?raw"
+import FoodDrinks from "$lib/assets/svgs/pois/food-drinks.svg?raw"
+import Campsite from "$lib/assets/svgs/pois/campsite.svg?raw"
+import Hotel from "$lib/assets/svgs/pois/hotel.svg?raw"
+import Hut from "$lib/assets/svgs/pois/hut.svg?raw"
+import Viewpoint from "$lib/assets/svgs/pois/viewpoint.svg?raw"
+import Attraction from "$lib/assets/svgs/pois/attraction.svg?raw"
+import Barrier from "$lib/assets/svgs/pois/barrier.svg?raw"
+import Toilet from "$lib/assets/svgs/pois/toilet.svg?raw"
+import Shelter from "$lib/assets/svgs/pois/shelter.svg?raw"
+import Shower from "$lib/assets/svgs/pois/shower.svg?raw"
+import Summit from "$lib/assets/svgs/pois/summit.svg?raw"
+import MountainPass from "$lib/assets/svgs/pois/mountain-pass.svg?raw"
+import Climbing from "$lib/assets/svgs/pois/climbing.svg?raw"
+import BicycleShop from "$lib/assets/svgs/pois/bike-repair.svg?raw"
+import BicycleRental from "$lib/assets/svgs/pois/bike-rental.svg?raw"
+import BicycleParking from "$lib/assets/svgs/pois/bike-parking.svg?raw"
+import Garage from "$lib/assets/svgs/pois/garage.svg?raw"
+import GasStation from "$lib/assets/svgs/pois/gas-station.svg?raw"
+import Parking from "$lib/assets/svgs/pois/parking.svg?raw"
+import Water from "$lib/assets/svgs/pois/water.svg?raw"
+import RailwayStation from "$lib/assets/svgs/pois/train.svg?raw"
+import SubwayStop from "$lib/assets/svgs/pois/subway.svg?raw"
+import TramStop from "$lib/assets/svgs/pois/tram.svg?raw"
+import BusStop from "$lib/assets/svgs/pois/bus.svg?raw"
+import Ferry from "$lib/assets/svgs/pois/ferry.svg?raw"
+import Picnic from "$lib/assets/svgs/pois/picnic.svg?raw"
+
 import type { FilterSpecification, MapMouseEvent, Marker, StyleSpecification } from "maplibre-gl"
 
 export interface BaseLayer {
@@ -171,7 +199,7 @@ export const pois: Record<string, POI> = {
     },
     'grocery-store': {
         icon: {
-            svg: "",
+            svg: GroceryStore,
             bg: 'Coral',
         },
         tags: {
@@ -181,7 +209,7 @@ export const pois: Record<string, POI> = {
     },
     "food-drinks": {
         icon: {
-            svg: "",
+            svg: FoodDrinks,
             bg: 'Coral',
         },
         tags: {
@@ -191,7 +219,7 @@ export const pois: Record<string, POI> = {
     },
     toilets: {
         icon: {
-            svg: "",
+            svg: Toilet,
             bg: 'DeepSkyBlue',
         },
         tags: {
@@ -201,7 +229,7 @@ export const pois: Record<string, POI> = {
     },
     water: {
         icon: {
-            svg: "",
+            svg: Water,
             bg: 'DeepSkyBlue',
         },
         tags: [
@@ -217,7 +245,7 @@ export const pois: Record<string, POI> = {
     },
     shower: {
         icon: {
-            svg: "",
+            svg: Shower,
             bg: 'DeepSkyBlue',
         },
         tags: {
@@ -227,7 +255,7 @@ export const pois: Record<string, POI> = {
     },
     shelter: {
         icon: {
-            svg: "",
+            svg: Shelter,
             bg: '#000000',
         },
         tags: {
@@ -237,7 +265,7 @@ export const pois: Record<string, POI> = {
     },
     'gas-station': {
         icon: {
-            svg: "",
+            svg: GasStation,
             bg: '#000000',
         },
         tags: {
@@ -247,7 +275,7 @@ export const pois: Record<string, POI> = {
     },
     parking: {
         icon: {
-            svg: "",
+            svg: Parking,
             bg: '#000000',
         },
         tags: {
@@ -257,7 +285,7 @@ export const pois: Record<string, POI> = {
     },
     garage: {
         icon: {
-            svg: "",
+            svg: Garage,
             bg: '#000000',
         },
         tags: {
@@ -267,7 +295,7 @@ export const pois: Record<string, POI> = {
     },
     barrier: {
         icon: {
-            svg: "",
+            svg: Barrier,
             bg: '#000000',
         },
         tags: {
@@ -276,7 +304,7 @@ export const pois: Record<string, POI> = {
     },
     attraction: {
         icon: {
-            svg: "",
+            svg: Attraction,
             bg: 'Green',
         },
         tags: {
@@ -285,7 +313,7 @@ export const pois: Record<string, POI> = {
     },
     viewpoint: {
         icon: {
-            svg: "",
+            svg: Viewpoint,
             bg: 'Green',
         },
         tags: {
@@ -295,7 +323,7 @@ export const pois: Record<string, POI> = {
     },
     hotel: {
         icon: {
-            svg: "",
+            svg: Hotel,
             bg: '#e6c100',
         },
         tags: {
@@ -305,7 +333,7 @@ export const pois: Record<string, POI> = {
     },
     campsite: {
         icon: {
-            svg: "",
+            svg: Campsite,
             bg: '#e6c100',
         },
         tags: {
@@ -315,7 +343,7 @@ export const pois: Record<string, POI> = {
     },
     hut: {
         icon: {
-            svg: "",
+            svg: Hut,
             bg: '#e6c100',
         },
         tags: {
@@ -325,7 +353,7 @@ export const pois: Record<string, POI> = {
     },
     picnic: {
         icon: {
-            svg: "",
+            svg: Picnic,
             bg: 'Green',
         },
         tags: {
@@ -335,7 +363,7 @@ export const pois: Record<string, POI> = {
     },
     summit: {
         icon: {
-            svg: "",
+            svg: Summit,
             bg: 'Green',
         },
         tags: {
@@ -343,9 +371,9 @@ export const pois: Record<string, POI> = {
         },
 
     },
-    pass: {
+    "mountain-pass": {
         icon: {
-            svg: "",
+            svg: MountainPass,
             bg: 'Green',
         },
         tags: {
@@ -354,7 +382,7 @@ export const pois: Record<string, POI> = {
     },
     climbing: {
         icon: {
-            svg: "",
+            svg: Climbing,
             bg: 'Green',
         },
         tags: {
@@ -363,7 +391,7 @@ export const pois: Record<string, POI> = {
     },
     'bicycle-parking': {
         icon: {
-            svg: "",
+            svg: BicycleParking,
             bg: 'HotPink',
         },
         tags: {
@@ -373,7 +401,7 @@ export const pois: Record<string, POI> = {
     },
     'bicycle-rental': {
         icon: {
-            svg: "",
+            svg: BicycleRental,
             bg: 'HotPink',
         },
         tags: {
@@ -382,7 +410,7 @@ export const pois: Record<string, POI> = {
     },
     'bicycle-shop': {
         icon: {
-            svg: "",
+            svg: BicycleShop,
             bg: 'HotPink',
         },
         tags: {
@@ -391,7 +419,7 @@ export const pois: Record<string, POI> = {
     },
     'railway-station': {
         icon: {
-            svg: "",
+            svg: RailwayStation,
             bg: 'DarkBlue',
         },
         tags: {
@@ -401,7 +429,7 @@ export const pois: Record<string, POI> = {
     },
     'tram-stop': {
         icon: {
-            svg: "",
+            svg: TramStop,
             bg: 'DarkBlue',
         },
         tags: {
@@ -411,7 +439,7 @@ export const pois: Record<string, POI> = {
     },
     'subway-stop': {
         icon: {
-            svg: "",
+            svg: SubwayStop,
             bg: 'DarkBlue',
         },
         tags: {
@@ -421,7 +449,7 @@ export const pois: Record<string, POI> = {
     },
     'bus-stop': {
         icon: {
-            svg: "",
+            svg: BusStop,
             bg: 'DarkBlue',
         },
         tags: {
@@ -432,7 +460,7 @@ export const pois: Record<string, POI> = {
     },
     ferry: {
         icon: {
-            svg: "",
+            svg: Ferry,
             bg: 'DarkBlue',
         },
         tags: {
@@ -478,7 +506,7 @@ export const defaultMapState: MapState = {
             toilets: false,
         },
         hiking: {
-            pass: false,
+            "mountain-pass": false,
             climbing: false,
             summit: false,
         },
@@ -494,10 +522,10 @@ export const defaultMapState: MapState = {
         },
         "public-transport": {
             "railway-station": false,
-            "bus-stop": false,
-            ferry: false,
             "subway-stop": false,
             "tram-stop": false,
+            "bus-stop": false,
+            ferry: false,
         }
     }
 }

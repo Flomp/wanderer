@@ -2,6 +2,7 @@
     import type { StyleSwitcherControlOptions } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
     import { _ } from "svelte-i18n";
     import RadioGroup, { type RadioItem } from "../base/radio_group.svelte";
+    import { defaultMapState } from "$lib/vendor/maplibre-layer-manager/layers";
 
     interface Props {
         settings: StyleSwitcherControlOptions;
@@ -48,7 +49,7 @@
     </button>
 
     <div
-        class="absolute bg-menu-background rounded-lg px-4 py-2 mt-2 shadow-xl space-y-3 max-h-96 overflow-y-scroll"
+        class="absolute bg-menu-background rounded-lg px-4 py-2 mt-2 shadow-xl space-y-3 max-h-96 overflow-y-scroll min-w-48"
         class:hidden={!showSwitcher}
         style="transform: translateX(calc(-100% + 29px))"
     >
@@ -94,10 +95,10 @@
         {/each}
         <hr class="border-input-border" />
         <p class="font-semibold whitespace-nowrap text-base">{$_("pois")}</p>
-        {#each Object.entries(settings.state.pois) as [category, pois]}
+        {#each Object.entries(defaultMapState.pois) as [category, pois]}
             <p class="text-sm font-medium whitespace-nowrap">{$_(category)}</p>
             {#each Object.keys(pois) as poi}
-                <div class="flex items-center mt-2 mb-4">
+                <div class="flex items-center mt-2 mb-4 ml-2">
                     <input
                         id="{poi}-poi-checkbox"
                         type="checkbox"
@@ -108,7 +109,7 @@
                         }}
                     />
 
-                    <label for="{poi}-layer-checkbox" class="ms-2 text-sm"
+                    <label for="{poi}-poi-checkbox" class="ms-2 text-sm"
                         >{$_(poi)}</label
                     >
                 </div>
