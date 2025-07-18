@@ -1094,7 +1094,7 @@
             map!.getCanvas().style.cursor = "";
         });
 
-        map.on("load", () => {
+        map.on("load", () => {            
             initMap(true);
             layerManager.init();
             oninit?.(map!);

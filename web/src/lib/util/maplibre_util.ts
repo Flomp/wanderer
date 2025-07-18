@@ -257,6 +257,43 @@ export function createPopupFromTrail(trail: Trail) {
     return popup;
 }
 
+export function createOverpassPopup(tags: Record<string, string>, coordinates: GeoJSON.Position) {
+    const name = tags.name ?? "?"
+
+    const popupContainer = document.createElement("div");
+    popupContainer.className = "p-4"
+
+    const popupHeading = document.createElement("h1");
+    popupHeading.classList = "font-medium text-lg"
+    popupHeading.textContent = name;
+
+    const coordinateSubtitle = document.createElement("p")
+    coordinateSubtitle.classList = "text-gray-500"
+    coordinateSubtitle.textContent = `${coordinates[0].toFixed(6)}, ${coordinates[1].toFixed(6)}`
+
+    popupContainer.appendChild(popupHeading)
+    popupContainer.appendChild(coordinateSubtitle)
+
+    const tagsGrid = document.createElement("div")
+    tagsGrid.classList = "grid grid-cols-2 gap-x-4 mt-4"
+
+    Object.entries(tags).forEach((([k, v]) => {
+        if (k == "name") return;
+        const kSpan = document.createElement("span")
+        kSpan.classList = "font-mono"
+        kSpan.textContent = k;
+        const vSpan = document.createElement("span")
+        vSpan.textContent = v;
+
+        tagsGrid.appendChild(kSpan);
+        tagsGrid.appendChild(vSpan);
+    }));
+
+    popupContainer.appendChild(tagsGrid)
+
+    return popupContainer;
+}
+
 export function calculatePixelPerMeter(map: M.Map, meters: number) {
     const y = map.getCanvas().getBoundingClientRect().y;
     const x = map.getCanvas().getBoundingClientRect().x;

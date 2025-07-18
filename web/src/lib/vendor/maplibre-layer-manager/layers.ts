@@ -1,16 +1,18 @@
 import Bakery from "$lib/assets/svgs/pois/bakery.svg?raw"
-import type { MapMouseEvent, Marker, StyleSpecification } from "maplibre-gl"
+import type { FilterSpecification, MapMouseEvent, Marker, StyleSpecification } from "maplibre-gl"
 
 export interface BaseLayer {
     markers?: Record<string, Marker>,
     spec: StyleSpecification,
-    listener?: {
+    filter?: FilterSpecification,
+    listeners?: Record<string, {
         onMouseUp?: (e: MapMouseEvent) => void,
         onMouseDown?: (e: MapMouseEvent) => void,
         onEnter?: (e: MapMouseEvent) => void,
         onLeave?: (e: MapMouseEvent) => void,
         onMouseMove?: (e: MapMouseEvent) => void,
-    }
+    }>
+
 }
 
 export const baseMapStyles: Record<string, string | StyleSpecification> = {
@@ -129,7 +131,7 @@ export const overlays: Record<string, StyleSpecification> = {
             },
         ],
     },
-    Skiing: {
+    skiing: {
         name: "waymarkedTrailsWinter",
         version: 8,
         sources: {
@@ -152,38 +154,293 @@ export const overlays: Record<string, StyleSpecification> = {
     }
 }
 
-export type POI = { q: string, icon: { svg: any, bg: string } }
-export const pois: Record<string, POI> = {
-    "grocery-store": { q: "nwr[shop=supermarket];nwr[shop=convenience];", icon: { svg: "", bg: "red" } },
-    "bakery": { q: "nwr[shop=bakery];", icon: { svg: Bakery, bg: "coral" } },
-    "food-drinks": { q: "nwr[amenity=restaurant];nwr[amenity=fast_food];nwr[amenity=cafe];nwr[amenity=pub];nwr[amenity=bar];", icon: { svg: "", bg: "red" } },
-    "toilet": { q: "nwr[amenity=toilets];", icon: { svg: "", bg: "red" } },
-    "drinking-water": { q: "nwr[amenity=drinking_water];nwr[amenity=water_point];nwr[natural=spring][drinking_water=yes];", icon: { svg: "", bg: "red" } },
-    "shower": { q: "nwr[amenity=shower];", icon: { svg: "", bg: "red" } },
-    "shelter": { q: "nwr[amenity=shelter];", icon: { svg: "", bg: "red" } },
-    "barrier": { q: "nwr[barrier=true];", icon: { svg: "", bg: "red" } },
-    "attraction": { q: "nwr[tourism=attraction];", icon: { svg: "", bg: "red" } },
-    "viewpoint": { q: "nwr[tourism=viewpoint];", icon: { svg: "", bg: "red" } },
-    "hotel": { q: "nwr[tourism=hotel];nwr[tourism=hostel];nwr[tourism=guest_house];nwr[tourism=motel];", icon: { svg: "", bg: "red" } },
-    "camp-site": { q: "nwr[tourism=camp_site];", icon: { svg: "", bg: "red" } },
-    "hut": { q: "nwr[tourism=alpine_hut];nwr[tourism=wilderness_hut];", icon: { svg: "", bg: "red" } },
-    "peak": { q: "nwr[natural=peak];", icon: { svg: "", bg: "red" } },
-    "mountain-pass": { q: "nwr[mountain_pass=yes];", icon: { svg: "", bg: "red" } },
-    "climbing": { q: "nwr[sport=climbing];", icon: { svg: "", bg: "red" } },
-    "bicylce-parking": { q: "nwr[amenity=bicycle_parking];", icon: { svg: "", bg: "red" } },
-    "bicycle-rental": { q: "nwr[amenity=bicycle_rental];", icon: { svg: "", bg: "red" } },
-    "bicycle-shop": { q: "nwr[shop=bicycle];", icon: { svg: "", bg: "red" } },
-    "gas-station": { q: "nwr[amenity=fuel];", icon: { svg: "", bg: "red" } },
-    "parking": { q: "nwr[amenity=parking];", icon: { svg: "", bg: "red" } },
-    "car-repair": { q: "nwr[shop=car_repair];", icon: { svg: "", bg: "red" } },
-    "motorcycle-repair": { q: "nwr[shop=motorcycle_repair];", icon: { svg: "", bg: "red" } },
-    "railway-station": { q: "nwr[railway=station];", icon: { svg: "", bg: "red" } },
-    "subway": { q: "nwr[railway=subway_entrance];", icon: { svg: "", bg: "red" } },
-    "tram": { q: "nwr[railway=tram_stop];", icon: { svg: "", bg: "red" } },
-    "bus": { q: "nwr[public_transport=stop_position][bus=yes];nwr[public_transport=platform][bus=yes];", icon: { svg: "", bg: "red" } },
-    "ferry": { q: "nwr[amenity=ferry_terminal];", icon: { svg: "", bg: "red" } },
+export type POI = {
+    tags:
+    | Record<string, string | boolean | string[]>
+    | Record<string, string | boolean | string[]>[], icon: { svg: any, bg: string }
 }
+export const pois: Record<string, POI> = {
+    bakery: {
+        icon: {
+            svg: Bakery,
+            bg: 'Coral',
+        },
+        tags: {
+            shop: 'bakery',
+        },
+    },
+    'grocery-store': {
+        icon: {
+            svg: "",
+            bg: 'Coral',
+        },
+        tags: {
+            shop: ['supermarket', 'convenience'],
+        },
 
+    },
+    "food-drinks": {
+        icon: {
+            svg: "",
+            bg: 'Coral',
+        },
+        tags: {
+            amenity: ['restaurant', 'fast_food', 'cafe', 'pub', 'bar'],
+        },
+
+    },
+    toilets: {
+        icon: {
+            svg: "",
+            bg: 'DeepSkyBlue',
+        },
+        tags: {
+            amenity: 'toilets',
+        },
+
+    },
+    water: {
+        icon: {
+            svg: "",
+            bg: 'DeepSkyBlue',
+        },
+        tags: [
+            {
+                amenity: ['drinking_water', 'water_point'],
+            },
+            {
+                natural: 'spring',
+                drinking_water: 'yes',
+            },
+        ],
+
+    },
+    shower: {
+        icon: {
+            svg: "",
+            bg: 'DeepSkyBlue',
+        },
+        tags: {
+            amenity: 'shower',
+        },
+
+    },
+    shelter: {
+        icon: {
+            svg: "",
+            bg: '#000000',
+        },
+        tags: {
+            amenity: 'shelter',
+        },
+
+    },
+    'gas-station': {
+        icon: {
+            svg: "",
+            bg: '#000000',
+        },
+        tags: {
+            amenity: 'fuel',
+        },
+
+    },
+    parking: {
+        icon: {
+            svg: "",
+            bg: '#000000',
+        },
+        tags: {
+            amenity: 'parking',
+        },
+
+    },
+    garage: {
+        icon: {
+            svg: "",
+            bg: '#000000',
+        },
+        tags: {
+            shop: ['car_repair', 'motorcycle_repair'],
+        },
+
+    },
+    barrier: {
+        icon: {
+            svg: "",
+            bg: '#000000',
+        },
+        tags: {
+            barrier: true,
+        },
+    },
+    attraction: {
+        icon: {
+            svg: "",
+            bg: 'Green',
+        },
+        tags: {
+            tourism: 'attraction',
+        },
+    },
+    viewpoint: {
+        icon: {
+            svg: "",
+            bg: 'Green',
+        },
+        tags: {
+            tourism: 'viewpoint',
+        },
+
+    },
+    hotel: {
+        icon: {
+            svg: "",
+            bg: '#e6c100',
+        },
+        tags: {
+            tourism: ['hotel', 'hostel', 'guest_house', 'motel'],
+        },
+
+    },
+    campsite: {
+        icon: {
+            svg: "",
+            bg: '#e6c100',
+        },
+        tags: {
+            tourism: 'camp_site',
+        },
+
+    },
+    hut: {
+        icon: {
+            svg: "",
+            bg: '#e6c100',
+        },
+        tags: {
+            tourism: ['alpine_hut', 'wilderness_hut'],
+        },
+
+    },
+    picnic: {
+        icon: {
+            svg: "",
+            bg: 'Green',
+        },
+        tags: {
+            tourism: 'picnic_site',
+        },
+
+    },
+    summit: {
+        icon: {
+            svg: "",
+            bg: 'Green',
+        },
+        tags: {
+            natural: 'peak',
+        },
+
+    },
+    pass: {
+        icon: {
+            svg: "",
+            bg: 'Green',
+        },
+        tags: {
+            mountain_pass: 'yes',
+        },
+    },
+    climbing: {
+        icon: {
+            svg: "",
+            bg: 'Green',
+        },
+        tags: {
+            sport: 'climbing',
+        },
+    },
+    'bicycle-parking': {
+        icon: {
+            svg: "",
+            bg: 'HotPink',
+        },
+        tags: {
+            amenity: 'bicycle_parking',
+        },
+
+    },
+    'bicycle-rental': {
+        icon: {
+            svg: "",
+            bg: 'HotPink',
+        },
+        tags: {
+            amenity: 'bicycle_rental',
+        },
+    },
+    'bicycle-shop': {
+        icon: {
+            svg: "",
+            bg: 'HotPink',
+        },
+        tags: {
+            shop: 'bicycle',
+        },
+    },
+    'railway-station': {
+        icon: {
+            svg: "",
+            bg: 'DarkBlue',
+        },
+        tags: {
+            railway: 'station',
+        },
+
+    },
+    'tram-stop': {
+        icon: {
+            svg: "",
+            bg: 'DarkBlue',
+        },
+        tags: {
+            railway: 'tram_stop',
+        },
+
+    },
+    'subway-stop': {
+        icon: {
+            svg: "",
+            bg: 'DarkBlue',
+        },
+        tags: {
+            railway: 'subway_entrance',
+        },
+
+    },
+    'bus-stop': {
+        icon: {
+            svg: "",
+            bg: 'DarkBlue',
+        },
+        tags: {
+            public_transport: ['stop_position', 'platform'],
+            bus: 'yes',
+        },
+
+    },
+    ferry: {
+        icon: {
+            svg: "",
+            bg: 'DarkBlue',
+        },
+        tags: {
+            amenity: 'ferry_terminal',
+        },
+
+    },
+};
 
 
 export type MapState = {
@@ -195,12 +452,10 @@ export type MapState = {
 export const defaultMapState: MapState = {
     base: "OpenFreeMap",
     overlays: {
-        waymarkedTrailsHiking: false,
-        waymarkedTrailsCycling: false,
-        waymarkedTrailsHorseRiding: false,
-        waymarkedTrailsMTB: false,
-        waymarkedTrailsSkating: false,
-        waymarkedTrailsWinter: false,
+        hiking: false,
+        cycling: false,
+        MTB: false,
+        skiing: false,
     },
     pois: {
         food: {
@@ -209,41 +464,40 @@ export const defaultMapState: MapState = {
             bakery: false,
         },
         tourism: {
-            "camp-site": false,
+            campsite: false,
             attraction: false,
             hotel: false,
             hut: false,
             viewpoint: false,
         },
         ammenity: {
-            "drinking-water": false,
+            water: false,
             barrier: false,
             shelter: false,
             shower: false,
-            toilet: false,
+            toilets: false,
         },
         hiking: {
-            "mountain-pass": false,
+            pass: false,
             climbing: false,
-            peak: false,
+            summit: false,
         },
         cycling: {
             "bicycle-rental": false,
             "bicycle-shop": false,
-            "bicylce-parking": false,
+            "bicycle-parking": false,
         },
         "car-motorcycle": {
-            "car-repair": false,
+            "garage": false,
             "gas-station": false,
-            "motorcycle-repair": false,
             parking: false,
         },
         "public-transport": {
             "railway-station": false,
-            bus: false,
+            "bus-stop": false,
             ferry: false,
-            subway: false,
-            tram: false,
+            "subway-stop": false,
+            "tram-stop": false,
         }
     }
 }

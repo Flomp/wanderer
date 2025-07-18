@@ -1,5 +1,6 @@
 import * as M from "maplibre-gl";
-import { baseMapStyles, defaultMapState, pois, type BaseLayer, type MapState } from "./layers";
+import { DebugLayer } from "./debug-layer";
+import { baseMapStyles, defaultMapState, type BaseLayer, type MapState } from "./layers";
 import { OverlayLayer } from "./overlay-layer";
 import { OverpassLayer } from "./overpass-layer";
 
@@ -8,7 +9,8 @@ import { OverpassLayer } from "./overpass-layer";
 export class LayerManager {
     private map: M.Map;
     state!: MapState;
-    layers: Record<string, BaseLayer> = {};
+    private layers: Record<string, BaseLayer> = {};
+    private addedListeners: Set<string> = new Set();
 
     constructor(map: M.Map) {
         this.map = map;
@@ -30,9 +32,13 @@ export class LayerManager {
         try {
             this.update(this.state, true);
 
-            const overpassLayer = new OverpassLayer()
-            this.addLayer("overpass", overpassLayer)
+            const overpassLayer = new OverpassLayer(this.map)
+            const debugLayer = new DebugLayer()
 
+            this.addLayer("overpass", overpassLayer)
+            this.addLayer("debug", debugLayer)
+
+            this.map.on('moveend', this.updateOverpassLayerAfterMapMoveBinded);
         } catch (e) {
             console.error(e)
             // map is probably not initialized yet
@@ -56,17 +62,24 @@ export class LayerManager {
             }
         }
 
-        const overpassLayer = this.layers.overpass;
-        if (overpassLayer) {
-            const castedOverpassLayer = overpassLayer as OverpassLayer
-            castedOverpassLayer.updateLayer(newState, this.map.getBounds()).then(() => {
-                this.loadIcons(castedOverpassLayer.pois);
-                (this.map.getSource('overpass') as M.GeoJSONSource).setData(castedOverpassLayer.data);
-            })
-        }
+        this.updateOverpassLayer(newState);
 
         this.state = newState
         localStorage.setItem("map-state", JSON.stringify(this.state));
+    }
+
+    updateOverpassLayerAfterMapMoveBinded = this.updateOverpassLayerAfterMapMove.bind(this);
+    updateOverpassLayerAfterMapMove() {
+        this.updateOverpassLayer(this.state)
+    }
+
+    private async updateOverpassLayer(newState: MapState) {
+        const overpassLayer = this.layers.overpass;
+        if (overpassLayer) {
+            const castedOverpassLayer = overpassLayer as OverpassLayer;
+            overpassLayer.filter = await castedOverpassLayer.updateLayerIfNeeded(newState, this.map.getBounds());
+            (this.map.getSource('overpass') as M.GeoJSONSource).setData(castedOverpassLayer.data);
+        }
     }
 
     private updateBaseLayer(layer: string | M.StyleSpecification) {
@@ -75,6 +88,9 @@ export class LayerManager {
 
 
     private addLayer(id: string, layer: BaseLayer) {
+        if (this.layers[id] && this.map.getLayer(id)) {
+            return;
+        }
         for (const [id, s] of Object.entries(layer.spec.sources)) {
             if (!this.map.getSource(id)) {
                 this.map.addSource(id, s)
@@ -85,6 +101,34 @@ export class LayerManager {
             if (!this.map.getLayer(l.id)) {
                 this.map.addLayer(l)
             }
+        }
+
+        if (layer.listeners) {
+            for (const [id, listener] of Object.entries(layer.listeners)) {
+                if (listener.onEnter && !this.addedListeners.has("mouseenter-" + id)) {
+                    this.addedListeners.add("mouseenter-" + id)
+                    this.map.on('mouseenter', id, listener.onEnter);
+                }
+
+                if (listener.onLeave && !this.addedListeners.has("onleave-" + id)) {
+                    this.addedListeners.add("mouseleave-" + id)
+                    this.map.on('mouseleave', id, listener.onLeave);
+                }
+
+                if (listener.onMouseDown && !this.addedListeners.has("click-" + id)) {
+                    this.addedListeners.add("click-" + id)
+                    this.map.on('click', id, listener.onMouseDown);
+                }
+
+                if (listener.onMouseMove && !this.addedListeners.has("mousemove-" + id)) {
+                    this.addedListeners.add("mousemove-" + id)
+                    this.map.on('mousemove', id, listener.onMouseMove);
+                }
+            }
+        }
+
+        if (layer.filter && !this.map.getFilter(id)) {
+            this.map.setFilter(id, layer.filter)
         }
 
         this.layers[id] = layer
@@ -106,6 +150,29 @@ export class LayerManager {
                 this.map.removeSource(id)
             }
         }
+
+        if (layer.listeners) {
+            for (const [id, listener] of Object.entries(layer.listeners)) {
+                if (listener.onEnter) {
+                    this.addedListeners.delete("mouseenter-" + id)
+                    this.map.off('mouseenter', id, listener.onEnter);
+                }
+
+                if (listener.onLeave) {
+                    this.addedListeners.delete("mouseleave-" + id)
+                    this.map.off('mouseleave', id, listener.onLeave);
+                }
+                if (listener.onMouseDown) {
+                    this.addedListeners.delete("click-" + id)
+                    this.map.off('click', id, listener.onMouseDown);
+                }
+                if (listener.onMouseMove) {
+                    this.addedListeners.delete("mousemove-" + id)
+                    this.map.off('mousemove', id, listener.onMouseMove);
+                }
+            }
+        }
+
         delete this.layers[id]
 
     }
@@ -114,31 +181,5 @@ export class LayerManager {
         for (const [id, layer] of Object.entries(this.layers)) {
             this.addLayer(id, layer)
         }
-    }
-
-    private loadIcons(activePois: string[]) {
-        activePois.forEach((poi) => {
-            if (!this.map.hasImage(`overpass-${poi}`)) {
-                let icon = new Image(100, 100);
-                icon.onload = () => {
-                    if (!this.map.hasImage(`overpass-${poi}`)) {
-                        this.map.addImage(`overpass-${poi}`, icon);
-                    }
-                };
-
-                const svg = `
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
-                    <circle cx="20" cy="20" r="20" fill="${pois[poi].icon.bg}" />
-                    <g transform="translate(8 8) scale(0.05)">
-                    ${pois[poi].icon.svg}
-                    </g>
-                </svg>
-                `
-                
-                icon.src =
-                    'data:image/svg+xml,' +
-                    encodeURIComponent(svg);
-            }
-        });
     }
 }

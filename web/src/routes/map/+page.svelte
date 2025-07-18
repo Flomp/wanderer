@@ -141,7 +141,6 @@
             loading = true;
         }
 
-        console.log(filter);
         const trailsInBox = await trails_search_bounding_box(
             northEast,
             southWest,

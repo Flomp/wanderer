@@ -52,7 +52,7 @@
         class:hidden={!showSwitcher}
         style="transform: translateX(calc(-100% + 29px))"
     >
-        <div class="flex items-center gap-x-12">
+        <div class="flex items-center justify-between">
             <span class="font-semibold whitespace-nowrap text-base"
                 >{$_("map-style")}</span
             >
