@@ -386,24 +386,17 @@
                     onCropToggle(false);
                 }}>{$_("crop")}</button
             >
-            <button
-                class="btn-secondary"
-                onclick={() => {
-                    crop = false;
-                    onCropToggle(false);
-                }}>{$_("cancel")}</button
-            >
         </div>
     {/if}
 
     {#if recalculateElevationData}
-        <div class="p-4 my-2 rounded-xl bg-background shadow-xl">
+        <div
+            class="p-4 my-2 rounded-xl bg-background shadow-xl flex flex-col max-w-70"
+        >
             <Button secondary onclick={onRecalculateElevationData}
                 >{$_("recalculate-elevation-data")}</Button
             >
-            <p
-                class="bg-background/50 rounded-xl text-sm text-gray-500 mt-2 max-w-72"
-            >
+            <p class="bg-background/50 rounded-xl text-sm text-gray-500 mt-3">
                 {$_("recalculating-elevation-data-hint")}
             </p>
         </div>
