@@ -4,7 +4,6 @@
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
-    import Textarea from "$lib/components/base/textarea.svelte";
     import Toggle from "$lib/components/base/toggle.svelte";
     import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
@@ -17,6 +16,7 @@
     import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
     import { WaypointCreateSchema } from "$lib/models/api/waypoint_schema.js";
     import GPX from "$lib/models/gpx/gpx";
+    import GPXWaypoint from "$lib/models/gpx/waypoint";
     import type { List } from "$lib/models/list";
     import { SummitLog } from "$lib/models/summit_log";
     import { Trail } from "$lib/models/trail";
@@ -35,26 +35,27 @@
         trails_update,
     } from "$lib/stores/trail_store.js";
     import {
-        anchors,
+        valhallaStore,
         calculateRouteBetween,
+        clearAnchors,
         clearRoute,
         deleteFromRoute,
         editRoute,
         insertIntoRoute,
         normalizeRouteTime,
+        recalculateHeight,
         resetRoute,
         reverseRoute,
-        route,
         setRoute,
-    } from "$lib/stores/valhalla_store";
+    } from "$lib/stores/valhalla_store.svelte.js";
     import { waypoint } from "$lib/stores/waypoint_store";
-    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromFile, gpx2trail } from "$lib/util/gpx_util";
+    import { cropGPX, fromFile, gpx2trail } from "$lib/util/gpx_util";
 
     import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
@@ -63,10 +64,11 @@
         type ComboboxItem,
     } from "$lib/components/base/combobox.svelte";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import Editor from "$lib/components/base/editor.svelte";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
-    import RoutingOptionsPopup from "$lib/components/trail/routing_options_popup.svelte";
+    import RouteEditor from "$lib/components/trail/route_editor.svelte";
     import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
     import { convertDMSToDD } from "$lib/models/gpx/utils.js";
     import { Tag } from "$lib/models/tag.js";
@@ -76,10 +78,12 @@
     } from "$lib/stores/search_store.js";
     import { tags_index } from "$lib/stores/tag_store.js";
     import { theme } from "$lib/stores/theme_store.js";
+    import { currentUser } from "$lib/stores/user_store.js";
     import { getIconForLocation } from "$lib/util/icon_util.js";
     import {
         createAnchorMarker,
         createEditTrailMapPopup,
+        FontawesomeMarker,
     } from "$lib/util/maplibre_util";
     import EXIF from "$lib/vendor/exif-js/exif.js";
     import { validator } from "@felte/validator-zod";
@@ -89,10 +93,8 @@
     import { onMount, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
-    import { scale } from "svelte/transition";
+    import { slide } from "svelte/transition";
     import { z } from "zod";
-    import { currentUser } from "$lib/stores/user_store.js";
-    import Editor from "$lib/components/base/editor.svelte";
 
     let { data } = $props();
 
@@ -118,6 +120,13 @@
     let draggingMarker = false;
 
     let searchDropdownItems: SearchItem[] = $state([]);
+
+    let cropStartMarker: FontawesomeMarker;
+    let cropEndMarker: FontawesomeMarker;
+
+    let flatRoute: GPXWaypoint[] = $derived(valhallaStore.route.flatten())
+
+    let croppedGPX: GPX | null = null;
 
     const ClientTrailCreateSchema = TrailCreateSchema.extend({
         expand: z
@@ -199,13 +208,13 @@
 
                 if (
                     (!form.lat || !form.lon) &&
-                    route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
+                    valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
                 ) {
-                    form.lat = route.trk
+                    form.lat = valhallaStore.route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lat;
-                    form.lon = route.trk
+                    form.lon = valhallaStore.route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lon;
@@ -344,6 +353,7 @@
             }
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
+            initCropMarkers();
         } catch (e) {
             console.error(e);
 
@@ -370,12 +380,10 @@
     }
 
     function clearAnchorMarker() {
-        for (const anchor of anchors) {
-            anchor.marker?.remove();
-        }
+        clearAnchors();
     }
 
-    function initRouteAnchors(gpx: GPX) {
+    function initRouteAnchors(gpx: GPX, addToMap: boolean = false) {
         const segments = gpx.trk?.at(0)?.trkseg ?? [];
 
         for (let i = 0; i < segments.length; i++) {
@@ -386,18 +394,64 @@
                 addAnchor(
                     points[0].$.lat!,
                     points[0].$.lon!,
-                    anchors.length,
-                    false,
+                    valhallaStore.anchors.length,
+                    addToMap,
                 );
             }
             if (i == segments.length - 1) {
                 addAnchor(
                     points[points.length - 1].$.lat!,
                     points[points.length - 1].$.lon!,
-                    anchors.length,
-                    false,
+                    valhallaStore.anchors.length,
+                    addToMap,
                 );
             }
+        }
+    }
+
+    function initCropMarkers() {
+        const routeStartPoint: M.LngLatLike = [
+            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$.lon ?? 0,
+            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$.lat ?? 0,
+        ];
+        const routeEndPoint: M.LngLatLike = [
+            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$.lon ?? 0,
+            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$.lat ?? 0,
+        ];
+        if (!cropStartMarker || !cropEndMarker) {
+            cropStartMarker = new FontawesomeMarker(
+                {
+                    id: "crop-start-marker",
+                    icon: "fa-regular fa-circle",
+                    fontSize: "xs",
+                    style: "z-10",
+                    width: 4,
+                    backgroundColor: "bg-primary",
+                    fontColor: "white",
+                },
+                {},
+            );
+            cropEndMarker = new FontawesomeMarker(
+                {
+                    id: "crop-end-marker",
+                    icon: "fa fa-flag-checkered",
+                    fontSize: "xs",
+                    style: "z-10",
+                    width: 4,
+                    backgroundColor: "bg-primary",
+                    fontColor: "white",
+                },
+                {},
+            );
+
+            cropStartMarker
+                .setOpacity("0")
+                .setLngLat(routeStartPoint)
+                .addTo(map!);
+            cropEndMarker.setOpacity("0").setLngLat(routeEndPoint).addTo(map!);
+        } else {
+            cropStartMarker.setLngLat(routeStartPoint);
+            cropEndMarker.setLngLat(routeEndPoint);
         }
     }
 
@@ -545,25 +599,25 @@
             return;
         }
         drawingActive = true;
-        if (!route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.length) {
+        if (!valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.length) {
         }
-        for (const anchor of anchors) {
+        for (const anchor of valhallaStore.anchors) {
             anchor.marker?.addTo(map);
         }
     }
 
     async function stopDrawing() {
         drawingActive = false;
-        for (const anchor of anchors) {
+        for (const anchor of valhallaStore.anchors) {
             anchor.marker?.remove();
         }
 
-        if (route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
-            $formData.lat = route.trk
+        if (valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
+            $formData.lat = valhallaStore.route.trk
                 ?.at(0)
                 ?.trkseg?.at(0)
                 ?.trkpt?.at(0)?.$.lat;
-            $formData.lon = route.trk
+            $formData.lon = valhallaStore.route.trk
                 ?.at(0)
                 ?.trkseg?.at(0)
                 ?.trkpt?.at(0)?.$.lon;
@@ -593,9 +647,9 @@
             });
             mapPopup.addTo(map!);
         } else {
-            const anchorCount = anchors.length;
+            const anchorCount = valhallaStore.anchors.length;
             if (anchorCount == 0) {
-                addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
+                addAnchor(e.lngLat.lat, e.lngLat.lng, valhallaStore.anchors.length);
             } else {
                 await addAnchorAndRecalculate(e.lngLat.lat, e.lngLat.lng);
             }
@@ -603,8 +657,8 @@
     }
 
     async function addAnchorAndRecalculate(lat: number, lon: number) {
-        const previousAnchor = anchors[anchors.length - 1];
-        const anchor = addAnchor(lat, lon, anchors.length);
+        const previousAnchor = valhallaStore.anchors[valhallaStore.anchors.length - 1];
+        const anchor = addAnchor(lat, lon, valhallaStore.anchors.length);
         const markerText = startAnchorLoading(anchor);
         try {
             const routeWaypoints = await calculateRouteBetween(
@@ -645,10 +699,10 @@
             lon,
             index + 1,
             () => {
-                removeAnchor(anchors.findIndex((a) => a.id == anchor.id));
+                removeAnchor(valhallaStore.anchors.findIndex((a) => a.id == anchor.id));
             },
             () => {
-                const thisAnchor = anchors.find((a) => a.id == anchor.id);
+                const thisAnchor = valhallaStore.anchors.find((a) => a.id == anchor.id);
                 addAnchorAndRecalculate(
                     thisAnchor?.lat ?? lat,
                     thisAnchor?.lon ?? lon,
@@ -666,7 +720,7 @@
                 anchor.lat = position.lat;
                 anchor.lon = position.lng;
                 await recalculateRoute(
-                    anchors.findIndex((a) => a.id == anchor.id),
+                    valhallaStore.anchors.findIndex((a) => a.id == anchor.id),
                 );
                 draggingMarker = false;
             },
@@ -675,7 +729,7 @@
             marker.addTo(map);
         }
         anchor.marker = marker;
-        anchors.splice(index, 0, anchor);
+        valhallaStore.anchors.splice(index, 0, anchor);
 
         return anchor;
     }
@@ -709,10 +763,10 @@
         if (!drawingActive) {
             return;
         }
-        anchors[anchorIndex]?.marker?.remove();
-        anchors.splice(anchorIndex, 1);
-        for (let i = anchorIndex; i < anchors.length; i++) {
-            const anchor = anchors[i];
+        valhallaStore.anchors[anchorIndex]?.marker?.remove();
+        valhallaStore.anchors.splice(anchorIndex, 1);
+        for (let i = anchorIndex; i < valhallaStore.anchors.length; i++) {
+            const anchor = valhallaStore.anchors[i];
             const markerIcon = anchor.marker?.getElement();
             if (markerIcon) {
                 const markerText = markerIcon.textContent ?? "0";
@@ -730,7 +784,7 @@
             if ($formData.expand?.gpx_data) {
                 updateTrailWithRouteData();
             }
-        } else if (anchorIndex == anchors.length) {
+        } else if (anchorIndex == valhallaStore.anchors.length) {
             deleteFromRoute(anchorIndex - 1);
             updateTrailWithRouteData();
         } else {
@@ -740,17 +794,17 @@
     }
 
     async function recalculateRoute(anchorIndex: number) {
-        const markerText = startAnchorLoading(anchors[anchorIndex]);
+        const markerText = startAnchorLoading(valhallaStore.anchors[anchorIndex]);
 
-        const anchor = anchors[anchorIndex];
+        const anchor = valhallaStore.anchors[anchorIndex];
         if (!anchor) {
             return;
         }
         let nextRouteSegment;
         let previousRouteSegment;
         try {
-            if (anchorIndex < anchors.length - 1) {
-                const nextAnchor = anchors[anchorIndex + 1];
+            if (anchorIndex < valhallaStore.anchors.length - 1) {
+                const nextAnchor = valhallaStore.anchors[anchorIndex + 1];
 
                 nextRouteSegment = await calculateRouteBetween(
                     anchor.lat,
@@ -761,7 +815,7 @@
                 );
             }
             if (anchorIndex > 0) {
-                const previousAnchor = anchors[anchorIndex - 1];
+                const previousAnchor = valhallaStore.anchors[anchorIndex - 1];
                 previousRouteSegment = await calculateRouteBetween(
                     previousAnchor.lat,
                     previousAnchor.lon,
@@ -789,7 +843,7 @@
                 type: "error",
             });
         } finally {
-            stopAnchorLoading(anchors[anchorIndex], markerText);
+            stopAnchorLoading(valhallaStore.anchors[anchorIndex], markerText);
         }
     }
 
@@ -807,8 +861,8 @@
         );
         const markerText = startAnchorLoading(anchor);
 
-        for (let i = data.segment + 2; i < anchors.length; i++) {
-            const anchor = anchors[i];
+        for (let i = data.segment + 2; i < valhallaStore.anchors.length; i++) {
+            const anchor = valhallaStore.anchors[i];
             const markerIcon = anchor.marker?.getElement();
             if (markerIcon) {
                 const markerText = markerIcon.textContent ?? "0";
@@ -821,8 +875,8 @@
                     $_("route-point") + " #" + newIndex;
             }
         }
-        const previousAnchor = anchors[data.segment];
-        const nextAnchor = anchors[data.segment + 2];
+        const previousAnchor = valhallaStore.anchors[data.segment];
+        const nextAnchor = valhallaStore.anchors[data.segment + 2];
 
         try {
             const previousRouteSegment = await calculateRouteBetween(
@@ -864,18 +918,101 @@
 
     function resetTrail() {
         resetRoute();
-        
+
         updateTrailWithRouteData();
     }
 
-    function updateTrailWithRouteData() {
-        overwriteGPX = true;
-        const totals = route.features;
+    async function recalculateElevationData() {
+        await recalculateHeight();
+
+        updateTrailWithRouteData();
+    }
+
+    function toggleCropMarkers(active: boolean) {
+        if (active) {
+            cropStartMarker?.setOpacity("1");
+            cropEndMarker?.setOpacity("1");
+        } else {
+            cropStartMarker?.setOpacity("0");
+            cropEndMarker?.setOpacity("0");
+        }
+    }
+
+    function updateCropMarkers(range: [start: number, end: number]) {
+        const [start, end] = range;
+
+        const targetStartDistance = valhallaStore.route.features.distance * (start / 100);
+        const [startLon, startLat, startIndex] = getCoordinateAtDistance(
+            flatRoute,
+            valhallaStore.route.features.cumulativeDistance,
+            targetStartDistance,
+        );
+
+        const targetEndDistance = valhallaStore.route.features.distance * (end / 100);
+        const [endLon, endLat, endIndex] = getCoordinateAtDistance(
+            flatRoute,
+            valhallaStore.route.features.cumulativeDistance,
+            targetEndDistance,
+        );
+
+        cropStartMarker.setLngLat([startLon, startLat]);
+        cropEndMarker.setLngLat([endLon, endLat]);
+
+        croppedGPX = cropGPX(flatRoute[startIndex], flatRoute[endIndex], valhallaStore.route);
+        const totals = croppedGPX.features;
         $formData.distance = totals.distance;
         $formData.duration = totals.duration / 1000;
         $formData.elevation_gain = totals.elevationGain;
         $formData.elevation_loss = totals.elevationLoss;
-        $formData.expand!.gpx_data = route.toString();
+    }
+
+    function confirmCrop() {
+        if (!croppedGPX) {
+            return;
+        }
+        setRoute(croppedGPX);
+        updateTrailWithRouteData();
+        clearAnchorMarker();
+        initRouteAnchors(croppedGPX, true);
+    }
+
+    function getCoordinateAtDistance(
+        points: GPXWaypoint[],
+        cumulative: number[],
+        target: number,
+    ) {
+        let low = 0,
+            high = cumulative.length - 1;
+
+        while (low < high) {
+            const mid = Math.floor((low + high) / 2);
+            if (cumulative[mid] < target) low = mid + 1;
+            else high = mid;
+        }
+
+        const i = Math.max(1, low);
+        const prevDist = cumulative[i - 1];
+        const nextDist = cumulative[i];
+        const ratio = (target - prevDist) / (nextDist - prevDist);
+
+        const prev = points[i - 1];
+        const next = points[i];
+
+        return [
+            prev.$.lon! + (next.$.lon! - prev.$.lon!) * ratio,
+            prev.$.lat! + (next.$.lat! - prev.$.lat!) * ratio,
+            i,
+        ];
+    }
+
+    function updateTrailWithRouteData() {
+        overwriteGPX = true;
+        const totals = valhallaStore.route.features;
+        $formData.distance = totals.distance;
+        $formData.duration = totals.duration / 1000;
+        $formData.elevation_gain = totals.elevationGain;
+        $formData.elevation_loss = totals.elevationLoss;
+        $formData.expand!.gpx_data = valhallaStore.route.toString();
 
         if (!$formData.id) {
             $formData.id = cryptoRandomString({ length: 15 });
@@ -1288,15 +1425,19 @@
     <div class="relative">
         {#if drawingActive}
             <div
-                in:scale={{ easing: backInOut }}
-                out:scale={{ easing: backInOut }}
+                in:slide={{ easing: backInOut, axis: "x" }}
+                out:slide={{ easing: backInOut, axis: "x" }}
                 class="absolute top-8 left-2 z-50"
             >
-                <RoutingOptionsPopup
+                <RouteEditor
                     bind:options={routingOptions}
                     onReverse={reverseTrail}
                     onReset={resetTrail}
-                ></RoutingOptionsPopup>
+                    onCropToggle={toggleCropMarkers}
+                    onCrop={confirmCrop}
+                    onUpdateCropRange={updateCropMarkers}
+                    onRecalculateElevationData={recalculateElevationData}
+                ></RouteEditor>
             </div>
         {/if}
         <div id="trail-map">

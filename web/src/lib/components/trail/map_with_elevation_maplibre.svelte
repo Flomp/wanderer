@@ -716,6 +716,7 @@
         if (!map) {
             return;
         }
+        hideWaypoints();
         activeTrail ??= 0;
         map.getCanvas().style.cursor = "crosshair";
         if (trails[activeTrail]) {
@@ -727,6 +728,7 @@
         if (!map) {
             return;
         }
+        showWaypoints();
         map.getCanvas().style.cursor = "inherit";
 
         if (activeTrail !== null && trails[activeTrail] && !clusterTrails) {

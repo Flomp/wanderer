@@ -1,6 +1,5 @@
 import GPX from "$lib/models/gpx/gpx";
 import { Trail } from "$lib/models/trail";
-import { Waypoint } from "$lib/models/waypoint";
 import { gpx, kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON";
 import cryptoRandomString from "crypto-random-string";
 //@ts-ignore
@@ -16,6 +15,7 @@ import * as xmldom from 'xmldom';
 import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 import { trails_show } from "$lib/stores/trail_store";
 import { handleFromRecordWithIRI } from "./activitypub_util";
+import { Waypoint } from "$lib/models/waypoint";
 
 
 export async function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -25,11 +25,11 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, f: (ur
     if (gpx instanceof Error) {
         throw gpx;
     }
-    try {
-        await gpx.correctElevation(f)
-    } catch(e) {
-        console.warn("Unable to correct elevation: " + e)
-    }
+    // try {
+    //     await gpx.correctElevation(f)
+    // } catch(e) {
+    //     console.warn("Unable to correct elevation: " + e)
+    // }
 
     const trail = new Trail("");
 
@@ -86,7 +86,7 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
             gpxTrail = response;
         }
     }
-    
+
     const gpx = await GPX.parse(gpxTrail.expand!.gpx_data!) as GPX;
 
     if (gpx instanceof Error) {
@@ -359,4 +359,46 @@ export function toGeoJson(gpxData: string) {
     geojson = splitMultiLineStringToLineStrings(geojson);
     geojson.bbox = bbox(geojson)
     return geojson
+}
+
+export function cropGPX(start: GPXWaypoint, end: GPXWaypoint, gpx: GPX): GPX {
+    let foundStart = false;
+    let done = false;
+
+    const croppedTrk = gpx.trk?.map(track => {
+        const croppedSegments: TrackSegment[] = [];
+
+        track.trkseg?.forEach(seg => {
+            const newPoints: GPXWaypoint[] = [];
+
+            for (const pt of seg.trkpt ?? []) {
+                if (!foundStart) {
+                    if (pt === start) {
+                        foundStart = true;
+                        newPoints.push(pt);
+                    }
+                    continue;
+                }
+
+                if (foundStart && !done) {
+                    newPoints.push(pt);
+                    if (pt === end) {
+                        done = true;
+                        break;
+                    }
+                }
+            }
+
+            if (newPoints.length > 0) {
+                croppedSegments.push({ trkpt: newPoints });
+            }
+        });
+
+        return {
+            ...track,
+            trkseg: croppedSegments,
+        };
+    }).filter(track => track.trkseg.length > 0);
+
+    return new GPX({ ...gpx, trk: croppedTrk ?? [], })
 }

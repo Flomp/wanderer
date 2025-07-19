@@ -12,6 +12,7 @@ class GpxMetricsComputation {
   totalElevationLossSmoothed = 0;
   totalDistance = 0;
   totalDistanceSmoothed = 0;
+  cumulativeDistance: number[] = []
 
   constructor(thresholdXY_m: number, thresholdZ_m: number) {
     this.thresholdXY_m = thresholdXY_m;
@@ -35,6 +36,7 @@ class GpxMetricsComputation {
     );
 
     this.totalDistance += distance;
+    this.cumulativeDistance.push(this.totalDistance)
 
     this.lastFilteredPointXY = point;
 

@@ -13,9 +13,9 @@ import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
 import { icons } from "./icon_util";
 
 export class FontawesomeMarker extends M.Marker {
-    constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
+    constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, style?: string, id?: string }, markerOptions?: M.MarkerOptions) {
         const element = document.createElement('div')
-        element.className = `cursor-pointer flex items-center justify-center w-${options.width ?? 7} aspect-square ${options.backgroundColor ?? "bg-gray-500"} rounded-full text-${options.fontSize ?? "normal"}`
+        element.className = `cursor-pointer flex items-center justify-center w-${options.width ?? 7} aspect-square ${options.backgroundColor ?? "bg-gray-500"} rounded-full text-${options.fontSize ?? "normal"} ${options.style ?? ""}`
         element.id = options.id ?? "";
         super({ element: element, ...markerOptions });
 

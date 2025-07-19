@@ -25,6 +25,7 @@ type GPXFeature = {
   centroid: { lat: number; lon: number };
   boundingBox: { minLat: number; maxLat: number; minLon: number; maxLon: number };
   distance: number;
+  cumulativeDistance: number[]
   elevationGain?: number;
   elevationLoss?: number;
   duration: number;
@@ -146,11 +147,26 @@ export default class GPX {
       centroid,
       boundingBox,
       distance: totalDistance,
+      cumulativeDistance: metrics.cumulativeDistance,
       elevationGain: totalElevationGain,
       elevationLoss: totalElevationLoss,
       duration: Math.abs(totalDuration),
       hash: this.generateMinHash(allPoints)
     }
+  }
+
+  flatten() {
+    const points: Waypoint[] = [];
+
+    this.trk?.forEach(track => {
+      track.trkseg?.forEach(segment => {
+        segment.trkpt?.forEach(pt => {
+          points.push(pt);
+        });
+      });
+    });
+
+    return points;
   }
 
   private generateMinHash(points: Waypoint[]): string {

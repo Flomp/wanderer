@@ -10,16 +10,28 @@ import { _ } from "svelte-i18n";
 
 
 const emtpyTrack: Track = { trkseg: [] }
-export let route: GPX = new GPX({ trk: [emtpyTrack] });
-export let anchors: ValhallaAnchor[] = [];
+
+class ValhallaStore {
+    route: GPX = $state(new GPX({ trk: [emtpyTrack] }));
+    anchors: ValhallaAnchor[] = $state([]);
+}
+
+export const valhallaStore = new ValhallaStore();
+
 
 export function clearRoute() {
-    route = new GPX({ trk: [emtpyTrack] });
-    anchors = [];
+    valhallaStore.route = new GPX({ trk: [emtpyTrack] });
+}
+
+export function clearAnchors() {
+    for (const anchor of valhallaStore.anchors) {
+        anchor.marker?.remove();
+    }
+    valhallaStore.anchors = [];
 }
 
 export function setRoute(newRoute: GPX) {
-    route = newRoute
+    valhallaStore.route = newRoute
 }
 
 export async function calculateRouteBetween(startLat: number, startLon: number, endLat: number, endLon: number, options: RoutingOptions) {
@@ -81,41 +93,41 @@ export async function insertIntoRoute(waypoints: Waypoint[], index?: number) {
     const segment = new TrackSegment({ trkpt: waypoints })
 
     if (index) {
-        route.trk?.at(0)?.trkseg?.splice(index, 0, segment);
+        valhallaStore.route.trk?.at(0)?.trkseg?.splice(index, 0, segment);
     } else {
-        route.trk?.at(0)?.trkseg?.push(segment);
+        valhallaStore.route.trk?.at(0)?.trkseg?.push(segment);
     }
 
-    route.features = route.getTotals();
+    valhallaStore.route.features = valhallaStore.route.getTotals();
 }
 
 export async function editRoute(index: number, waypoints: Waypoint[]) {
-    const segment = route.trk?.at(0)?.trkseg?.at(index)
+    const segment = valhallaStore.route.trk?.at(0)?.trkseg?.at(index)
     if (segment) {
         segment.trkpt = waypoints
     }
-    route.features = route.getTotals();
+    valhallaStore.route.features = valhallaStore.route.getTotals();
 }
 
 export function deleteFromRoute(index: number) {
-    route.trk?.at(0)?.trkseg?.splice(index, 1);
-    route.features = route.getTotals();
+    valhallaStore.route.trk?.at(0)?.trkseg?.splice(index, 1);
+    valhallaStore.route.features = valhallaStore.route.getTotals();
 }
 
 export function reverseRoute() {
-    for (const trk of route.trk ?? []) {
+    for (const trk of valhallaStore.route.trk ?? []) {
         for (const seg of trk.trkseg ?? []) {
             seg.trkpt?.reverse()
         }
         trk.trkseg?.reverse()
     }
-    route.trk?.reverse()
+    valhallaStore.route.trk?.reverse()
 
-    route.features = route.getTotals();
+    valhallaStore.route.features = valhallaStore.route.getTotals();
 
-    anchors.reverse();
+    valhallaStore.anchors.reverse();
 
-    anchors.forEach((a, i) => {
+    valhallaStore.anchors.forEach((a, i) => {
         if (!a.marker) {
             return;
         }
@@ -126,29 +138,33 @@ export function reverseRoute() {
             ._content.getElementsByTagName("h5")[0];
         if (anchorPopupHeading) {
             anchorPopupHeading.textContent =
-                get(_)("route-point") + " #" + (i + 1);
+                get(_)("valhallaStore.route-point") + " #" + (i + 1);
         }
     });
 }
 
 export function resetRoute() {
-    route = new GPX({ trk: [emtpyTrack] });
+    valhallaStore.route = new GPX({ trk: [{ ...emtpyTrack }] });
 
-    anchors.forEach((a) => {
-        if(!a.marker) {
+    valhallaStore.anchors.forEach((a) => {
+        if (!a.marker) {
             return;
         }
 
         a.marker.remove();
     })
 
-    anchors = []
+    valhallaStore.anchors = []
+}
+
+export async function recalculateHeight() {
+    await valhallaStore.route.correctElevation();
 }
 
 export function normalizeRouteTime() {
     let currentTime = new Date();
 
-    for (const seg of route.trk?.at(0)?.trkseg ?? []) {
+    for (const seg of valhallaStore.route.trk?.at(0)?.trkseg ?? []) {
 
         if (!seg.trkpt?.length) {
             continue
