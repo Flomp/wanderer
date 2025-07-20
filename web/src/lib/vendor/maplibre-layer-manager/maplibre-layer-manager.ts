@@ -75,7 +75,7 @@ export class LayerManager {
 
     private async updateOverpassLayer(newState: MapState) {
         const overpassLayer = this.layers.overpass;
-        if (overpassLayer) {
+        if (overpassLayer && this.map.getSource('overpass')) {
             const castedOverpassLayer = overpassLayer as OverpassLayer;
             overpassLayer.filter = await castedOverpassLayer.updateLayerIfNeeded(newState, this.map.getBounds());
             (this.map.getSource('overpass') as M.GeoJSONSource).setData(castedOverpassLayer.data);

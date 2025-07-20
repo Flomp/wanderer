@@ -429,7 +429,7 @@
                     id: "crop-start-marker",
                     icon: "fa-regular fa-circle",
                     fontSize: "xs",
-                    style: "z-10 w-6",
+                    style: "w-6",
                     width: 4,
                     backgroundColor: "bg-primary",
                     fontColor: "white",
@@ -441,7 +441,7 @@
                     id: "crop-end-marker",
                     icon: "fa fa-flag-checkered",
                     fontSize: "xs",
-                    style: "z-10 w-6",
+                    style: "w-6",
                     width: 4,
                     backgroundColor: "bg-primary",
                     fontColor: "white",
@@ -731,12 +731,16 @@
                 if (!drawingActive) {
                     return;
                 }
-                const position = marker.getLngLat();
-                anchor.lat = position.lat;
-                anchor.lon = position.lng;
-                await recalculateRoute(
-                    valhallaStore.anchors.findIndex((a) => a.id == anchor.id),
+                const anchorIndex = valhallaStore.anchors.findIndex(
+                    (a) => a.id == anchor.id,
                 );
+                const thisAnchor = valhallaStore.anchors[anchorIndex];
+                const position = marker.getLngLat();
+                thisAnchor.lat = position.lat;
+                thisAnchor.lon = position.lng;
+
+                await recalculateRoute(anchorIndex);
+
                 draggingMarker = false;
             },
         );
@@ -943,6 +947,7 @@
 
         splitSegment(data.segment, data.event.lngLat);
         updateFollowingAnchors(data.segment);
+        updateTrailWithRouteData();
     }
 
     function reverseTrail() {

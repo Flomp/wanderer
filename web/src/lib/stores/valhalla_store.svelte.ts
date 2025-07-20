@@ -178,14 +178,16 @@ export async function splitSegment(index: number, pos: LngLat) {
 
         if (dist < minDistance) {
             bestSplitIndex = i
+            minDistance = dist
         }
     }
 
-    const firstSegmentPoints = [...points.slice(0, index)];
-    const secondSegmentPoints = [...points.slice(index)];
+    const intersectionPoint = new Waypoint({ $: { lat: pos.lat, lon: pos.lng}, ele: points[bestSplitIndex].ele });
+    const firstSegmentPoints = [...points.slice(0, bestSplitIndex), intersectionPoint];
+    const secondSegmentPoints = [intersectionPoint, ...points.slice(bestSplitIndex)];
 
-    seg.trkpt = firstSegmentPoints;
-    insertIntoRoute(secondSegmentPoints, index)
+    editRoute(index, firstSegmentPoints)
+    insertIntoRoute(secondSegmentPoints, index + 1)
 }
 
 export function normalizeRouteTime() {
