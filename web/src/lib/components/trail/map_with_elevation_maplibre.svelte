@@ -55,6 +55,10 @@
             segment: number;
             event: M.MapMouseEvent;
         }) => void;
+        onsegmentclick?: (data: {
+            segment: number;
+            event: M.MapMouseEvent;
+        }) => void;
         onselect?: (trail: Trail) => void;
         onunselect?: (trail: Trail) => void;
         onfullscreen?: () => void;
@@ -87,6 +91,7 @@
         clusterTrails = false,
         onmarkerdragend,
         onsegmentdragend,
+        onsegmentclick,
         onselect,
         onunselect,
         onfullscreen,
@@ -408,7 +413,7 @@
                 activeTrail = trails.findIndex((t) => t.id == trail.id);
             };
             layers[id].listener.onMouseMove = moveCrosshairToCursorPosition;
-            layers[id].listener.onMouseDown = (e) => handDragStart(e, id);
+            layers[id].listener.onMouseDown = (e) => handleDragStart(e, id);
 
             map.on("mouseenter", id, layers[id].listener.onEnter);
             map.on("mouseleave", id, layers[id].listener.onLeave);
@@ -529,7 +534,7 @@
         elevationMarker.setLngLat(e.lngLat);
     }
 
-    function handDragStart(e: M.MapMouseEvent, id: string) {
+    function handleDragStart(e: M.MapMouseEvent, id: string) {
         if (
             !drawing ||
             (e.originalEvent.target as HTMLElement | null)?.classList.contains(
@@ -549,13 +554,21 @@
         }
 
         map?.on("mousemove", moveElevationMarkerToCursorPosition);
-        map?.once("mouseup", handleDragEnd);
+        map?.once("mouseup", (e2) => handleDragEnd(e2, e));
     }
 
-    function handleDragEnd(e: M.MapMouseEvent) {
+    function handleDragEnd(end: M.MapMouseEvent, start: M.MapMouseEvent) {
         map?.off("mousemove", moveElevationMarkerToCursorPosition);
         epc?.hideCrosshair();
-        onsegmentdragend?.({ segment: draggingSegment!, event: e });
+        const distanceDragged = Math.sqrt(
+            Math.pow(end.originalEvent.x - start.originalEvent.x, 2) +
+                Math.pow(end.originalEvent.y - start.originalEvent.y, 2),
+        );
+        if (distanceDragged < 0.5) {
+            onsegmentclick?.({ segment: draggingSegment!, event: end });
+        } else {
+            onsegmentdragend?.({ segment: draggingSegment!, event: end });
+        }
         draggingSegment = null;
     }
 
@@ -1096,7 +1109,7 @@
             map!.getCanvas().style.cursor = "";
         });
 
-        map.on("load", () => {            
+        map.on("load", () => {
             initMap(true);
             layerManager.init();
             oninit?.(map!);

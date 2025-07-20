@@ -47,6 +47,7 @@
         resetRoute,
         reverseRoute,
         setRoute,
+        splitSegment,
     } from "$lib/stores/valhalla_store.svelte.js";
     import { waypoint } from "$lib/stores/waypoint_store";
     import { getFileURL } from "$lib/util/file_util";
@@ -93,7 +94,7 @@
     import { onMount, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
-    import { slide } from "svelte/transition";
+    import { fly, slide } from "svelte/transition";
     import { z } from "zod";
 
     let { data } = $props();
@@ -124,7 +125,7 @@
     let cropStartMarker: FontawesomeMarker;
     let cropEndMarker: FontawesomeMarker;
 
-    let flatRoute: GPXWaypoint[] = $derived(valhallaStore.route.flatten())
+    let flatRoute: GPXWaypoint[] = $derived(valhallaStore.route.flatten());
 
     let croppedGPX: GPX | null = null;
 
@@ -411,12 +412,16 @@
 
     function initCropMarkers() {
         const routeStartPoint: M.LngLatLike = [
-            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$.lon ?? 0,
-            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$.lat ?? 0,
+            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$
+                .lon ?? 0,
+            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$
+                .lat ?? 0,
         ];
         const routeEndPoint: M.LngLatLike = [
-            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$.lon ?? 0,
-            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$.lat ?? 0,
+            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$
+                .lon ?? 0,
+            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$
+                .lat ?? 0,
         ];
         if (!cropStartMarker || !cropEndMarker) {
             cropStartMarker = new FontawesomeMarker(
@@ -611,6 +616,7 @@
         for (const anchor of valhallaStore.anchors) {
             anchor.marker?.remove();
         }
+        toggleCropMarkers(false);
 
         if (valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
             $formData.lat = valhallaStore.route.trk
@@ -649,7 +655,11 @@
         } else {
             const anchorCount = valhallaStore.anchors.length;
             if (anchorCount == 0) {
-                addAnchor(e.lngLat.lat, e.lngLat.lng, valhallaStore.anchors.length);
+                addAnchor(
+                    e.lngLat.lat,
+                    e.lngLat.lng,
+                    valhallaStore.anchors.length,
+                );
             } else {
                 await addAnchorAndRecalculate(e.lngLat.lat, e.lngLat.lng);
             }
@@ -657,7 +667,8 @@
     }
 
     async function addAnchorAndRecalculate(lat: number, lon: number) {
-        const previousAnchor = valhallaStore.anchors[valhallaStore.anchors.length - 1];
+        const previousAnchor =
+            valhallaStore.anchors[valhallaStore.anchors.length - 1];
         const anchor = addAnchor(lat, lon, valhallaStore.anchors.length);
         const markerText = startAnchorLoading(anchor);
         try {
@@ -699,10 +710,14 @@
             lon,
             index + 1,
             () => {
-                removeAnchor(valhallaStore.anchors.findIndex((a) => a.id == anchor.id));
+                removeAnchor(
+                    valhallaStore.anchors.findIndex((a) => a.id == anchor.id),
+                );
             },
             () => {
-                const thisAnchor = valhallaStore.anchors.find((a) => a.id == anchor.id);
+                const thisAnchor = valhallaStore.anchors.find(
+                    (a) => a.id == anchor.id,
+                );
                 addAnchorAndRecalculate(
                     thisAnchor?.lat ?? lat,
                     thisAnchor?.lon ?? lon,
@@ -794,7 +809,9 @@
     }
 
     async function recalculateRoute(anchorIndex: number) {
-        const markerText = startAnchorLoading(valhallaStore.anchors[anchorIndex]);
+        const markerText = startAnchorLoading(
+            valhallaStore.anchors[anchorIndex],
+        );
 
         const anchor = valhallaStore.anchors[anchorIndex];
         if (!anchor) {
@@ -860,21 +877,8 @@
             data.segment + 1,
         );
         const markerText = startAnchorLoading(anchor);
+        updateFollowingAnchors(data.segment);
 
-        for (let i = data.segment + 2; i < valhallaStore.anchors.length; i++) {
-            const anchor = valhallaStore.anchors[i];
-            const markerIcon = anchor.marker?.getElement();
-            if (markerIcon) {
-                const markerText = markerIcon.textContent ?? "0";
-                const markerIndex = parseInt(markerText);
-                const newIndex = markerIndex + 1;
-                markerIcon.textContent = newIndex + "";
-                anchor
-                    .marker!.getPopup()
-                    ._content.getElementsByTagName("h5")[0].textContent =
-                    $_("route-point") + " #" + newIndex;
-            }
-        }
         const previousAnchor = valhallaStore.anchors[data.segment];
         const nextAnchor = valhallaStore.anchors[data.segment + 2];
 
@@ -910,6 +914,37 @@
         }
     }
 
+    function updateFollowingAnchors(segment: number) {
+        for (let i = segment + 2; i < valhallaStore.anchors.length; i++) {
+            const anchor = valhallaStore.anchors[i];
+            const markerIcon = anchor.marker?.getElement();
+            if (markerIcon) {
+                const markerText = markerIcon.textContent ?? "0";
+                const markerIndex = parseInt(markerText);
+                const newIndex = markerIndex + 1;
+                markerIcon.textContent = newIndex + "";
+                anchor
+                    .marker!.getPopup()
+                    ._content.getElementsByTagName("h5")[0].textContent =
+                    $_("route-point") + " #" + newIndex;
+            }
+        }
+    }
+
+    async function handleSegmentClick(data: {
+        segment: number;
+        event: M.MapMouseEvent;
+    }) {
+        addAnchor(
+            data.event.lngLat.lat,
+            data.event.lngLat.lng,
+            data.segment + 1,
+        );
+
+        splitSegment(data.segment, data.event.lngLat);
+        updateFollowingAnchors(data.segment);
+    }
+
     function reverseTrail() {
         reverseRoute();
 
@@ -935,20 +970,27 @@
         } else {
             cropStartMarker?.setOpacity("0");
             cropEndMarker?.setOpacity("0");
+            const totals = valhallaStore.route.features;
+            $formData.distance = totals.distance;
+            $formData.duration = totals.duration / 1000;
+            $formData.elevation_gain = totals.elevationGain;
+            $formData.elevation_loss = totals.elevationLoss;
         }
     }
 
     function updateCropMarkers(range: [start: number, end: number]) {
         const [start, end] = range;
 
-        const targetStartDistance = valhallaStore.route.features.distance * (start / 100);
+        const targetStartDistance =
+            valhallaStore.route.features.distance * (start / 100);
         const [startLon, startLat, startIndex] = getCoordinateAtDistance(
             flatRoute,
             valhallaStore.route.features.cumulativeDistance,
             targetStartDistance,
         );
 
-        const targetEndDistance = valhallaStore.route.features.distance * (end / 100);
+        const targetEndDistance =
+            valhallaStore.route.features.distance * (end / 100);
         const [endLon, endLat, endIndex] = getCoordinateAtDistance(
             flatRoute,
             valhallaStore.route.features.cumulativeDistance,
@@ -958,7 +1000,11 @@
         cropStartMarker.setLngLat([startLon, startLat]);
         cropEndMarker.setLngLat([endLon, endLat]);
 
-        croppedGPX = cropGPX(flatRoute[startIndex], flatRoute[endIndex], valhallaStore.route);
+        croppedGPX = cropGPX(
+            flatRoute[startIndex],
+            flatRoute[endIndex],
+            valhallaStore.route,
+        );
         const totals = croppedGPX.features;
         $formData.distance = totals.distance;
         $formData.duration = totals.duration / 1000;
@@ -1425,8 +1471,8 @@
     <div class="relative">
         {#if drawingActive}
             <div
-                in:slide={{ easing: backInOut, axis: "x" }}
-                out:slide={{ easing: backInOut, axis: "x" }}
+                in:fly={{ easing: backInOut, x: -30 }}
+                out:fly={{ easing: backInOut, x: -30 }}
                 class="absolute top-8 left-2 z-50"
             >
                 <RouteEditor
@@ -1450,6 +1496,7 @@
                 activeTrail={0}
                 bind:map
                 onclick={(target) => handleMapClick(target)}
+                onsegmentclick={(data) => handleSegmentClick(data)}
                 onsegmentdragend={(data) => handleSegmentDragEnd(data)}
                 mapOptions={{ preserveDrawingBuffer: true }}
             ></MapWithElevationMaplibre>

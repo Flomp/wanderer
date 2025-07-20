@@ -1,12 +1,14 @@
 import GPX from "$lib/models/gpx/gpx";
 import type Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
+import { haversineDistance } from "$lib/models/gpx/utils";
 import Waypoint from "$lib/models/gpx/waypoint";
 import { type RoutingOptions, type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
 import { APIError } from "$lib/util/api_util";
 import { decodePolyline, encodePolyline } from "$lib/util/polyline_util";
-import { get } from "svelte/store";
+import type { LngLat } from "maplibre-gl";
 import { _ } from "svelte-i18n";
+import { get } from "svelte/store";
 
 
 const emtpyTrack: Track = { trkseg: [] }
@@ -138,7 +140,7 @@ export function reverseRoute() {
             ._content.getElementsByTagName("h5")[0];
         if (anchorPopupHeading) {
             anchorPopupHeading.textContent =
-                get(_)("valhallaStore.route-point") + " #" + (i + 1);
+                get(_)("route-point") + " #" + (i + 1);
         }
     });
 }
@@ -159,6 +161,31 @@ export function resetRoute() {
 
 export async function recalculateHeight() {
     await valhallaStore.route.correctElevation();
+}
+
+export async function splitSegment(index: number, pos: LngLat) {
+    let seg = valhallaStore.route.trk?.at(0)?.trkseg?.at(index);
+    if (!seg || !seg.trkpt) {
+        return;
+    }
+    const points = seg.trkpt;
+
+    let bestSplitIndex: number = 0
+    let minDistance = Infinity
+    for (let i = 1; i < points.length; i++) {
+        const pt = points[i]
+        const dist = haversineDistance(pt.$.lat!, pt.$.lon!, pos.lat, pos.lng);
+
+        if (dist < minDistance) {
+            bestSplitIndex = i
+        }
+    }
+
+    const firstSegmentPoints = [...points.slice(0, index)];
+    const secondSegmentPoints = [...points.slice(index)];
+
+    seg.trkpt = firstSegmentPoints;
+    insertIntoRoute(secondSegmentPoints, index)
 }
 
 export function normalizeRouteTime() {

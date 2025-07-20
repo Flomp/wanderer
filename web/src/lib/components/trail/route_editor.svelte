@@ -121,7 +121,7 @@
                 recalculateElevationData = false;
                 crop = false;
                 editRoute = !editRoute;
-            }}><i class="fa fa-pen text-sm"></i></button
+            }}><i class="fa fa-route text-sm"></i></button
         >
         <button
             class="btn-icon"
