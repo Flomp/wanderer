@@ -1,0 +1,24 @@
+FROM alpine:3.16
+
+WORKDIR /
+
+COPY migrations ./migrations
+
+ARG TARGETARCH
+RUN echo ${TARGETARCH}
+COPY ./pocketbase_${TARGETARCH} /pocketbase
+RUN chmod +x /pocketbase
+
+# Verify binary output contains expected version string (aka binary is compiled for musl)
+# If you see "/bin/sh: /pocketbase: not found"
+# this likely means the binary is not compiled on / for musl
+RUN output="$(/pocketbase --version)" && \
+    echo "Version output: $output" && \
+    echo "$output" | grep -q 'pocketbase version (untracked)'
+
+ENV MEILI_URL=http://localhost:7700
+ENV MEILI_MASTER_KEY=
+
+EXPOSE 8090
+
+ENTRYPOINT ["/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb_data"]
