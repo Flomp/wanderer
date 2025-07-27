@@ -134,7 +134,7 @@
   "error-creating-user": "创建用户错误",
   "error-disabling-strava-integration": "Error disabling strava integration",
   "error-during-login": "登录错误",
-  "error-during-password-reset": "Unable to send password reset email",
+  "error-during-password-reset": "无法发送密码重置邮件",
   "error-exporting-trail": "导出路线失败",
   "error-liking-trail": "Error liking trail",
   "error-logging-in-to-komoot": "Error logging in to komoot",
