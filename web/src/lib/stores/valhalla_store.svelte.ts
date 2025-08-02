@@ -6,20 +6,21 @@ import Waypoint from "$lib/models/gpx/waypoint";
 import { type RoutingOptions, type ValhallaAnchor, type ValhallaHeightResponse, type ValhallaRouteResponse } from "$lib/models/valhalla";
 import { APIError } from "$lib/util/api_util";
 import { decodePolyline, encodePolyline } from "$lib/util/polyline_util";
+import { applyChangeset, diff, revertChangeset, type Changeset } from 'json-diff-ts';
 import type { LngLat } from "maplibre-gl";
 import { _ } from "svelte-i18n";
 import { get } from "svelte/store";
-
 
 const emtpyTrack: Track = { trkseg: [] }
 
 class ValhallaStore {
     route: GPX = $state(new GPX({ trk: [emtpyTrack] }));
     anchors: ValhallaAnchor[] = $state([]);
+    undoStack: { delta: Changeset, reverseDelta: Changeset }[] = $state([]);
+    redoStack: { delta: Changeset, reverseDelta: Changeset }[] = $state([]);
 }
 
 export const valhallaStore = new ValhallaStore();
-
 
 export function clearRoute() {
     valhallaStore.route = new GPX({ trk: [emtpyTrack] });
@@ -32,8 +33,25 @@ export function clearAnchors() {
     valhallaStore.anchors = [];
 }
 
-export function setRoute(newRoute: GPX) {
-    valhallaStore.route = newRoute
+export function clearUndoRedoStack() {
+    valhallaStore.undoStack = []
+    valhallaStore.redoStack = []
+}
+
+function pushToUndoStack(delta: Changeset, reverseDelta: Changeset) {
+    valhallaStore.undoStack.push({ delta, reverseDelta })
+    valhallaStore.redoStack = []
+}
+
+
+export function setRoute(newRoute: GPX, undoable: boolean = false) {
+    const delta = diff(valhallaStore.route, newRoute);
+    const reverseDelta = diff(newRoute, valhallaStore.route);
+    valhallaStore.route = applyChangeset(valhallaStore.route, delta);
+    if (undoable) {
+        pushToUndoStack(delta, reverseDelta)
+    }
+
 }
 
 export async function calculateRouteBetween(startLat: number, startLon: number, endLat: number, endLon: number, options: RoutingOptions) {
@@ -92,38 +110,67 @@ export async function calculateRouteBetween(startLat: number, startLon: number, 
 }
 
 export async function insertIntoRoute(waypoints: Waypoint[], index?: number) {
+    const snapshot = new GPX({ ...valhallaStore.route })
     const segment = new TrackSegment({ trkpt: waypoints })
 
     if (index) {
-        valhallaStore.route.trk?.at(0)?.trkseg?.splice(index, 0, segment);
+        snapshot.trk?.at(0)?.trkseg?.splice(index, 0, segment);
     } else {
-        valhallaStore.route.trk?.at(0)?.trkseg?.push(segment);
+        snapshot.trk?.at(0)?.trkseg?.push(segment);
     }
+
+    const delta = diff(valhallaStore.route, snapshot);
+    const reverseDelta = diff(snapshot, valhallaStore.route);
+    valhallaStore.route = applyChangeset(valhallaStore.route, delta);
+    pushToUndoStack(delta, reverseDelta)
 
     valhallaStore.route.features = valhallaStore.route.getTotals();
 }
 
 export async function editRoute(index: number, waypoints: Waypoint[]) {
-    const segment = valhallaStore.route.trk?.at(0)?.trkseg?.at(index)
+    const snapshot = new GPX({ ...valhallaStore.route })
+
+    const segment = snapshot.trk?.at(0)?.trkseg?.at(index)
     if (segment) {
         segment.trkpt = waypoints
     }
+
+    const delta = diff(valhallaStore.route, snapshot);
+    const reverseDelta = diff(snapshot, valhallaStore.route)
+    valhallaStore.route = applyChangeset(valhallaStore.route, delta);
+    pushToUndoStack(delta, reverseDelta)
+
+
+
     valhallaStore.route.features = valhallaStore.route.getTotals();
 }
 
 export function deleteFromRoute(index: number) {
-    valhallaStore.route.trk?.at(0)?.trkseg?.splice(index, 1);
-    valhallaStore.route.features = valhallaStore.route.getTotals();
+    const snapshot = new GPX({ ...valhallaStore.route })
+
+    snapshot.trk?.at(0)?.trkseg?.splice(index, 1);
+    snapshot.features = valhallaStore.route.getTotals();
+
+    const delta = diff(valhallaStore.route, snapshot);
+    const reverseDelta = diff(snapshot, valhallaStore.route)
+    valhallaStore.route = applyChangeset(valhallaStore.route, delta);
+    pushToUndoStack(delta, reverseDelta)
 }
 
 export function reverseRoute() {
-    for (const trk of valhallaStore.route.trk ?? []) {
+    const snapshot = new GPX({ ...valhallaStore.route })
+    for (const trk of snapshot.trk ?? []) {
         for (const seg of trk.trkseg ?? []) {
             seg.trkpt?.reverse()
         }
         trk.trkseg?.reverse()
     }
-    valhallaStore.route.trk?.reverse()
+    snapshot.trk?.reverse()
+
+    const delta = diff(valhallaStore.route, snapshot);
+    const reverseDelta = diff(snapshot, valhallaStore.route);
+    valhallaStore.route = applyChangeset(valhallaStore.route, delta);
+    pushToUndoStack(delta, reverseDelta)
 
     valhallaStore.route.features = valhallaStore.route.getTotals();
 
@@ -146,7 +193,10 @@ export function reverseRoute() {
 }
 
 export function resetRoute() {
-    valhallaStore.route = new GPX({ trk: [{ ...emtpyTrack }] });
+    const delta = diff(valhallaStore.route, new GPX({ trk: [{ ...emtpyTrack }] }));
+    const reverseDelta = diff(new GPX({ trk: [{ ...emtpyTrack }] }), valhallaStore.route);
+    valhallaStore.route = applyChangeset(valhallaStore.route, delta);
+    pushToUndoStack(delta, reverseDelta)
 
     valhallaStore.anchors.forEach((a) => {
         if (!a.marker) {
@@ -182,7 +232,7 @@ export async function splitSegment(index: number, pos: LngLat) {
         }
     }
 
-    const intersectionPoint = new Waypoint({ $: { lat: pos.lat, lon: pos.lng}, ele: points[bestSplitIndex].ele });
+    const intersectionPoint = new Waypoint({ $: { lat: pos.lat, lon: pos.lng }, ele: points[bestSplitIndex].ele });
     const firstSegmentPoints = [...points.slice(0, bestSplitIndex), intersectionPoint];
     const secondSegmentPoints = [intersectionPoint, ...points.slice(bestSplitIndex)];
 
@@ -208,4 +258,26 @@ export function normalizeRouteTime() {
         }
         currentTime = new Date(seg.trkpt[seg.trkpt.length - 1].time!.getTime());
     }
+}
+
+export function undo() {
+    const historyItem = valhallaStore.undoStack.pop()
+    if (!historyItem) {
+        return
+    }
+    valhallaStore.redoStack.push(historyItem)
+
+    valhallaStore.route = applyChangeset(valhallaStore.route, historyItem.reverseDelta);
+    valhallaStore.route.features = valhallaStore.route.getTotals();
+}
+
+export function redo() {
+    const historyItem = valhallaStore.redoStack.pop()
+    if (!historyItem) {
+        return
+    }
+    valhallaStore.undoStack.push(historyItem)
+
+    valhallaStore.route = applyChangeset(valhallaStore.route, historyItem.delta);
+    valhallaStore.route.features = valhallaStore.route.getTotals();
 }

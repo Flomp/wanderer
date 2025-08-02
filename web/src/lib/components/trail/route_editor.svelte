@@ -3,14 +3,15 @@
         RoutingOptions,
         ValhallaBicycleCostingOptions,
     } from "$lib/models/valhalla";
+    import { valhallaStore } from "$lib/stores/valhalla_store.svelte";
     import { formatSpeed } from "$lib/util/format_util";
     import { _ } from "svelte-i18n";
     import { slide } from "svelte/transition";
+    import Button from "../base/button.svelte";
+    import DoubleSlider from "../base/double_slider.svelte";
     import Select, { type SelectItem } from "../base/select.svelte";
     import Slider from "../base/slider.svelte";
     import Toggle from "../base/toggle.svelte";
-    import Button from "../base/button.svelte";
-    import DoubleSlider from "../base/double_slider.svelte";
     interface Props {
         options: RoutingOptions;
         onReverse: () => void;
@@ -19,6 +20,8 @@
         onUpdateCropRange: (data: [number, number]) => void;
         onCrop: () => void;
         onRecalculateElevationData: () => void;
+        onUndo: () => void;
+        onRedo: () => void;
     }
 
     let {
@@ -29,6 +32,8 @@
         onUpdateCropRange,
         onCrop,
         onRecalculateElevationData,
+        onUndo,
+        onRedo,
     }: Props = $props();
 
     const modesOfTransport: SelectItem[] = [
@@ -121,6 +126,7 @@
                 recalculateElevationData = false;
                 crop = false;
                 editRoute = !editRoute;
+                onCropToggle(false);
             }}><i class="fa fa-route text-sm"></i></button
         >
         <button
@@ -142,7 +148,22 @@
                 recalculateElevationData = !recalculateElevationData;
                 crop = false;
                 editRoute = false;
+                onCropToggle(false);
             }}><i class="fa fa-mountain text-sm"></i></button
+        >
+        <button
+            class="btn-icon"
+            class:text-gray-500={valhallaStore.undoStack.length == 0}
+            disabled={valhallaStore.undoStack.length == 0}
+            aria-label="undo route action"
+            onclick={onUndo}><i class="fa fa-undo text-sm"></i></button
+        >
+        <button
+            class="btn-icon"
+            class:text-gray-500={valhallaStore.redoStack.length == 0}
+            disabled={valhallaStore.redoStack.length == 0}
+            aria-label="redo route action"
+            onclick={onRedo}><i class="fa fa-redo text-sm"></i></button
         >
     </div>
 

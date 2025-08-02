@@ -48,6 +48,9 @@
         reverseRoute,
         setRoute,
         splitSegment,
+        undo,
+        redo,
+        clearUndoRedoStack,
     } from "$lib/stores/valhalla_store.svelte.js";
     import { waypoint } from "$lib/stores/waypoint_store";
     import { getFileURL } from "$lib/util/file_util";
@@ -124,8 +127,6 @@
 
     let cropStartMarker: FontawesomeMarker;
     let cropEndMarker: FontawesomeMarker;
-
-    let flatRoute: GPXWaypoint[] = $derived(valhallaStore.route.flatten());
 
     let croppedGPX: GPX | null = null;
 
@@ -261,8 +262,9 @@
     });
 
     onMount(async () => {
-        clearAnchorMarker();
+        clearAnchors();
         clearRoute();
+        clearUndoRedoStack();
 
         if ($formData.expand!.gpx_data) {
             const gpx = await GPX.parse($formData.expand!.gpx_data);
@@ -300,7 +302,8 @@
         }
 
         clearWaypoints();
-        clearAnchorMarker();
+        clearAnchors();
+        clearUndoRedoStack();
         clearRoute();
         drawingActive = false;
         overwriteGPX = false;
@@ -354,7 +357,6 @@
             }
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
-            initCropMarkers();
         } catch (e) {
             console.error(e);
 
@@ -380,10 +382,6 @@
         $formData.waypoints = [];
     }
 
-    function clearAnchorMarker() {
-        clearAnchors();
-    }
-
     function initRouteAnchors(gpx: GPX, addToMap: boolean = false) {
         const segments = gpx.trk?.at(0)?.trkseg ?? [];
 
@@ -407,56 +405,6 @@
                     addToMap,
                 );
             }
-        }
-    }
-
-    function initCropMarkers() {
-        const routeStartPoint: M.LngLatLike = [
-            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$
-                .lon ?? 0,
-            valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)?.$
-                .lat ?? 0,
-        ];
-        const routeEndPoint: M.LngLatLike = [
-            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$
-                .lon ?? 0,
-            valhallaStore.route.trk?.at(-1)?.trkseg?.at(-1)?.trkpt?.at(-1)?.$
-                .lat ?? 0,
-        ];
-        if (!cropStartMarker || !cropEndMarker) {
-            cropStartMarker = new FontawesomeMarker(
-                {
-                    id: "crop-start-marker",
-                    icon: "fa-regular fa-circle",
-                    fontSize: "xs",
-                    style: "w-6",
-                    width: 4,
-                    backgroundColor: "bg-primary",
-                    fontColor: "white",
-                },
-                {},
-            );
-            cropEndMarker = new FontawesomeMarker(
-                {
-                    id: "crop-end-marker",
-                    icon: "fa fa-flag-checkered",
-                    fontSize: "xs",
-                    style: "w-6",
-                    width: 4,
-                    backgroundColor: "bg-primary",
-                    fontColor: "white",
-                },
-                {},
-            );
-
-            cropStartMarker
-                .setOpacity("0")
-                .setLngLat(routeStartPoint)
-                .addTo(map!);
-            cropEndMarker.setOpacity("0").setLngLat(routeEndPoint).addTo(map!);
-        } else {
-            cropStartMarker.setLngLat(routeStartPoint);
-            cropEndMarker.setLngLat(routeEndPoint);
         }
     }
 
@@ -600,6 +548,7 @@
     }
 
     function startDrawing() {
+        console.log("starting drawing...");
         if (!map) {
             return;
         }
@@ -612,28 +561,32 @@
     }
 
     async function stopDrawing() {
+        console.log("stopping drawing...");
+
         drawingActive = false;
-        for (const anchor of valhallaStore.anchors) {
-            anchor.marker?.remove();
-        }
-        toggleCropMarkers(false);
+        // for (const anchor of valhallaStore.anchors) {
+        //     anchor.marker?.remove();
+        // }
+        // toggleCropMarkers(false);
+        // clearUndoRedoStack();
 
-        if (valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
-            $formData.lat = valhallaStore.route.trk
-                ?.at(0)
-                ?.trkseg?.at(0)
-                ?.trkpt?.at(0)?.$.lat;
-            $formData.lon = valhallaStore.route.trk
-                ?.at(0)
-                ?.trkseg?.at(0)
-                ?.trkpt?.at(0)?.$.lon;
-        }
+        // if (valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
+        //     $formData.lat = valhallaStore.route.trk
+        //         ?.at(0)
+        //         ?.trkseg?.at(0)
+        //         ?.trkpt?.at(0)?.$.lat;
+        //     $formData.lon = valhallaStore.route.trk
+        //         ?.at(0)
+        //         ?.trkseg?.at(0)
+        //         ?.trkpt?.at(0)?.$.lon;
+        // }
 
-        const r = await searchLocationReverse($formData.lat!, $formData.lon!);
-
-        if (r) {
-            setFields("location", r);
-        }
+        // if ($formData.lat && $formData.lon) {
+        //     const r = await searchLocationReverse($formData.lat, $formData.lon);
+        //     if (r) {
+        //         setFields("location", r);
+        //     }
+        // }
     }
 
     async function handleMapClick(e: M.MapMouseEvent) {
@@ -984,7 +937,39 @@
     }
 
     function updateCropMarkers(range: [start: number, end: number]) {
+        if (!cropStartMarker || !cropEndMarker) {
+            cropStartMarker = new FontawesomeMarker(
+                {
+                    id: "crop-start-marker",
+                    icon: "fa-regular fa-circle",
+                    fontSize: "xs",
+                    style: "w-6",
+                    width: 4,
+                    backgroundColor: "bg-primary",
+                    fontColor: "white",
+                },
+                {},
+            );
+            cropEndMarker = new FontawesomeMarker(
+                {
+                    id: "crop-end-marker",
+                    icon: "fa fa-flag-checkered",
+                    fontSize: "xs",
+                    style: "w-6",
+                    width: 4,
+                    backgroundColor: "bg-primary",
+                    fontColor: "white",
+                },
+                {},
+            );
+
+            cropStartMarker.setLngLat([0, 0]).addTo(map!);
+            cropEndMarker.setLngLat([0, 0]).addTo(map!);
+        }
+
         const [start, end] = range;
+
+        const flatRoute = valhallaStore.route.flatten();
 
         const targetStartDistance =
             valhallaStore.route.features.distance * (start / 100);
@@ -1021,9 +1006,9 @@
         if (!croppedGPX) {
             return;
         }
-        setRoute(croppedGPX);
+        setRoute(croppedGPX, true);
         updateTrailWithRouteData();
-        clearAnchorMarker();
+        clearAnchors();
         initRouteAnchors(croppedGPX, true);
     }
 
@@ -1166,6 +1151,20 @@
                 );
             }
         }
+    }
+
+    function undoRouteEdit() {
+        undo();
+        updateTrailWithRouteData();
+        clearAnchors();
+        initRouteAnchors(valhallaStore.route, true);
+    }
+
+    function redoRouteEdit() {
+        redo();
+        updateTrailWithRouteData();
+        clearAnchors();
+        initRouteAnchors(valhallaStore.route, true);
     }
 </script>
 
@@ -1488,6 +1487,8 @@
                     onCrop={confirmCrop}
                     onUpdateCropRange={updateCropMarkers}
                     onRecalculateElevationData={recalculateElevationData}
+                    onUndo={undoRouteEdit}
+                    onRedo={redoRouteEdit}
                 ></RouteEditor>
             </div>
         {/if}
