@@ -280,6 +280,7 @@ export default class GPX {
 
     const builder = new xml2js.Builder(options)
     const gpx = new GPX(this);
+    (gpx as any).features = undefined
     allDatesToISOString(gpx);
 
     let xmlString = builder.buildObject(gpx);

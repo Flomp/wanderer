@@ -1061,8 +1061,8 @@
         });
     }
 
-    function updateTrailOnMap() {
-        const t = { ...$formData } as Trail;
+    function updateTrailOnMap() {       
+        const t: Trail = JSON.parse(JSON.stringify($formData));
         t.expand!.gpx = valhallaStore.route;
         mapTrail = [t];
     }
