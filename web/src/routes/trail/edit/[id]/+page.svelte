@@ -99,6 +99,8 @@
     import { backInOut } from "svelte/easing";
     import { fly, slide } from "svelte/transition";
     import { z } from "zod";
+    import Track from "$lib/models/gpx/track.js";
+    import TrackSegment from "$lib/models/gpx/track-segment.js";
 
     let { data } = $props();
 
@@ -202,6 +204,7 @@
                     photoFiles = [new File([blob], "route")];
                 }
 
+                form.expand!.gpx_data = valhallaStore.route.toString();
                 if (form.expand!.gpx_data && overwriteGPX) {
                     gpxFile = new Blob([form.expand!.gpx_data], {
                         type: "text/xml",
@@ -267,23 +270,25 @@
         clearUndoRedoStack();
 
         if ($formData.expand!.gpx_data) {
-            const gpx = await GPX.parse($formData.expand!.gpx_data);
+            const gpx = GPX.parse($formData.expand!.gpx_data);
             if (!(gpx instanceof Error)) {
                 if (gpx.rte && !gpx.trk) {
                     gpx.trk = [
-                        {
+                        new Track({
                             trkseg: [
-                                {
+                                new TrackSegment({
                                     trkpt: gpx.rte?.at(0)?.rtept,
-                                },
+                                }),
                             ],
-                        },
+                        }),
                     ];
                     gpx.rte = undefined;
                 }
 
                 setRoute(gpx);
                 initRouteAnchors(gpx);
+
+                updateTrailOnMap();
             }
         }
     });
@@ -305,6 +310,7 @@
         clearAnchors();
         clearUndoRedoStack();
         clearRoute();
+        mapTrail = [];
         drawingActive = false;
         overwriteGPX = false;
 
@@ -313,10 +319,11 @@
 
         try {
             const prevId = $formData.id;
-            const parseResult = await gpx2trail(gpxData, selectedFile.name);
+            const parseResult = gpx2trail(gpxData, selectedFile.name);
             setFields(parseResult.trail);
             $formData.id = prevId ?? cryptoRandomString({ length: 15 });
             $formData.expand!.gpx_data = gpxData;
+
             setFields(
                 "category",
                 page.data.settings.category || $categories[0].id,
@@ -345,18 +352,20 @@
 
             if (parseResult.gpx.rte?.length && !parseResult.gpx.trk) {
                 parseResult.gpx.trk = [
-                    {
+                    new Track({
                         trkseg: [
-                            {
+                            new TrackSegment({
                                 trkpt: parseResult.gpx.rte?.at(0)?.rtept,
-                            },
+                            }),
                         ],
-                    },
+                    }),
                 ];
                 parseResult.gpx.rte = undefined;
             }
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
+
+            updateTrailOnMap();
         } catch (e) {
             console.error(e);
 
@@ -919,7 +928,6 @@
     }
 
     function toggleCropMarkers(active: boolean) {
-        console.log("toggleCropMarkers", active);
         if (active) {
             cropStartMarker?.setOpacity("1");
             cropEndMarker?.setOpacity("1");
@@ -1035,8 +1043,8 @@
     function updateTrailWithRouteData() {
         overwriteGPX = true;
         updateTotals(valhallaStore.route);
-        $formData.expand!.gpx_data = valhallaStore.route.toString();
 
+        updateTrailOnMap();
         if (!$formData.id) {
             $formData.id = cryptoRandomString({ length: 15 });
         }
@@ -1044,14 +1052,19 @@
 
     function updateTotals(gpx: GPX) {
         const totals = gpx.features;
-        $formData.distance = totals.distance;
-        $formData.duration = totals.duration / 1000;
-        $formData.elevation_gain = totals.elevationGain;
-        $formData.elevation_loss = totals.elevationLoss;
+        formData.set({
+            ...$formData,
+            distance: totals.distance,
+            duration: totals.duration / 1000,
+            elevation_gain: totals.elevationGain,
+            elevation_loss: totals.elevationLoss,
+        });
     }
 
     function updateTrailOnMap() {
-        mapTrail = [$formData as Trail];
+        const t = { ...$formData } as Trail;
+        t.expand!.gpx = valhallaStore.route;
+        mapTrail = [t];
     }
 
     function handleSearchClick(item: SearchItem) {
@@ -1071,12 +1084,6 @@
             icon: getIconForLocation(h),
         }));
     }
-    let gpxData = $derived($formData.expand?.gpx_data);
-    $effect(() => {
-        if (gpxData) {
-            untrack(() => updateTrailOnMap());
-        }
-    });
 
     function getTrailTags() {
         return (

@@ -21,7 +21,7 @@ export async function PUT(event: RequestEvent) {
         }
         let parseResult: { trail: Trail, gpx: GPX };
         try {
-            parseResult = (await gpx2trail(gpxData, data.get("name") as string | undefined, event.fetch));
+            parseResult = gpx2trail(gpxData, data.get("name") as string | undefined, event.fetch);
         } catch (e: any) {
             console.error(e)
             throw new ClientResponseError({ status: 400, response: { message: "Invalid file" } })

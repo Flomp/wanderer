@@ -89,11 +89,8 @@
             $data.distance = undefined;
             return;
         }
-        const gpxObject = await GPX.parse(trailData);
-        if (gpxObject instanceof Error) {
-            throw gpxObject;
-        }
-
+        const gpxObject = GPX.parse(trailData);
+       
         const totals = gpxObject.features;
 
         $data.duration = totals.duration / 1000;

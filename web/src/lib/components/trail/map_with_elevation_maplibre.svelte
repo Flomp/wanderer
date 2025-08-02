@@ -1,12 +1,12 @@
 <script lang="ts">
     import { page } from "$app/state";
     import directionCaret from "$lib/assets/svgs/caret-right-solid.svg";
+    import GPX from "$lib/models/gpx/gpx";
     import type { Trail } from "$lib/models/trail";
     import type { Waypoint } from "$lib/models/waypoint";
     import { theme } from "$lib/stores/theme_store";
     import { fetchGPX } from "$lib/stores/trail_store";
     import { findStartAndEndPoints } from "$lib/util/geojson_util";
-    import { toGeoJson } from "$lib/util/gpx_util";
     import {
         createMarkerFromWaypoint,
         createPopupFromTrail,
@@ -15,24 +15,17 @@
     import type { ElevationProfileControl } from "$lib/vendor/maplibre-elevation-profile/elevationprofile-control";
     import { FullscreenControl } from "$lib/vendor/maplibre-fullscreen/fullscreen-control";
     import MaplibreGraticule from "$lib/vendor/maplibre-graticule/maplibre-graticule";
-    import {
-        baseMapStyles,
-        overlays,
-        pois,
-    } from "$lib/vendor/maplibre-layer-manager/layers";
+    import { baseMapStyles } from "$lib/vendor/maplibre-layer-manager/layers";
     import { LayerManager } from "$lib/vendor/maplibre-layer-manager/maplibre-layer-manager";
-    import {
-        StyleSwitcherControl,
-        type StyleSwitcherControlOptions,
-    } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
+    import { StyleSwitcherControl } from "$lib/vendor/maplibre-style-switcher/style-switcher-control";
     import type { Feature, FeatureCollection, GeoJSON } from "geojson";
     import * as M from "maplibre-gl";
     import "maplibre-gl/dist/maplibre-gl.css";
     import { onDestroy, onMount, untrack } from "svelte";
-    import type { RadioItem } from "../base/radio_group.svelte";
 
     interface Props {
         trails?: Trail[];
+        gpx?: GPX;
         waypoints?: Waypoint[];
         markers?: M.Marker[];
         map?: M.Map | null;
@@ -160,10 +153,10 @@
         toggleEpcTheme();
     });
     $effect(() => {
-        if (drawing && map) {
-            startDrawing();
-        } else if (!drawing && map) {
-            stopDrawing();
+        if (drawing) {
+            untrack(() => startDrawing());
+        } else {
+            untrack(() => stopDrawing());
         }
     });
     $effect(() => {
@@ -203,9 +196,11 @@
         let cD: FeatureCollection = { type: "FeatureCollection", features: [] };
         let r: GeoJSON[] = [];
 
-        trails.forEach((t) => {
-            if (t.expand?.gpx_data) {
-                r.push(toGeoJson(t.expand.gpx_data) as GeoJSON);
+        for (const t of trails) {
+            if (t.expand?.gpx) {
+                r.push(t.expand.gpx.toGeoJSON());
+            } else if (t.expand?.gpx_data) {
+                r.push(GPX.parse(t.expand.gpx_data).toGeoJSON());
             }
             if (clusterTrails && t.lat !== null && t.lon !== null) {
                 cD.features.push({
@@ -220,7 +215,7 @@
                     },
                 } as Feature);
             }
-        });
+        }
 
         return [r, cD];
     }
@@ -653,9 +648,9 @@
         clusterPopup = createPopupFromTrail(trail);
         clusterPopup.setLngLat([trail.lon!, trail.lat!]).addTo(map);
 
-        const geojson = await fetchGPX(trail);
+        const gpx = await fetchGPX(trail);
 
-        addClusterHighlightLayer(toGeoJson(geojson));
+        addClusterHighlightLayer(GPX.parse(gpx).toGeoJSON());
 
         clusterPopup.on("close", () => {
             unHighlightCluster(false);
@@ -814,7 +809,7 @@
     }
 
     function showWaypoints() {
-        if (!map) {
+        if (!map || drawing) {
             return;
         }
 
@@ -1030,22 +1025,22 @@
                             type: "hillshade",
                         });
                     }
-
-                    trails.forEach((t, i) => {
-                        const layerId = t.id!;
-
-                        if (map?.getLayer(layerId)) {
-                            return;
-                        }
-                        addTrailLayer(t, layerId, i, data[i]);
-                    });
-                    if (
-                        activeTrail !== null &&
-                        !map?.getLayer("direction-carets")
-                    ) {
-                        addCaretLayer(trails[activeTrail].id!);
-                    }
                 } catch (e) {}
+            }
+            trails.forEach((t, i) => {
+                const layerId = t.id!;
+
+                if (map?.getLayer(layerId)) {
+                    return;
+                }
+                addTrailLayer(t, layerId, i, data[i]);
+            });
+            if (
+                activeTrail !== null &&
+                trails[activeTrail] &&
+                !map?.getLayer("direction-carets")
+            ) {
+                addCaretLayer(trails[activeTrail].id!);
             }
         });
 

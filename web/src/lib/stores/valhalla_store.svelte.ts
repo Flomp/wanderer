@@ -1,5 +1,5 @@
 import GPX from "$lib/models/gpx/gpx";
-import type Track from "$lib/models/gpx/track";
+import Track from "$lib/models/gpx/track";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import { haversineDistance } from "$lib/models/gpx/utils";
 import Waypoint from "$lib/models/gpx/waypoint";
@@ -11,7 +11,7 @@ import type { LngLat } from "maplibre-gl";
 import { _ } from "svelte-i18n";
 import { get } from "svelte/store";
 
-const emtpyTrack: Track = { trkseg: [] }
+const emtpyTrack = new Track({ trkseg: [] })
 
 class ValhallaStore {
     route: GPX = $state(new GPX({ trk: [emtpyTrack] }));
@@ -193,8 +193,8 @@ export function reverseRoute() {
 }
 
 export function resetRoute() {
-    const delta = diff(valhallaStore.route, new GPX({ trk: [{ ...emtpyTrack }] }));
-    const reverseDelta = diff(new GPX({ trk: [{ ...emtpyTrack }] }), valhallaStore.route);
+    const delta = diff(valhallaStore.route, new GPX({ trk: [new Track({ ...emtpyTrack })] }));
+    const reverseDelta = diff(new GPX({ trk: [new Track({ ...emtpyTrack })] }), valhallaStore.route);
     valhallaStore.route = applyChangeset(valhallaStore.route, delta);
     pushToUndoStack(delta, reverseDelta)
 
@@ -214,8 +214,6 @@ export async function recalculateHeight() {
 }
 
 export async function splitSegment(index: number, pos: LngLat) {
-    console.log(valhallaStore.route.features.duration);
-
     let seg = valhallaStore.route.trk?.at(0)?.trkseg?.at(index);
     if (!seg || !seg.trkpt) {
         return;

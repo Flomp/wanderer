@@ -58,7 +58,7 @@
             };
         }
 
-        trail = (await gpx2trail(log.expand.gpx_data!)).trail;
+        trail = gpx2trail(log.expand.gpx_data!).trail;
         trail.id = log.id;
         trail.expand!.gpx_data = log.expand.gpx_data;
 

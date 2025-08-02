@@ -18,9 +18,9 @@ import { handleFromRecordWithIRI } from "./activitypub_util";
 import { Waypoint } from "$lib/models/waypoint";
 
 
-export async function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
-    const gpx = await GPX.parse(gpxString);
+    const gpx = GPX.parse(gpxString);
 
     if (gpx instanceof Error) {
         throw gpx;
@@ -87,7 +87,7 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
         }
     }
 
-    const gpx = await GPX.parse(gpxTrail.expand!.gpx_data!) as GPX;
+    const gpx = GPX.parse(gpxTrail.expand!.gpx_data!);
 
     if (gpx instanceof Error) {
         throw gpx;
@@ -108,12 +108,12 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
     for (const wp of gpxTrail.expand!.waypoints ?? []) {
         const gpxWpt = gpx.wpt.find((w) => w.$.lat == wp.lat && w.$.lon == wp.lon)
         if (!gpxWpt) {
-            gpx.wpt.push({
+            gpx.wpt.push(new GPXWaypoint({
                 $: {
                     lat: wp.lat,
                     lon: wp.lon
                 }
-            })
+            }))
         }
     }
 
@@ -351,16 +351,6 @@ function isKMZFile(buffer: ArrayBuffer) {
     return blob[0] === 0x50 && blob[1] === 0x4B && blob[2] === 0x03 && blob[3] === 0x04;
 }
 
-export function toGeoJson(gpxData: string) {
-    const parser = browser ? new DOMParser() : new xmldom.DOMParser();
-    let geojson = gpx(
-        parser.parseFromString(gpxData, "text/xml"),
-    ) as GeoJSON;
-    geojson = splitMultiLineStringToLineStrings(geojson);
-    geojson.bbox = bbox(geojson)
-    return geojson
-}
-
 export function cropGPX(start: GPXWaypoint, end: GPXWaypoint, gpx: GPX): GPX {
     let foundStart = false;
     let done = false;
@@ -390,7 +380,7 @@ export function cropGPX(start: GPXWaypoint, end: GPXWaypoint, gpx: GPX): GPX {
             }
 
             if (newPoints.length > 0) {
-                croppedSegments.push({ trkpt: newPoints });
+                croppedSegments.push(new TrackSegment({ trkpt: newPoints }));
             }
         });
 
@@ -400,5 +390,5 @@ export function cropGPX(start: GPXWaypoint, end: GPXWaypoint, gpx: GPX): GPX {
         };
     }).filter(track => track.trkseg.length > 0);
 
-    return new GPX({ ...gpx, trk: croppedTrk ?? [], })
+    return new GPX({ ...gpx, trk: croppedTrk?.map(t => new Track({ ...t })) ?? [], })
 }

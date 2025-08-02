@@ -42,4 +42,24 @@ export default class Route {
       this.rtept = (object.rtept as Waypoint[]).map(rtept => new Waypoint(rtept))
     }
   }
+
+  toGeoJSON(): GeoJSON.Feature {
+    const coordinates = (this.rtept || []).map(pt =>
+      [pt.$.lon ?? 0, pt.$.lat ?? 0, pt.ele ?? 0]
+    );
+
+    return {
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates
+      },
+      properties: {
+        name: this.name,
+        desc: this.desc,
+        type: this.type,
+        number: this.number
+      }
+    };
+  }
 }
