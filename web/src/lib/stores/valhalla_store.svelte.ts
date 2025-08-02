@@ -214,6 +214,8 @@ export async function recalculateHeight() {
 }
 
 export async function splitSegment(index: number, pos: LngLat) {
+    console.log(valhallaStore.route.features.duration);
+
     let seg = valhallaStore.route.trk?.at(0)?.trkseg?.at(index);
     if (!seg || !seg.trkpt) {
         return;
@@ -232,12 +234,13 @@ export async function splitSegment(index: number, pos: LngLat) {
         }
     }
 
-    const intersectionPoint = new Waypoint({ $: { lat: pos.lat, lon: pos.lng }, ele: points[bestSplitIndex].ele });
+    const intersectionPoint = new Waypoint({ ...points[bestSplitIndex], $: { lat: pos.lat, lon: pos.lng } });
     const firstSegmentPoints = [...points.slice(0, bestSplitIndex), intersectionPoint];
     const secondSegmentPoints = [intersectionPoint, ...points.slice(bestSplitIndex)];
 
     editRoute(index, firstSegmentPoints)
     insertIntoRoute(secondSegmentPoints, index + 1)
+
 }
 
 export function normalizeRouteTime() {

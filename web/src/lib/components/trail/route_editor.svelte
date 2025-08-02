@@ -12,6 +12,7 @@
     import Select, { type SelectItem } from "../base/select.svelte";
     import Slider from "../base/slider.svelte";
     import Toggle from "../base/toggle.svelte";
+    import { tick } from "svelte";
     interface Props {
         options: RoutingOptions;
         onReverse: () => void;
@@ -114,6 +115,14 @@
                 break;
         }
     }
+
+    async function togglePanels(_edit: boolean, _crop: boolean, _recalc: boolean) {        
+        recalculateElevationData = _recalc;
+        crop = _crop;
+        editRoute = _edit
+        await tick()
+        onCropToggle(_crop);
+    }
 </script>
 
 <div class="flex gap-x-2 items-start">
@@ -122,34 +131,19 @@
             class="btn-icon"
             class:bg-secondary-hover={editRoute}
             aria-label="edit route"
-            onclick={() => {
-                recalculateElevationData = false;
-                crop = false;
-                editRoute = !editRoute;
-                onCropToggle(false);
-            }}><i class="fa fa-route text-sm"></i></button
+            onclick={async () => await togglePanels(!editRoute, false, false)}><i class="fa fa-route text-sm"></i></button
         >
         <button
             class="btn-icon"
             class:bg-secondary-hover={crop}
             aria-label="crop route"
-            onclick={() => {
-                recalculateElevationData = false;
-                crop = !crop;
-                editRoute = false;
-                onCropToggle(crop);
-            }}><i class="fa fa-scissors text-sm"></i></button
+            onclick={async () => await togglePanels(false, !crop, false)}><i class="fa fa-scissors text-sm"></i></button
         >
         <button
             class="btn-icon"
             class:bg-secondary-hover={recalculateElevationData}
             aria-label="recalculate elevation data"
-            onclick={() => {
-                recalculateElevationData = !recalculateElevationData;
-                crop = false;
-                editRoute = false;
-                onCropToggle(false);
-            }}><i class="fa fa-mountain text-sm"></i></button
+            onclick={async () => await togglePanels(false, false, !recalculateElevationData)}><i class="fa fa-mountain text-sm"></i></button
         >
         <button
             class="btn-icon"

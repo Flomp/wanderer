@@ -94,7 +94,7 @@
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
     import * as M from "maplibre-gl";
-    import { onMount, untrack } from "svelte";
+    import { onMount, tick, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
     import { fly, slide } from "svelte/transition";
@@ -548,7 +548,6 @@
     }
 
     function startDrawing() {
-        console.log("starting drawing...");
         if (!map) {
             return;
         }
@@ -561,32 +560,30 @@
     }
 
     async function stopDrawing() {
-        console.log("stopping drawing...");
-
         drawingActive = false;
-        // for (const anchor of valhallaStore.anchors) {
-        //     anchor.marker?.remove();
-        // }
-        // toggleCropMarkers(false);
-        // clearUndoRedoStack();
+        for (const anchor of valhallaStore.anchors) {
+            anchor.marker?.remove();
+        }
+        toggleCropMarkers(false);
+        clearUndoRedoStack();
 
-        // if (valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
-        //     $formData.lat = valhallaStore.route.trk
-        //         ?.at(0)
-        //         ?.trkseg?.at(0)
-        //         ?.trkpt?.at(0)?.$.lat;
-        //     $formData.lon = valhallaStore.route.trk
-        //         ?.at(0)
-        //         ?.trkseg?.at(0)
-        //         ?.trkpt?.at(0)?.$.lon;
-        // }
+        if (valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
+            $formData.lat = valhallaStore.route.trk
+                ?.at(0)
+                ?.trkseg?.at(0)
+                ?.trkpt?.at(0)?.$.lat;
+            $formData.lon = valhallaStore.route.trk
+                ?.at(0)
+                ?.trkseg?.at(0)
+                ?.trkpt?.at(0)?.$.lon;
+        }
 
-        // if ($formData.lat && $formData.lon) {
-        //     const r = await searchLocationReverse($formData.lat, $formData.lon);
-        //     if (r) {
-        //         setFields("location", r);
-        //     }
-        // }
+        if ($formData.lat && $formData.lon) {
+            const r = await searchLocationReverse($formData.lat, $formData.lon);
+            if (r) {
+                setFields("location", r);
+            }
+        }
     }
 
     async function handleMapClick(e: M.MapMouseEvent) {
@@ -922,17 +919,15 @@
     }
 
     function toggleCropMarkers(active: boolean) {
+        console.log("toggleCropMarkers", active);
         if (active) {
             cropStartMarker?.setOpacity("1");
             cropEndMarker?.setOpacity("1");
         } else {
             cropStartMarker?.setOpacity("0");
             cropEndMarker?.setOpacity("0");
-            const totals = valhallaStore.route.features;
-            $formData.distance = totals.distance;
-            $formData.duration = totals.duration / 1000;
-            $formData.elevation_gain = totals.elevationGain;
-            $formData.elevation_loss = totals.elevationLoss;
+
+            updateTotals(valhallaStore.route);
         }
     }
 
@@ -966,7 +961,6 @@
             cropStartMarker.setLngLat([0, 0]).addTo(map!);
             cropEndMarker.setLngLat([0, 0]).addTo(map!);
         }
-
         const [start, end] = range;
 
         const flatRoute = valhallaStore.route.flatten();
@@ -995,11 +989,8 @@
             flatRoute[endIndex],
             valhallaStore.route,
         );
-        const totals = croppedGPX.features;
-        $formData.distance = totals.distance;
-        $formData.duration = totals.duration / 1000;
-        $formData.elevation_gain = totals.elevationGain;
-        $formData.elevation_loss = totals.elevationLoss;
+
+        updateTotals(croppedGPX);
     }
 
     function confirmCrop() {
@@ -1043,16 +1034,20 @@
 
     function updateTrailWithRouteData() {
         overwriteGPX = true;
-        const totals = valhallaStore.route.features;
-        $formData.distance = totals.distance;
-        $formData.duration = totals.duration / 1000;
-        $formData.elevation_gain = totals.elevationGain;
-        $formData.elevation_loss = totals.elevationLoss;
+        updateTotals(valhallaStore.route);
         $formData.expand!.gpx_data = valhallaStore.route.toString();
 
         if (!$formData.id) {
             $formData.id = cryptoRandomString({ length: 15 });
         }
+    }
+
+    function updateTotals(gpx: GPX) {
+        const totals = gpx.features;
+        $formData.distance = totals.distance;
+        $formData.duration = totals.duration / 1000;
+        $formData.elevation_gain = totals.elevationGain;
+        $formData.elevation_loss = totals.elevationLoss;
     }
 
     function updateTrailOnMap() {
@@ -1155,16 +1150,16 @@
 
     function undoRouteEdit() {
         undo();
-        updateTrailWithRouteData();
         clearAnchors();
         initRouteAnchors(valhallaStore.route, true);
+        updateTrailWithRouteData();
     }
 
     function redoRouteEdit() {
         redo();
-        updateTrailWithRouteData();
         clearAnchors();
         initRouteAnchors(valhallaStore.route, true);
+        updateTrailWithRouteData();
     }
 </script>
 
@@ -1208,7 +1203,13 @@
             <button
                 class="btn-primary"
                 type="button"
-                onclick={drawingActive ? stopDrawing : startDrawing}
+                onclick={async () => {
+                    if (drawingActive) {
+                        await stopDrawing();
+                    } else {
+                        startDrawing();
+                    }
+                }}
             >
                 {$formData.expand?.gpx_data
                     ? drawingActive
