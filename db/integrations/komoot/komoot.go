@@ -221,6 +221,97 @@ func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user st
 	return hasNewTours, nil
 }
 
+// mapCategory returns the category ID for the given Komoot category.
+// A two-step lookup will be done. First a lookup for a exact category will be performed. If the
+// user has manually defined the categories of the exactMap, these will be used.
+// If there is no result, a mapping to the default Wanderer categories is done.
+func mapCategory(app core.App, komootCategory string) string {
+	// List of sports retrieved from here: https://static.komoot.de/doc/external-api/v007/sports.html
+	exactMap := map[string]string{
+		// Main sport types
+		"hike":             "Hiking",
+		"mountaineering":   "Hiking",
+		"racebike":         "Racebiking",
+		"e_racebike":       "Racebiking",
+		"touringbicycle":   "Biking",
+		"e_touringbicycle": "Biking",
+		"mtb":              "Mountainbiking",
+		"e_mtb":            "Mountainbiking",
+		"mtb_easy":         "Gravelbiking", // Gravel riding
+		"e_mtb_easy":       "Gravelbiking", // E-Gravel riding
+		"mtb_advanced":     "Endurobiking", // Enduro mountain biking
+		"e_mtb_advanced":   "Endurobiking", // E-enduro mountain biking
+		"jogging":          "Running",
+		// Tracking sport types
+		"climbing":      "Climbing",
+		"downhillbike":  "Downhillbiking",
+		"nordic":        "Skiing", // Cross-Country Skiing
+		"nordicwalking": "Nordicwalking",
+		"skaten":        "Skating",
+		"skialpin":      "Skiing",     // Alpine Skiing,
+		"skitour":       "Skitouring", // Alpine Ski Touring
+		"sled":          "Sledding",   // Sledding
+		"snowboard":     "Snowboarding",
+		"snowshoe":      "Snowshoeing", // Snow Shoe
+		"unicycle":      "Unicycling",  // Unicycling
+		"citybike":      "Biking",
+		"other":         "Hiking",
+	}
+
+	defaultMap := map[string]string{
+		// Main sport types
+		"hike":             "Hiking",
+		"mountaineering":   "Hiking",
+		"racebike":         "Biking",
+		"e_racebike":       "Biking",
+		"touringbicycle":   "Biking",
+		"e_touringbicycle": "Biking",
+		"mtb":              "Biking",
+		"e_mtb":            "Biking",
+		"mtb_easy":         "Biking", // Gravel riding
+		"e_mtb_easy":       "Biking", // E-Gravel riding
+		"mtb_advanced":     "Biking", // Enduro mountain biking
+		"e_mtb_advanced":   "Biking", // E-enduro mountain biking
+		"jogging":          "Walking",
+		// Tracking sport types
+		"climbing":      "Climbing",
+		"downhillbike":  "Biking",
+		"nordic":        "Skiing", // Cross-Country Skiing
+		"nordicwalking": "Walking",
+		"skaten":        "Walking",
+		"skialpin":      "Skiing", // Alpine Skiing,
+		"skitour":       "Skiing", // Alpine Ski Touring
+		"sled":          "Skiing", // Sledding
+		"snowboard":     "Skiing",
+		"snowshoe":      "Skiing", // Snow Shoe
+		"unicycle":      "Biking", // Unicycling
+		"citybike":      "Biking",
+		"other":         "Walking",
+	}
+
+	// Check if there is a user defined exact category mapping found
+	category, err := app.FindFirstRecordByData("categories", "name", exactMap[komootCategory])
+	if err != nil {
+		app.Logger().Warn("Komoot import: error getting exact category mapping", "error", err)
+	} else if category != nil {
+		return category.Id
+	}
+
+	// Map the Komoot categories to the default Wanderer categories
+	category, err = app.FindFirstRecordByData("categories", "name", defaultMap[komootCategory])
+	if err != nil {
+		app.Logger().Warn("Komoot import: error getting default category mapping", "error", err)
+	} else if category != nil {
+		return category.Id
+	}
+
+	// If an error occured or no mapping found
+	if err == nil {
+		app.Logger().Warn("Komoot import: category mapping is missing. Probably Komoot introduced a new category.", "Komoot category", komootCategory)
+	}
+	return ""
+}
+
 func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomootTour, gpx *filesystem.File, actor string, wpIds []string) error {
 	trailid := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
@@ -231,22 +322,7 @@ func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomoo
 
 	record := core.NewRecord(collection)
 
-	categoryMap := map[string]string{
-		"hike":           "Hiking",
-		"touringbicycle": "Biking",
-		"mtb":            "Biking",
-		"racebike":       "Biking",
-		"jogging":        "Walking",
-		"mtb_easy":       "Workout",
-		"mtb_advanced":   "Walking",
-		"mountaineering": "Hiking",
-	}
-
-	category, _ := app.FindFirstRecordByData("categories", "name", categoryMap[detailedTour.Sport])
-	categoryId := ""
-	if category != nil {
-		categoryId = category.Id
-	}
+	categoryId := mapCategory(app, detailedTour.Sport)
 
 	var photos []*filesystem.File
 	if len(detailedTour.Embedded.CoverImages.Embedded.Items) > 0 {
