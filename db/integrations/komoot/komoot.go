@@ -2,6 +2,7 @@ package komoot
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -292,7 +293,9 @@ func mapCategory(app core.App, komootCategory string) string {
 	// Check if there is a user defined exact category mapping found
 	category, err := app.FindFirstRecordByData("categories", "name", exactMap[komootCategory])
 	if err != nil {
-		app.Logger().Warn("Komoot import: error getting exact category mapping", "error", err)
+		if !errors.Is(err, sql.ErrNoRows) {
+			app.Logger().Warn("Komoot import: error getting exact category mapping", "error", err)
+		}
 	} else if category != nil {
 		return category.Id
 	}
@@ -300,13 +303,15 @@ func mapCategory(app core.App, komootCategory string) string {
 	// Map the Komoot categories to the default Wanderer categories
 	category, err = app.FindFirstRecordByData("categories", "name", defaultMap[komootCategory])
 	if err != nil {
-		app.Logger().Warn("Komoot import: error getting default category mapping", "error", err)
+		if !errors.Is(err, sql.ErrNoRows) {
+			app.Logger().Warn("Komoot import: error getting default category mapping", "error", err)
+		}
 	} else if category != nil {
 		return category.Id
 	}
 
-	// If an error occured or no mapping found
-	if err == nil {
+	// If no mapping found
+	if errors.Is(err, sql.ErrNoRows) {
 		app.Logger().Warn("Komoot import: category mapping is missing. Probably Komoot introduced a new category.", "Komoot category", komootCategory)
 	}
 	return ""
