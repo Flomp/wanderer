@@ -38,7 +38,7 @@
 
     async function handleFilterUpdate() {
         loading = true;
-        const response = await trails_search_filter(filter, pagination.page);
+        const response = await trails_search_filter(filter, 1);
         trails = response.items;
         pagination.page = response.page;
         pagination.totalPages = response.totalPages;
