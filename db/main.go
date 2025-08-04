@@ -990,6 +990,10 @@ func onBootstrapHandler() func(se *core.BootstrapEvent) error {
 }
 
 func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
+	se.Router.GET("/health", func(e *core.RequestEvent) error {
+		return e.JSON(http.StatusOK, map[string]string{"status": "ok"})
+	})
+
 	se.Router.GET("/public/search/token", func(e *core.RequestEvent) error {
 		searchRules := map[string]interface{}{
 			"lists": map[string]string{
