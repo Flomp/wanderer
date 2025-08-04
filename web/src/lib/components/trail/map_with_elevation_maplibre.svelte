@@ -580,8 +580,6 @@
         map.getCanvas().style.cursor = "inherit";
 
         if (activeTrail !== null && trails[activeTrail] && !clusterTrails) {
-            console.log(data[activeTrail].features[0]);
-
             addStartEndMarkers(
                 trails[activeTrail],
                 trails[activeTrail].id,

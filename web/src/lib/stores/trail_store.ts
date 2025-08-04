@@ -593,7 +593,7 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
     }
 
     if (filter.category.length > 0) {
-        filterText += ` AND category IN [${filter.category.join(",")}]`;
+        filterText += ` AND category IN ['${filter.category.join(",")}']`;
     }
 
     if (filter.tags.length > 0) {

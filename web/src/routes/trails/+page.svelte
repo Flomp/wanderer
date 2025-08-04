@@ -26,7 +26,7 @@
         capture: () => filter,
         restore: (value) => {
             filter = value;
-            handleFilterUpdate()
+            handleFilterUpdate();
         },
     };
 
