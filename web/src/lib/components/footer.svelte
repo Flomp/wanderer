@@ -36,7 +36,7 @@
                 <a href="https://wanderer.to/#features">{$_("features")}</a>
             </li>
             <li>
-                <a href="https://wanderer.to/run/changelog/"
+                <a href="https://wanderer.to/changelog/"
                     >{$_("changelog")}</a
                 >
             </li>
