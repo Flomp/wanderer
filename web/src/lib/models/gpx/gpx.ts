@@ -244,16 +244,16 @@ export default class GPX {
     }()) as unknown as GPX;
   }
 
-  toGeoJSON(): GeoJSON.FeatureCollection {
+  toGeoJSON(includeRoute: boolean = false, includeWaypoints: boolean = false): GeoJSON.FeatureCollection {
     const features: GeoJSON.Feature[] = [];
 
-    if (this.wpt) {
+    if (this.wpt && includeWaypoints) {
       for (const wpt of this.wpt) {
         features.push(wpt.toGeoJSON());
       }
     }
 
-    if (this.rte) {
+    if (this.rte && includeRoute) {
       for (const rte of this.rte) {
         features.push(rte.toGeoJSON());
       }
@@ -269,6 +269,7 @@ export default class GPX {
       type: "FeatureCollection",
       features
     };
+    
     geojson.bbox = bbox(geojson)
 
     return geojson

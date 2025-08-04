@@ -9,7 +9,7 @@ import { OverpassLayer } from "./overpass-layer";
 export class LayerManager {
     private map: M.Map;
     state!: MapState;
-    private layers: Record<string, BaseLayer> = {};
+    layers: Record<string, BaseLayer> = {};
     private addedListeners: Set<string> = new Set();
 
     constructor(map: M.Map) {
@@ -87,8 +87,18 @@ export class LayerManager {
     }
 
 
-    private addLayer(id: string, layer: BaseLayer) {
+    addLayer(id: string, layer: BaseLayer) {
         if (this.layers[id] && this.map.getLayer(id)) {
+            // update sources and return
+            for (const [sourceId, s] of Object.entries(layer.spec.sources)) {
+                if (s.type != "geojson" || !this.map.getSource(sourceId)) {
+                    continue;
+                }
+
+                const source = this.map.getSource(sourceId) as M.GeoJSONSource
+                source.setData(s.data)
+                this.layers[id] = layer
+            }
             return;
         }
         for (const [id, s] of Object.entries(layer.spec.sources)) {
@@ -134,7 +144,7 @@ export class LayerManager {
         this.layers[id] = layer
     }
 
-    private removeLayer(id: string) {
+    removeLayer(id: string) {
         const layer = this.layers[id];
         if (!layer) {
             return;
@@ -178,7 +188,7 @@ export class LayerManager {
     }
 
     private restoreLayers() {
-        for (const [id, layer] of Object.entries(this.layers)) {
+        for (const [id, layer] of Object.entries(this.layers)) {           
             this.addLayer(id, layer)
         }
     }

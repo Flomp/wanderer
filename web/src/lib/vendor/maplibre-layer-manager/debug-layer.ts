@@ -1,6 +1,5 @@
-import type { Marker, StyleSpecification, MapMouseEvent } from "maplibre-gl";
+import type { StyleSpecification } from "maplibre-gl";
 import type { BaseLayer } from "./layers";
-import * as M from "maplibre-gl";
 
 export class DebugLayer implements BaseLayer {
     spec: StyleSpecification = {
