@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -32,26 +33,37 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
-const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+const (
+	defaultPocketBaseEncryptionKey = "fde406459dc1f6ca6f348e1f44a9a2af"
+	defaultMeiliMasterKey          = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+)
 
 // verifySettings checks if the required environment variables are set.
 // If they are not set, it logs a warning.
-func verifySettings(app core.App) {
+func verifySettings() error {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 
-	if len(encryptionKey) == 0 || len(encryptionKey) < 32 {
-		app.Logger().Warn("POCKETBASE_ENCRYPTION_KEY not set or is shorter than 32 bytes")
+	var errs []error
+
+	if len(encryptionKey) != 32 {
+		errs = append(errs, errors.New("POCKETBASE_ENCRYPTION_KEY must be exactly 32 bytes long- See https://wanderer.to/run/installation/#prerequisites for more information"))
+	}
+
+	if encryptionKey == defaultPocketBaseEncryptionKey {
+		errs = append(errs, errors.New("POCKETBASE_ENCRYPTION_KEY is still set to the default value. Please change it to a secure value"))
 	}
 
 	meiliMasterKey := os.Getenv("MEILI_MASTER_KEY")
 
-	if len(meiliMasterKey) == 0 || len(meiliMasterKey) < 32 {
-		app.Logger().Warn("MEILI_MASTER_KEY not set or is shorter than 32 bytes")
+	if len(meiliMasterKey) < 32 {
+		errs = append(errs, errors.New("MEILI_MASTER_KEY not set or is shorter than 32 bytes"))
 	}
 
 	if meiliMasterKey == defaultMeiliMasterKey {
-		app.Logger().Warn("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value.")
+		errs = append(errs, errors.New("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value"))
 	}
+
+	return errors.Join(errs...)
 }
 
 func main() {
@@ -59,7 +71,9 @@ func main() {
 	app := pocketbase.New()
 	client := initializeMeiliSearch()
 
-	verifySettings(app)
+	if err := verifySettings(); err != nil {
+		log.Fatal("Configuration error: ", err)
+	}
 
 	registerMigrations(app)
 	setupEventHandlers(app, client)
