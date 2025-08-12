@@ -101,8 +101,6 @@
     import { z } from "zod";
     import Track from "$lib/models/gpx/track.js";
     import TrackSegment from "$lib/models/gpx/track-segment.js";
-  import type { LongitudeField } from "activitypub-types";
-  import { ListCreateSchema } from "$lib/models/api/list_schema.js";
 
     let { data } = $props();
 
