@@ -74,7 +74,7 @@
     } from "$lib/components/base/search.svelte";
     import RouteEditor from "$lib/components/trail/route_editor.svelte";
     import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
-    import { convertDMSToDD } from "$lib/models/gpx/utils.js";
+    import { convertDMSToDD, haversineDistance } from "$lib/models/gpx/utils.js";
     import { Tag } from "$lib/models/tag.js";
     import {
         searchLocationReverse,
@@ -101,6 +101,8 @@
     import { z } from "zod";
     import Track from "$lib/models/gpx/track.js";
     import TrackSegment from "$lib/models/gpx/track-segment.js";
+  import type { LongitudeField } from "activitypub-types";
+  import { ListCreateSchema } from "$lib/models/api/list_schema.js";
 
     let { data } = $props();
 
@@ -1109,6 +1111,13 @@
         document.getElementById("waypoint-photo-input")!.click();
     }
 
+    class GPXCoord
+    {
+        longitude!: number;
+        latitude!: number;
+        photos: File[] | undefined;
+    }
+
     async function handleWaypointPhotoSelection() {
         const files = (
             document.getElementById("waypoint-photo-input") as HTMLInputElement
@@ -1118,8 +1127,10 @@
             return;
         }
 
+        const liCoords: GPXCoord[] = [];
+
         for (const file of files) {
-            const coords = await new Promise<number[]>((resolve) => {
+            const coords = await new Promise<GPXCoord | undefined>((resolve) => {
                 EXIF.getData(file, function (p) {
                     const lat = EXIF.getTag(p, "GPSLatitude");
                     const latDir = EXIF.getTag(p, "GPSLatitudeRef");
@@ -1127,22 +1138,19 @@
                     const lonDir = EXIF.getTag(p, "GPSLongitudeRef");
 
                     if (lat && lon) {
-                        resolve([
-                            convertDMSToDD(lat, latDir),
-                            convertDMSToDD(lon, lonDir),
-                        ]);
+                        var c = new GPXCoord();
+
+                        c.latitude = convertDMSToDD(lat, latDir);
+                        c.longitude = convertDMSToDD(lon, lonDir);
+                    
+                        resolve(c);
                     } else {
-                        resolve([]);
+                        resolve(undefined);
                     }
                 });
             });
-            if (coords.length) {
-                const wp: Waypoint = new Waypoint(coords[0], coords[1], {
-                    icon: "image",
-                });
-                wp._photos = [file];
-                saveWaypoint(wp);
-            } else {
+
+            if (!coords) {
                 show_toast(
                     {
                         type: "warning",
@@ -1151,7 +1159,41 @@
                     },
                     10000,
                 );
+                continue;
             }
+
+            var found = false;
+            if (liCoords.length > 0) {
+                for (let refCoords of liCoords) {
+                    const distance = haversineDistance(refCoords.latitude, refCoords.longitude, coords.latitude, coords.longitude);
+
+                    if (distance < 500) {
+                        found = true;
+                        if (!refCoords.photos) {
+                            refCoords.photos = [];
+                        }
+                        refCoords.photos.push(file);
+                        break;
+                    }
+                }
+            } 
+            
+            if (found === false) {
+                coords.photos = [file];
+                liCoords.push(coords);
+            }
+        }
+
+        for (const coords of liCoords) {
+            if (!coords.photos) {
+                continue;
+            }
+
+            const wp: Waypoint = new Waypoint(coords.latitude, coords.longitude, {
+                icon: coords.photos.length > 1 ? "images" : "image",
+            });
+            wp._photos = coords.photos;
+            saveWaypoint(wp);
         }
     }
 

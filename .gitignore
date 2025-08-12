@@ -12,3 +12,9 @@ build*.sh
 start.*
 
 data*/
+node_modules/*
+
+start_web.bat
+start_db.bat
+package-lock.json
+package.json
