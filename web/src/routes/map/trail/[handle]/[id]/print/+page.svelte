@@ -615,7 +615,7 @@
         >
             <div class="basis-full">
                 <MapWithElevationMaplibre
-                    trails={[$trail]}
+                    trails={[ $trail, ...page.data.alternativeTrails ]}
                     waypoints={$trail.expand?.waypoints}
                     activeTrail={0}
                     onzoom={updateScale}
