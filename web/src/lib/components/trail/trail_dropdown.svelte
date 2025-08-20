@@ -192,7 +192,7 @@
             if (hasTrail()) {
                 window
                     .open(
-                        `https://www.google.com/maps/dir/Current+Location/${trail()!.lat},${trail()!.lon}`,
+                        `https://www.openstreetmap.org/directions?to=${trail()!.lat},${trail()!.lon}`,
                         "_blank",
                     )
                     ?.focus();
