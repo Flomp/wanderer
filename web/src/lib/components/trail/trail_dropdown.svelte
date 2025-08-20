@@ -22,6 +22,7 @@
     import TrailShareModal from "./trail_share_modal.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
     import type { Snippet } from "svelte";
+    import { page } from "$app/state";
 
     interface Props {
         trails?: Set<Trail> | undefined;
@@ -44,6 +45,7 @@
         return (
             hasTrail() &&
             !isMultiselectMode() &&
+            Boolean($currentUser) &&
             (trail()!.expand?.author?.id === $currentUser?.actor ||
                 trail()!.expand?.trail_share_via_trail?.some(
                     (s) => s.permission == "edit",
@@ -143,6 +145,9 @@
     }
 
     function isFromCurrentUser(uTrail?: Trail): boolean {
+        if (!$currentUser) {
+            return false;
+        }
         if (uTrail !== undefined) {
             return uTrail.expand?.author?.id === $currentUser?.actor;
         } else if (trails !== undefined && trails.size > 0) {
@@ -169,14 +174,16 @@
             return;
         }
 
-        const handle = handleFromRecordWithIRI(trail());
+        const handle = page.params.handle
 
         if (item.value == "show") {
             if (hasTrail()) {
-                goto(
-                    mode == "overview" || mode == "multi-select"
+                const url = mode == "overview" || mode == "multi-select"
                         ? `/map/trail/${handle}/${trailId()}`
-                        : `/trail/view/${handle}/${trailId()}`,
+                        : `/trail/view/${handle}/${trailId()}`
+                
+                goto(
+                    url + '?' + page.url.searchParams
                 );
             }
         } else if (item.value == "list") {
@@ -199,7 +206,7 @@
             }
         } else if (item.value == "print") {
             if (hasTrail()) {
-                goto(`/map/trail/${handle}/${trailId()}/print`);
+                goto(`/map/trail/${handle}/${trailId()}/print?${page.url.searchParams}`);
             }
         } else if (item.value == "share") {
             trailShareModal.openModal();

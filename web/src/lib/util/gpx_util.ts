@@ -81,7 +81,7 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
     if (!trail.expand?.gpx_data) {
         // no gpx_data -> empty trail?
         // or just not expanded? -> expand now
-        const response = await trails_show(trail.id!, handleFromRecordWithIRI(trail), true);
+        const response = await trails_show(trail.id!, handleFromRecordWithIRI(trail), undefined, true);
 
         if (!response.expand?.gpx_data) {
             throw Error("Trail has no GPX data")

@@ -133,12 +133,12 @@ export async function trails_search_bounding_box(northEast: M.LngLat, southWest:
 
 }
 
-export async function trails_show(id: string, handle?: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_show(id: string, handle?: string, share?: string, loadGPX?: boolean, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const r = await f(`/api/v1/trail/${id}?` + new URLSearchParams({
         expand: "category,waypoints,summit_logs_via_trail,summit_logs_via_trail.author,trail_share_via_trail.actor,trail_like_via_trail,tags,author",
-        ...(handle ? { handle } : {})
-
+        ...(handle ? { handle } : {}),
+        ...(share ? { share } : {})
     }), {
         method: 'GET',
     })
