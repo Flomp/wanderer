@@ -319,7 +319,7 @@
 
         try {
             const prevId = $formData.id;
-            const parseResult = gpx2trail(gpxData, selectedFile.name);
+            const parseResult = await gpx2trail(gpxData, selectedFile.name);
             setFields(parseResult.trail);
             $formData.id = prevId ?? cryptoRandomString({ length: 15 });
             $formData.expand!.gpx_data = gpxData;

@@ -18,18 +18,21 @@ import { handleFromRecordWithIRI } from "./activitypub_util";
 import { Waypoint } from "$lib/models/waypoint";
 
 
-export function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function gpx2trail(gpxString: string, fallbackName?: string, correctElevation: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
     const gpx = GPX.parse(gpxString);
 
     if (gpx instanceof Error) {
         throw gpx;
     }
-    // try {
-    //     await gpx.correctElevation(f)
-    // } catch(e) {
-    //     console.warn("Unable to correct elevation: " + e)
-    // }
+    if (correctElevation) {
+        try {
+            await gpx.correctElevation(f)
+        } catch (e) {
+            console.warn("Unable to correct elevation: " + e)
+        }
+    }
+
 
     const trail = new Trail("");
 
