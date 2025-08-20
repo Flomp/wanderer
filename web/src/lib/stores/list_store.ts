@@ -133,7 +133,7 @@ export async function lists_create(list: List, avatar?: File) {
 
 export async function lists_update(list: List, avatar?: File) {
 
-    const formData = objectToFormData(list)
+    const formData = objectToFormData(list, [ "expand" ])
 
     if (avatar) {
         formData.append("avatar", avatar);
