@@ -1,3 +1,9 @@
+/**
+ * Component adapted from: https://github.com/gpxstudio/gpx.studio/blob/main/website/src/lib/components/layer-control/OverpassLayer.ts
+ * Original author: @vcoppe
+ * License: MIT
+ */
+
 import { createOverpassPopup } from "$lib/util/maplibre_util";
 import * as M from "maplibre-gl";
 import { type LngLatBounds, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";

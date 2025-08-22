@@ -125,9 +125,14 @@ export class LayerManager {
                     this.map.on('mouseleave', id, listener.onLeave);
                 }
 
-                if (listener.onMouseDown && !this.addedListeners.has("click-" + id)) {
-                    this.addedListeners.add("click-" + id)
-                    this.map.on('click', id, listener.onMouseDown);
+                if (listener.onMouseDown && !this.addedListeners.has("mousedown-" + id)) {
+                    this.addedListeners.add("mousedown-" + id)
+                    this.map.on('mousedown', id, listener.onMouseDown);
+                }
+
+                if (listener.onMouseUp && !this.addedListeners.has("mouseup-" + id)) {
+                    this.addedListeners.add("mouseup-" + id)
+                    this.map.on('mouseup', id, listener.onMouseUp);
                 }
 
                 if (listener.onMouseMove && !this.addedListeners.has("mousemove-" + id)) {
@@ -188,7 +193,7 @@ export class LayerManager {
     }
 
     private restoreLayers() {
-        for (const [id, layer] of Object.entries(this.layers)) {           
+        for (const [id, layer] of Object.entries(this.layers)) {
             this.addLayer(id, layer)
         }
     }

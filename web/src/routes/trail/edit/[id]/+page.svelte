@@ -811,9 +811,7 @@
             if (previousRouteSegment) {
                 editRoute(anchorIndex - 1, previousRouteSegment);
             }
-            if ($formData.expand?.gpx_data) {
-                updateTrailWithRouteData();
-            }
+            updateTrailWithRouteData();
             normalizeRouteTime();
         } catch (e) {
             console.error(e);
@@ -1044,10 +1042,10 @@
         overwriteGPX = true;
         updateTotals(valhallaStore.route);
 
-        updateTrailOnMap();
         if (!$formData.id) {
             $formData.id = cryptoRandomString({ length: 15 });
         }
+        updateTrailOnMap();
     }
 
     function updateTotals(gpx: GPX) {
@@ -1061,7 +1059,7 @@
         });
     }
 
-    function updateTrailOnMap() {       
+    function updateTrailOnMap() {
         const t: Trail = JSON.parse(JSON.stringify($formData));
         t.expand!.gpx = valhallaStore.route;
         mapTrail = [t];
