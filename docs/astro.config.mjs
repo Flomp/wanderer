@@ -92,6 +92,7 @@ export default defineConfig({
           },
           {
             label: 'Backend configuration',
+            collapsed: true,
             items: [
               { label: 'Overview', link: '/run/backend-configuration/' },
               { label: 'SMTP', link: '/run/backend-configuration/smtp/' },
