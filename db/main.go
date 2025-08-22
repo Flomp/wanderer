@@ -931,7 +931,14 @@ func listFeedHandler() func(e *core.RecordsListRequestEvent) error {
 
 			errs := e.App.ExpandRecord(item, []string{"author"}, nil)
 			if len(errs) > 0 {
-				return fmt.Errorf("failed to expand: %v", errs)
+				return fmt.Errorf("failed to expand author: %v", errs)
+			}
+
+			if typ == string(util.TrailFeed) {
+				errs := e.App.ExpandRecord(item, []string{"category"}, nil)
+				if len(errs) > 0 {
+					return fmt.Errorf("failed to expand category: %v", errs)
+				}
 			}
 
 			r.MergeExpand(map[string]any{"item": item})
