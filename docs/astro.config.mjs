@@ -92,21 +92,18 @@ export default defineConfig({
           },
           {
             label: 'Backend configuration',
-            link: '/run/backend-configuration/'
-          },
-          {
-            label: 'Custom categories',
-            link: '/run/custom-categories/'
-          },
-          {
-            label: 'Backing up your server',
-            link: '/run/backup-server/'
-          },
-          {
-            label: 'Changelog',
-            link: '/run/changelog/'
-          }]
-      }, {
+            collapsed: true,
+            items: [
+              { label: 'Overview', link: '/run/backend-configuration/' },
+              { label: 'SMTP', link: '/run/backend-configuration/smtp/' },
+              { label: 'OAuth2', link: '/run/backend-configuration/oauth2/' },
+              { label: 'Backing up your server', link: '/run/backend-configuration/backup-server/' },
+              { label: 'Custom categories', link: '/run/backend-configuration/custom-categories/' },
+            ]
+          }
+        ]
+      },
+      {
         label: 'Develop wanderer',
         items: [
           {
@@ -123,12 +120,21 @@ export default defineConfig({
           },
         ]
       },
-      ...openAPISidebarGroups,],
+      ...openAPISidebarGroups,
+      {
+        label: 'Changelog',
+        link: '/changelog/',
+      }],
     customCss: ['./src/custom.css', './src/tailwind.css', '@fontsource/ibm-plex-sans/400.css', '@fontsource/ibm-plex-sans/600.css', '@fontsource/ibm-plex-mono/400.css', '@fontsource/ibm-plex-mono/600.css']
   }), svelte()],
   output: "server",
   vite: { plugins: [tailwindcss()] },
   adapter: node({
     mode: "standalone"
-  })
+  }),
+  redirects: {
+    '/run/changelog/': '/changelog/',
+    '/run/backup-server/': '/run/backend-configuration/backup-server/',
+    '/run/custom-categories/': '/run/backend-configuration/custom-categories/',
+  },
 });
