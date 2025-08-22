@@ -150,7 +150,7 @@
     {/if}
     <div class="p-4">
         <div>
-            <h4 class="font-semibold text-lg line-clamp-2">{trail.name}</h4>
+            <h4 class="font-semibold text-lg line-clamp-2 wrap-anywhere">{trail.name}</h4>
             {#if trail.date}
                 <p class="text-xs text-gray-500 mb-3">
                     {new Date(trail.date).toLocaleDateString(undefined, {

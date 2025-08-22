@@ -353,7 +353,7 @@
                         title={trail.name}
                         class="{mode == 'map'
                             ? 'text-4xl'
-                            : 'text-5xl'} font-bold line-clamp-3 mb-1"
+                            : 'text-5xl'} font-bold line-clamp-3 mb-1 wrap-anywhere"
                         style="line-height: 1.18"
                     >
                         {trail.name}

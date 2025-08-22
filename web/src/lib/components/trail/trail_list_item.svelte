@@ -82,7 +82,7 @@
     </div>
     <div class="min-w-0 basis-full relative">
         <div class="flex items-center justify-between">
-            <h4 class="font-semibold text-lg">
+            <h4 class="font-semibold text-lg line-clamp-2 wrap-anywhere">
                 {trail.name}
             </h4>
             <div class="flex items-center shrink-0 gap-3">
