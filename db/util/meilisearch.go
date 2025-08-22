@@ -42,10 +42,10 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		category = trailCategory.GetString("name")
 	}
 
-	// polyline, err := getPolyline(app, r)
-	// if err != nil {
-	// 	polyline = ""
-	// }
+	polyline, err := getPolyline(app, r)
+	if err != nil {
+		polyline = ""
+	}
 
 	domain := ""
 	if !author.GetBool("isLocal") {
@@ -78,9 +78,9 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		"thumbnail":      thumbnail,
 		"gpx":            r.GetString("gpx"),
 		"tags":           tags,
-		// "polyline":       polyline,
-		"domain": domain,
-		"iri":    r.GetString("iri"),
+		"polyline":       polyline,
+		"domain":         domain,
+		"iri":            r.GetString("iri"),
 		"_geo": map[string]float64{
 			"lat": r.GetFloat("lat"),
 			"lng": r.GetFloat("lon"),
