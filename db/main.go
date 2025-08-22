@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -40,30 +39,28 @@ const (
 
 // verifySettings checks if the required environment variables are set.
 // If they are not set, it logs a warning.
-func verifySettings() error {
+func verifySettings(app core.App) {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 
-	var errs []error
-
 	if len(encryptionKey) != 32 {
-		errs = append(errs, errors.New("POCKETBASE_ENCRYPTION_KEY must be exactly 32 bytes long- See https://wanderer.to/run/installation/#prerequisites for more information"))
+		// terminate if the encryption key is not set or is not exactly 32 bytes long,
+		// as this is a requirement for PocketBase to function properly.
+		log.Fatal("POCKETBASE_ENCRYPTION_KEY must be exactly 32 bytes long- See https://wanderer.to/run/installation/#prerequisites for more information")
 	}
 
 	if encryptionKey == defaultPocketBaseEncryptionKey {
-		errs = append(errs, errors.New("POCKETBASE_ENCRYPTION_KEY is still set to the default value. Please change it to a secure value"))
+		app.Logger().Warn("POCKETBASE_ENCRYPTION_KEY is still set to the default value. Please change it to a secure value")
 	}
 
 	meiliMasterKey := os.Getenv("MEILI_MASTER_KEY")
 
 	if len(meiliMasterKey) < 32 {
-		errs = append(errs, errors.New("MEILI_MASTER_KEY not set or is shorter than 32 bytes"))
+		app.Logger().Warn("MEILI_MASTER_KEY not set or is shorter than 32 bytes")
 	}
 
 	if meiliMasterKey == defaultMeiliMasterKey {
-		errs = append(errs, errors.New("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value"))
+		app.Logger().Warn("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value")
 	}
-
-	return errors.Join(errs...)
 }
 
 func main() {
@@ -71,9 +68,7 @@ func main() {
 	app := pocketbase.New()
 	client := initializeMeiliSearch()
 
-	if err := verifySettings(); err != nil {
-		log.Fatal("Configuration error: ", err)
-	}
+	verifySettings(app)
 
 	registerMigrations(app)
 	setupEventHandlers(app, client)
