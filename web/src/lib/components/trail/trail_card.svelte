@@ -66,7 +66,7 @@
 </script>
 
 <div
-    class="trail-card relative rounded-2xl border border-input-border min-w-72 h-[386px] {fullWidth
+    class="trail-card relative rounded-2xl border border-input-border min-w-72 h-[386px] bg-background {fullWidth
         ? ''
         : 'lg:w-72'} cursor-pointer flex flex-col"
     class:bg-secondary-hover={selected}

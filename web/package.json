@@ -66,6 +66,7 @@
     "jspdf": "^2.5.1",
     "jszip": "^3.10.1",
     "maplibre-gl": "^4.7.1",
+    "marked": "^16.2.0",
     "meilisearch": "^0.37.0",
     "ngeohash": "^0.6.3",
     "nouislider": "^15.7.1",
