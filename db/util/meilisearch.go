@@ -14,7 +14,7 @@ import (
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/twpayne/go-gpx"
+	"github.com/tkrajina/gpxgo/gpx"
 	"github.com/twpayne/go-polyline"
 )
 
@@ -120,15 +120,17 @@ func getPolyline(app core.App, r *core.Record) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	gpxData, err := gpx.Read(content)
+	gpxData, err := gpx.Parse(content)
 	if err != nil {
 		return "", err
 	}
+
+	gpxData.SimplifyTracks(50)
 	coordinates := make([][]float64, 4)
-	for _, trk := range gpxData.Trk {
-		for _, seg := range trk.TrkSeg {
-			for _, pt := range seg.TrkPt {
-				coordinates = append(coordinates, []float64{pt.Lat, pt.Lon})
+	for _, trk := range gpxData.Tracks {
+		for _, seg := range trk.Segments {
+			for _, pt := range seg.Points {
+				coordinates = append(coordinates, []float64{pt.Latitude, pt.Longitude})
 			}
 		}
 	}

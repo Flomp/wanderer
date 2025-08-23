@@ -398,8 +398,21 @@
         if (!geojson || !map || !map.style) {
             return;
         }
-
-        layerManager.addLayer("preview", new PreviewLayer(geojson));
+        layerManager.addLayer(
+            "preview",
+            new PreviewLayer(map, geojson, {
+                preview: {
+                    onEnter: (e) => {
+                        const trail = trails.find(t => t.id === (e as any).features[0].properties.trail)
+                        if(!trail) return;
+                        highlightCluster(trail)
+                    },
+                    onLeave: (e) => {
+                        unHighlightCluster()
+                    }
+                },
+            }),
+        );
     }
 
     function moveCrosshairToCursorPosition(e: M.MapMouseEvent) {

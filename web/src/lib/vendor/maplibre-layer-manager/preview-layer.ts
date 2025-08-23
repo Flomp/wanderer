@@ -1,11 +1,31 @@
-import type { StyleSpecification } from "maplibre-gl";
+import type { MapMouseEvent, StyleSpecification } from "maplibre-gl";
 import type { BaseLayer } from "./layers";
+import * as M from "maplibre-gl";
 
 export class PreviewLayer implements BaseLayer {
 
-    spec: StyleSpecification;
+    private map: M.Map;
 
-    constructor(geojson: GeoJSON.FeatureCollection) {
+    spec: StyleSpecification;
+    listeners: Record<string, { onMouseUp?: (e: MapMouseEvent) => void; onMouseDown?: (e: MapMouseEvent) => void; onEnter?: (e: MapMouseEvent) => void; onLeave?: (e: MapMouseEvent) => void; onMouseMove?: (e: MapMouseEvent) => void; }> = {
+        "preview": {
+            onEnter: () => this.map!.getCanvas().style.cursor = "pointer",
+            onLeave: () => this.map!.getCanvas().style.cursor = ""
+        },
+        "preview-start-points": {
+            onEnter: () => this.map!.getCanvas().style.cursor = "pointer",
+            onLeave: () => this.map!.getCanvas().style.cursor = ""
+        }
+    };
+
+    constructor(map: M.Map, geojson: GeoJSON.FeatureCollection, listeners?: Record<string, { onMouseUp?: (e: MapMouseEvent) => void; onMouseDown?: (e: MapMouseEvent) => void; onEnter?: (e: MapMouseEvent) => void; onLeave?: (e: MapMouseEvent) => void; onMouseMove?: (e: MapMouseEvent) => void; }>) {
+        
+        this.map = map;
+        this.listeners = {
+            "preview": { ...this.listeners["preview"], ...listeners?.["preview"] },
+            "preview-start-points": { ...this.listeners["preview-start-points"], ...listeners?.["preview-start-points"] }
+        }
+
         const startPoints: GeoJSON.FeatureCollection = {
             type: "FeatureCollection",
             features: geojson.features.map((f, i) => ({
@@ -28,7 +48,7 @@ export class PreviewLayer implements BaseLayer {
                     type: "geojson",
                     data: geojson,
                 },
-                "preview-start-point": {
+                "preview-start-points": {
                     type: "geojson",
                     data: startPoints,
                 }
@@ -45,9 +65,9 @@ export class PreviewLayer implements BaseLayer {
                     },
                 },
                 {
-                    id: "preview-start-point",
+                    id: "preview-start-points",
                     type: "circle",
-                    source: "preview-start-point",
+                    source: "preview-start-points",
                     minzoom: 10,
                     paint: {
                         "circle-color": "#242734",

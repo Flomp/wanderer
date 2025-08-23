@@ -1,7 +1,6 @@
 package komoot
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -17,7 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
-	"github.com/twpayne/go-gpx"
+	"github.com/tkrajina/gpxgo/gpx"
 )
 
 func SyncKomoot(app core.App) error {
@@ -438,35 +437,36 @@ func fetchPhoto(url string, width string, height string) (*filesystem.File, erro
 }
 
 func generateTourGPX(detailedTour *DetailedKomootTour) (*filesystem.File, error) {
-	var points []*gpx.WptType
+	var points []gpx.GPXPoint
 
 	for _, item := range detailedTour.Embedded.Coordinates.Items {
 		t := detailedTour.Date.Unix() + int64(item.T/1000)
 
-		points = append(points, &gpx.WptType{Lat: item.Lat, Lon: item.Lng, Ele: item.Alt, Time: time.Unix(t, 0)})
+		points = append(points, gpx.GPXPoint{
+			Point:     gpx.Point{Latitude: item.Lat, Longitude: item.Lng, Elevation: *gpx.NewNullableFloat64(item.Alt)},
+			Timestamp: time.Unix(t, 0)})
 	}
 
-	gpx := &gpx.GPX{
+	gpxData := &gpx.GPX{
 		Version: "1.1",
 		Creator: "komoot GPX Exporter",
-		Trk: []*gpx.TrkType{
+		Tracks: []gpx.GPXTrack{
 			{
 				Name: detailedTour.Name,
-				TrkSeg: []*gpx.TrkSegType{
+				Segments: []gpx.GPXTrackSegment{
 					{
-						TrkPt: points,
+						Points: points,
 					},
 				},
 			},
 		},
 	}
-	var buf bytes.Buffer
-	err := gpx.Write(&buf)
+	gpxAsXML, err := gpxData.ToXml(gpx.ToXmlParams{Version: "1.1", Indent: true})
 	if err != nil {
 		return nil, err
 	}
 
-	gpxFile, err := filesystem.NewFileFromBytes(buf.Bytes(), detailedTour.Name+".gpx")
+	gpxFile, err := filesystem.NewFileFromBytes(gpxAsXML, detailedTour.Name+".gpx")
 	if err != nil {
 		return nil, err
 	}
