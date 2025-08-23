@@ -19,7 +19,7 @@ export class PreviewLayer implements BaseLayer {
     };
 
     constructor(map: M.Map, geojson: GeoJSON.FeatureCollection, listeners?: Record<string, { onMouseUp?: (e: MapMouseEvent) => void; onMouseDown?: (e: MapMouseEvent) => void; onEnter?: (e: MapMouseEvent) => void; onLeave?: (e: MapMouseEvent) => void; onMouseMove?: (e: MapMouseEvent) => void; }>) {
-        
+
         this.map = map;
         this.listeners = {
             "preview": { ...this.listeners["preview"], ...listeners?.["preview"] },
@@ -74,6 +74,34 @@ export class PreviewLayer implements BaseLayer {
                         "circle-radius": 6,
                         "circle-stroke-width": 2,
                         "circle-stroke-color": "#fff",
+                    },
+                },
+                {
+                    id: "preview-direction-carets",
+                    type: "symbol",
+                    source: "preview",
+                    minzoom: 10,
+                    layout: {
+                        "symbol-placement": "line",
+                        "symbol-spacing": [
+                            "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"],
+                            0,
+                            80,
+                            18,
+                            200,
+                        ],
+                        "icon-image": "direction-caret",
+                        "icon-size": [
+                            "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"],
+                            0,
+                            0.5,
+                            18,
+                            0.8,
+                        ],
                     },
                 }
             ]
