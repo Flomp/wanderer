@@ -10,7 +10,7 @@ body:
     id: what-happened
     attributes:
       label: What happened?
-      description: Also tell us, what did you expect to happen?
+      description: Also, please tell us what you expected to happen. Please convert .gpx files to .txt and attach them when appropriate.
       placeholder: Tell us what you see!
     validations:
       required: true
