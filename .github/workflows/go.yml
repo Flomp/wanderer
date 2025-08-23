@@ -1,8 +1,15 @@
 name: Go
 
 on:
-  push: { branches: [ main ] }
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/**'
+      - 'db/**'
   pull_request:
+    paths:
+      - '.github/**'
+      - 'db/**'
 
 jobs:
   db-test:
