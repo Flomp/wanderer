@@ -32,25 +32,34 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
-const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+const (
+	defaultPocketBaseEncryptionKey = "fde406459dc1f6ca6f348e1f44a9a2af"
+	defaultMeiliMasterKey          = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+)
 
 // verifySettings checks if the required environment variables are set.
 // If they are not set, it logs a warning.
 func verifySettings(app core.App) {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 
-	if len(encryptionKey) == 0 || len(encryptionKey) < 32 {
-		app.Logger().Warn("POCKETBASE_ENCRYPTION_KEY not set or is shorter than 32 bytes")
+	if len(encryptionKey) != 32 {
+		// terminate if the encryption key is not set or is not exactly 32 bytes long,
+		// as this is a requirement for PocketBase to function properly.
+		log.Fatal("POCKETBASE_ENCRYPTION_KEY must be exactly 32 bytes long- See https://wanderer.to/run/installation/#prerequisites for more information")
+	}
+
+	if encryptionKey == defaultPocketBaseEncryptionKey {
+		app.Logger().Warn("POCKETBASE_ENCRYPTION_KEY is still set to the default value. Please change it to a secure value")
 	}
 
 	meiliMasterKey := os.Getenv("MEILI_MASTER_KEY")
 
-	if len(meiliMasterKey) == 0 || len(meiliMasterKey) < 32 {
+	if len(meiliMasterKey) < 32 {
 		app.Logger().Warn("MEILI_MASTER_KEY not set or is shorter than 32 bytes")
 	}
 
 	if meiliMasterKey == defaultMeiliMasterKey {
-		app.Logger().Warn("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value.")
+		app.Logger().Warn("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value")
 	}
 }
 
