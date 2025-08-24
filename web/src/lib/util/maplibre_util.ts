@@ -173,6 +173,9 @@ export function createPopupFromTrail(trail: Trail) {
             ? emptyStateTrailLight
             : emptyStateTrailDark;
     const popup = new M.Popup({ maxWidth: "420px" });
+    if (!trail.expand?.author) {
+        return popup
+    }
     // Create a container element for the popup content
     const linkElement = document.createElement("a");
     linkElement.href = `/map/trail/${handleFromRecordWithIRI(trail)}/${trail.id}`; // Set href safely
