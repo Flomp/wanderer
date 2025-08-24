@@ -21,6 +21,7 @@ export class List {
         author?: Actor;
 
     }
+    created?: string;
     author: string;
 
     constructor(name: string, trails: Trail[], params?: { description?: string, public?: boolean, avatar?: string, author?: string }) {

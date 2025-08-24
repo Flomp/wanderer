@@ -59,7 +59,7 @@
 
 <svelte:window onscroll={onListScroll} />
 
-<div>
+<div style="min-height: 70vh">
     <h1 class="text-3xl font-semibold mb-4">{$_(page.params.type)}</h1>
     <ul class="space-y-4">
         {#each follows.items as follow}

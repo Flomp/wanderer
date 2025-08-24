@@ -137,6 +137,7 @@
         const fullTrail = await trails_show(
             trail.iri ? trail.iri.substring(trail.iri.length - 15) : trail.id!,
             handleFromRecordWithIRI(trail),
+            undefined,
             true,
         );
         selectedTrail = fullTrail;
@@ -251,7 +252,8 @@
                 disabled={!selectedList}
                 onclick={back}><i class="fa fa-arrow-left"></i></button
             >
-            <Search bind:value={filter.q} onupdate={() => updateFilter()}></Search>
+            <Search bind:value={filter.q} onupdate={() => updateFilter()}
+            ></Search>
             <button
                 aria-label="Toggle filter"
                 class="btn-icon"

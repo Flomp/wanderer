@@ -18,7 +18,9 @@ export async function GET(event: RequestEvent) {
             event.url.searchParams.delete("handle")
 
             const safeSearchParams = RecordOptionsSchema.parse(Object.fromEntries(event.url.searchParams));
-
+            if (event.url.searchParams.has("share")) {
+                safeSearchParams.query = { share: event.url.searchParams.get("share")! }
+            }
             let origin = new URL(actor.iri).origin
             let iri = `${origin}/api/v1/trail/${event.params.id}`
 

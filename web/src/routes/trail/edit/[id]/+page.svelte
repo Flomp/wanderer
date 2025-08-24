@@ -4,7 +4,6 @@
     import Datepicker from "$lib/components/base/datepicker.svelte";
     import Select from "$lib/components/base/select.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
-    import Textarea from "$lib/components/base/textarea.svelte";
     import Toggle from "$lib/components/base/toggle.svelte";
     import ListSelectModal from "$lib/components/list/list_select_modal.svelte";
     import SummitLogCard from "$lib/components/summit_log/summit_log_card.svelte";
@@ -17,6 +16,7 @@
     import { TrailCreateSchema } from "$lib/models/api/trail_schema.js";
     import { WaypointCreateSchema } from "$lib/models/api/waypoint_schema.js";
     import GPX from "$lib/models/gpx/gpx";
+    import GPXWaypoint from "$lib/models/gpx/waypoint";
     import type { List } from "$lib/models/list";
     import { SummitLog } from "$lib/models/summit_log";
     import { Trail } from "$lib/models/trail";
@@ -35,26 +35,31 @@
         trails_update,
     } from "$lib/stores/trail_store.js";
     import {
-        anchors,
+        valhallaStore,
         calculateRouteBetween,
+        clearAnchors,
         clearRoute,
         deleteFromRoute,
         editRoute,
         insertIntoRoute,
         normalizeRouteTime,
+        recalculateHeight,
         resetRoute,
         reverseRoute,
-        route,
         setRoute,
-    } from "$lib/stores/valhalla_store";
+        splitSegment,
+        undo,
+        redo,
+        clearUndoRedoStack,
+    } from "$lib/stores/valhalla_store.svelte.js";
     import { waypoint } from "$lib/stores/waypoint_store";
-    import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
+    import { getFileURL } from "$lib/util/file_util";
     import {
         formatDistance,
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { fromFile, gpx2trail } from "$lib/util/gpx_util";
+    import { cropGPX, fromFile, gpx2trail } from "$lib/util/gpx_util";
 
     import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
@@ -63,10 +68,11 @@
         type ComboboxItem,
     } from "$lib/components/base/combobox.svelte";
     import type { DropdownItem } from "$lib/components/base/dropdown.svelte";
+    import Editor from "$lib/components/base/editor.svelte";
     import Search, {
         type SearchItem,
     } from "$lib/components/base/search.svelte";
-    import RoutingOptionsPopup from "$lib/components/trail/routing_options_popup.svelte";
+    import RouteEditor from "$lib/components/trail/route_editor.svelte";
     import { TagCreateSchema } from "$lib/models/api/tag_schema.js";
     import { convertDMSToDD } from "$lib/models/gpx/utils.js";
     import { Tag } from "$lib/models/tag.js";
@@ -76,23 +82,25 @@
     } from "$lib/stores/search_store.js";
     import { tags_index } from "$lib/stores/tag_store.js";
     import { theme } from "$lib/stores/theme_store.js";
+    import { currentUser } from "$lib/stores/user_store.js";
     import { getIconForLocation } from "$lib/util/icon_util.js";
     import {
         createAnchorMarker,
         createEditTrailMapPopup,
+        FontawesomeMarker,
     } from "$lib/util/maplibre_util";
     import EXIF from "$lib/vendor/exif-js/exif.js";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
     import * as M from "maplibre-gl";
-    import { onMount, untrack } from "svelte";
+    import { onMount, tick, untrack } from "svelte";
     import { _ } from "svelte-i18n";
     import { backInOut } from "svelte/easing";
-    import { scale } from "svelte/transition";
+    import { fly, slide } from "svelte/transition";
     import { z } from "zod";
-    import { currentUser } from "$lib/stores/user_store.js";
-    import Editor from "$lib/components/base/editor.svelte";
+    import Track from "$lib/models/gpx/track.js";
+    import TrackSegment from "$lib/models/gpx/track-segment.js";
 
     let { data } = $props();
 
@@ -118,6 +126,11 @@
     let draggingMarker = false;
 
     let searchDropdownItems: SearchItem[] = $state([]);
+
+    let cropStartMarker: FontawesomeMarker;
+    let cropEndMarker: FontawesomeMarker;
+
+    let croppedGPX: GPX | null = null;
 
     const ClientTrailCreateSchema = TrailCreateSchema.extend({
         expand: z
@@ -191,6 +204,7 @@
                     photoFiles = [new File([blob], "route")];
                 }
 
+                form.expand!.gpx_data = valhallaStore.route.toString();
                 if (form.expand!.gpx_data && overwriteGPX) {
                     gpxFile = new Blob([form.expand!.gpx_data], {
                         type: "text/xml",
@@ -199,13 +213,13 @@
 
                 if (
                     (!form.lat || !form.lon) &&
-                    route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
+                    valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)
                 ) {
-                    form.lat = route.trk
+                    form.lat = valhallaStore.route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lat;
-                    form.lon = route.trk
+                    form.lon = valhallaStore.route.trk
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lon;
@@ -251,27 +265,30 @@
     });
 
     onMount(async () => {
-        clearAnchorMarker();
+        clearAnchors();
         clearRoute();
+        clearUndoRedoStack();
 
         if ($formData.expand!.gpx_data) {
-            const gpx = await GPX.parse($formData.expand!.gpx_data);
+            const gpx = GPX.parse($formData.expand!.gpx_data);
             if (!(gpx instanceof Error)) {
                 if (gpx.rte && !gpx.trk) {
                     gpx.trk = [
-                        {
+                        new Track({
                             trkseg: [
-                                {
+                                new TrackSegment({
                                     trkpt: gpx.rte?.at(0)?.rtept,
-                                },
+                                }),
                             ],
-                        },
+                        }),
                     ];
                     gpx.rte = undefined;
                 }
 
                 setRoute(gpx);
                 initRouteAnchors(gpx);
+
+                updateTrailOnMap();
             }
         }
     });
@@ -290,8 +307,10 @@
         }
 
         clearWaypoints();
-        clearAnchorMarker();
+        clearAnchors();
+        clearUndoRedoStack();
         clearRoute();
+        mapTrail = [];
         drawingActive = false;
         overwriteGPX = false;
 
@@ -304,6 +323,7 @@
             setFields(parseResult.trail);
             $formData.id = prevId ?? cryptoRandomString({ length: 15 });
             $formData.expand!.gpx_data = gpxData;
+
             setFields(
                 "category",
                 page.data.settings.category || $categories[0].id,
@@ -332,18 +352,20 @@
 
             if (parseResult.gpx.rte?.length && !parseResult.gpx.trk) {
                 parseResult.gpx.trk = [
-                    {
+                    new Track({
                         trkseg: [
-                            {
+                            new TrackSegment({
                                 trkpt: parseResult.gpx.rte?.at(0)?.rtept,
-                            },
+                            }),
                         ],
-                    },
+                    }),
                 ];
                 parseResult.gpx.rte = undefined;
             }
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
+
+            updateTrailOnMap();
         } catch (e) {
             console.error(e);
 
@@ -369,13 +391,7 @@
         $formData.waypoints = [];
     }
 
-    function clearAnchorMarker() {
-        for (const anchor of anchors) {
-            anchor.marker?.remove();
-        }
-    }
-
-    function initRouteAnchors(gpx: GPX) {
+    function initRouteAnchors(gpx: GPX, addToMap: boolean = false) {
         const segments = gpx.trk?.at(0)?.trkseg ?? [];
 
         for (let i = 0; i < segments.length; i++) {
@@ -386,16 +402,16 @@
                 addAnchor(
                     points[0].$.lat!,
                     points[0].$.lon!,
-                    anchors.length,
-                    false,
+                    valhallaStore.anchors.length,
+                    addToMap,
                 );
             }
             if (i == segments.length - 1) {
                 addAnchor(
                     points[points.length - 1].$.lat!,
                     points[points.length - 1].$.lon!,
-                    anchors.length,
-                    false,
+                    valhallaStore.anchors.length,
+                    addToMap,
                 );
             }
         }
@@ -545,34 +561,37 @@
             return;
         }
         drawingActive = true;
-        if (!route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.length) {
+        if (!valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.length) {
         }
-        for (const anchor of anchors) {
+        for (const anchor of valhallaStore.anchors) {
             anchor.marker?.addTo(map);
         }
     }
 
     async function stopDrawing() {
         drawingActive = false;
-        for (const anchor of anchors) {
+        for (const anchor of valhallaStore.anchors) {
             anchor.marker?.remove();
         }
+        toggleCropMarkers(false);
+        clearUndoRedoStack();
 
-        if (route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
-            $formData.lat = route.trk
+        if (valhallaStore.route.trk?.at(0)?.trkseg?.at(0)?.trkpt?.at(0)) {
+            $formData.lat = valhallaStore.route.trk
                 ?.at(0)
                 ?.trkseg?.at(0)
                 ?.trkpt?.at(0)?.$.lat;
-            $formData.lon = route.trk
+            $formData.lon = valhallaStore.route.trk
                 ?.at(0)
                 ?.trkseg?.at(0)
                 ?.trkpt?.at(0)?.$.lon;
         }
 
-        const r = await searchLocationReverse($formData.lat!, $formData.lon!);
-
-        if (r) {
-            setFields("location", r);
+        if ($formData.lat && $formData.lon) {
+            const r = await searchLocationReverse($formData.lat, $formData.lon);
+            if (r) {
+                setFields("location", r);
+            }
         }
     }
 
@@ -593,9 +612,13 @@
             });
             mapPopup.addTo(map!);
         } else {
-            const anchorCount = anchors.length;
+            const anchorCount = valhallaStore.anchors.length;
             if (anchorCount == 0) {
-                addAnchor(e.lngLat.lat, e.lngLat.lng, anchors.length);
+                addAnchor(
+                    e.lngLat.lat,
+                    e.lngLat.lng,
+                    valhallaStore.anchors.length,
+                );
             } else {
                 await addAnchorAndRecalculate(e.lngLat.lat, e.lngLat.lng);
             }
@@ -603,8 +626,9 @@
     }
 
     async function addAnchorAndRecalculate(lat: number, lon: number) {
-        const previousAnchor = anchors[anchors.length - 1];
-        const anchor = addAnchor(lat, lon, anchors.length);
+        const previousAnchor =
+            valhallaStore.anchors[valhallaStore.anchors.length - 1];
+        const anchor = addAnchor(lat, lon, valhallaStore.anchors.length);
         const markerText = startAnchorLoading(anchor);
         try {
             const routeWaypoints = await calculateRouteBetween(
@@ -645,10 +669,14 @@
             lon,
             index + 1,
             () => {
-                removeAnchor(anchors.findIndex((a) => a.id == anchor.id));
+                removeAnchor(
+                    valhallaStore.anchors.findIndex((a) => a.id == anchor.id),
+                );
             },
             () => {
-                const thisAnchor = anchors.find((a) => a.id == anchor.id);
+                const thisAnchor = valhallaStore.anchors.find(
+                    (a) => a.id == anchor.id,
+                );
                 addAnchorAndRecalculate(
                     thisAnchor?.lat ?? lat,
                     thisAnchor?.lon ?? lon,
@@ -662,12 +690,16 @@
                 if (!drawingActive) {
                     return;
                 }
-                const position = marker.getLngLat();
-                anchor.lat = position.lat;
-                anchor.lon = position.lng;
-                await recalculateRoute(
-                    anchors.findIndex((a) => a.id == anchor.id),
+                const anchorIndex = valhallaStore.anchors.findIndex(
+                    (a) => a.id == anchor.id,
                 );
+                const thisAnchor = valhallaStore.anchors[anchorIndex];
+                const position = marker.getLngLat();
+                thisAnchor.lat = position.lat;
+                thisAnchor.lon = position.lng;
+
+                await recalculateRoute(anchorIndex);
+
                 draggingMarker = false;
             },
         );
@@ -675,7 +707,7 @@
             marker.addTo(map);
         }
         anchor.marker = marker;
-        anchors.splice(index, 0, anchor);
+        valhallaStore.anchors.splice(index, 0, anchor);
 
         return anchor;
     }
@@ -709,10 +741,10 @@
         if (!drawingActive) {
             return;
         }
-        anchors[anchorIndex]?.marker?.remove();
-        anchors.splice(anchorIndex, 1);
-        for (let i = anchorIndex; i < anchors.length; i++) {
-            const anchor = anchors[i];
+        valhallaStore.anchors[anchorIndex]?.marker?.remove();
+        valhallaStore.anchors.splice(anchorIndex, 1);
+        for (let i = anchorIndex; i < valhallaStore.anchors.length; i++) {
+            const anchor = valhallaStore.anchors[i];
             const markerIcon = anchor.marker?.getElement();
             if (markerIcon) {
                 const markerText = markerIcon.textContent ?? "0";
@@ -730,7 +762,7 @@
             if ($formData.expand?.gpx_data) {
                 updateTrailWithRouteData();
             }
-        } else if (anchorIndex == anchors.length) {
+        } else if (anchorIndex == valhallaStore.anchors.length) {
             deleteFromRoute(anchorIndex - 1);
             updateTrailWithRouteData();
         } else {
@@ -740,17 +772,19 @@
     }
 
     async function recalculateRoute(anchorIndex: number) {
-        const markerText = startAnchorLoading(anchors[anchorIndex]);
+        const markerText = startAnchorLoading(
+            valhallaStore.anchors[anchorIndex],
+        );
 
-        const anchor = anchors[anchorIndex];
+        const anchor = valhallaStore.anchors[anchorIndex];
         if (!anchor) {
             return;
         }
         let nextRouteSegment;
         let previousRouteSegment;
         try {
-            if (anchorIndex < anchors.length - 1) {
-                const nextAnchor = anchors[anchorIndex + 1];
+            if (anchorIndex < valhallaStore.anchors.length - 1) {
+                const nextAnchor = valhallaStore.anchors[anchorIndex + 1];
 
                 nextRouteSegment = await calculateRouteBetween(
                     anchor.lat,
@@ -761,7 +795,7 @@
                 );
             }
             if (anchorIndex > 0) {
-                const previousAnchor = anchors[anchorIndex - 1];
+                const previousAnchor = valhallaStore.anchors[anchorIndex - 1];
                 previousRouteSegment = await calculateRouteBetween(
                     previousAnchor.lat,
                     previousAnchor.lon,
@@ -777,9 +811,7 @@
             if (previousRouteSegment) {
                 editRoute(anchorIndex - 1, previousRouteSegment);
             }
-            if ($formData.expand?.gpx_data) {
-                updateTrailWithRouteData();
-            }
+            updateTrailWithRouteData();
             normalizeRouteTime();
         } catch (e) {
             console.error(e);
@@ -789,7 +821,7 @@
                 type: "error",
             });
         } finally {
-            stopAnchorLoading(anchors[anchorIndex], markerText);
+            stopAnchorLoading(valhallaStore.anchors[anchorIndex], markerText);
         }
     }
 
@@ -806,23 +838,10 @@
             data.segment + 1,
         );
         const markerText = startAnchorLoading(anchor);
+        updateFollowingAnchors(data.segment);
 
-        for (let i = data.segment + 2; i < anchors.length; i++) {
-            const anchor = anchors[i];
-            const markerIcon = anchor.marker?.getElement();
-            if (markerIcon) {
-                const markerText = markerIcon.textContent ?? "0";
-                const markerIndex = parseInt(markerText);
-                const newIndex = markerIndex + 1;
-                markerIcon.textContent = newIndex + "";
-                anchor
-                    .marker!.getPopup()
-                    ._content.getElementsByTagName("h5")[0].textContent =
-                    $_("route-point") + " #" + newIndex;
-            }
-        }
-        const previousAnchor = anchors[data.segment];
-        const nextAnchor = anchors[data.segment + 2];
+        const previousAnchor = valhallaStore.anchors[data.segment];
+        const nextAnchor = valhallaStore.anchors[data.segment + 2];
 
         try {
             const previousRouteSegment = await calculateRouteBetween(
@@ -856,6 +875,38 @@
         }
     }
 
+    function updateFollowingAnchors(segment: number) {
+        for (let i = segment + 2; i < valhallaStore.anchors.length; i++) {
+            const anchor = valhallaStore.anchors[i];
+            const markerIcon = anchor.marker?.getElement();
+            if (markerIcon) {
+                const markerText = markerIcon.textContent ?? "0";
+                const markerIndex = parseInt(markerText);
+                const newIndex = markerIndex + 1;
+                markerIcon.textContent = newIndex + "";
+                anchor
+                    .marker!.getPopup()
+                    ._content.getElementsByTagName("h5")[0].textContent =
+                    $_("route-point") + " #" + newIndex;
+            }
+        }
+    }
+
+    async function handleSegmentClick(data: {
+        segment: number;
+        event: M.MapMouseEvent;
+    }) {
+        addAnchor(
+            data.event.lngLat.lat,
+            data.event.lngLat.lng,
+            data.segment + 1,
+        );
+
+        splitSegment(data.segment, data.event.lngLat);
+        updateFollowingAnchors(data.segment);
+        updateTrailWithRouteData();
+    }
+
     function reverseTrail() {
         reverseRoute();
 
@@ -864,26 +915,154 @@
 
     function resetTrail() {
         resetRoute();
-        
+
         updateTrailWithRouteData();
+    }
+
+    async function recalculateElevationData() {
+        await recalculateHeight();
+
+        updateTrailWithRouteData();
+    }
+
+    function toggleCropMarkers(active: boolean) {
+        if (active) {
+            cropStartMarker?.setOpacity("1");
+            cropEndMarker?.setOpacity("1");
+        } else {
+            cropStartMarker?.setOpacity("0");
+            cropEndMarker?.setOpacity("0");
+
+            updateTotals(valhallaStore.route);
+        }
+    }
+
+    function updateCropMarkers(range: [start: number, end: number]) {
+        if (!cropStartMarker || !cropEndMarker) {
+            cropStartMarker = new FontawesomeMarker(
+                {
+                    id: "crop-start-marker",
+                    icon: "fa-regular fa-circle",
+                    fontSize: "xs",
+                    style: "w-6",
+                    width: 4,
+                    backgroundColor: "bg-primary",
+                    fontColor: "white",
+                },
+                {},
+            );
+            cropEndMarker = new FontawesomeMarker(
+                {
+                    id: "crop-end-marker",
+                    icon: "fa fa-flag-checkered",
+                    fontSize: "xs",
+                    style: "w-6",
+                    width: 4,
+                    backgroundColor: "bg-primary",
+                    fontColor: "white",
+                },
+                {},
+            );
+
+            cropStartMarker.setLngLat([0, 0]).addTo(map!);
+            cropEndMarker.setLngLat([0, 0]).addTo(map!);
+        }
+        const [start, end] = range;
+
+        const flatRoute = valhallaStore.route.flatten();
+
+        const targetStartDistance =
+            valhallaStore.route.features.distance * (start / 100);
+        const [startLon, startLat, startIndex] = getCoordinateAtDistance(
+            flatRoute,
+            valhallaStore.route.features.cumulativeDistance,
+            targetStartDistance,
+        );
+
+        const targetEndDistance =
+            valhallaStore.route.features.distance * (end / 100);
+        const [endLon, endLat, endIndex] = getCoordinateAtDistance(
+            flatRoute,
+            valhallaStore.route.features.cumulativeDistance,
+            targetEndDistance,
+        );
+
+        cropStartMarker.setLngLat([startLon, startLat]);
+        cropEndMarker.setLngLat([endLon, endLat]);
+
+        croppedGPX = cropGPX(
+            flatRoute[startIndex],
+            flatRoute[endIndex],
+            valhallaStore.route,
+        );
+
+        updateTotals(croppedGPX);
+    }
+
+    function confirmCrop() {
+        if (!croppedGPX) {
+            return;
+        }
+        setRoute(croppedGPX, true);
+        updateTrailWithRouteData();
+        clearAnchors();
+        initRouteAnchors(croppedGPX, true);
+    }
+
+    function getCoordinateAtDistance(
+        points: GPXWaypoint[],
+        cumulative: number[],
+        target: number,
+    ) {
+        let low = 0,
+            high = cumulative.length - 1;
+
+        while (low < high) {
+            const mid = Math.floor((low + high) / 2);
+            if (cumulative[mid] < target) low = mid + 1;
+            else high = mid;
+        }
+
+        const i = Math.max(1, low);
+        const prevDist = cumulative[i - 1];
+        const nextDist = cumulative[i];
+        const ratio = (target - prevDist) / (nextDist - prevDist);
+
+        const prev = points[i - 1];
+        const next = points[i];
+
+        return [
+            prev.$.lon! + (next.$.lon! - prev.$.lon!) * ratio,
+            prev.$.lat! + (next.$.lat! - prev.$.lat!) * ratio,
+            i,
+        ];
     }
 
     function updateTrailWithRouteData() {
         overwriteGPX = true;
-        const totals = route.features;
-        $formData.distance = totals.distance;
-        $formData.duration = totals.duration / 1000;
-        $formData.elevation_gain = totals.elevationGain;
-        $formData.elevation_loss = totals.elevationLoss;
-        $formData.expand!.gpx_data = route.toString();
+        updateTotals(valhallaStore.route);
 
         if (!$formData.id) {
             $formData.id = cryptoRandomString({ length: 15 });
         }
+        updateTrailOnMap();
+    }
+
+    function updateTotals(gpx: GPX) {
+        const totals = gpx.features;
+        formData.set({
+            ...$formData,
+            distance: totals.distance,
+            duration: totals.duration / 1000,
+            elevation_gain: totals.elevationGain,
+            elevation_loss: totals.elevationLoss,
+        });
     }
 
     function updateTrailOnMap() {
-        mapTrail = [$formData as Trail];
+        const t: Trail = JSON.parse(JSON.stringify($formData));
+        t.expand!.gpx = valhallaStore.route;
+        mapTrail = [t];
     }
 
     function handleSearchClick(item: SearchItem) {
@@ -903,12 +1082,6 @@
             icon: getIconForLocation(h),
         }));
     }
-    let gpxData = $derived($formData.expand?.gpx_data);
-    $effect(() => {
-        if (gpxData) {
-            untrack(() => updateTrailOnMap());
-        }
-    });
 
     function getTrailTags() {
         return (
@@ -979,6 +1152,20 @@
             }
         }
     }
+
+    function undoRouteEdit() {
+        undo();
+        clearAnchors();
+        initRouteAnchors(valhallaStore.route, true);
+        updateTrailWithRouteData();
+    }
+
+    function redoRouteEdit() {
+        redo();
+        clearAnchors();
+        initRouteAnchors(valhallaStore.route, true);
+        updateTrailWithRouteData();
+    }
 </script>
 
 <svelte:head>
@@ -1021,7 +1208,13 @@
             <button
                 class="btn-primary"
                 type="button"
-                onclick={drawingActive ? stopDrawing : startDrawing}
+                onclick={async () => {
+                    if (drawingActive) {
+                        await stopDrawing();
+                    } else {
+                        startDrawing();
+                    }
+                }}
             >
                 {$formData.expand?.gpx_data
                     ? drawingActive
@@ -1288,15 +1481,21 @@
     <div class="relative">
         {#if drawingActive}
             <div
-                in:scale={{ easing: backInOut }}
-                out:scale={{ easing: backInOut }}
+                in:fly={{ easing: backInOut, x: -30 }}
+                out:fly={{ easing: backInOut, x: -30 }}
                 class="absolute top-8 left-2 z-50"
             >
-                <RoutingOptionsPopup
+                <RouteEditor
                     bind:options={routingOptions}
                     onReverse={reverseTrail}
                     onReset={resetTrail}
-                ></RoutingOptionsPopup>
+                    onCropToggle={toggleCropMarkers}
+                    onCrop={confirmCrop}
+                    onUpdateCropRange={updateCropMarkers}
+                    onRecalculateElevationData={recalculateElevationData}
+                    onUndo={undoRouteEdit}
+                    onRedo={redoRouteEdit}
+                ></RouteEditor>
             </div>
         {/if}
         <div id="trail-map">
@@ -1309,6 +1508,7 @@
                 activeTrail={0}
                 bind:map
                 onclick={(target) => handleMapClick(target)}
+                onsegmentclick={(data) => handleSegmentClick(data)}
                 onsegmentdragend={(data) => handleSegmentDragEnd(data)}
                 mapOptions={{ preserveDrawingBuffer: true }}
             ></MapWithElevationMaplibre>

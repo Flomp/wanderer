@@ -9,6 +9,7 @@
         currentMin?: any;
         currentMax?: any;
         onset?: (data: [number, number]) => void;
+        onupdate?: (data: [number, number]) => void;
     }
 
     let {
@@ -17,6 +18,7 @@
         currentMin = $bindable(minValue),
         currentMax = $bindable(maxValue),
         onset,
+        onupdate,
     }: Props = $props();
 
     let sliderContainer: any = $state();
@@ -25,6 +27,7 @@
         const updateValues = (values: string[]) => {
             currentMin = parseFloat(values[0]);
             currentMax = parseFloat(values[1]);
+            onupdate?.([currentMin, currentMax]);
         };
 
         noUiSlider.create(sliderContainer, {

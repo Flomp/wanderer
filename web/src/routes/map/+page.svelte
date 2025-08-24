@@ -46,7 +46,7 @@
     const maxBoundingBox: TrailBoundingBox = page.data.boundingBox;
     const settings: Settings = page.data.settings;
 
-    const MIN_ZOOM = 100;
+    const MIN_ZOOM = 10;
 
     let loading: boolean = $state(true);
     let loadingNextPage: boolean = false;
@@ -141,7 +141,6 @@
             loading = true;
         }
 
-        console.log(filter);
         const trailsInBox = await trails_search_bounding_box(
             northEast,
             southWest,
@@ -422,6 +421,7 @@
             oninit={handleMapInit}
             {trails}
             showElevation={false}
+            showTerrain={true}
             showInfoPopup={true}
             activeTrail={-1}
             fitBounds="off"

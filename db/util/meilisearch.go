@@ -14,7 +14,7 @@ import (
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/twpayne/go-gpx"
+	"github.com/tkrajina/gpxgo/gpx"
 	"github.com/twpayne/go-polyline"
 )
 
@@ -42,10 +42,10 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		category = trailCategory.GetString("name")
 	}
 
-	// polyline, err := getPolyline(app, r)
-	// if err != nil {
-	// 	polyline = ""
-	// }
+	polyline, err := getPolyline(app, r)
+	if err != nil {
+		polyline = ""
+	}
 
 	domain := ""
 	if !author.GetBool("isLocal") {
@@ -78,9 +78,9 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		"thumbnail":      thumbnail,
 		"gpx":            r.GetString("gpx"),
 		"tags":           tags,
-		// "polyline":       polyline,
-		"domain": domain,
-		"iri":    r.GetString("iri"),
+		"polyline":       polyline,
+		"domain":         domain,
+		"iri":            r.GetString("iri"),
 		"_geo": map[string]float64{
 			"lat": r.GetFloat("lat"),
 			"lng": r.GetFloat("lon"),
@@ -120,15 +120,17 @@ func getPolyline(app core.App, r *core.Record) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	gpxData, err := gpx.Read(content)
+	gpxData, err := gpx.Parse(content)
 	if err != nil {
 		return "", err
 	}
+
+	gpxData.SimplifyTracks(50)
 	coordinates := make([][]float64, 4)
-	for _, trk := range gpxData.Trk {
-		for _, seg := range trk.TrkSeg {
-			for _, pt := range seg.TrkPt {
-				coordinates = append(coordinates, []float64{pt.Lat, pt.Lon})
+	for _, trk := range gpxData.Tracks {
+		for _, seg := range trk.Segments {
+			for _, pt := range seg.Points {
+				coordinates = append(coordinates, []float64{pt.Latitude, pt.Longitude})
 			}
 		}
 	}

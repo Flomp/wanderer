@@ -1,6 +1,5 @@
 import GPX from "$lib/models/gpx/gpx";
 import { Trail } from "$lib/models/trail";
-import { Waypoint } from "$lib/models/waypoint";
 import { gpx, kml, tcx } from "$lib/vendor/toGeoJSON/toGeoJSON";
 import cryptoRandomString from "crypto-random-string";
 //@ts-ignore
@@ -16,20 +15,24 @@ import * as xmldom from 'xmldom';
 import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
 import { trails_show } from "$lib/stores/trail_store";
 import { handleFromRecordWithIRI } from "./activitypub_util";
+import { Waypoint } from "$lib/models/waypoint";
 
 
-export async function gpx2trail(gpxString: string, fallbackName?: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function gpx2trail(gpxString: string, fallbackName?: string, correctElevation: boolean = false, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
 
-    const gpx = await GPX.parse(gpxString);
+    const gpx = GPX.parse(gpxString);
 
     if (gpx instanceof Error) {
         throw gpx;
     }
-    try {
-        await gpx.correctElevation(f)
-    } catch(e) {
-        console.warn("Unable to correct elevation: " + e)
+    if (correctElevation) {
+        try {
+            await gpx.correctElevation(f)
+        } catch (e) {
+            console.warn("Unable to correct elevation: " + e)
+        }
     }
+
 
     const trail = new Trail("");
 
@@ -78,7 +81,7 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
     if (!trail.expand?.gpx_data) {
         // no gpx_data -> empty trail?
         // or just not expanded? -> expand now
-        const response = await trails_show(trail.id!, handleFromRecordWithIRI(trail), true);
+        const response = await trails_show(trail.id!, handleFromRecordWithIRI(trail), undefined, true);
 
         if (!response.expand?.gpx_data) {
             throw Error("Trail has no GPX data")
@@ -86,8 +89,8 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
             gpxTrail = response;
         }
     }
-    
-    const gpx = await GPX.parse(gpxTrail.expand!.gpx_data!) as GPX;
+
+    const gpx = GPX.parse(gpxTrail.expand!.gpx_data!);
 
     if (gpx instanceof Error) {
         throw gpx;
@@ -108,12 +111,12 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
     for (const wp of gpxTrail.expand!.waypoints ?? []) {
         const gpxWpt = gpx.wpt.find((w) => w.$.lat == wp.lat && w.$.lon == wp.lon)
         if (!gpxWpt) {
-            gpx.wpt.push({
+            gpx.wpt.push(new GPXWaypoint({
                 $: {
                     lat: wp.lat,
                     lon: wp.lon
                 }
-            })
+            }))
         }
     }
 
@@ -351,12 +354,44 @@ function isKMZFile(buffer: ArrayBuffer) {
     return blob[0] === 0x50 && blob[1] === 0x4B && blob[2] === 0x03 && blob[3] === 0x04;
 }
 
-export function toGeoJson(gpxData: string) {
-    const parser = browser ? new DOMParser() : new xmldom.DOMParser();
-    let geojson = gpx(
-        parser.parseFromString(gpxData, "text/xml"),
-    ) as GeoJSON;
-    geojson = splitMultiLineStringToLineStrings(geojson);
-    geojson.bbox = bbox(geojson)
-    return geojson
+export function cropGPX(start: GPXWaypoint, end: GPXWaypoint, gpx: GPX): GPX {
+    let foundStart = false;
+    let done = false;
+
+    const croppedTrk = gpx.trk?.map(track => {
+        const croppedSegments: TrackSegment[] = [];
+
+        track.trkseg?.forEach(seg => {
+            const newPoints: GPXWaypoint[] = [];
+
+            for (const pt of seg.trkpt ?? []) {
+                if (!foundStart) {
+                    if (pt === start) {
+                        foundStart = true;
+                        newPoints.push(pt);
+                    }
+                    continue;
+                }
+
+                if (foundStart && !done) {
+                    newPoints.push(pt);
+                    if (pt === end) {
+                        done = true;
+                        break;
+                    }
+                }
+            }
+
+            if (newPoints.length > 0) {
+                croppedSegments.push(new TrackSegment({ trkpt: newPoints }));
+            }
+        });
+
+        return {
+            ...track,
+            trkseg: croppedSegments,
+        };
+    }).filter(track => track.trkseg.length > 0);
+
+    return new GPX({ ...gpx, trk: croppedTrk?.map(t => new Track({ ...t })) ?? [], })
 }

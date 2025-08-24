@@ -89,13 +89,14 @@
             $data.distance = undefined;
             return;
         }
-        const gpxObject = await GPX.parse(trailData);
-        if (gpxObject instanceof Error) {
-            throw gpxObject;
+        const gpxObject = GPX.parse(trailData);
+        try {
+            await gpxObject.correctElevation();
+        } catch (e) {
+            console.warn("Unable to correct elevation: " + e);
         }
 
         const totals = gpxObject.features;
-
         $data.duration = totals.duration / 1000;
         $data.elevation_gain = totals.elevationGain;
         $data.elevation_loss = totals.elevationLoss;

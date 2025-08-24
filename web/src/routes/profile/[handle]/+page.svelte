@@ -3,23 +3,28 @@
     import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
-    import ActivityCard from "$lib/components/profile/activity_card.svelte";
+    import FeedCard from "$lib/components/profile/feed_card.svelte";
+    import type { FeedItem } from "$lib/models/feed.js";
 
-    import type { TimelineItem } from "$lib/models/timeline.js";
-    import { profile_timeline_index } from "$lib/stores/profile_store.js";
+    import { profile_feed_index } from "$lib/stores/profile_store.js";
     import { theme } from "$lib/stores/theme_store.js";
     import { getFileURL } from "$lib/util/file_util.js";
     import { _ } from "svelte-i18n";
 
     let { data } = $props();
 
-    let timeline = $derived(data.timeline);
+    $effect(() => {
+        data.feed;
+        feed = data.feed
+    })
+
+    let feed = $state(data.feed);
 
     let loading: boolean = false;
 
     let pagination = $derived({
-        page: 1,
-        totalPages: data.timeline.totalItems,
+        page: feed.page,
+        totalPages: feed.totalItems,
     });
 
     async function onListScroll(e: Event) {
@@ -37,22 +42,19 @@
 
     async function loadNextPage() {
         pagination.page += 1;
-        data.timeline = await profile_timeline_index(
-            data.actor.iri,
-            pagination.page,
-        );
+        feed = await profile_feed_index(page.params.handle, pagination.page);
     }
 
-    function handleTimeLineItemClick(item: TimelineItem) {
-        if (item.trail_iri.length) {
-            const originalTrailId = item.trail_iri.substring(
-                item.trail_iri.length - 15,
-            );
+    function handleFeedItemClick(f: FeedItem) {
+        const author = f.expand.item.expand?.author;
+        if (f.type == "trail") {
             goto(
-                `/trail/view/@${item.trail_author_username}@${item.trail_author_domain}/${item.trail_id}`,
+                `/trail/view/@${author?.preferred_username}@${author?.domain}/${f.item}`,
             );
         } else {
-            goto(`/trail/view/${page.params.handle}/${item.trail_id}`);
+            goto(
+                `/lists/@${author?.preferred_username}@${author?.domain}/${f.item}`,
+            );
         }
     }
 </script>
@@ -133,24 +135,24 @@
     </div>
     <div class="space-y-4">
         <h4 class="text-xl font-semibold">Timeline</h4>
-        {#if !timeline.items?.length && data.isOwnProfile}
+        {#if !feed.items?.length && data.isOwnProfile}
             <a class="btn-primary inline-block" href="/trails/edit/new"
                 >+ {$_("new-trail")}</a
             >
-        {:else if !timeline.items?.length}
+        {:else if !feed.items?.length}
             <p class="w-full text-center text-gray-500 text-sm">
                 {$_("empty-activities", {
                     values: { username: data.profile.preferredUsername },
                 })}
             </p>
         {/if}
-        {#each timeline.items as item}
+        {#each feed.items as item}
             <div
                 class="py-1 cursor-pointer"
                 role="presentation"
-                onclick={() => handleTimeLineItemClick(item)}
+                onclick={() => handleFeedItemClick(item)}
             >
-                <ActivityCard activity={item} actor={data.actor}></ActivityCard>
+                <FeedCard feedItem={item}></FeedCard>
             </div>
         {/each}
     </div>

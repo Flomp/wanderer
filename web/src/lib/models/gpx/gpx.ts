@@ -10,6 +10,7 @@ import geohash from "ngeohash"
 import { encodePolyline } from '$lib/util/polyline_util';
 import { APIError } from '$lib/util/api_util';
 import type { ValhallaHeightResponse } from '../valhalla';
+import { bbox } from '$lib/util/geojson_util';
 
 const defaultAttributes = {
   version: '1.1',
@@ -25,6 +26,7 @@ type GPXFeature = {
   centroid: { lat: number; lon: number };
   boundingBox: { minLat: number; maxLat: number; minLon: number; maxLon: number };
   distance: number;
+  cumulativeDistance: number[]
   elevationGain?: number;
   elevationLoss?: number;
   duration: number;
@@ -146,11 +148,26 @@ export default class GPX {
       centroid,
       boundingBox,
       distance: totalDistance,
+      cumulativeDistance: metrics.cumulativeDistance,
       elevationGain: totalElevationGain,
       elevationLoss: totalElevationLoss,
       duration: Math.abs(totalDuration),
       hash: this.generateMinHash(allPoints)
     }
+  }
+
+  flatten() {
+    const points: Waypoint[] = [];
+
+    this.trk?.forEach(track => {
+      track.trkseg?.forEach(segment => {
+        segment.trkpt?.forEach(pt => {
+          points.push(pt);
+        });
+      });
+    });
+
+    return points;
   }
 
   private generateMinHash(points: Waypoint[]): string {
@@ -194,31 +211,66 @@ export default class GPX {
     this.features = this.getTotals()
   }
 
-  static parse(gpxString: string): Promise<GPX | Error> {
+  static parse(gpxString: string): GPX {
     const sanitizedGPX = gpxString.replace(/\sxmlns=""/g, '').replace(/<!--[\s\S]*?-->/g, '');
 
-    return new Promise<GPX | Error>((resolve, reject) => xml2js.parseString(sanitizedGPX, {
-      explicitArray: false,
-      attrValueProcessors: [(str: string) => {
-        if (str.length && !isNaN(Number(str))) {
-          return Number.isInteger(Number(str)) ? parseInt(String(str), 10) : parseFloat(String(str));
+    return (function () {
+      let data = null, error = null;
+      xml2js.parseString(sanitizedGPX, {
+        explicitArray: false,
+        attrValueProcessors: [(str: string) => {
+          if (str.length && !isNaN(Number(str))) {
+            return Number.isInteger(Number(str)) ? parseInt(String(str), 10) : parseFloat(String(str));
+          }
+          return str;
         }
-        return str;
-      }
-      ]
-    }, async (err, xml) => {
-      if (err) {
-        reject(err);
-      }
-      const gpx = new GPX({
-        $: xml.gpx.$,
-        metadata: xml.gpx.metadata,
-        wpt: xml.gpx.wpt,
-        rte: xml.gpx.rte,
-        trk: xml.gpx.trk
+        ]
+      }, (err, xml) => {
+        error = err;
+        data = new GPX({
+          $: xml.gpx.$,
+          metadata: xml.gpx.metadata,
+          wpt: xml.gpx.wpt,
+          rte: xml.gpx.rte,
+          trk: xml.gpx.trk
+        });
       });
-      resolve(gpx)
-    }));
+      if (error) {
+        throw error
+      };
+      return data;
+    }()) as unknown as GPX;
+  }
+
+  toGeoJSON(includeRoute: boolean = false, includeWaypoints: boolean = false): GeoJSON.FeatureCollection {
+    const features: GeoJSON.Feature[] = [];
+
+    if (this.wpt && includeWaypoints) {
+      for (const wpt of this.wpt) {
+        features.push(wpt.toGeoJSON());
+      }
+    }
+
+    if (this.rte && includeRoute) {
+      for (const rte of this.rte) {
+        features.push(rte.toGeoJSON());
+      }
+    }
+
+    if (this.trk) {
+      for (const trk of this.trk) {
+        features.push(...trk.toGeoJSON());
+      }
+    }
+
+    let geojson: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features
+    };
+    
+    geojson.bbox = bbox(geojson)
+
+    return geojson
   }
 
   toString(options?: xml2js.BuilderOptions) {
@@ -227,6 +279,7 @@ export default class GPX {
 
     const builder = new xml2js.Builder(options)
     const gpx = new GPX(this);
+    (gpx as any).features = undefined
     allDatesToISOString(gpx);
 
     let xmlString = builder.buildObject(gpx);

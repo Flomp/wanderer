@@ -143,7 +143,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 
 	inbox := fmt.Sprintf("%s%s", origin, e.Request.Header.Get("X-Forwarded-Path"))
 
-	userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "inbox", inbox)
+	recipient, err := e.App.FindFirstRecordByData("activitypub_actors", "inbox", inbox)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 	actor, err := e.App.FindFirstRecordByData("activitypub_actors", "iri", activity.Actor.GetID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {
-			actor, err = GetActorByIRI(e.App, userActor, activity.Actor.GetID().String(), false)
+			actor, err = GetActorByIRI(e.App, recipient, activity.Actor.GetID().String(), false)
 			if err != nil {
 				return err
 			}
@@ -177,7 +177,7 @@ func ProcessActivity(e *core.RequestEvent) error {
 	case pub.UpdateType:
 		fallthrough
 	case pub.CreateType:
-		err = ProcessCreateOrUpdateActivity(e.App, actor, activity)
+		err = ProcessCreateOrUpdateActivity(e.App, actor, recipient, activity)
 	case pub.DeleteType:
 		err = ProcessDeleteActivity(e.App, actor, activity)
 	case pub.AnnounceType:

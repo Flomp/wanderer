@@ -149,7 +149,7 @@
                         <td
                             class="flex justify-between items-center text-sm relative"
                         >
-                            <div class="p-4 w-[75%]" title={trail.name}>
+                            <div class="p-4 w-[75%] line-clamp-2 wrap-anywhere" title={trail.name}>
                                 {trail.name}
                             </div>
                             <div class="flex flex-col items-center">

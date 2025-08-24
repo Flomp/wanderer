@@ -32,25 +32,34 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
-const defaultMeiliMasterKey = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+const (
+	defaultPocketBaseEncryptionKey = "fde406459dc1f6ca6f348e1f44a9a2af"
+	defaultMeiliMasterKey          = "vODkljPcfFANYNepCHyDyGjzAMPcdHnrb6X5KyXQPWo"
+)
 
 // verifySettings checks if the required environment variables are set.
 // If they are not set, it logs a warning.
 func verifySettings(app core.App) {
 	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
 
-	if len(encryptionKey) == 0 || len(encryptionKey) < 32 {
-		app.Logger().Warn("POCKETBASE_ENCRYPTION_KEY not set or is shorter than 32 bytes")
+	if len(encryptionKey) != 32 {
+		// terminate if the encryption key is not set or is not exactly 32 bytes long,
+		// as this is a requirement for PocketBase to function properly.
+		log.Fatal("POCKETBASE_ENCRYPTION_KEY must be exactly 32 bytes long- See https://wanderer.to/run/installation/#prerequisites for more information")
+	}
+
+	if encryptionKey == defaultPocketBaseEncryptionKey {
+		app.Logger().Warn("POCKETBASE_ENCRYPTION_KEY is still set to the default value. Please change it to a secure value")
 	}
 
 	meiliMasterKey := os.Getenv("MEILI_MASTER_KEY")
 
-	if len(meiliMasterKey) == 0 || len(meiliMasterKey) < 32 {
+	if len(meiliMasterKey) < 32 {
 		app.Logger().Warn("MEILI_MASTER_KEY not set or is shorter than 32 bytes")
 	}
 
 	if meiliMasterKey == defaultMeiliMasterKey {
-		app.Logger().Warn("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value.")
+		app.Logger().Warn("MEILI_MASTER_KEY is still set to the default value. Please change it to a secure value")
 	}
 }
 
@@ -119,6 +128,8 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterCreateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
 	app.OnRecordUpdate("integrations").BindFunc(updateIntegrationHandler())
 	app.OnRecordAfterUpdateSuccess("integrations").BindFunc(createUpdateIntegrationSuccessHandler())
+
+	app.OnRecordsListRequest("feed", "profile_feed").BindFunc(listFeedHandler())
 
 	app.OnRecordCreateRequest().BindFunc(sanitizeHTML())
 	app.OnRecordUpdateRequest().BindFunc(sanitizeHTML())
@@ -242,6 +253,11 @@ func createTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
+		_, err = util.InsertIntoFeed(e.App, author.Id, author.Id, record.Id, util.TrailFeed)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 }
@@ -293,6 +309,11 @@ func deleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		}
 
 		err = federation.CreateTrailDeleteActivity(e.App, e.Record)
+		if err != nil {
+			return err
+		}
+
+		err = util.DeleteFromFeed(e.App, record.Id)
 		if err != nil {
 			return err
 		}
@@ -616,6 +637,11 @@ func createListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
+		_, err = util.InsertIntoFeed(e.App, author.Id, author.Id, record.Id, util.ListFeed)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 }
@@ -663,6 +689,11 @@ func deleteListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 		}
 
 		err = federation.CreateListDeleteActivity(e.App, record)
+		if err != nil {
+			return err
+		}
+
+		err = util.DeleteFromFeed(e.App, record.Id)
 		if err != nil {
 			return err
 		}
@@ -719,24 +750,6 @@ func deleteListShareHandler(client meilisearch.ServiceManager) func(e *core.Reco
 
 func createFollowHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		// record := e.Record
-		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
-		// 	return fmt.Errorf("failed to expand: %v", errs)
-		// }
-		// follower := record.ExpandedOne("follower")
-
-		// notification := util.Notification{
-		// 	Type: util.NewFollower,
-		// 	Metadata: map[string]string{
-		// 		"follower": follower.GetString("username"),
-		// 	},
-		// 	Seen:   false,
-		// 	Author: record.GetString("follower"),
-		// }
-		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
-		// if err != nil {
-		// 	return err
-		// }
 		e.Next()
 		federation.CreateFollowActivity(e.App, e.Record)
 
@@ -746,25 +759,6 @@ func createFollowHandler() func(e *core.RecordRequestEvent) error {
 
 func deleteFollowHandler() func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
-		// record := e.Record
-		// if errs := e.App.ExpandRecord(record, []string{"follower"}, nil); len(errs) > 0 {
-		// 	return fmt.Errorf("failed to expand: %v", errs)
-		// }
-		// follower := record.ExpandedOne("follower")
-
-		// notification := util.Notification{
-		// 	Type: util.NewFollower,
-		// 	Metadata: map[string]string{
-		// 		"follower": follower.GetString("username"),
-		// 	},
-		// 	Seen:   false,
-		// 	Author: record.GetString("follower"),
-		// }
-		// err := util.SendNotification(e.App, notification, record.GetString("followee"))
-		// if err != nil {
-		// 	return err
-		// }
-
 		federation.CreateUnfollowActivity(e.App, e.Record)
 
 		return e.Next()
@@ -914,6 +908,54 @@ func changeUserEmailHandler() func(e *core.RecordRequestEmailChangeRequestEvent)
 	}
 }
 
+func listFeedHandler() func(e *core.RecordsListRequestEvent) error {
+	return func(e *core.RecordsListRequestEvent) error {
+
+		for _, r := range e.Records {
+			var item *core.Record
+			var err error
+
+			typ := r.GetString("type")
+			typ = strings.Trim(typ, "\"")
+
+			itemId := r.GetString("item")
+			itemId = strings.Trim(itemId, "\"")
+
+			switch typ {
+			case string(util.TrailFeed):
+				item, err = e.App.FindRecordById("trails", itemId)
+			case string(util.ListFeed):
+				item, err = e.App.FindRecordById("lists", itemId)
+			case string(util.SummitLogFeed):
+				item, err = e.App.FindRecordById("summit_logs", itemId)
+			}
+
+			if err != nil {
+				continue
+			}
+
+			if item == nil {
+				continue
+			}
+
+			errs := e.App.ExpandRecord(item, []string{"author"}, nil)
+			if len(errs) > 0 {
+				return fmt.Errorf("failed to expand author: %v", errs)
+			}
+
+			if typ == string(util.TrailFeed) {
+				errs := e.App.ExpandRecord(item, []string{"category"}, nil)
+				if len(errs) > 0 {
+					return fmt.Errorf("failed to expand category: %v", errs)
+				}
+			}
+
+			r.MergeExpand(map[string]any{"item": item})
+		}
+		return e.Next()
+	}
+}
+
 func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.ServeEvent) error {
 	return func(se *core.ServeEvent) error {
 		registerRoutes(se, client)
@@ -964,6 +1006,10 @@ func onBootstrapHandler() func(se *core.BootstrapEvent) error {
 }
 
 func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
+	se.Router.GET("/health", func(e *core.RequestEvent) error {
+		return e.JSON(http.StatusOK, map[string]string{"status": "ok"})
+	})
+
 	se.Router.GET("/public/search/token", func(e *core.RequestEvent) error {
 		searchRules := map[string]interface{}{
 			"lists": map[string]string{

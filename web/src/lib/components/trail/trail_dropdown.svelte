@@ -21,14 +21,18 @@
     import TrailExportModal from "./trail_export_modal.svelte";
     import TrailShareModal from "./trail_share_modal.svelte";
     import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
+    import type { Snippet } from "svelte";
+    import { page } from "$app/state";
 
     interface Props {
         trails?: Set<Trail> | undefined;
         mode: "overview" | "map" | "list" | "multi-select";
-        onconfirm?: (resetSelection?: boolean) => void;
+        toggle?: Snippet<[any]>;
+        onDelete?: () => void;
+        onShare?: () => void;
     }
 
-    let { trails, mode, onconfirm }: Props = $props();
+    let { trails, mode, toggle, onDelete, onShare }: Props = $props();
 
     let confirmModal: ConfirmModal;
     let listSelectModal: ListSelectModal;
@@ -41,6 +45,7 @@
         return (
             hasTrail() &&
             !isMultiselectMode() &&
+            Boolean($currentUser) &&
             (trail()!.expand?.author?.id === $currentUser?.actor ||
                 trail()!.expand?.trail_share_via_trail?.some(
                     (s) => s.permission == "edit",
@@ -140,6 +145,9 @@
     }
 
     function isFromCurrentUser(uTrail?: Trail): boolean {
+        if (!$currentUser) {
+            return false;
+        }
         if (uTrail !== undefined) {
             return uTrail.expand?.author?.id === $currentUser?.actor;
         } else if (trails !== undefined && trails.size > 0) {
@@ -166,14 +174,16 @@
             return;
         }
 
-        const handle = handleFromRecordWithIRI(trail());
+        const handle = page.params.handle
 
         if (item.value == "show") {
             if (hasTrail()) {
-                goto(
-                    mode == "overview" || mode == "multi-select"
+                const url = mode == "overview" || mode == "multi-select"
                         ? `/map/trail/${handle}/${trailId()}`
-                        : `/trail/view/${handle}/${trailId()}`,
+                        : `/trail/view/${handle}/${trailId()}`
+                
+                goto(
+                    url + '?' + page.url.searchParams
                 );
             }
         } else if (item.value == "list") {
@@ -189,14 +199,14 @@
             if (hasTrail()) {
                 window
                     .open(
-                        `https://www.google.com/maps/dir/Current+Location/${trail()!.lat},${trail()!.lon}`,
+                        `https://www.openstreetmap.org/directions?to=${trail()!.lat},${trail()!.lon}`,
                         "_blank",
                     )
                     ?.focus();
             }
         } else if (item.value == "print") {
             if (hasTrail()) {
-                goto(`/map/trail/${handle}/${trailId()}/print`);
+                goto(`/map/trail/${handle}/${trailId()}/print?${page.url.searchParams}`);
             }
         } else if (item.value == "share") {
             trailShareModal.openModal();
@@ -302,7 +312,7 @@
                 await doDeleteTrail(dTrail);
             }
 
-            onconfirm?.(true);
+            onDelete?.();
         }
     }
 
@@ -315,7 +325,7 @@
     }
 
     async function handleShareUpdate() {
-        onconfirm?.();
+        onShare?.();
     }
 
     async function handleListSelection(list: List) {
@@ -390,9 +400,14 @@
     }
 </script>
 
-<Dropdown items={dropdownItems()} onchange={(item) => handleDropdownClick(item)}
-    >{#snippet children({ toggleMenu: openDropdown })}
-        {#if mode == "multi-select"}
+<Dropdown
+    items={dropdownItems()}
+    onchange={(item) => handleDropdownClick(item)}
+>
+    {#snippet children({ toggleMenu: openDropdown })}
+        {#if toggle}{@render toggle({
+                toggleMenu: openDropdown,
+            })}{:else if mode == "multi-select"}
             <button
                 aria-label="Open dropdown"
                 class="btn-primary flex-shrink-0 !font-medium"
@@ -400,7 +415,8 @@
             >
                 <span
                     >{trails?.size}
-                    {$_("selected")} <i class="fa fa-caret-down ml-1"></i></span
+                    {$_("selected")}
+                    <i class="fa fa-caret-down ml-1"></i></span
                 >
             </button>
         {:else}

@@ -176,6 +176,11 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		} else {
 			return nil, err
 		}
+	} else {
+		// this trail exists already
+		// nothing more to do
+
+		return record, nil
 	}
 
 	var distance, duration, elevation_gain, elevation_loss float64
@@ -442,6 +447,11 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) (
 		} else {
 			return nil, err
 		}
+	} else {
+		// this list exists already
+		// nothing more to do
+
+		return record, nil
 	}
 
 	record.Set("name", l.Name.First().Value)

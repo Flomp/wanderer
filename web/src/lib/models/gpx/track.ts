@@ -42,4 +42,16 @@ export default class Track {
       this.trkseg = object.trkseg.map(trkseg => new TrackSegment(trkseg));;
     }
   }
+  toGeoJSON(): GeoJSON.Feature[] {
+    const features: GeoJSON.Feature[] = [];
+
+    if (!this.trkseg) return features;
+
+    this.trkseg.forEach((segment, index) => {
+      const feature = segment.toGeoJSON(this, index, features.length);
+      features.push(feature);
+    });
+
+    return features;
+  }
 }

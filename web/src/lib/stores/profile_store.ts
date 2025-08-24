@@ -1,16 +1,16 @@
-import type { TimelineItem } from "$lib/models/timeline";
+import type { FeedItem } from "$lib/models/feed";
+import type { ListFilter } from "$lib/models/list";
+import type { SummitLog, SummitLogFilter } from "$lib/models/summit_log";
 import { defaultTrailSearchAttributes, Trail, type TrailFilter, type TrailSearchResult } from "$lib/models/trail";
 import { APIError } from "$lib/util/api_util";
 import type { Hits } from "meilisearch";
 import type { ListResult } from "pocketbase";
-import { searchResultToTrailList } from "./trail_store";
-import type { SummitLog, SummitLogFilter } from "$lib/models/summit_log";
-import { buildFilterText } from "./summit_log_store";
-import type { ListFilter } from "$lib/models/list";
-import type { ListSearchResult } from "./search_store";
 import { searchResultToLists } from "./list_store";
+import type { ListSearchResult } from "./search_store";
+import { buildFilterText } from "./summit_log_store";
+import { searchResultToTrailList } from "./trail_store";
 
-let timeline: TimelineItem[] = []
+let feed: FeedItem[] = []
 
 
 export async function profile_show(handle: string, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
@@ -58,8 +58,8 @@ export async function profile_lists_index(handle: string, filter: ListFilter, pa
 }
 
 
-export async function profile_timeline_index(handle: string, page: number, perPage: number = 1, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
-    let r = await f(`/api/v1/profile/${handle}/timeline?` + new URLSearchParams({
+export async function profile_feed_index(handle: string, page: number, perPage: number = 10, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+    let r = await f(`/api/v1/profile/${handle}/feed?` + new URLSearchParams({
         page: page.toString(),
         perPage: perPage.toString(),
         sort: '-created'
@@ -71,13 +71,13 @@ export async function profile_timeline_index(handle: string, page: number, perPa
         throw new APIError(r.status, response.message, response.detail)
     }
 
-    const fetchedTimeline: ListResult<TimelineItem> = await r.json()
+    const fetchedFeed: ListResult<FeedItem> = await r.json()
 
-    const result = page > 1 ? [...timeline, ...fetchedTimeline.items] : fetchedTimeline.items
+    const result = page > 1 ? [...feed, ...fetchedFeed.items] : fetchedFeed.items
 
-    timeline = result;
+    feed = result;
 
-    return { ...fetchedTimeline, items: result };
+    return { ...fetchedFeed, items: result };
 
 }
 

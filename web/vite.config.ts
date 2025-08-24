@@ -9,12 +9,12 @@ export default defineConfig({
 	ssr: { noExternal: ['three'] },
 	...(process.env.WANDERER_ENV == "dev" ? {
 		server: {
-			https: {
-				key: fs.readFileSync('.svelte-kit/key.pem'),
-				cert: fs.readFileSync('.svelte-kit/cert.pem')
-			},
-			host: true, // true
-			port: 443 // 443
+			// https: {
+			// 	key: fs.readFileSync('.svelte-kit/key.pem'),
+			// 	cert: fs.readFileSync('.svelte-kit/cert.pem')
+			// },
+			// host: true, // true
+			// port: 443 // 443
 		}
 	} : {})
 });

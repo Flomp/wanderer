@@ -78,4 +78,22 @@ export default class Waypoint {
       this.link = object.link.map(l => new Link(l));
     }
   }
+
+  toGeoJSON(): GeoJSON.Feature {
+    return {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [this.$.lon ?? 0, this.$.lat ?? 0, this.ele ?? 0]
+      },
+      properties: {
+        name: this.name,
+        desc: this.desc,
+        time: this.time?.toISOString(),
+        type: this.type,
+        sym: this.sym
+      }
+    };
+  }
+
 }

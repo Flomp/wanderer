@@ -2,9 +2,8 @@ package federation
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"path"
+	"pocketbase/util"
 	"strings"
 	"time"
 
@@ -315,16 +314,17 @@ func ProcessDeleteActivity(app core.App, actor *core.Record, activity pub.Activi
 
 func processDeleteTrailActivity(app core.App, activity pub.Activity) error {
 
-	trailUrl, err := url.Parse(activity.Object.GetID().String())
+	object := activity.Object.GetID().String()
+	trail, err := app.FindFirstRecordByData("trails", "iri", object)
 	if err != nil {
 		return err
 	}
-	recordId := path.Base(trailUrl.Path)
 
-	trail, err := app.FindRecordById("trails", recordId)
+	err = util.DeleteFromFeed(app, trail.Id)
 	if err != nil {
 		return err
 	}
+
 	return app.Delete(trail)
 }
 
@@ -370,8 +370,10 @@ func processDeleteListActivity(app core.App, actor *core.Record, activity pub.Ac
 		return err
 	}
 
-	if list.GetString("author") != actor.Id {
-		return fmt.Errorf("actor is not summit log author")
+	err = util.DeleteFromFeed(app, list.Id)
+	if err != nil {
+		return err
 	}
+
 	return app.Delete(list)
 }

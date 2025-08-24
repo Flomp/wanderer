@@ -1,3 +1,37 @@
+# v0.18.0
+
+## Features
+- Adds feed on homepage for logged in users
+- Adds customizable "About" section to the homepage (read [here](https://wanderer.to/run/frontend-configuration/about) to learn more)
+- New Maps: OpenHikingMap, CyclOSM
+- New map overlays: hiking, biking, mountain biking & skiing routes
+- New POI overlays: e.g. grocery stores, campsites, water sources etc.
+- Complete overhaul of the route drawing/editing feature
+- Adds option to crop routes when editing
+- Adds undo/redo to route editing
+- Adds option to manually recalculate elevation data when editing a route
+- Adds automated elevation correction when uploading trails/summit logs directly
+- Directions to a trail head are now provided by OpenStreetMap
+- Non-pulbic trails can now be shared with guests via a public share link
+- Adds route previews on lower zoom levels in the world map
+> [!NOTE]
+To display the previews for each track on the world map, wanderer computes encoded polylines for each track on startup. Depending on the amount of trails in your instance, it can take several minutes until all trails are fully indexed and searchable.
+- 3D terrain is now also available in the world map
+- Trail category is now displayed in search results
+
+## Bug fixes
+- Custom categories with spaces are now handled correctly
+- Avoid reuploading all trails when updating a list
+- Fixes build dependencies for building from source (thanks @slothful-vassal)
+- Add headers to nominatim requests to comply with usage policy
+- Reset pagination when updating filters
+
+## Thanks
+
+A big thanks goes to @cugu for doing a lot of GitHub house keeping and submitting various, helpful PRs while I was gone!
+Another big shoutout has to go to @vcoppe and [gpx.studio](https://github.com/gpxstudio/gpx.studio). Their code was a huge help implementing the various map overlays and GPX editing functionality that was added in this patch.
+
+
 # v0.17.2
 ## Features
 - Trails in the map view can now be sorted

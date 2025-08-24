@@ -15,7 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
-	"github.com/twpayne/go-gpx"
+	"github.com/tkrajina/gpxgo/gpx"
 	"github.com/twpayne/go-polyline"
 )
 
@@ -610,7 +610,7 @@ func generateActivityGPX(activity *DetailedStravaActivity, accessToken string) (
 	timeStream := streamResponse.Time
 	altitudeStream := streamResponse.Altitude
 
-	var points []*gpx.WptType
+	var points []gpx.GPXPoint
 
 	for i, latlng := range latLngStream.Data {
 		lat := latlng[0]
@@ -618,30 +618,31 @@ func generateActivityGPX(activity *DetailedStravaActivity, accessToken string) (
 		alt := altitudeStream.Data[i]
 		t := activity.StartDate.Unix() + int64(timeStream.Data[i])
 
-		points = append(points, &gpx.WptType{Lat: lat, Lon: lon, Ele: alt, Time: time.Unix(t, 0)})
+		points = append(points, gpx.GPXPoint{
+			Point:     gpx.Point{Latitude: lat, Longitude: lon, Elevation: *gpx.NewNullableFloat64(alt)},
+			Timestamp: time.Unix(t, 0)})
 	}
 
-	gpx := &gpx.GPX{
+	gpxData := &gpx.GPX{
 		Version: "1.1",
 		Creator: "Strava GPX Exporter",
-		Trk: []*gpx.TrkType{
+		Tracks: []gpx.GPXTrack{
 			{
 				Name: activity.Name,
-				TrkSeg: []*gpx.TrkSegType{
+				Segments: []gpx.GPXTrackSegment{
 					{
-						TrkPt: points,
+						Points: points,
 					},
 				},
 			},
 		},
 	}
-	var buf bytes.Buffer
-	err = gpx.Write(&buf)
+	gpxAsXML, err := gpxData.ToXml(gpx.ToXmlParams{Version: "1.1", Indent: true})
 	if err != nil {
 		return nil, err
 	}
 
-	gpxFile, err := filesystem.NewFileFromBytes(buf.Bytes(), activity.Name+".gpx")
+	gpxFile, err := filesystem.NewFileFromBytes(gpxAsXML, activity.Name+".gpx")
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,8 @@
 <script lang="ts">
     import * as M from "maplibre-gl";
 
-    import { fromFile, toGeoJson } from "$lib/util/gpx_util";
+    import GPX from "$lib/models/gpx/gpx";
+    import { fromFile } from "$lib/util/gpx_util";
     import { onMount } from "svelte";
     interface Props {
         trailFile: File | undefined | null;
@@ -76,7 +77,12 @@
         const sourceId = "trail-picker-geojson-source";
         const layerId = "trail-picker-geojson-layer";
 
-        const geojson = toGeoJson(trailData);
+        const gpx = GPX.parse(trailData)
+        if(gpx instanceof Error) {
+            throw gpx;
+        }
+
+        const geojson = gpx.toGeoJSON()
 
         if (layer) {
             map.removeLayer(layerId);

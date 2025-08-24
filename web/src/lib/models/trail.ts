@@ -1,6 +1,7 @@
 import type { Actor } from "./activitypub/actor";
 import type { Category } from "./category";
 import type { Comment } from "./comment";
+import type GPX from "./gpx/gpx";
 import type { SummitLog } from "./summit_log";
 import type { Tag } from "./tag";
 import type { TrailLike } from "./trail_like";
@@ -40,6 +41,7 @@ class Trail {
         author?: Actor
         comments_via_trail?: Comment[]
         gpx_data?: string
+        gpx?: GPX
         trail_share_via_trail?: TrailShare[]
         trail_like_via_trail?: TrailLike[]
 

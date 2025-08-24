@@ -7,15 +7,15 @@ import { theme } from "$lib/stores/theme_store";
 import M from "maplibre-gl";
 import { _ } from "svelte-i18n";
 import { get } from "svelte/store";
+import { handleFromRecordWithIRI } from "./activitypub_util";
 import { getFileURL } from "./file_util";
 import { formatDistance, formatElevation, formatTimeHHMM } from "./format_util";
 import { icons } from "./icon_util";
-import { handleFromRecordWithIRI } from "./activitypub_util";
 
 export class FontawesomeMarker extends M.Marker {
-    constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, id?: string }, markerOptions?: M.MarkerOptions) {
+    constructor(options: { icon: string, fontSize?: string, width?: number, backgroundColor?: string, fontColor?: string, style?: string, id?: string }, markerOptions?: M.MarkerOptions) {
         const element = document.createElement('div')
-        element.className = `cursor-pointer flex items-center justify-center w-${options.width ?? 7} aspect-square ${options.backgroundColor ?? "bg-gray-500"} rounded-full text-${options.fontSize ?? "normal"}`
+        element.className = `cursor-pointer flex items-center justify-center w-${options.width ?? 7} aspect-square ${options.backgroundColor ?? "bg-gray-500"} rounded-full text-${options.fontSize ?? "normal"} ${options.style ?? ""}`
         element.id = options.id ?? "";
         super({ element: element, ...markerOptions });
 
@@ -255,6 +255,44 @@ export function createPopupFromTrail(trail: Trail) {
     popup.setDOMContent(linkElement);
 
     return popup;
+}
+
+export function createOverpassPopup(feature: GeoJSON.Feature, coordinates: GeoJSON.Position) {
+    const tags: Record<string, string> = JSON.parse(feature.properties?.tags);
+    const name = tags.name ?? get(_)(feature.properties?.query) ?? "?"
+
+    const popupContainer = document.createElement("div");
+    popupContainer.className = "p-4"
+
+    const popupHeading = document.createElement("h1");
+    popupHeading.classList = "font-medium text-lg"
+    popupHeading.textContent = name;
+
+    const coordinateSubtitle = document.createElement("p")
+    coordinateSubtitle.classList = "text-gray-500"
+    coordinateSubtitle.textContent = `${coordinates[0].toFixed(6)}, ${coordinates[1].toFixed(6)}`
+
+    popupContainer.appendChild(popupHeading)
+    popupContainer.appendChild(coordinateSubtitle)
+
+    const tagsGrid = document.createElement("div")
+    tagsGrid.classList = "grid grid-cols-2 gap-x-4 mt-4"
+
+    Object.entries(tags).forEach((([k, v]) => {
+        if (k == "name") return;
+        const kSpan = document.createElement("span")
+        kSpan.classList = "font-mono"
+        kSpan.textContent = k;
+        const vSpan = document.createElement("span")
+        vSpan.textContent = v;
+
+        tagsGrid.appendChild(kSpan);
+        tagsGrid.appendChild(vSpan);
+    }));
+
+    popupContainer.appendChild(tagsGrid)
+
+    return popupContainer;
 }
 
 export function calculatePixelPerMeter(map: M.Map, meters: number) {

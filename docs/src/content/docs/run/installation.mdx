@@ -66,7 +66,7 @@ services:
     image: getmeili/meilisearch:v1.11.3
     environment:
       <<: *cenv
-      MEILI_NO_ANALYTICS: true
+      MEILI_NO_ANALYTICS: "true"
     ports:
       - 7700:7700
     networks:
@@ -98,6 +98,12 @@ services:
     restart: unless-stopped
     volumes:
       - ./data/pb_data:/pb_data
+    healthcheck:
+      test: wget --spider -q http://localhost:8090/health || exit 1
+      interval: 15s
+      retries: 10
+      start_period: 20s
+      timeout: 10s
 
   web:
     container_name: wanderer-web
@@ -106,25 +112,32 @@ services:
       search:
         condition: service_healthy
       db:
-        condition: service_started
+        condition: service_healthy
     environment:
       <<: *cenv
       ORIGIN: http://localhost:3000
       BODY_SIZE_LIMIT: Infinity
       PUBLIC_POCKETBASE_URL: http://db:8090
-      PUBLIC_DISABLE_SIGNUP: false
+      PUBLIC_DISABLE_SIGNUP: "false"
       UPLOAD_FOLDER: /app/uploads
       UPLOAD_USER:
       UPLOAD_PASSWORD:
-      PUBLIC_VALHALLA_URL: https://valhalla.openstreetmap1.de
+      PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de
       PUBLIC_NOMINATIM_URL: https://nominatim.openstreetmap.org
     volumes:
       - ./data/uploads:/app/uploads
+      # - ./data/about.md:/app/build/client/md/about.md
     ports:
       - "3000:3000"
     networks:
       - wanderer
     restart: unless-stopped
+    healthcheck:
+      test: curl --fail http://localhost:3000/ || exit 1
+      interval: 15s
+      retries: 10
+      start_period: 20s
+      timeout: 10s
 
 networks:
   wanderer:
@@ -165,7 +178,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Always consult the [changelog](/run/changelog) before updating, in case of breaking changes.
+Always consult the [changelog](/changelog) before updating, in case of breaking changes.
 
 ## Installation from Source
 
@@ -262,7 +275,7 @@ To update to the latest version:
 git pull origin main
 ```
 
-Then re-run the launch script. Always review the [changelog](/run/changelog) for breaking changes.
+Then re-run the launch script. Always review the [changelog](/changelog) for breaking changes.
 
 ## Verify the Installation
 

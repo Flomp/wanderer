@@ -1,10 +1,9 @@
 <script lang="ts">
     import { page } from "$app/state";
     import TrailList from "$lib/components/trail/trail_list.svelte";
-    import type { Trail, TrailFilter } from "$lib/models/trail.js";
+    import type { TrailFilter } from "$lib/models/trail.js";
     import { profile_trails_index } from "$lib/stores/profile_store.js";
     import { show_toast } from "$lib/stores/toast_store.svelte.js";
-    import { trails_search_filter } from "$lib/stores/trail_store";
     import { _ } from "svelte-i18n";
 
     let { data } = $props();
