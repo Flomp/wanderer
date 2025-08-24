@@ -91,8 +91,13 @@ export default defineConfig({
             link: '/run/environment-configuration/'
           },
           {
+            label: 'Frontend configuration',
+            items: [
+              { label: 'Edit the "About" section', link: '/run/frontend-configuration/about' },
+            ]
+          },
+          {
             label: 'Backend configuration',
-            collapsed: true,
             items: [
               { label: 'Overview', link: '/run/backend-configuration/' },
               { label: 'SMTP', link: '/run/backend-configuration/smtp/' },
