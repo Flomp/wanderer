@@ -90,16 +90,18 @@
         extend: validator({
             schema: ClientListCreateSchema,
         }),
-        onSubmit: async (form) => {
-            if (await checkPrerequisites()) {
-                await saveList();
-            }
-        },
+        
     });
 
     onMount(() => {
         trailsOnMap = [...(data.list.expand?.trails ?? [])];
     });
+
+    async function handleSubmit() {
+        if (await checkPrerequisites()) {
+                await saveList();
+            }
+    }
 
     async function checkPrerequisites() {
         if (
@@ -288,6 +290,7 @@
     <form
         id="list-form"
         class="flex flex-col gap-4 px-8 order-1 md:order-none mt-8 md:mt-0 overflow-y-scroll"
+        onsubmit={handleSubmit}
         use:form
     >
         <h2 class="text-2xl font-semibold">
