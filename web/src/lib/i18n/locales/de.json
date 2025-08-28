@@ -336,7 +336,7 @@
   "road": "Straße",
   "route": "{n, plural, =1 {Route} other {Routen}}",
   "route-point": "Punkt auf Route",
-  "russian": "",
+  "russian": "Russian",
   "save": "Speichern",
   "save-list": "Liste speichern",
   "save-trail": "Route speichern",

@@ -336,6 +336,7 @@
   "road": "Шоссе",
   "route": "{n, plural, =1 {Маршрут} other {Маршрутов}}",
   "route-point": "Точка маршрута",
+  "russian": "Russian",
   "save": "Сохранить",
   "save-list": "Сохранить список",
   "russian": "Russian",
