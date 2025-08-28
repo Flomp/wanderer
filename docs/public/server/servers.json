@@ -41,7 +41,16 @@
         "description": "An instance for Italy, with motorcycle category added.",
         "image": "/server/imgs/gatti.ninja.jpg",
         "region": ["Italy"],
-        "language": ["Itlian"],
+        "language": ["Italian"],
         "category": ["Biking", "Motorcycling", "General"]
+    },
+    {
+        "name": "Towiski",
+        "url": "https://wanderer.towiski.de/",
+        "description": "My Wanderer instance for the paths less traveled. Signups welcome.",
+        "image": "/server/imgs/towiski.de.jpg",
+        "region": ["Tanzania", "Sri Lanka", "Germany", "Laos"],
+        "language": ["English", "German"],
+        "category": ["Biking", "Hiking"]
     }
 ]
