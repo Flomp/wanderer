@@ -269,10 +269,17 @@ Make sure you replace `MEILI_MASTER_KEY` with a secure value before going to pro
 
 ### Updating
 
-To update to the latest version:
+To update to the latest version stop the running application and run:
 
 ```bash
 git pull origin main
+
+cd wanderer/db
+go mod tidy && go build
+
+cd wanderer/web
+npm ci --omit=dev
+npm run build
 ```
 
 Then re-run the launch script. Always review the [changelog](/changelog) for breaking changes.
