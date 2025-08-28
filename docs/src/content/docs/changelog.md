@@ -2,6 +2,18 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.18.1
+### Bug fixes
+- Fixes permission issues that prevented federation from working properly
+- Trail categories are properly displayed in lists
+- Fixes issue that prevented lists from saving
+
+### Documentation
+- Improves docs for updating on bare-metal installations
+
+### Translation
+- Adds Basque and Russian translations (thanks @aisaivia & @jeffscrum)
+
 ## v0.18.0
 
 ### Features

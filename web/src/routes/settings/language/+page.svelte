@@ -16,7 +16,7 @@
         { text: $_("english"), value: "en" },
         { text: $_("german"), value: "de" },
         { text: $_("spanish"), value: "es" },
-        { text: $_("catalan"), value: "eu" },
+        { text: $_("basque"), value: "eu" },
         { text: $_("french"), value: "fr" },
         { text: $_("hungarian"), value: "hu" },
         { text: $_("italian"), value: "it" },
