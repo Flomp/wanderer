@@ -197,11 +197,10 @@
                     {/if}
                 </div>
             {/if}
-
             <div class="flex gap-x-4 gap-y-1 text-base flex-wrap">
-                {#if trail.category}
+                {#if trail.expand?.category?.name || trail.category}
                     <p>
-                        <i class="fa fa-shapes mr-3"> </i>{$_(trail.category)}
+                        <i class="fa fa-shapes mr-3"> </i>{$_(trail.expand?.category?.name ?? trail.category ?? "-")}
                     </p>
                 {/if}
                 {#if trail.location}

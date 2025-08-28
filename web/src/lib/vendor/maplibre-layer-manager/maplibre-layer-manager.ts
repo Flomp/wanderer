@@ -88,6 +88,9 @@ export class LayerManager {
 
 
     addLayer(id: string, layer: BaseLayer) {
+        if(!layer.spec) {
+            return;
+        }
         if (this.layers[id] && this.map.getLayer(id)) {
             // update sources and return
             for (const [sourceId, s] of Object.entries(layer.spec.sources)) {

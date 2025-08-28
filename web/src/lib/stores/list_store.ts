@@ -95,7 +95,6 @@ export async function lists_show(id: string, handle?: string, f: (url: RequestIn
     for (const trail of response.expand?.trails ?? []) {
         const gpxData: string = await fetchGPX(trail, f);
         trail.expand.gpx_data = gpxData;
-        trail.category = trail.expand?.category?.name ?? "-";
     }
 
     list.set(response);
