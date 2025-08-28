@@ -131,6 +131,9 @@ export async function searchLocationReverse(lat: number, lon: number) {
     const nominatimURL = env.PUBLIC_NOMINATIM_URL ?? "https://nominatim.openstreetmap.org"
     const r = await fetch(`${nominatimURL}/reverse?lat=${lat}&lon=${lon}&format=geojson&addressdetails=1`, {
         method: "GET",
+        headers: new Headers({
+            "User-Agent": "wanderer/" + version
+        })
     });
     if (!r.ok) {
         const response = await r.json();
