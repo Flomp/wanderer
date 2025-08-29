@@ -1127,6 +1127,21 @@
 
         const liCoords: GPXCoord[] = [];
 
+        let mergeRadius = 50;
+        if ($formData.category) {
+            for (const cat of $categories) {
+                if ($formData.category !== cat.id) {
+                    continue;
+                }
+
+                if (cat.wp_merge_radius && cat.wp_merge_radius > 0) {
+                    mergeRadius = cat.wp_merge_radius;
+                }
+
+                break;
+            }
+        }
+
         for (const file of files) {
             const coords = await new Promise<GPXCoord | undefined>((resolve) => {
                 EXIF.getData(file, function (p) {
@@ -1165,7 +1180,7 @@
                 for (let refCoords of liCoords) {
                     const distance = haversineDistance(refCoords.latitude, refCoords.longitude, coords.latitude, coords.longitude);
 
-                    if (distance < 500) {
+                    if (distance < mergeRadius) {
                         found = true;
                         if (!refCoords.photos) {
                             refCoords.photos = [];
