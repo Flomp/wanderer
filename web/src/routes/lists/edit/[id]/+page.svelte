@@ -103,9 +103,6 @@
     });
 
     async function checkPrerequisites() {
-
-let x = $formData.expand?.trails?.find(t => !t.public);
-
         if (    $formData.public === true && 
                 $formData.expand?.trails?.find(t => !t.public) !== undefined
         ) {
