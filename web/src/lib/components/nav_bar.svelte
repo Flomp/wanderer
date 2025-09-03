@@ -98,9 +98,9 @@
 
     function handleDropdownClick(item: { text: string; value: any }) {
         if (item.value == "profile") {
-            goto(`/profile/@${$currentUser?.username?.toLowerCase()}`);
+            goto(`/profile/@${$currentUser?.username}`);
         } else if (item.value == "trails") {
-            goto(`/profile/@${$currentUser?.username?.toLowerCase()}/trails`);
+            goto(`/profile/@${$currentUser?.username}/trails`);
         } else if (item.value == "logout") {
             logout();
             window.location.href = "/";
