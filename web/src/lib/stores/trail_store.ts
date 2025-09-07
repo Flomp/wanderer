@@ -457,7 +457,7 @@ export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Pr
             created: new Date(h.created * 1000).toISOString(),
             date: new Date(h.date * 1000).toISOString(),
             description: h.description,
-            difficulty: h.difficulty,
+            difficulty: h.difficulty == 0 ? "easy" : h.difficulty == 1 ? "moderate" : "difficult",
             distance: h.distance,
             duration: h.duration,
             elevation_gain: h.elevation_gain,

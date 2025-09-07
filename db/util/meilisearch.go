@@ -69,7 +69,7 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 		"elevation_gain": r.GetFloat("elevation_gain"),
 		"elevation_loss": r.GetFloat("elevation_loss"),
 		"duration":       r.GetFloat("duration"),
-		"difficulty":     r.Get("difficulty"),
+		"difficulty":     difficultyToNumber(r.GetString("difficulty")),
 		"category":       category,
 		"completed":      logCount > 0,
 		"date":           r.GetDateTime("date").Time().Unix(),
@@ -95,6 +95,19 @@ func documentFromTrailRecord(app core.App, r *core.Record, author *core.Record, 
 	}
 
 	return document, nil
+}
+
+func difficultyToNumber(difficulty string) int32 {
+	switch difficulty {
+	case "easy":
+		return 0
+	case "moderate":
+		return 1
+	case "difficult":
+		return 2
+	}
+
+	return 0
 }
 
 func getPolyline(app core.App, r *core.Record) (string, error) {

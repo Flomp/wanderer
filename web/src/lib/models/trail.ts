@@ -111,7 +111,7 @@ interface TrailFilter {
     q: string,
     category: string[],
     tags: string[],
-    difficulty: ("easy" | "moderate" | "difficult")[]
+    difficulty: (0 | 1 | 2)[]
     author?: string;
     public?: boolean;
     shared?: boolean;
@@ -169,7 +169,7 @@ interface TrailSearchResult {
     elevation_gain: number;
     elevation_loss: number;
     duration: number;
-    difficulty: "easy" | "moderate" | "difficult";
+    difficulty: 0 | 1 | 2;
     category: string;
     completed: boolean;
     date: number;
