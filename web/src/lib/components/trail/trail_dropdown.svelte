@@ -349,19 +349,35 @@
     }
 
     async function publishTrails() {
-        for (const cTrail of trails ?? []) {
-            if (!cTrail) continue;
+        try {
+            for (const cTrail of trails ?? []) {
+                if (!cTrail) continue;
 
-            if (!cTrail.expand?.author?.id) continue;
+                if (!cTrail.expand?.author?.id) continue;
 
-            if (!cTrail.expand?.category) {
-                cTrail.expand.category =  $categories.find((c) => c.name == cTrail.category);
+                if (!cTrail.expand?.category) {
+                    cTrail.expand.category =  $categories.find((c) => c.name == cTrail.category);
+                }
+
+                const origTrail: Trail = { ...cTrail, author: cTrail.expand!.author!.id, category: cTrail.expand.category?.id ?? undefined };
+                const updatedTrail: Trail = { ...origTrail, public: !origTrail.public };
+
+                await trails_update(origTrail, updatedTrail);
             }
+            
+            show_toast({
+                type: "success",
+                icon: "check",
+                text: $_("trail-saved-successfully"),
+            });
+        } catch (e) {
+            console.error(e);
 
-            const origTrail: Trail = { ...cTrail, author: cTrail.expand!.author!.id, category: cTrail.expand.category?.id ?? undefined };
-            const updatedTrail: Trail = { ...origTrail, public: !origTrail.public };
-
-            await trails_update(origTrail, updatedTrail);
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: $_("error-saving-trail"),
+            });
         }
 
         onUpdate?.();
