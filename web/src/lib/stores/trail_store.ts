@@ -236,6 +236,72 @@ export async function trails_create(trail: Trail, photos: File[], gpx: File | Bl
 
 }
 
+export async function trails_copy(trail: Trail, name: string) { 
+        
+    let cTrail: Trail = {
+            name: name, 
+            public: trail.public, 
+            photos: [], 
+            tags: trail.tags, 
+            waypoints: trail.waypoints, 
+            like_count: trail.like_count, 
+            author: trail.author,
+            location: trail.location,
+            date: trail.date,
+            distance: trail.distance,
+            elevation_gain: trail.elevation_gain,
+            elevation_loss: trail.elevation_loss,
+            duration: trail.duration,
+            difficulty: trail.difficulty,
+            lat: trail.lat,
+            lon: trail.lon,
+            thumbnail: trail.thumbnail,
+            category: trail.category,
+            description: trail.description,
+            created: trail.created
+        };
+
+    const formData = objectToFormData(cTrail);
+    
+    let r = await fetch(`/api/v1/trail/form?` + new URLSearchParams({
+        expand: "category,waypoints,summit_logs_via_trail,trail_share_via_trail,tags",
+    }), {
+        method: 'PUT',
+        body: formData,
+    })
+
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail)
+    }
+
+
+    let model: Trail = await r.json();
+
+    const nTrail: Trail = {...model };
+
+    const gpxData: string = await fetchGPX(trail, fetch);
+    let gpxFile = new Blob([gpxData], {
+                        type: "text/xml",
+                    });
+
+    let photoFiles: File[] | undefined = undefined;
+    for (const photo of trail.photos ?? []) {
+        const photoURL = getFileURL(trail, photo);
+        const photoBlob = await fetch(photoURL).then(
+            (response) => response.blob(),
+        );
+        const photoData = new File([photoBlob], photo);
+
+        if (!photoFiles) photoFiles = [];
+        photoFiles.push(photoData);
+    }
+
+    await trails_update(model, nTrail, photoFiles, gpxFile);
+
+    return nTrail.id;
+} 
+
 export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: File[], gpx?: File | Blob | null) {
     newTrail.author = oldTrail.author
 

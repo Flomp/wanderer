@@ -8,7 +8,7 @@
         lists_remove_trail,
     } from "$lib/stores/list_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
-    import { trails_delete, trails_update } from "$lib/stores/trail_store";
+    import { trails_delete, trails_update, trails_copy } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
@@ -83,6 +83,13 @@
         }
 
         return isPublic;
+    }
+
+    function allowCopy(): boolean {
+        if (mode === "multi-select")
+            return false;
+
+        return allowEdit();
     }
 
     function allowPublish(): boolean {
@@ -197,6 +204,15 @@
                         //value: "edit", 
                         value: getDropdownItemTag("edit", undefined, false),
                         icon: "pen" 
+                    }
+                ]
+                : []),
+            ...(allowCopy()
+                ? [
+                    {
+                        text: $_("create-variant"), 
+                        value: getDropdownItemTag("copy", undefined, false),
+                        icon: "copy" 
                     }
                 ]
                 : []),
@@ -341,11 +357,50 @@
             if (hasTrail()) {
                 goto(`/trail/edit/${trailId()}`);
             }
+        } else if (ddVal.tag == "copy") {
+            if (hasTrail()) {
+                const newId = await copyTrail(trail());
+                
+                if (newId && newId !== undefined) {
+                    const url = allowEdit()
+                            ? `/trail/edit/${newId}`
+                            : `/trail/view/${handle}/${newId}`
+                    
+                    goto(
+                        url + '?' + page.url.searchParams
+                    );
+                }
+            }
         } else if (ddVal.tag == "publish" ) {
-            publishTrails();
+            publishTrails();            
         } else if (ddVal.tag == "delete") {
             confirmModal.openModal();
         }
+    }
+
+    async function copyTrail(trail: Trail | undefined) {
+        if (!trail) return undefined;
+
+        let newId: string | undefined;
+        try {
+            newId = await trails_copy(trail, trail.name + " (COPY)");
+            
+            show_toast({
+                type: "success",
+                icon: "check",
+                text: $_("trail-copied-successfully"),
+            });
+        } catch (e) {
+            console.error(e);
+
+            show_toast({
+                type: "error",
+                icon: "close",
+                text: $_("error-copying-trail"),
+            });
+        }
+
+        return newId;
     }
 
     async function publishTrails() {
