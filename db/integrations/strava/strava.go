@@ -251,17 +251,16 @@ func syncTrailsWithRoutes(app core.App, accessToken string, user string, actor s
 			app.Logger().Warn(fmt.Sprintf("Unable to fetch GPX for route '%s': %v", route.Name, err))
 			continue
 		}
-		wpIds, err := createWaypointsFromRoute(app, route, user)
-		if err != nil {
-			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for route '%s': %v", route.Name, err))
-			continue
-		}
-		err = createTrailFromRoute(app, route, gpx, actor, wpIds)
+		trailid, err := createTrailFromRoute(app, route, gpx, actor)
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to create trail for route '%s': %v", route.Name, err))
 			continue
 		}
-
+		err = createWaypointsFromRoute(app, route, user, trailid)
+		if err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for route '%s': %v", route.Name, err))
+			continue
+		}
 	}
 
 	return hasNewRoutes, nil
@@ -305,10 +304,12 @@ func fetchRouteGPX(route StravaRoute, accessToken string) (*filesystem.File, err
 	return gpxFile, nil
 }
 
-func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File, actor string, wpIds []string) error {
+func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File, actor string) (string, error) {
+	trailid := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
+
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	record := core.NewRecord(collection)
@@ -337,6 +338,7 @@ func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File,
 	}
 
 	record.Load(map[string]any{
+		"id":                trailid,
 		"name":              route.Name,
 		"description":       route.Description,
 		"public":            !route.Private,
@@ -348,7 +350,6 @@ func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File,
 		"external_id":       route.IDStr,
 		"lat":               lat,
 		"lon":               lon,
-		"waypoints":         wpIds,
 		"difficulty":        "easy",
 		"category":          category,
 		"author":            actor,
@@ -359,19 +360,17 @@ func createTrailFromRoute(app core.App, route StravaRoute, gpx *filesystem.File,
 	}
 
 	if err := app.Save(record); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return trailid, err
 }
 
-func createWaypointsFromRoute(app core.App, route StravaRoute, user string) ([]string, error) {
+func createWaypointsFromRoute(app core.App, route StravaRoute, user string, trailid string) error {
 	collection, err := app.FindCollectionByNameOrId("waypoints")
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	wpIds := make([]string, len(route.Waypoints))
 
 	for i, wp := range route.Waypoints {
 		record := core.NewRecord(collection)
@@ -383,13 +382,15 @@ func createWaypointsFromRoute(app core.App, route StravaRoute, user string) ([]s
 		record.Set("icon", "circle")
 		record.Set("author", user)
 		record.Set("distance_from_start", wp.DistanceIntoRoute)
+		record.Set("trail", trailid)
 
-		app.Save(record)
+		if err := app.Save(record); err != nil {
+			return err
+		}
 
-		wpIds[i] = record.Id
 	}
 
-	return wpIds, nil
+	return nil
 }
 
 func syncTrailsWithActivities(app core.App, accessToken string, user string, actor string, activities []StravaActivity) (bool, error) {

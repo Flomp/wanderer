@@ -390,7 +390,7 @@
                 currentHeight += getTextHeight($trail.description, doc, width - 32) + 8;
             }
 
-            if (includeWaypoints && $trail.expand?.waypoints) {
+            if (includeWaypoints && $trail.expand?.waypoints_via_trail) {
                 const header = $_("waypoints", { values: { n: 2 } })
                 let textHeight = getTextHeight(header, doc, width - 32)
                 if (currentHeight + textHeight + 8 > height) {
@@ -401,7 +401,7 @@
                 currentHeight += textHeight + 8;
                 doc.setFont("IBMPlexSans-Regular", "normal");
 
-                ($trail.expand.waypoints || []).forEach(waypoint => {
+                ($trail.expand.waypoints_via_trail || []).forEach(waypoint => {
                     let description = waypoint.description || "";
                     let name = waypoint.name || "";
 
@@ -616,7 +616,7 @@
             <div class="basis-full">
                 <MapWithElevationMaplibre
                     trails={[$trail]}
-                    waypoints={$trail.expand?.waypoints}
+                    waypoints={$trail.expand?.waypoints_via_trail}
                     activeTrail={0}
                     onzoom={updateScale}
                     bind:map
