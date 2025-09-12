@@ -1308,94 +1308,166 @@ func bootstrapCategories(app core.App) error {
 }
 
 func bootstrapMeilisearchDocuments(app core.App, client meilisearch.ServiceManager) error {
-	query := app.RecordQuery("trails")
-	trails := []*core.Record{}
+	// --- Trails ---
+	const pageSize = 100
+	var page int64 = 0
 
-	if err := query.All(&trails); err != nil {
+	// Clear index before re-indexing
+	if _, err := client.Index("trails").DeleteAllDocuments(); err != nil {
 		return err
 	}
 
-	_, err := client.Index("trails").DeleteAllDocuments()
-	if err != nil {
-		return err
-	}
-	for _, trail := range trails {
-		author, err := app.FindRecordById("activitypub_actors", trail.GetString(("author")))
+	for {
+		trails := []*core.Record{}
+		err := app.RecordQuery("trails").
+			Limit(pageSize).
+			Offset(page * int64(pageSize)).
+			All(&trails)
 		if err != nil {
 			return err
 		}
-		if err := util.IndexTrail(app, trail, author, client); err != nil {
-			app.Logger().Warn(fmt.Sprintf("Unable to index trail '%s': %v", trail.GetString("name"), err))
-			continue
+		if len(trails) == 0 {
+			break
 		}
 
-		shares, err := app.FindAllRecords("trail_share",
-			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trail.Id}),
+		// Collect author IDs to fetch in batch
+		authorIDs := make([]string, 0, len(trails))
+		for _, t := range trails {
+			if id := t.GetString("author"); id != "" {
+				authorIDs = append(authorIDs, id)
+			}
+		}
+
+		// Fetch all authors in one go
+		authorArgs := make([]interface{}, len(authorIDs))
+		for i, v := range authorIDs {
+			authorArgs[i] = v
+		}
+
+		authors, err := app.FindAllRecords("activitypub_actors",
+			dbx.In("id", authorArgs...),
 		)
 		if err != nil {
 			return err
 		}
-		actorIds := make([]string, len(shares))
-		for i, r := range shares {
-			actorIds[i] = r.GetString("actor")
+		authorMap := make(map[string]*core.Record, len(authors))
+		for _, a := range authors {
+			authorMap[a.Id] = a
 		}
-		err = util.UpdateTrailShares(trail.Id, actorIds, client)
+
+		for _, trail := range trails {
+			author := authorMap[trail.GetString("author")]
+
+			if err := util.IndexTrail(app, trail, author, client); err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to index trail '%s': %v", trail.GetString("name"), err))
+				continue
+			}
+
+			// Shares
+			shares, err := app.FindAllRecords("trail_share",
+				dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trail.Id}),
+			)
+			if err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to fetch shares for trail '%s': %v", trail.GetString("name"), err))
+				continue
+			}
+			shareActors := make([]string, len(shares))
+			for i, r := range shares {
+				shareActors[i] = r.GetString("actor")
+			}
+			if err := util.UpdateTrailShares(trail.Id, shareActors, client); err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
+			}
+
+			// Likes
+			likes, err := app.FindAllRecords("trail_like",
+				dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trail.Id}),
+			)
+			if err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to fetch likes for trail '%s': %v", trail.GetString("name"), err))
+				continue
+			}
+			likeActors := make([]string, len(likes))
+			for i, r := range likes {
+				likeActors[i] = r.GetString("actor")
+			}
+			if err := util.UpdateTrailLikes(trail.Id, likeActors, client); err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to update trail likes '%s': %v", trail.GetString("name"), err))
+			}
+		}
+
+		page++
+	}
+
+	// --- Lists ---
+	if _, err := client.Index("lists").DeleteAllDocuments(); err != nil {
+		return err
+	}
+
+	page = 0
+	for {
+		lists := []*core.Record{}
+		err := app.RecordQuery("lists").
+			Limit(pageSize).
+			Offset(page * pageSize).
+			All(&lists)
 		if err != nil {
-			app.Logger().Warn(fmt.Sprintf("Unable to update trail shares '%s': %v", trail.GetString("name"), err))
-			continue
+			return err
 		}
-		likes, err := app.FindAllRecords("trail_like",
-			dbx.NewExp("trail = {:trailId}", dbx.Params{"trailId": trail.Id}),
+		if len(lists) == 0 {
+			break
+		}
+
+		// Collect author IDs in batch
+		authorIDs := make([]string, 0, len(lists))
+		for _, l := range lists {
+			if id := l.GetString("author"); id != "" {
+				authorIDs = append(authorIDs, id)
+			}
+		}
+		// Fetch all authors in one go
+		authorArgs := make([]interface{}, len(authorIDs))
+		for i, v := range authorIDs {
+			authorArgs[i] = v
+		}
+
+		authors, err := app.FindAllRecords("activitypub_actors",
+			dbx.In("id", authorArgs...),
 		)
 		if err != nil {
 			return err
 		}
-		actorIds = make([]string, len(likes))
-		for i, r := range likes {
-			actorIds[i] = r.GetString("actor")
-		}
-		err = util.UpdateTrailLikes(trail.Id, actorIds, client)
-		if err != nil {
-			app.Logger().Warn(fmt.Sprintf("Unable to update trail likes '%s': %v", trail.GetString("name"), err))
-			continue
-		}
-	}
-
-	lists, err := app.FindAllRecords("lists")
-	if err != nil {
-		return err
-	}
-	_, err = client.Index("lists").DeleteAllDocuments()
-	if err != nil {
-		return err
-	}
-
-	for _, list := range lists {
-		author, err := app.FindRecordById("activitypub_actors", list.GetString(("author")))
-		if err != nil {
-			return err
-		}
-		if err := util.IndexList(app, list, author, client); err != nil {
-			app.Logger().Warn(fmt.Sprintf("Unable to index list '%s': %v", list.GetString("name"), err))
-			continue
+		authorMap := make(map[string]*core.Record, len(authors))
+		for _, a := range authors {
+			authorMap[a.Id] = a
 		}
 
-		shares, err := app.FindAllRecords("list_share",
-			dbx.NewExp("list = {:listId}", dbx.Params{"listId": list.Id}),
-		)
-		if err != nil {
-			return err
-		}
-		actorIds := make([]string, len(shares))
-		for i, r := range shares {
-			actorIds[i] = r.GetString("actor")
-		}
-		err = util.UpdateListShares(list.Id, actorIds, client)
+		for _, list := range lists {
+			author := authorMap[list.GetString("author")]
 
-		if err != nil {
-			app.Logger().Warn(fmt.Sprintf("Unable to update list shares '%s': %v", list.GetString("name"), err))
-			continue
+			if err := util.IndexList(app, list, author, client); err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to index list '%s': %v", list.GetString("name"), err))
+				continue
+			}
+
+			shares, err := app.FindAllRecords("list_share",
+				dbx.NewExp("list = {:listId}", dbx.Params{"listId": list.Id}),
+			)
+			if err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to fetch list shares '%s': %v", list.GetString("name"), err))
+				continue
+			}
+			shareActors := make([]string, len(shares))
+			for i, r := range shares {
+				shareActors[i] = r.GetString("actor")
+			}
+			if err := util.UpdateListShares(list.Id, shareActors, client); err != nil {
+				app.Logger().Warn(fmt.Sprintf("Unable to update list shares '%s': %v", list.GetString("name"), err))
+			}
 		}
+
+		page++
 	}
+
 	return nil
 }
