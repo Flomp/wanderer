@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Datepicker from "$lib/components/base/datepicker.svelte";
     import Modal from "$lib/components/base/modal.svelte";
     import TextField from "$lib/components/base/text_field.svelte";
     import Toggle from "$lib/components/base/toggle.svelte";
@@ -25,23 +26,32 @@
         modal.openModal();
     }
 
-    const { form, errors } = createForm({
+    const {
+        form,
+        errors,
+        data: formData,
+    } = createForm({
         initialValues: {
             clientId: integration?.strava?.clientId ?? "",
             clientSecret: integration?.strava?.clientSecret ?? "",
             routes: integration?.strava?.routes ?? true,
             activities: integration?.strava?.activities ?? true,
             active: integration?.strava?.active ?? false,
+            after: integration?.strava?.after,
         },
         extend: validator({
             schema: StravaSchema,
         }),
         onSubmit: async (form) => {
-            form.active = integration?.strava?.active ?? form.active
+            form.active = integration?.strava?.active ?? form.active;
             onsave?.(form);
             modal.closeModal();
         },
     });
+
+    function clearAfterDate() {
+        ($formData as any).after = undefined;
+    }
 </script>
 
 <Modal
@@ -60,7 +70,9 @@
             ></TextField>
             <TextField
                 label="Client Secret"
-                placeholder={integration?.strava ? `(${$_("unchanged")})` : "de8b3789bd7116d..."}
+                placeholder={integration?.strava
+                    ? `(${$_("unchanged")})`
+                    : "de8b3789bd7116d..."}
                 name="clientSecret"
                 type="password"
                 error={$errors.clientSecret}
@@ -72,6 +84,25 @@
                     name="activities"
                     label={$_("activity", { values: { n: 2 } })}
                 ></Toggle>
+            </div>
+            <p
+                class="text-xs text-gray-500 max-w-lg pt-4 pb-1 border-t border-input-border"
+            >
+                {$_("strava-integration-after-date-hint")}
+            </p>
+            <div class="flex items-end relative gap-x-2">
+                <Datepicker
+                    error={$errors.after}
+                    label={$_("after")}
+                    bind:value={$formData.after}
+                ></Datepicker>
+                <button
+                    class="btn-icon mb-[10px]"
+                    type="button"
+                    onclick={clearAfterDate}
+                    aria-label="Clear 'after' date"
+                    ><i class="fa fa-close"></i></button
+                >
             </div>
         </form>
     {/snippet}
