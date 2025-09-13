@@ -14,11 +14,12 @@
     let loading: boolean = $state(true);
 
     let filter: TrailFilter = $state(page.data.filter);
-    const pagination: { page: number; totalPages: number } = $state({
+    const pagination: { page: number; totalPages: number, items: number } = $state({
         page: page.url.searchParams.has("page")
             ? parseInt(page.url.searchParams.get("page")!)
             : 1,
         totalPages: 1,
+        items: 12,
     });
     let trails: Trail[] = $state([]);
 
@@ -55,17 +56,19 @@
 
     async function handleFilterUpdate() {
         loading = true;
-        const response = await trails_search_filter(filter, 1);
+        const response = await trails_search_filter(filter, 1, pagination.items);
         trails = response.items;
         pagination.page = response.page;
         pagination.totalPages = response.totalPages;
         loading = false;
     }
 
-    async function paginate(newPage: number) {
+    async function paginate(newPage: number, items?: number) {
         pagination.page = newPage;
-        const response = await trails_search_filter(filter, newPage);
+        const response = await trails_search_filter(filter, newPage, items);
         trails = response.items;
+        pagination.page = response.page;
+        pagination.totalPages = response.totalPages;
         page.url.searchParams.set("page", newPage.toString());
         goto(`?${page.url.searchParams.toString()}`);
     }

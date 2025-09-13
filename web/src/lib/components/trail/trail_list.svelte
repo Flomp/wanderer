@@ -15,14 +15,14 @@
     interface Props {
         filter?: TrailFilter | null;
         trails: Trail[];
-        pagination?: { page: number; totalPages: number };
+        pagination?: { page: number; totalPages: number, items: number };
         loading?: boolean;
         fullWidthCards?: boolean;
         onupdate?: (
             filter: TrailFilter | null,
             selection: Set<Trail> | undefined,
         ) => void;
-        onpagination?: (page: number) => void;
+        onpagination?: (page: number, items?: number) => void;
     }
 
     let {
@@ -31,6 +31,7 @@
         pagination = {
             page: 1,
             totalPages: 1,
+            items: 12,
         },
         loading = false,
         fullWidthCards = false,
@@ -42,6 +43,15 @@
         { text: $_("card", { values: { n: 2 } }), value: "cards" },
         { text: $_("list", { values: { n: 1 } }), value: "list" },
         { text: $_("table"), value: "table" },
+    ];
+    
+    const perPageOptions: SelectItem[] = [
+        { text: "6", value: 6 },
+        { text: "12", value: 12 },
+        { text: "24", value: 24 },
+        { text: "48", value: 48 },
+        { text: "96", value: 96 },
+        { text: $_("all"), value: -1 },
     ];
 
     let selectedDisplayOption = $state(displayOptions[0].value);
@@ -206,6 +216,10 @@
     function handleMouseLeave(trail: Trail) {
         handleHoverUpdate(trail);
     }
+
+    function setItemsPerPage() {
+        onpagination?.(1, pagination.items);
+    }
 </script>
 
 <div class="min-w-0">
@@ -267,9 +281,10 @@
                     trails={null}
                     selection={new Set<Trail>()}
                     tableHeader={sortOptions}
+                    items={pagination.items}
                 ></TrailTable>
             {:else}
-                {#each { length: 12 } as _, index}
+                {#each { length: pagination.items } as _, index}
                     {#if selectedDisplayOption === "cards"}
                         <div class="flex-1">
                             <SkeletonCard></SkeletonCard>
@@ -293,6 +308,7 @@
                         (option) => option.value !== "elevation_loss",
                     )}
                     {filter}
+                    items={pagination.items}
                     onsort={handleSortUpdate}
                     onTrailSelect={(t) => handleSelectionUpdate(t)}
                 ></TrailTable>
@@ -330,11 +346,22 @@
             {/if}
         {/if}
     </div>
-    <Pagination
-        page={pagination.page}
-        totalPages={pagination.totalPages}
-        {onpagination}
-    ></Pagination>
+    <div class="flex items-end flex-wrap lg:flex-nowrap gap-x-6 gap-y-2 mx-4">
+        <div class="basis-full order-1 md:order-none">
+            <Pagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                {onpagination}
+            ></Pagination>
+        </div>
+        <div class="shrink-0">
+            <Select
+                bind:value={pagination.items}
+                items={perPageOptions}
+                onchange={setItemsPerPage}
+            ></Select>
+        </div>
+    </div>
 </div>
 
 <style>
