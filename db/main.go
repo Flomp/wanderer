@@ -21,6 +21,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/spf13/cast"
 
+	"pocketbase/commands"
 	"pocketbase/federation"
 	"pocketbase/integrations/komoot"
 	"pocketbase/integrations/strava"
@@ -72,6 +73,8 @@ func main() {
 
 	registerMigrations(app)
 	setupEventHandlers(app, client)
+
+	setupCommands(app)
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
@@ -138,6 +141,10 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnServe().BindFunc(onBeforeServeHandler(client))
 
 	app.OnBootstrap().BindFunc(onBootstrapHandler())
+}
+
+func setupCommands(app *pocketbase.PocketBase) {
+	app.RootCmd.AddCommand(commands.Dedup(app))
 }
 
 func sanitizeHTML() func(e *core.RecordRequestEvent) error {
