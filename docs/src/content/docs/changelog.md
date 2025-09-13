@@ -2,6 +2,19 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.18.2
+### Features
+- Adds `dedup` command to pocketbase. This command allows an admin to quickly identify duplicate trails and delete them. Use the `--dry-run` flag to only log duplicate trails without deleting them. To execute the command run `docker exec -it wanderer-db ./pocketbase dedup --dry-run`.
+- Adds option to only sync strava activities after a certain date
+- Singificant performance improvements for instances with larger userbases
+- Greatly improved initial indexing speed when starting wanderer
+### Bug fixes
+- Fixes permission issues for public trails
+- Fixes bug that caused trails to be duplicated multiple times (to clean up see the `dedup` command above)
+- Fixes link to "New Trail" from empty profiles
+- Fixes link when opening a trail from the map searchbar
+- Sorting by difficulty no longer sorts by difficulty alphabetically
+- Fixes strava integration stopping after only one page
 ## v0.18.1
 ### Bug fixes
 - Fixes permission issues that prevented federation from working properly
