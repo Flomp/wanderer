@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -162,7 +163,19 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		return nil, err
 	}
 
-	record, err := app.FindFirstRecordByData("trails", "iri", t.ID.String())
+	iri := t.ID.String()
+	var record *core.Record
+	if actor.GetBool(("isLocal")) {
+		trailUrl, parseErr := url.Parse(iri)
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		trailId := path.Base(trailUrl.Path)
+		record, err = app.FindRecordById("trails", trailId)
+	} else {
+		record, err = app.FindFirstRecordByData("trails", "iri", iri)
+	}
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			collection, err := app.FindCollectionByNameOrId("trails")
@@ -279,7 +292,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		}
 
 		if len(photoURLs) > 0 {
-			photos := make([]*filesystem.File, len(photoURLs))
+			photos := []*filesystem.File{}
 			for i, purl := range photoURLs {
 				photo, err := filesystem.NewFileFromURL(context.Background(), purl)
 				if err != nil {

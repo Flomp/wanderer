@@ -48,6 +48,7 @@ function isFormContentType(request: Request) {
   );
 }
 
+let publicMeilisearchKey: string | undefined = undefined;
 
 const auth: Handle = async ({ event, resolve }) => {
   const pb = new PocketBase(envPub.PUBLIC_POCKETBASE_URL)
@@ -82,10 +83,14 @@ const auth: Handle = async ({ event, resolve }) => {
   if (pb.authStore.record) {
     meiliApiKey = pb.authStore.record.token
     settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.record.id}"`, { requestKey: null })
-    actor = await pb.collection("activitypub_actors").getFirstListItem(`user='${pb.authStore.record.id}'`)
+    actor = await pb.collection("activitypub_actors").getFirstListItem(`isLocal=1&&user='${pb.authStore.record.id}'`)
   } else {
-    const response = await pb.send("/public/search/token", { method: "GET", fetch: event.fetch });
-    meiliApiKey = response.token;
+    if (!publicMeilisearchKey) {
+      const response = await pb.send("/public/search/token", { method: "GET", fetch: event.fetch });
+      publicMeilisearchKey = response.token;
+    }
+
+    meiliApiKey = publicMeilisearchKey!;
   }
   const ms = new MeiliSearch({ host: env.MEILI_URL, apiKey: meiliApiKey });
 

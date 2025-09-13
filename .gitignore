@@ -9,6 +9,6 @@ search/dumps
 
 run.sh
 build*.sh
-start.*
+start*.*
 
 data*/

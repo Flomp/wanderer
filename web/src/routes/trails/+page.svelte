@@ -25,7 +25,24 @@
     export const snapshot: Snapshot<TrailFilter> = {
         capture: () => filter,
         restore: (value) => {
-            filter = value;
+            const difficultyMap: Record<string, 0 | 1 | 2> = {
+                easy: 0,
+                moderate: 1,
+                difficult: 2,
+            };
+            // defensive copy
+            const migrated = { ...value };
+
+            if (Array.isArray(migrated.difficulty)) {
+                migrated.difficulty = migrated.difficulty.map((d: any) => {
+                    if (typeof d === "string" && d in difficultyMap) {
+                        return difficultyMap[d];
+                    }
+                    return d;
+                });
+            }
+
+            filter = migrated;
             handleFilterUpdate();
         },
     };
