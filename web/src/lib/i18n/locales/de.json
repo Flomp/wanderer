@@ -390,7 +390,7 @@
   "statistics": "Statistiken",
   "stop-drawing": "Zeichnen beenden",
   "stop-editing": "Bearbeiten beenden",
-  "strava-integration-after-date-hint": "",
+  "strava-integration-after-date-hint": "If your account has a large amount of acitivities you may run into Strava's API rate limit preventing you from syncing all activities at once. To mitigate this issue you can set an \"After\" date below so that only activities that were recorded after this date are synced.",
   "subway-stop": "U-Bahn Eingang",
   "summit": "Gipfel",
   "summit-book": "Gipfelbuch",
