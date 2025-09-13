@@ -34,7 +34,7 @@ export async function profile_lists_index(handle: string, filter: ListFilter, pa
             q: filter.q,
             options: {
                 sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
-                hitsPerPage: perPage,
+                hitsPerPage: perPage > 0 ? perPage : undefined,
                 page: page
             }
         }),
@@ -89,7 +89,7 @@ export async function profile_trails_index(handle: string, filter: TrailFilter, 
             options: {
                 attributesToRetrieve: defaultTrailSearchAttributes,
                 sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
-                hitsPerPage: 12,
+                hitsPerPage: perPage > 0 ? perPage : undefined,
                 page: page
             }
         }),
