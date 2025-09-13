@@ -211,6 +211,7 @@
   "invalid-username": "Érvénytelen felhasználó",
   "italian": "Olasz",
   "joined": "Joined",
+  "keep-private": "Keep private",
   "language": "Nyelf",
   "latitude": "Szélesség",
   "layer": "{n, plural, =1 {Layer} other {Layers}}",
