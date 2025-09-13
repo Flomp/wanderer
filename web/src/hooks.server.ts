@@ -83,7 +83,7 @@ const auth: Handle = async ({ event, resolve }) => {
   if (pb.authStore.record) {
     meiliApiKey = pb.authStore.record.token
     settings = await pb.collection('settings').getFirstListItem<Settings>(`user="${pb.authStore.record.id}"`, { requestKey: null })
-    actor = await pb.collection("activitypub_actors").getFirstListItem(`user='${pb.authStore.record.id}'`)
+    actor = await pb.collection("activitypub_actors").getFirstListItem(`isLocal=1&&user='${pb.authStore.record.id}'`)
   } else {
     if (!publicMeilisearchKey) {
       const response = await pb.send("/public/search/token", { method: "GET", fetch: event.fetch });
