@@ -243,6 +243,7 @@ export async function trails_update(oldTrail: Trail, newTrail: Trail, photos?: F
     const waypointUpdates = compareObjectArrays<Waypoint>(oldTrail.expand?.waypoints_via_trail ?? [], newTrail.expand?.waypoints_via_trail ?? []);
 
     for (const addedWaypoint of waypointUpdates.added) {
+        addedWaypoint.trail = newTrail.id!
         const model = await waypoints_create({
             ...addedWaypoint,
             marker: undefined,
