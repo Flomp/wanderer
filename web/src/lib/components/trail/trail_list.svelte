@@ -218,7 +218,7 @@
     }
 
     function setItemsPerPage() {
-        onpagination?.(1, pagination.items);
+        onpagination?.(1, pagination.items < 0 ? pagination.totalPages * trails.length : pagination.items);
     }
 </script>
 
