@@ -228,6 +228,7 @@
             <Pagination
                 page={pagination.page}
                 totalPages={pagination.totalPages}
+                perPage={pagination.items}
                 {onpagination}
             ></Pagination>
         </div>
@@ -351,6 +352,7 @@
             <Pagination
                 page={pagination.page}
                 totalPages={pagination.totalPages}
+                perPage={pagination.items}
                 {onpagination}
             ></Pagination>
         </div>
