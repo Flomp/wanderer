@@ -193,7 +193,7 @@
 
     async function handleTrailsEditDone(resetSelection: boolean = false) {
         if (resetSelection) {
-            selection?.clear();
+            selection = new Set<Trail>();
             hoveredTrail = undefined;
         }
         await tick();
@@ -224,6 +224,7 @@
                     mode={"multi-select"}
                     onDelete={() => handleTrailsEditDone(true)}
                     onShare={() => handleTrailsEditDone(false)}
+                    onUpdate={() => handleTrailsEditDone(true)}
                 />
             </div>
         {/if}

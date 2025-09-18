@@ -1,9 +1,19 @@
 <script module lang="ts">
+
+    import Toggle from "$lib/components/base/toggle.svelte";
+
+
     export type DropdownItem = {
         text: string;
         value: any;
         icon?: string;
     };
+
+    export type DropdownItemTag = {
+        tag: string;
+        value: any;
+        toggle?: boolean;
+    }
 </script>
 
 <script lang="ts">
@@ -88,6 +98,18 @@
         closeMenu();
     }
 
+    function getToggleStatus(t: DropdownItemTag) : boolean {
+        if (t) return t.value === true;
+
+        return false;
+    }
+
+    function isToggle(t: DropdownItemTag) : boolean {
+        if (t) return t.toggle === true;
+
+        return false;
+    }
+
     function handleWindowClick(e: MouseEvent) {
         if (
             (e.target as HTMLElement).parentElement?.classList.contains(
@@ -132,10 +154,19 @@
                     role="presentation"
                     onclick={(e) => handleItemClick(e, item)}
                 >
-                    {#if item.icon}
-                        <i class="fa fa-{item.icon} mr-3"></i>
+                    {#if isToggle(item.value as DropdownItemTag)}
+                        <Toggle
+                            name="public"
+                            label={item.text}
+                            icon={item.icon}
+                            value={getToggleStatus(item.value as DropdownItemTag)}
+                        ></Toggle>
+                    {:else}
+                        {#if item.icon}
+                            <i class="fa fa-{item.icon} mr-3"></i>
+                        {/if}
+                        <span class="whitespace-nowrap">{item.text}</span>
                     {/if}
-                    <span class="whitespace-nowrap">{item.text}</span>
                 </li>
             {/each}
         </ul>
