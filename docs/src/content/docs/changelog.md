@@ -2,6 +2,16 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.18.3
+### Bug fixes
+- Fixes bug that prevented waypoints from being update or deleted in v0.18.2
+- Return properly formatted error message when accessing a protected API route
+- Fixes logo for OIDC 2 & 3 providers (thanks @wolffshots)
+- Fixes bug that caused dropdown actions from a feed item on the homepage to cause a 404 error
+
+### Maintenance
+- Updates pocketbase to v0.30.0
+
 ## v0.18.2
 ### Features
 - Adds `dedup` command to pocketbase. This command allows an admin to quickly identify duplicate trails and delete them. Use the `--dry-run` flag to only log duplicate trails without deleting them. To execute the command run `docker exec -it wanderer-db ./pocketbase dedup --dry-run`.
