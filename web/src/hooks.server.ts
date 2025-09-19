@@ -4,7 +4,7 @@ import type { Settings } from '$lib/models/settings'
 
 import PocketBase from 'pocketbase'
 import { isRouteProtected } from '$lib/util/authorization_util'
-import { json, redirect, text, type Handle } from '@sveltejs/kit'
+import { error, json, redirect, text, type Handle } from '@sveltejs/kit'
 import { sequence } from '@sveltejs/kit/hooks'
 import { MeiliSearch } from 'meilisearch'
 import { locale } from 'svelte-i18n'
@@ -60,6 +60,9 @@ const auth: Handle = async ({ event, resolve }) => {
 
   // validate the user existence and if the path is acceesible
   if (!pb.authStore.record && isRouteProtected(url)) {
+    if (url.pathname.startsWith("/api")) {
+      return json({ message: "Unauthorized" }, { status: 401 })
+    }
     throw redirect(302, '/login?r=' + url.pathname);
   } else if (pb.authStore.record && url.pathname === "/login") {
     throw redirect(302, '/');
