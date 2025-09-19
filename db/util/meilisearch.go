@@ -146,7 +146,7 @@ func getPolyline(app core.App, r *core.Record) (string, error) {
 	}
 	defer fsys.Close()
 
-	gpxFile, err := fsys.GetFile(avatarKey)
+	gpxFile, err := fsys.GetReader(avatarKey)
 	if err != nil {
 		return "", err
 	}
