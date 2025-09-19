@@ -174,7 +174,7 @@
             return;
         }
 
-        const handle = page.params.handle
+        const handle = page.params.handle ?? handleFromRecordWithIRI(trail())
 
         if (item.value == "show") {
             if (hasTrail()) {
