@@ -211,6 +211,7 @@
   "invalid-username": "无效用户名",
   "italian": "意大利语",
   "joined": "已加入",
+  "keep-private": "Keep private",
   "language": "语言",
   "latitude": "纬度",
   "layer": "{n, plural, =1 {层} other {层}}",
