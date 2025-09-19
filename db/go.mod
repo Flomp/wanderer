@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/go-ap/jsonld v0.0.0-20250905102310-8480b0fe24d9
-	github.com/meilisearch/meilisearch-go v0.29.0
+	github.com/meilisearch/meilisearch-go v0.34.0
 	github.com/pocketbase/dbx v1.11.0
 	github.com/pocketbase/pocketbase v0.30.0
 	github.com/tkrajina/gpxgo v1.4.0
@@ -19,8 +19,6 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
-	github.com/josharian/intern v1.0.0 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
 )
