@@ -5,7 +5,6 @@
     import type { Trail } from "$lib/models/trail";
     import type { Waypoint } from "$lib/models/waypoint";
     import { theme } from "$lib/stores/theme_store";
-    import { fetchGPX } from "$lib/stores/trail_store";
     import { findStartAndEndPoints } from "$lib/util/geojson_util";
     import {
         createMarkerFromWaypoint,
@@ -592,6 +591,8 @@
         if (trails[activeTrail]) {
             removeStartEndMarkers(trails[activeTrail].id);
         }
+        
+        geolocate();
     }
 
     function stopDrawing() {
@@ -731,6 +732,8 @@
         }
     }
 
+    let geolocateControl : M.GeolocateControl;
+
     onMount(async () => {
         const initialState = {
             lng: 0,
@@ -800,8 +803,7 @@
             "top-left",
         );
 
-        map.addControl(
-            new M.GeolocateControl({
+        geolocateControl = new M.GeolocateControl({
                 positionOptions: {
                     enableHighAccuracy: true,
                 },
@@ -809,8 +811,8 @@
                     animate: fitBounds == "animate",
                 },
                 trackUserLocation: true,
-            }),
-        );
+            });
+        map.addControl(geolocateControl);
 
         if (showStyleSwitcher) {
             map.addControl(switcherControl);
@@ -901,6 +903,17 @@
 
         showWaypoints();
     });
+
+    function geolocate() {
+        if (!page.data.settings?.behavior) return;
+
+        if (page.data.settings.behavior.allowAutoGeolocate === true) {
+            if (geolocateControl._watchState === 'OFF') {
+                geolocateControl.options.trackUserLocation = true;
+                geolocateControl.trigger();
+            }
+        }
+    }
 
     onDestroy(() => {
         map?.remove();
