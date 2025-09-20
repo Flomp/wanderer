@@ -592,6 +592,8 @@
         if (trails[activeTrail]) {
             removeStartEndMarkers(trails[activeTrail].id);
         }
+        
+        geolocate();
     }
 
     function stopDrawing() {
@@ -731,6 +733,8 @@
         }
     }
 
+    let geolocateControl : M.GeolocateControl;
+
     onMount(async () => {
         const initialState = {
             lng: 0,
@@ -800,8 +804,7 @@
             "top-left",
         );
 
-        map.addControl(
-            new M.GeolocateControl({
+        geolocateControl = new M.GeolocateControl({
                 positionOptions: {
                     enableHighAccuracy: true,
                 },
@@ -809,8 +812,8 @@
                     animate: fitBounds == "animate",
                 },
                 trackUserLocation: true,
-            }),
-        );
+            });
+        map.addControl(geolocateControl);
 
         if (showStyleSwitcher) {
             map.addControl(switcherControl);
@@ -901,6 +904,14 @@
 
         showWaypoints();
     });
+
+    function geolocate() {
+        if (geolocateControl._watchState === 'OFF') {
+            geolocateControl.options.trackUserLocation = true;
+            geolocateControl.trigger();
+        }
+    }
+
 
     onDestroy(() => {
         map?.remove();
