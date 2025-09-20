@@ -92,12 +92,6 @@ jobs:
           cd ..
           docker buildx build web/ --no-cache -t flomp/wanderer-web:$VERSION -t flomp/wanderer-web:latest --platform=linux/amd64,linux/arm64 --push
 
-          # Build docs image
-          cd docs
-          npm ci && npm run build
-          cd ..
-          docker buildx build docs/ --no-cache -t flomp/wanderer-docs:$VERSION -t flomp/wanderer-docs:latest --platform=linux/amd64,linux/arm64 --push
-
   # Job 3: Publish the Release
   release:
     runs-on: ubuntu-latest
