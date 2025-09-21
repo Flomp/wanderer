@@ -3,11 +3,12 @@
     import { page } from "$app/state";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
-    import type { Trail, TrailFilter } from "$lib/models/trail";
+    import type { Trail, TrailFilter, TrailSearchResult } from "$lib/models/trail";
     import { trails_search_filter } from "$lib/stores/trail_store";
     import type { Snapshot } from "@sveltejs/kit";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n";
+    import { APIError } from "$lib/util/api_util";
 
     let filterExpanded: boolean = $state(true);
 
@@ -56,21 +57,50 @@
 
     async function handleFilterUpdate() {
         loading = true;
-        const response = await trails_search_filter(filter, 1, pagination.items < 0 ? pagination.totalPages * trails.length : pagination.items);
-        trails = response.items;
-        pagination.page = response.page;
-        pagination.totalPages = response.totalPages;
+
+        await paginate(1, pagination.items < 0 ? pagination.totalPages * trails.length : pagination.items);
+
         loading = false;
     }
 
     async function paginate(newPage: number, items?: number) {
         pagination.page = newPage;
+
+        try {
+            await doPaginate(newPage, items);
+        } catch (err: any) {
+            let apiError : APIError = err;
+            if (apiError.status == 413) { // content too large
+                let newItems = 24;
+                if (items) {
+                    if (items > 96) {
+                        newItems = 96;
+                    } else if (items > 48) {
+                        newItems = 48;
+                    } else if (items > 24) {
+                        newItems = 24;
+                    } else {
+                        newItems = 12;
+                    }
+                } else {
+                    newItems = 96;
+                }
+                await doPaginate(newPage, newItems);
+            }
+        }
+        
+        page.url.searchParams.set("page", newPage.toString());
+        goto(`?${page.url.searchParams.toString()}`);
+    }
+
+    async function doPaginate(newPage: number, items?: number) {
         const response = await trails_search_filter(filter, newPage, items);
+        if (items) {
+            pagination.items = items;
+        }
         trails = response.items;
         pagination.page = response.page;
         pagination.totalPages = response.totalPages;
-        page.url.searchParams.set("page", newPage.toString());
-        goto(`?${page.url.searchParams.toString()}`);
     }
 </script>
 
