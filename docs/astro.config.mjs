@@ -91,10 +91,6 @@ export default defineConfig({
             ]
           },
           {
-            label: 'Update',
-            link: '/run/update/'
-          },
-          {
             label: 'Environment configuration',
             link: '/run/environment-configuration/'
           },
