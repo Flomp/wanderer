@@ -101,6 +101,7 @@
     import { z } from "zod";
     import Track from "$lib/models/gpx/track.js";
     import TrackSegment from "$lib/models/gpx/track-segment.js";
+    import { getTrailDifficulty } from "$lib/util/trail_util";
 
     let { data } = $props();
 
@@ -231,6 +232,20 @@
                         photoFiles,
                         gpxFile,
                     );
+
+                    if (!page.params.difficulty) {
+
+                        let speed : number = 10;
+                        if (routingOptions.modeOfTransport === "pedestrian" && routingOptions.pedestrianOptions) {
+                            if (routingOptions.pedestrianOptions.walking_speed) speed = routingOptions.pedestrianOptions.walking_speed;
+                        }
+                        else if (routingOptions.modeOfTransport === "bicycle" && routingOptions.bicycleOptions) {
+                            if (routingOptions.bicycleOptions.cycling_speed) speed = routingOptions.bicycleOptions.cycling_speed;
+                        }
+
+                        createdTrail.difficulty = getTrailDifficulty(createdTrail, routingOptions.modeOfTransport, speed);
+                    }
+
                     setFields(createdTrail);
                     trail.set(createdTrail);
                 } else {
