@@ -51,6 +51,7 @@
     let loading: boolean = $state(false);
 
     let newShares: TrailShare[] = [];
+    let publicList: boolean = $state(data.list?.public);
 
     let shareConfirmModal: ConfirmModal;
     let publishConfirmModal: ConfirmModal;
@@ -102,11 +103,8 @@
     });
 
     async function checkPrerequisites() {
-        if (
-            (data.list?.public === false && $formData.public === true) ||
-            ($formData.public === true &&
-                (data.list?.expand?.trails?.length ?? 0) <
-                    ($formData.expand?.trails?.length ?? 0))
+        if (    $formData.public === true && 
+                $formData.expand?.trails?.find(t => !t.public) !== undefined
         ) {
             publishConfirmModal.openModal();
             return false;
@@ -137,6 +135,7 @@
                 icon: "check",
                 text: $_("list-saved-successfully"),
             });
+            publicList = $formData.public;
         } catch (e) {
             show_toast({
                 type: "error",
@@ -332,7 +331,11 @@
             label={$_("description")}
             error={$errors.description}
         ></Editor>
-        <Toggle name="public" label={$_("public")}></Toggle>
+        <Toggle
+            name="public"
+            label={$formData.public ? $_("public") : $_("private")}
+            icon={$formData.public ? "globe" : "lock"}
+        ></Toggle>
         <h3 class="text-xl font-semibold">
             {$_("trail", { values: { n: 2 } })}
         </h3>
@@ -461,8 +464,13 @@
     action="confirm"
     bind:this={shareConfirmModal}
     onconfirm={async () => {
-        await updateTrailShares();
-        await saveList();
+        loading = true;
+        try {
+            await updateTrailShares();
+            await saveList();
+        } finally {
+            loading = false;
+        }
     }}
 ></ConfirmModal>
 
@@ -471,10 +479,24 @@
     text={$_("list-public-warning")}
     title={$_("confirm-publish")}
     action="confirm"
+    deny="keep-private"
     bind:this={publishConfirmModal}
     onconfirm={async () => {
-        await publishTrails();
-        await saveList();
+        loading = true;
+        try {
+            await publishTrails();
+            await saveList();
+        } finally {
+            loading = false;
+        }
+    }}
+    oncancel={async () => {
+        loading = true;
+        try {
+            await saveList();
+        } finally {
+            loading = false;
+        }
     }}
 ></ConfirmModal>
 

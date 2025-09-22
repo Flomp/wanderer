@@ -211,6 +211,7 @@
   "invalid-username": "Nome utente non valido",
   "italian": "Italiano",
   "joined": "Aggiunto",
+  "keep-private": "Keep private",
   "language": "Lingua",
   "latitude": "Latitudine",
   "layer": "{n, plural, =1 {Layer} other {Layers}}",
