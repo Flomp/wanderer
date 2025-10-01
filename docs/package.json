@@ -11,18 +11,18 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
-    "@astrojs/node": "^9.2.2",
-    "@astrojs/starlight": "^0.34.4",
+    "@astrojs/node": "^9.4.4",
+    "@astrojs/starlight": "^0.36.0",
     "@astrojs/starlight-tailwind": "^4.0.1",
-    "@astrojs/svelte": "^7.1.0",
-    "@fontsource/ibm-plex-mono": "^5.0.13",
-    "@fontsource/ibm-plex-sans": "^5.0.20",
-    "@tailwindcss/vite": "^4.1.10",
-    "astro": "^5.9.3",
-    "sharp": "^0.32.5",
-    "starlight-openapi": "^0.9.0",
-    "svelte": "^5.34.8",
+    "@astrojs/svelte": "^7.2.0",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "@tailwindcss/vite": "^4.1.13",
+    "astro": "^5.14.1",
+    "sharp": "^0.34.4",
+    "starlight-openapi": "^0.20.0",
+    "svelte": "^5.39.7",
     "tailwindcss": "^4.1.10",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   }
 }
