@@ -47,6 +47,8 @@
 
     let lists: List[] = $state([]);
 
+    let loading: boolean = $state(false);
+
     function allowEdit(): boolean {
         return (
             hasTrail() &&
@@ -285,7 +287,7 @@
             return;
         }
 
-        const handle = page.params.handle ?? handleFromRecordWithIRI(trail())
+        const handle = page.params.handle ?? handleFromRecordWithIRI(trail());
 
         const ddVal = item.value as string;
 
@@ -376,6 +378,8 @@
 
     async function updateTrailsVisibility() {
         const newVisibility = !majorityOfSelectedTrailsArePublic();
+
+        loading = true;
         for (const cTrail of trails ?? []) {
             if (!cTrail) continue;
 
@@ -411,12 +415,7 @@
             }
         }
 
-        // show_toast({
-        //     type: "success",
-        //     icon: "check",
-        //     text: $_("trail-saved-successfully"),
-        // });
-
+        loading = false;
         onUpdate?.();
     }
 
@@ -507,9 +506,12 @@
 
     async function deleteTrails() {
         if (hasTrail()) {
+            loading = true;
+
             for (const dTrail of trails!) {
                 await doDeleteTrail(dTrail);
             }
+            loading = false;
 
             onDelete?.();
         }
@@ -606,7 +608,11 @@
     {#snippet children({ toggleMenu: openDropdown })}
         {#if toggle}{@render toggle({
                 toggleMenu: openDropdown,
-            })}{:else if mode == "multi-select"}
+            })}
+        {:else if loading}
+            <div class="w-16"></div>
+            <div class="spinner light:spinner-dark"></div>
+        {:else if mode == "multi-select"}
             <button
                 aria-label="Open dropdown"
                 class="btn-primary flex-shrink-0 !font-medium"

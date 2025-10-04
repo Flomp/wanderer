@@ -53,9 +53,12 @@
         }
     });
 
-    async function handleFilterUpdate() {
+    async function handleFilterUpdate(resetPagination: boolean = true) {
         loading = true;
-        const response = await trails_search_filter(filter, 1);
+        const response = await trails_search_filter(
+            filter,
+            resetPagination ? 1 : pagination.page,
+        );
         trails = response.items;
         pagination.page = response.page;
         pagination.totalPages = response.totalPages;
@@ -82,14 +85,14 @@
         categories={page.data.categories}
         bind:filter
         {filterExpanded}
-        onupdate={handleFilterUpdate}
+        onupdate={() => handleFilterUpdate()}
     ></TrailFilterPanel>
     <TrailList
         bind:filter
         {loading}
         {trails}
         {pagination}
-        onupdate={handleFilterUpdate}
+        onupdate={() => handleFilterUpdate(false)}
         onpagination={paginate}
     ></TrailList>
 </main>
