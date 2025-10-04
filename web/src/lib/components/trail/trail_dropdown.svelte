@@ -1,28 +1,32 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/state";
     import type { List } from "$lib/models/list";
     import type { Trail } from "$lib/models/trail";
+    import { categories } from "$lib/stores/category_store.js";
     import {
         lists_add_trail,
         lists_index,
         lists_remove_trail,
     } from "$lib/stores/list_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
-    import { trails_delete, trails_update, trails_copy } from "$lib/stores/trail_store";
+    import {
+        trails_copy,
+        trails_delete,
+        trails_update,
+    } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
     import JSZip from "jszip";
+    import type { Snippet } from "svelte";
     import { _ } from "svelte-i18n";
-    import Dropdown, { type DropdownItem, type DropdownItemTag } from "../base/dropdown.svelte";
+    import Dropdown, { type DropdownItem } from "../base/dropdown.svelte";
     import ConfirmModal from "../confirm_modal.svelte";
     import ListSelectModal from "../list/list_select_modal.svelte";
     import TrailExportModal from "./trail_export_modal.svelte";
     import TrailShareModal from "./trail_share_modal.svelte";
-    import type { Snippet } from "svelte";
-    import { page } from "$app/state";
-    import { categories } from "$lib/stores/category_store.js";
 
     interface Props {
         trails?: Set<Trail> | undefined;
@@ -54,20 +58,17 @@
         );
     }
 
-    function isPublic(): boolean {
-        if (trails === undefined || trails.size === 0)
-            return false;
+    function majorityOfSelectedTrailsArePublic(): boolean {
+        if (trails === undefined || trails.size === 0) return false;
 
-        if (!Boolean($currentUser))
-            return false;
+        if (!Boolean($currentUser)) return false;
 
-
-        let isPublic: boolean = false;
-        let isPublicSet : boolean = false;
+        let publicCount = 0;
 
         for (const cTrail of trails) {
             if (cTrail.expand?.author === undefined) return false;
-            if (cTrail.expand!.author!.id !== $currentUser?.actor &&
+            if (
+                cTrail.expand!.author!.id !== $currentUser?.actor &&
                 !cTrail.expand?.trail_share_via_trail?.some(
                     (s) => s.permission == "edit",
                 )
@@ -75,61 +76,42 @@
                 return false;
             }
 
-            if (isPublicSet === false) {
-                isPublic = cTrail.public;
-            } else if (cTrail.public !== isPublic) {
-                return false;
+            if (cTrail.public) {
+                publicCount += 1;
             }
         }
-
-        return isPublic;
+        return publicCount >= trails.size / 2;
     }
 
     function allowCopy(): boolean {
-        if (mode === "multi-select")
-            return false;
+        if (mode === "multi-select") return false;
 
         return allowEdit();
     }
 
     function allowPublish(): boolean {
-        if (mode !== "multi-select")
+        if (mode !== "multi-select") return false;
+
+        if (trails === undefined || trails.size === 0) return false;
+
+        if (!Boolean($currentUser)) {
             return false;
-
-        if (trails === undefined || trails.size === 0)
-            return false;
-
-        if (!Boolean($currentUser))
-            return false;
-
-
-        let isPublic: boolean = false;
-        let isPublicSet : boolean = false;
+        }
 
         for (const cTrail of trails) {
             if (cTrail.expand?.author === undefined) return false;
-            if (cTrail.expand!.author!.id !== $currentUser?.actor &&
+            if (
+                cTrail.expand!.author!.id !== $currentUser?.actor &&
                 !cTrail.expand?.trail_share_via_trail?.some(
                     (s) => s.permission == "edit",
                 )
             ) {
-                return false;
-            }
-
-            if (isPublicSet === false) {
-                isPublicSet = true;
-                isPublic = cTrail.public === true;
-            } else if (cTrail.public === true && isPublic === false) {
-                return false;
-            } else if (cTrail.public === false && isPublic === true) {
                 return false;
             }
         }
 
         return true;
     }
-
-
 
     function dropdownItems(): DropdownItem[] {
         return [
@@ -138,110 +120,100 @@
                       mode == "overview" || mode == "multi-select"
                           ? {
                                 text: $_("show-on-map"),
-                                //value: "show",
-                                value: getDropdownItemTag("show", undefined, false),
+                                value: "show",
                                 icon: "map",
                             }
                           : {
                                 text: $_("show-in-overview"),
-                                //value: "show",
-                                value: getDropdownItemTag("show", undefined, false),
+                                value: "show",
                                 icon: "table-columns",
                             },
                   ]
                 : []),
             ...(!isMultiselectMode()
                 ? [
-                    { 
-                        text: $_("directions"), 
-                        //value: "direction", 
-                        value: getDropdownItemTag("direction", undefined, false),
-                        icon: "car" 
-                    }
-                ]
+                      {
+                          text: $_("directions"),
+                          value: "direction",
+                          icon: "car",
+                      },
+                  ]
                 : []),
             ...(canExport()
                 ? [
                       {
-                        text: $_("export"),
-                        //value: "download",
-                        value: getDropdownItemTag("download", undefined, false),
-                        icon: "download",
+                          text: $_("export"),
+                          value: "download",
+                          icon: "download",
                       },
                   ]
                 : []),
             ...(!isMultiselectMode()
-                ? [{ 
-                        text: $_("print"), 
-                        //value: "print", 
-                        value: getDropdownItemTag("print", undefined, false),
-                        icon: "print" }]
+                ? [
+                      {
+                          text: $_("print"),
+                          value: "print",
+                          icon: "print",
+                      },
+                  ]
                 : []),
             ...(!isFromCurrentUser()
                 ? []
                 : [
                       {
-                        text: $_("add-to-list"),
-                        //value: "list",
-                        value: getDropdownItemTag("list", undefined, false),
-                        icon: "bookmark",
+                          text: $_("add-to-list"),
+                          value: "print",
+                          icon: "bookmark",
                       },
                   ]),
             ...(isMultiselectMode() || !isFromCurrentUser()
                 ? []
                 : [
-                    { 
-                        text: $_("share"), 
-                        //value: "share",
-                        value: getDropdownItemTag("share", undefined, false), 
-                        icon: "share" 
-                    }
-                ]),
+                      {
+                          text: $_("share"),
+                          value: "share",
+                          icon: "share",
+                      },
+                  ]),
             ...(allowEdit()
                 ? [
-                    {
-                        text: $_("edit"), 
-                        //value: "edit", 
-                        value: getDropdownItemTag("edit", undefined, false),
-                        icon: "pen" 
-                    }
-                ]
+                      {
+                          text: $_("edit"),
+                          value: "edit",
+                          icon: "pen",
+                      },
+                  ]
                 : []),
             ...(allowCopy()
                 ? [
-                    {
-                        text: $_("create-variant"), 
-                        value: getDropdownItemTag("copy", undefined, false),
-                        icon: "copy" 
-                    }
-                ]
+                      {
+                          text: $_("create-variant"),
+                          value: "copy",
+                          icon: "copy",
+                      },
+                  ]
                 : []),
             ...(allowPublish()
                 ? [
-                    { 
-                        text: !isPublic() ? $_("private") : $_("public"), 
-                        //value: "publish", 
-                        value: getDropdownItemTag("publish", isPublic(), true),
-                        icon: !isPublic() ? "lock" : "globe", 
-                    }
-                ]
+                      {
+                          text: `${$_("visibilty")}: ${majorityOfSelectedTrailsArePublic() ? $_("private") : $_("public")}`,
+                          value: "publish",
+                          icon: majorityOfSelectedTrailsArePublic()
+                              ? "lock"
+                              : "globe",
+                      },
+                  ]
                 : []),
             ...(allowDelete()
                 ? [
-                    { 
-                        text: $_("delete"), 
-                        //value: "delete", 
-                        value: getDropdownItemTag("delete", undefined, false),
-                        icon: "trash" 
-                    }
-                ]
+                      {
+                          text: $_("delete"),
+                          value: "delete",
+                          icon: "trash",
+                      },
+                  ]
                 : []),
         ];
-    }
-
-    function getDropdownItemTag(tag: string, val: any, toggle: boolean) {
-        const ddVal : DropdownItemTag = { tag: tag, value: val, toggle: toggle };
-        return ddVal;
     }
 
     function isMultiselectMode(): boolean {
@@ -308,26 +280,24 @@
     }
 
     async function handleDropdownClick(item: { text: string; value: any }) {
-
         if (!trail()) {
             return;
         }
 
-        const handle = page.params.handle
+        const handle = page.params.handle;
 
-        const ddVal = item.value as DropdownItemTag;
+        const ddVal = item.value as string;
 
-        if (ddVal.tag == "show") {
+        if (ddVal == "show") {
             if (hasTrail()) {
-                const url = mode == "overview" || mode == "multi-select"
+                const url =
+                    mode == "overview" || mode == "multi-select"
                         ? `/map/trail/${handle}/${trailId()}`
-                        : `/trail/view/${handle}/${trailId()}`
-                
-                goto(
-                    url + '?' + page.url.searchParams
-                );
+                        : `/trail/view/${handle}/${trailId()}`;
+
+                goto(url + "?" + page.url.searchParams);
             }
-        } else if (ddVal.tag == "list") {
+        } else if (ddVal == "list") {
             lists = (
                 await lists_index(
                     { q: "", author: $currentUser?.actor ?? "" },
@@ -336,7 +306,7 @@
                 )
             ).items;
             listSelectModal.openModal();
-        } else if (ddVal.tag == "direction") {
+        } else if (ddVal == "direction") {
             if (hasTrail()) {
                 window
                     .open(
@@ -345,35 +315,35 @@
                     )
                     ?.focus();
             }
-        } else if (ddVal.tag == "print") {
+        } else if (ddVal == "print") {
             if (hasTrail()) {
-                goto(`/map/trail/${handle}/${trailId()}/print?${page.url.searchParams}`);
+                goto(
+                    `/map/trail/${handle}/${trailId()}/print?${page.url.searchParams}`,
+                );
             }
-        } else if (ddVal.tag == "share") {
+        } else if (ddVal == "share") {
             trailShareModal.openModal();
-        } else if (ddVal.tag == "download") {
+        } else if (ddVal == "download") {
             trailExportModal.openModal();
-        } else if (ddVal.tag == "edit") {
+        } else if (ddVal == "edit") {
             if (hasTrail()) {
                 goto(`/trail/edit/${trailId()}`);
             }
-        } else if (ddVal.tag == "copy") {
+        } else if (ddVal == "copy") {
             if (hasTrail()) {
                 const newId = await copyTrail(trail());
-                
+
                 if (newId && newId !== undefined) {
                     const url = allowEdit()
-                            ? `/trail/edit/${newId}`
-                            : `/trail/view/${handle}/${newId}`
-                    
-                    goto(
-                        url + '?' + page.url.searchParams
-                    );
+                        ? `/trail/edit/${newId}`
+                        : `/trail/view/${handle}/${newId}`;
+
+                    goto(url + "?" + page.url.searchParams);
                 }
             }
-        } else if (ddVal.tag == "publish" ) {
-            publishTrails();            
-        } else if (ddVal.tag == "delete") {
+        } else if (ddVal == "publish") {
+            updateTrailsVisibility();
+        } else if (ddVal == "delete") {
             confirmModal.openModal();
         }
     }
@@ -384,7 +354,7 @@
         let newId: string | undefined;
         try {
             newId = await trails_copy(trail, trail.name + " (COPY)");
-            
+
             show_toast({
                 type: "success",
                 icon: "check",
@@ -403,37 +373,48 @@
         return newId;
     }
 
-    async function publishTrails() {
-        try {
-            for (const cTrail of trails ?? []) {
-                if (!cTrail) continue;
+    async function updateTrailsVisibility() {
+        const newVisibility = !majorityOfSelectedTrailsArePublic();
+        for (const cTrail of trails ?? []) {
+            if (!cTrail) continue;
 
-                if (!cTrail.expand?.author?.id) continue;
+            if (!cTrail.expand?.author?.id) continue;
 
-                if (!cTrail.expand?.category) {
-                    cTrail.expand.category =  $categories.find((c) => c.name == cTrail.category);
-                }
-
-                const origTrail: Trail = { ...cTrail, author: cTrail.expand!.author!.id, category: cTrail.expand.category?.id ?? undefined };
-                const updatedTrail: Trail = { ...origTrail, public: !origTrail.public };
-
-                await trails_update(origTrail, updatedTrail);
+            if (!cTrail.expand?.category) {
+                cTrail.expand.category = $categories.find(
+                    (c) => c.name == cTrail.category,
+                );
             }
-            
-            show_toast({
-                type: "success",
-                icon: "check",
-                text: $_("trail-saved-successfully"),
-            });
-        } catch (e) {
-            console.error(e);
 
-            show_toast({
-                type: "error",
-                icon: "close",
-                text: $_("error-saving-trail"),
-            });
+            const origTrail: Trail = {
+                ...cTrail,
+                author: cTrail.expand!.author!.id,
+                category: cTrail.expand.category?.id ?? undefined,
+            };
+            const updatedTrail: Trail = {
+                ...origTrail,
+                public: newVisibility,
+                tags: undefined as any,
+            };
+
+            try {
+                await trails_update(origTrail, updatedTrail);
+            } catch (e) {
+                console.error(e);
+
+                show_toast({
+                    type: "error",
+                    icon: "close",
+                    text: `${$_("error-saving-trail")}: ${cTrail.name}`,
+                });
+            }
         }
+
+        // show_toast({
+        //     type: "success",
+        //     icon: "check",
+        //     text: $_("trail-saved-successfully"),
+        // });
 
         onUpdate?.();
     }
