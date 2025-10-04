@@ -71,16 +71,29 @@
         } catch (err: any) {
             let apiError : APIError = err;
             if (apiError.status == 413) { // content too large
-                let newItems = 10;
                 
-                if (items > 100) {
-                    newItems = 100;
-                } else if (items > 50) {
-                    newItems = 50;
-                } else if (items > 25) {
-                    newItems = 25;
+                let newItems = 10;
+                    
+                if (items == 12 || items == 24 || items == 48 || items == 96) { // cards view
+                    if (items > 96) {
+                        newItems = 96;
+                    } else if (items > 48) {
+                        newItems = 48;
+                    } else if (items > 24) {
+                        newItems = 24;
+                    } else {
+                        newItems = 12;
+                    }
                 } else {
-                    newItems = 10;
+                    if (items > 100) {
+                        newItems = 100;
+                    } else if (items > 50) {
+                        newItems = 50;
+                    } else if (items > 25) {
+                        newItems = 25;
+                    } else {
+                        newItems = 10;
+                    }
                 }
                     
                 await doPaginate(newPage, newItems);

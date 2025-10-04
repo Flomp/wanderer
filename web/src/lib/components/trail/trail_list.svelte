@@ -11,7 +11,6 @@
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
     import { onMount, tick } from "svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
-  import { page } from "$app/state";
 
     interface Props {
         filter?: TrailFilter | null;
