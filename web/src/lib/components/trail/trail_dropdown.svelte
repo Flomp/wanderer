@@ -27,6 +27,7 @@
     import ListSelectModal from "../list/list_select_modal.svelte";
     import TrailExportModal from "./trail_export_modal.svelte";
     import TrailShareModal from "./trail_share_modal.svelte";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         trails?: Set<Trail> | undefined;
@@ -284,7 +285,7 @@
             return;
         }
 
-        const handle = page.params.handle;
+        const handle = page.params.handle ?? handleFromRecordWithIRI(trail())
 
         const ddVal = item.value as string;
 

@@ -2,6 +2,29 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.18.3
+### Bug fixes
+- Fixes bug that prevented waypoints from being update or deleted in v0.18.2
+- Return properly formatted error message when accessing a protected API route
+- Fixes logo for OIDC 2 & 3 providers (thanks @wolffshots)
+- Fixes bug that caused dropdown actions from a feed item on the homepage to cause a 404 error
+
+### Maintenance
+- Updates pocketbase to v0.30.0
+
+## v0.18.2
+### Features
+- Adds `dedup` command to pocketbase. This command allows an admin to quickly identify duplicate trails and delete them. Use the `--dry-run` flag to only log duplicate trails without deleting them. To execute the command run `docker exec -it wanderer-db ./pocketbase dedup --dry-run`.
+- Adds option to only sync strava activities after a certain date
+- Singificant performance improvements for instances with larger userbases
+- Greatly improved initial indexing speed when starting wanderer
+### Bug fixes
+- Fixes permission issues for public trails
+- Fixes bug that caused trails to be duplicated multiple times (to clean up see the `dedup` command above)
+- Fixes link to "New Trail" from empty profiles
+- Fixes link when opening a trail from the map searchbar
+- Sorting by difficulty no longer sorts by difficulty alphabetically
+- Fixes strava integration stopping after only one page
 ## v0.18.1
 ### Bug fixes
 - Fixes permission issues that prevented federation from working properly

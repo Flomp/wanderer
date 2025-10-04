@@ -205,14 +205,14 @@ func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user st
 			app.Logger().Warn(fmt.Sprintf("Unable to generate GPX for tour '%s': %v", tour.Name, err))
 			continue
 		}
-		wpIds, err := createWaypointsFromTour(app, detailedTour, user)
-		if err != nil {
-			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for tour '%s': %v", tour.Name, err))
-			continue
-		}
-		err = createTrailFromTour(app, k, detailedTour, gpx, actor, wpIds)
+		trailid, err := createTrailFromTour(app, k, detailedTour, gpx, actor)
 		if err != nil {
 			app.Logger().Warn(fmt.Sprintf("Unable to create trail for tour '%s': %v", tour.Name, err))
+			continue
+		}
+		err = createWaypointsFromTour(app, detailedTour, user, trailid)
+		if err != nil {
+			app.Logger().Warn(fmt.Sprintf("Unable to create waypoints for tour '%s': %v", tour.Name, err))
 			continue
 		}
 
@@ -220,12 +220,12 @@ func syncTrailWithTours(app core.App, k *KomootApi, i KomootIntegration, user st
 	return hasNewTours, nil
 }
 
-func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomootTour, gpx *filesystem.File, actor string, wpIds []string) error {
+func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomootTour, gpx *filesystem.File, actor string) (string, error) {
 	trailid := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	collection, err := app.FindCollectionByNameOrId("trails")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	record := core.NewRecord(collection)
@@ -251,12 +251,12 @@ func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomoo
 	if len(detailedTour.Embedded.CoverImages.Embedded.Items) > 0 {
 		photos, err = fetchRoutePhotos(k, detailedTour)
 		if err != nil {
-			return err
+			return "", err
 		}
 	} else {
 		photo, err := fetchPhoto(detailedTour.MapImage.Src, "", "")
 		if err != nil {
-			return err
+			return "", err
 		}
 		photos = append(photos, photo)
 	}
@@ -281,7 +281,6 @@ func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomoo
 		"lon":               detailedTour.StartPoint.Lng,
 		"difficulty":        diffculty,
 		"category":          categoryId,
-		"waypoints":         wpIds,
 		"author":            actor,
 	})
 
@@ -293,13 +292,13 @@ func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomoo
 	}
 
 	if err := app.Save(record); err != nil {
-		return err
+		return "", err
 	}
 
 	if detailedTour.Type == "tour_recorded" {
 		collection, err := app.FindCollectionByNameOrId("summit_logs")
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		summitLogRecord := core.NewRecord(collection)
@@ -313,25 +312,23 @@ func createTrailFromTour(app core.App, k *KomootApi, detailedTour *DetailedKomoo
 			"trail":          trailid,
 		})
 		if err := app.Save(summitLogRecord); err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	return nil
+	return trailid, nil
 }
 
-func createWaypointsFromTour(app core.App, tour *DetailedKomootTour, user string) ([]string, error) {
+func createWaypointsFromTour(app core.App, tour *DetailedKomootTour, user string, trailid string) error {
 	collection, err := app.FindCollectionByNameOrId("waypoints")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	wpIds := make([]string, len(tour.Embedded.Timeline.Embedded.Items))
-
-	for i, wp := range tour.Embedded.Timeline.Embedded.Items {
+	for _, wp := range tour.Embedded.Timeline.Embedded.Items {
 		photos, err := fetchWaypointPhotos(wp)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		record := core.NewRecord(collection)
 
@@ -358,6 +355,7 @@ func createWaypointsFromTour(app core.App, tour *DetailedKomootTour, user string
 			"icon":                "circle",
 			"author":              user,
 			"distance_from_start": 0,
+			"trail":               trailid,
 		})
 
 		if photos != nil {
@@ -365,13 +363,11 @@ func createWaypointsFromTour(app core.App, tour *DetailedKomootTour, user string
 		}
 
 		if err := app.Save(record); err != nil {
-			return nil, err
+			return err
 		}
-
-		wpIds[i] = record.Id
 	}
 
-	return wpIds, nil
+	return nil
 }
 
 func fetchRoutePhotos(k *KomootApi, tour *DetailedKomootTour) ([]*filesystem.File, error) {
