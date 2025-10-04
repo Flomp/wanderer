@@ -12,7 +12,7 @@ import type { Feature, FeatureCollection, GeoJSON, GeoJsonProperties, Position }
 import JSZip from "jszip";
 import type { AuthRecord } from "pocketbase";
 import * as xmldom from 'xmldom';
-import { bbox, splitMultiLineStringToLineStrings } from "./geojson_util";
+import { getTrailDifficulty } from "$lib/util/trail_util";
 import { trails_show } from "$lib/stores/trail_store";
 import { handleFromRecordWithIRI } from "./activitypub_util";
 import { Waypoint } from "$lib/models/waypoint";
@@ -71,6 +71,22 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, correc
     trail.elevation_gain = totals.elevationGain;
     trail.elevation_loss = totals.elevationLoss;
     trail.distance = totals.distance
+
+    if (trail.distance && totals.moveDuration && totals.moveDuration > 0) {
+
+        let speed = trail.distance / (totals.moveDuration / 3600.0);
+
+        let modeOfTransport : "pedestrian" | "bicycle" | "auto" = "auto";
+        if (speed < 10) {
+            modeOfTransport = "pedestrian";
+        } else if (speed < 40) {
+            modeOfTransport = "bicycle";
+        }       
+        
+        console.warn(modeOfTransport)
+
+        trail.difficulty = getTrailDifficulty(trail, modeOfTransport, speed);
+    }
 
     return { gpx: gpx, trail: trail }
 }
