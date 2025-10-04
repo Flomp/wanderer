@@ -1,19 +1,9 @@
 <script module lang="ts">
-
-    import Toggle from "$lib/components/base/toggle.svelte";
-
-
     export type DropdownItem = {
         text: string;
         value: any;
         icon?: string;
     };
-
-    export type DropdownItemTag = {
-        tag: string;
-        value: any;
-        toggle?: boolean;
-    }
 </script>
 
 <script lang="ts">
@@ -34,7 +24,7 @@
     let dropdownElement: HTMLUListElement | undefined = $state();
     let dropdownToggleElement: HTMLDivElement;
 
-    export async function toggleMenu(e: MouseEvent) {        
+    export async function toggleMenu(e: MouseEvent) {
         e.stopPropagation();
         e.preventDefault();
 
@@ -91,23 +81,14 @@
         isOpen = false;
     }
 
-    function handleItemClick(e: MouseEvent, item: { text: string; value: any }) {
+    function handleItemClick(
+        e: MouseEvent,
+        item: { text: string; value: any },
+    ) {
         e.preventDefault();
         e.stopPropagation();
         onchange?.(item);
         closeMenu();
-    }
-
-    function getToggleStatus(t: DropdownItemTag) : boolean {
-        if (t) return t.value === true;
-
-        return false;
-    }
-
-    function isToggle(t: DropdownItemTag) : boolean {
-        if (t) return t.toggle === true;
-
-        return false;
     }
 
     function handleWindowClick(e: MouseEvent) {
@@ -154,19 +135,10 @@
                     role="presentation"
                     onclick={(e) => handleItemClick(e, item)}
                 >
-                    {#if isToggle(item.value as DropdownItemTag)}
-                        <Toggle
-                            name="public"
-                            label={item.text}
-                            icon={item.icon}
-                            value={getToggleStatus(item.value as DropdownItemTag)}
-                        ></Toggle>
-                    {:else}
-                        {#if item.icon}
-                            <i class="fa fa-{item.icon} mr-3"></i>
-                        {/if}
-                        <span class="whitespace-nowrap">{item.text}</span>
+                    {#if item.icon}
+                        <i class="fa fa-{item.icon} mr-3"></i>
                     {/if}
+                    <span class="whitespace-nowrap">{item.text}</span>
                 </li>
             {/each}
         </ul>
