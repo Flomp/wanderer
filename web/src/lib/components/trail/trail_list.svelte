@@ -11,6 +11,7 @@
     import SkeletonListItem from "../base/skeleton_list_item.svelte";
     import { onMount, tick } from "svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
+  import { page } from "$app/state";
 
     interface Props {
         filter?: TrailFilter | null;
@@ -22,7 +23,7 @@
             filter: TrailFilter | null,
             selection: Set<Trail> | undefined,
         ) => void;
-        onpagination?: (page: number, items?: number) => void;
+        onpagination?: (page: number, items: number) => void;
     }
 
     let {
@@ -31,7 +32,7 @@
         pagination = {
             page: 1,
             totalPages: 1,
-            items: 12,
+            items: 25,
         },
         loading = false,
         fullWidthCards = false,
@@ -46,12 +47,17 @@
     ];
     
     const perPageOptions: SelectItem[] = [
-        { text: "6", value: 6 },
+        { text: "10", value: 10 },
+        { text: "25", value: 25 },
+        { text: "50", value: 50 },
+        { text: "100", value: 100 },
+    ];
+    
+    const perPageOptionsCards: SelectItem[] = [
         { text: "12", value: 12 },
         { text: "24", value: 24 },
         { text: "48", value: 48 },
         { text: "96", value: 96 },
-        { text: $_("all"), value: -1 },
     ];
 
     let selectedDisplayOption = $state(displayOptions[0].value);
@@ -75,6 +81,7 @@
         const storedDisplayOption = localStorage.getItem("displayOption");
         const storedSort = localStorage.getItem("sort");
         const storedSortOrder = localStorage.getItem("sort_order");
+        const paginationItems = localStorage.getItem("paginationItems");
 
         if (storedDisplayOption) {
             selectedDisplayOption = storedDisplayOption;
@@ -88,11 +95,84 @@
                 (storedSortOrder as typeof filter.sortOrder | null) ??
                 filter.sortOrder;
         }
+        if (paginationItems) {
+            pagination.items = +paginationItems;
+        
+            let itemsChanged = false;
+            if (selectedDisplayOption == "cards") {
+                if (pagination.items > 50) {
+                    pagination.items = 96;
+                    itemsChanged = true;
+                } else if (pagination.items > 25) {
+                    pagination.items = 48;
+                    itemsChanged = true;
+                } else if (pagination.items > 12) {
+                    pagination.items = 24;
+                    itemsChanged = true;
+                } else {
+                    pagination.items = 12;
+                    itemsChanged = true;
+                }
+            } else {
+                if (pagination.items > 50) {
+                    pagination.items = 100;
+                    itemsChanged = true;
+                } else if (pagination.items > 25) {
+                    pagination.items = 50;
+                    itemsChanged = true;
+                } else if (pagination.items > 12) {
+                    pagination.items = 25;
+                    itemsChanged = true;
+                } else {
+                    pagination.items = 10;
+                    itemsChanged = true;
+                }
+            }
+
+            if (itemsChanged) {
+                localStorage.setItem("paginationItems", pagination.items.toString());
+            }
+        }
         onupdate?.(filter, selection);
     });
 
     function setDisplayOption() {
         localStorage.setItem("displayOption", selectedDisplayOption);
+
+        let itemsChanged = false;
+        if (selectedDisplayOption == "cards") {
+            if (pagination.items > 50) {
+                pagination.items = 96;
+                itemsChanged = true;
+            } else if (pagination.items > 25) {
+                pagination.items = 48;
+                itemsChanged = true;
+            } else if (pagination.items > 12) {
+                pagination.items = 24;
+                itemsChanged = true;
+            } else {
+                pagination.items = 12;
+                itemsChanged = true;
+            }
+        } else {
+            if (pagination.items > 50) {
+                pagination.items = 100;
+                itemsChanged = true;
+            } else if (pagination.items > 25) {
+                pagination.items = 50;
+                itemsChanged = true;
+            } else if (pagination.items > 12) {
+                pagination.items = 25;
+                itemsChanged = true;
+            } else {
+                pagination.items = 10;
+                itemsChanged = true;
+            }
+        }
+
+        if (itemsChanged) {
+            localStorage.setItem("paginationItems", pagination.items.toString());
+        }
     }
 
     function setSort() {
@@ -218,7 +298,8 @@
     }
 
     function setItemsPerPage() {
-        onpagination?.(1, pagination.items < 0 ? pagination.totalPages * trails.length : pagination.items);
+        localStorage.setItem("paginationItems", pagination.items.toString());
+        onpagination?.(1, pagination.items);
     }
 </script>
 
@@ -359,7 +440,7 @@
         <div class="shrink-0">
             <Select
                 bind:value={pagination.items}
-                items={perPageOptions}
+                items={selectedDisplayOption == "cards" ? perPageOptionsCards : perPageOptions}
                 onchange={setItemsPerPage}
             ></Select>
         </div>

@@ -56,7 +56,7 @@ export async function trails_recommend(size: number, f: (url: RequestInfo | URL,
 
 }
 
-export async function trails_search_filter(filter: TrailFilter, page: number = 1, perPage: number | undefined, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
+export async function trails_search_filter(filter: TrailFilter, page: number = 1, perPage: number, f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {
     const user = get(currentUser)
 
     let filterText: string = buildFilterText(user, filter, true);
@@ -70,7 +70,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
                 filter: filterText,
                 attributesToRetrieve: defaultTrailSearchAttributes,
                 sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
-                hitsPerPage: perPage && perPage > 0 ? perPage : undefined,
+                hitsPerPage: perPage,
                 page: page
             }
         }),

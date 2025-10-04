@@ -20,7 +20,7 @@
             ? parseInt(page.url.searchParams.get("page")!)
             : 1,
         totalPages: 1,
-        items: 12,
+        items: 25,
     });
     let trails: Trail[] = $state([]);
 
@@ -58,12 +58,12 @@
     async function handleFilterUpdate() {
         loading = true;
 
-        await paginate(1, pagination.items < 0 ? pagination.totalPages * trails.length : pagination.items);
+        await paginate(1, pagination.items);
 
         loading = false;
     }
 
-    async function paginate(newPage: number, items?: number) {
+    async function paginate(newPage: number, items: number) {
         pagination.page = newPage;
 
         try {
@@ -71,20 +71,18 @@
         } catch (err: any) {
             let apiError : APIError = err;
             if (apiError.status == 413) { // content too large
-                let newItems = 24;
-                if (items) {
-                    if (items > 96) {
-                        newItems = 96;
-                    } else if (items > 48) {
-                        newItems = 48;
-                    } else if (items > 24) {
-                        newItems = 24;
-                    } else {
-                        newItems = 12;
-                    }
+                let newItems = 10;
+                
+                if (items > 100) {
+                    newItems = 100;
+                } else if (items > 50) {
+                    newItems = 50;
+                } else if (items > 25) {
+                    newItems = 25;
                 } else {
-                    newItems = 96;
+                    newItems = 10;
                 }
+                    
                 await doPaginate(newPage, newItems);
             }
         }
@@ -93,7 +91,7 @@
         goto(`?${page.url.searchParams.toString()}`);
     }
 
-    async function doPaginate(newPage: number, items?: number) {
+    async function doPaginate(newPage: number, items: number) {
         const response = await trails_search_filter(filter, newPage, items);
         if (items) {
             pagination.items = items;
