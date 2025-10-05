@@ -101,6 +101,11 @@
     import { z } from "zod";
     import Track from "$lib/models/gpx/track.js";
     import TrackSegment from "$lib/models/gpx/track-segment.js";
+    import { getTrailDifficulty } from "$lib/util/trail_util";
+    import { Settings } from "$lib/models/settings";
+    import { Threshold, type DifficultyAlgorithm } from "$lib/models/difficulty_algorithms.js";
+    import { algorithms_index } from "$lib/stores/difficulty_algorithms_store.js";
+
 
     let { data } = $props();
 
@@ -223,7 +228,7 @@
                         ?.at(0)
                         ?.trkseg?.at(0)
                         ?.trkpt?.at(0)?.$.lon;
-                }
+                } 
 
                 if (page.params.id === "new" && !savedAtLeastOnce) {
                     const createdTrail = await trails_create(
@@ -231,6 +236,8 @@
                         photoFiles,
                         gpxFile,
                     );
+                    
+                    await setDifficulty(createdTrail);
                     setFields(createdTrail);
                     trail.set(createdTrail);
                 } else {
@@ -263,6 +270,40 @@
             }
         },
     });
+
+    async function setDifficulty(createdTrail: Trail) {
+        let settings: Settings = page.data.settings;
+        if (settings && settings.skills) {
+            let skills = settings.skills.find((skill) => skill.category == createdTrail.category);
+            if (skills && skills.algorithm && skills.speed) {
+                
+                let algorithms = await algorithms_index();
+                let skillAgorithm: DifficultyAlgorithm[] = new Array();
+                for (let alg of algorithms) {
+                    if (alg.id == skills.algorithm) {
+                        skillAgorithm.push(alg);
+                    }
+                }
+
+                if (skillAgorithm.length > 0) {
+                    let thresholds: Threshold[] = new Array();
+                    for (let alg of skillAgorithm) {
+                        if (alg.thresholds) {
+                            for (let thresh of alg.thresholds) {
+                                if (thresh.speed == skills.speed) {
+                                    thresholds.push(thresh);
+                                }
+                            }
+                        }
+                    }
+
+                    if (thresholds.length > 0) {
+                        createdTrail.difficulty = getTrailDifficulty(createdTrail, thresholds);
+                    }
+                }
+            }
+        }
+    }
 
     onMount(async () => {
         clearAnchors();
