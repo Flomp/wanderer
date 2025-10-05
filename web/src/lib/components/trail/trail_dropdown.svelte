@@ -10,12 +10,9 @@
         lists_remove_trail,
     } from "$lib/stores/list_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
-    import {
-        trails_copy,
-        trails_delete,
-        trails_update,
-    } from "$lib/stores/trail_store";
+    import { trails_delete, trails_update } from "$lib/stores/trail_store";
     import { currentUser } from "$lib/stores/user_store";
+    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
     import { getFileURL, saveAs } from "$lib/util/file_util";
     import { trail2gpx } from "$lib/util/gpx_util";
     import { gpx } from "$lib/vendor/toGeoJSON/toGeoJSON";
@@ -27,7 +24,6 @@
     import ListSelectModal from "../list/list_select_modal.svelte";
     import TrailExportModal from "./trail_export_modal.svelte";
     import TrailShareModal from "./trail_share_modal.svelte";
-    import { handleFromRecordWithIRI } from "$lib/util/activitypub_util";
 
     interface Props {
         trails?: Set<Trail> | undefined;
@@ -87,9 +83,9 @@
     }
 
     function allowCopy(): boolean {
-        if (mode === "multi-select") return false;
+        if ((trails?.size ?? 0) > 1) return false;
 
-        return allowEdit();
+        return !isMultiselectMode();
     }
 
     function allowPublish(): boolean {
@@ -178,19 +174,10 @@
                           icon: "share",
                       },
                   ]),
-            ...(allowEdit()
-                ? [
-                      {
-                          text: $_("edit"),
-                          value: "edit",
-                          icon: "pen",
-                      },
-                  ]
-                : []),
             ...(allowCopy()
                 ? [
                       {
-                          text: $_("create-variant"),
+                          text: $_("duplicate"),
                           value: "copy",
                           icon: "copy",
                       },
@@ -204,6 +191,15 @@
                           icon: majorityOfSelectedTrailsArePublic()
                               ? "lock"
                               : "globe",
+                      },
+                  ]
+                : []),
+            ...(allowEdit()
+                ? [
+                      {
+                          text: $_("edit"),
+                          value: "edit",
+                          icon: "pen",
                       },
                   ]
                 : []),
@@ -334,46 +330,13 @@
             }
         } else if (ddVal == "copy") {
             if (hasTrail()) {
-                const newId = await copyTrail(trail());
-
-                if (newId && newId !== undefined) {
-                    const url = allowEdit()
-                        ? `/trail/edit/${newId}`
-                        : `/trail/view/${handle}/${newId}`;
-
-                    goto(url + "?" + page.url.searchParams);
-                }
+                goto("/trail/edit/new?orig=" + trail()?.id);
             }
         } else if (ddVal == "publish") {
             updateTrailsVisibility();
         } else if (ddVal == "delete") {
             confirmModal.openModal();
         }
-    }
-
-    async function copyTrail(trail: Trail | undefined) {
-        if (!trail) return undefined;
-
-        let newId: string | undefined;
-        try {
-            newId = await trails_copy(trail, trail.name + " (COPY)");
-
-            show_toast({
-                type: "success",
-                icon: "check",
-                text: $_("trail-copied-successfully"),
-            });
-        } catch (e) {
-            console.error(e);
-
-            show_toast({
-                type: "error",
-                icon: "close",
-                text: $_("error-copying-trail"),
-            });
-        }
-
-        return newId;
     }
 
     async function updateTrailsVisibility() {
@@ -610,7 +573,7 @@
                 toggleMenu: openDropdown,
             })}
         {:else if loading}
-            <div class="w-16"></div>
+            <div class:w-16={isMultiselectMode()}></div>
             <div class="spinner light:spinner-dark"></div>
         {:else if mode == "multi-select"}
             <button
