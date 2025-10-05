@@ -10,7 +10,7 @@ export async function GET(event: RequestEvent) {
         return error(400, { message: "Bad request" })
     }
 
-    if(splitUsername(handle)[1] !== env.ORIGIN && !event.locals.user) {
+    if(splitUsername(handle)[1] !== undefined && !event.locals.user) {
         return error(401, { message: "Unauthorized" })
     }
 
