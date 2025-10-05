@@ -3,8 +3,10 @@
     import type { SelectItem } from "$lib/components/base/select.svelte";
     import { _ } from "svelte-i18n";
     import { Settings } from "$lib/models/settings";
-    import type { Category } from "$lib/models/category.js";
-  import { onMount } from "svelte";
+    import type { Category } from "$lib/models/category";
+    import { onMount } from "svelte";
+    import type { DifficultyAlgorithm } from "$lib/models/difficulty_algorithms";
+    import { algorithms_index } from "$lib/stores/difficulty_algorithms_store";
 
     interface Props {
         settings: Settings,
@@ -22,27 +24,32 @@
     let currentSpeed = $state("normal");
 
     onMount(() => {
-        let currentSkill = settings.skills?.find((s) => s.category == category.name);
+        let currentSkill = settings.skills?.find((s) => s.category == category.id);
         if (currentSkill) {
             currentAlgorithm = currentSkill.algorithm;
             currentSpeed = currentSkill.speed;
-            console.log(currentAlgorithm)
         }
+        algorithms_index().then((a) => {
+            getAlgorithms(a);
+        })
     })
 
-    const difficultyModeItems: SelectItem[] = [ 
-        { text: "", value: "none" }, 
-        { text: $_("hiking"), value: "pedestrian" }, 
-        { text: $_("cycling"), value: "bicycle" }, 
-        { text: $_("driving"), value: "auto" } 
-    ];
+    let algorithmItems: SelectItem[] = $state(new Array());
+
+    function getAlgorithms(algorithms: DifficultyAlgorithm[] | undefined) {
+        if (algorithms) {
+            for (let algo of algorithms) {
+                algorithmItems.push({ text: $_(algo.name), value: algo.id });
+            }
+        }
+    }
 
     const speedItems: SelectItem[] = [
-        { text: $_("relaxed"), value: "0" },
-        { text: $_("moderate"), value: "1" },
-        { text: $_("normal"), value: "2" },
-        { text: $_("fast"), value: "3" },
-        { text: $_("super-fast"), value: "4" },
+        { text: $_("relaxed"), value: "relaxed" },
+        { text: $_("moderate"), value: "moderate" },
+        { text: $_("medium"), value: "medium" },
+        { text: $_("fast"), value: "fast" },
+        { text: $_("expert"), value: "expert" },
     ];
 
     async function handleDifficultyModeSelection(value: string) {
@@ -83,7 +90,7 @@
         <div class="px-4">
             <h4 class="text-xs font-small mb-2">{$_("difficulty-algorithm")}</h4>
             <Select
-                items={difficultyModeItems}
+                items={algorithmItems}
                 bind:value={currentAlgorithm}
                 onchange={handleDifficultyModeSelection}
             ></Select>

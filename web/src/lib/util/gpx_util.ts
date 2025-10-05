@@ -81,11 +81,9 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, correc
             modeOfTransport = "pedestrian";
         } else if (speed < 40) {
             modeOfTransport = "bicycle";
-        }       
-        
-        console.warn(modeOfTransport)
+        }
 
-        trail.difficulty = getTrailDifficulty(trail, modeOfTransport, speed);
+        //trail.difficulty = await getTrailDifficulty(trail, modeOfTransport, speed);
     }
 
     return { gpx: gpx, trail: trail }

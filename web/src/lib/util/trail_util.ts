@@ -1,39 +1,27 @@
 import { Trail } from "$lib/models/trail";
+import type { Threshold } from "$lib/models/difficulty_algorithms";
 
-export function getTrailDifficulty(t: Trail, modeOfTransport: "pedestrian" | "bicycle" | "auto", speed: number) {
-    switch (modeOfTransport)
-    {
-        case "bicycle":
-            return getBikingDifficulty(t, speed);
-        case "pedestrian":
-            return getHikingDifficulty(t, speed);
-    }
-}
 
-function getBikingDifficulty(t: Trail, speed: number) : "easy" | "moderate" | "difficult" | undefined {
+export function getTrailDifficulty(t: Trail, thresholds: Threshold[]) : "easy" | "moderate" | "difficult" | undefined {
     if (!t.distance || !t.elevation_gain) return undefined;
+
+    if (doGetTrailDifficulty(t, thresholds, "difficult") != undefined)
+        return "difficult";
+    if (doGetTrailDifficulty(t, thresholds, "moderate") != undefined)
+        return "moderate";
     
-    const duration : number = t.distance / speed / 1000;
-
-    if (duration > 5) return "difficult";
-    if (t.elevation_gain > 450) return "difficult";
-
-    if (duration > 2) return "moderate";
-    if (t.elevation_gain > 150) return "moderate";
-
     return "easy";
 }
 
-function getHikingDifficulty(t: Trail, speed: number) : "easy" | "moderate" | "difficult" | undefined {
+function doGetTrailDifficulty(t: Trail, thresholds: Threshold[], difficulty: "moderate" | "difficult") : "moderate" | "difficult" | undefined {
     if (!t.distance || !t.elevation_gain) return undefined;
-    
-    const duration : number = t.distance / speed / 1000;
 
-    if (duration > 5) return "difficult";
-    if (t.elevation_gain > 900) return "difficult";
+    let threshDistance = thresholds.find((thresh) => thresh.difficulty == difficulty && thresh.type == "distance");
+    if (threshDistance && t.distance > threshDistance.limit)
+        return difficulty;
+    let threshElevation = thresholds.find((thresh) => thresh.difficulty == difficulty && thresh.type == "elevation");
+    if (threshElevation && t.elevation_gain > threshElevation.limit)
+        return difficulty;
 
-    if (duration > 2) return "moderate";
-    if (t.elevation_gain > 300) return "moderate";
-
-    return "easy";
+    return undefined;
 }

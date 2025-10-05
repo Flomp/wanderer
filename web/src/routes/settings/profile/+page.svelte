@@ -17,7 +17,6 @@
 
     let selectedCategory = $state(
         data.categories.find((c) => c.id == data.settings.category) || data.categories[0],
-        //data.settings?.category || data.categories[0].id,
     );
 
     let bio = $state(data.settings?.bio ?? "");
