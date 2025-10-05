@@ -348,25 +348,23 @@
 
             if (!cTrail.expand?.author?.id) continue;
 
-            if (!cTrail.expand?.category) {
-                cTrail.expand.category = $categories.find(
-                    (c) => c.name == cTrail.category,
-                );
-            }
-
             const origTrail: Trail = {
                 ...cTrail,
                 author: cTrail.expand!.author!.id,
-                category: cTrail.expand.category?.id ?? undefined,
             };
             const updatedTrail: Trail = {
                 ...origTrail,
                 public: newVisibility,
-                tags: undefined as any,
             };
 
             try {
-                await trails_update(origTrail, updatedTrail);
+                await trails_update(
+                    origTrail,
+                    updatedTrail,
+                    undefined,
+                    undefined,
+                    ["tags", "category"],
+                );
             } catch (e) {
                 console.error(e);
 
