@@ -3,7 +3,11 @@
     import { page } from "$app/state";
     import TrailFilterPanel from "$lib/components/trail/trail_filter_panel.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
-    import type { Trail, TrailFilter, TrailSearchResult } from "$lib/models/trail";
+    import type {
+        Trail,
+        TrailFilter,
+        TrailSearchResult,
+    } from "$lib/models/trail";
     import { trails_search_filter } from "$lib/stores/trail_store";
     import type { Snapshot } from "@sveltejs/kit";
     import { onMount } from "svelte";
@@ -15,13 +19,14 @@
     let loading: boolean = $state(true);
 
     let filter: TrailFilter = $state(page.data.filter);
-    const pagination: { page: number; totalPages: number, items: number } = $state({
-        page: page.url.searchParams.has("page")
-            ? parseInt(page.url.searchParams.get("page")!)
-            : 1,
-        totalPages: 1,
-        items: 25,
-    });
+    const pagination: { page: number; totalPages: number; items: number } =
+        $state({
+            page: page.url.searchParams.has("page")
+                ? parseInt(page.url.searchParams.get("page")!)
+                : 1,
+            totalPages: 1,
+            items: 25,
+        });
     let trails: Trail[] = $state([]);
 
     export const snapshot: Snapshot<TrailFilter> = {
@@ -55,10 +60,10 @@
         }
     });
 
-    async function handleFilterUpdate() {
+    async function handleFilterUpdate(resetPagination: boolean = true) {
         loading = true;
 
-        await paginate(1, pagination.items);
+        await paginate(resetPagination ? 1 : pagination.page, pagination.items);
 
         loading = false;
     }
@@ -69,12 +74,14 @@
         try {
             await doPaginate(newPage, items);
         } catch (err: any) {
-            let apiError : APIError = err;
-            if (apiError.status == 413) { // content too large
-                
+            let apiError: APIError = err;
+            if (apiError.status == 413) {
+                // content too large
+
                 let newItems = 10;
-                    
-                if (items == 12 || items == 24 || items == 48 || items == 96) { // cards view
+
+                if (items == 12 || items == 24 || items == 48 || items == 96) {
+                    // cards view
                     if (items > 96) {
                         newItems = 96;
                     } else if (items > 48) {
@@ -95,11 +102,11 @@
                         newItems = 10;
                     }
                 }
-                    
+
                 await doPaginate(newPage, newItems);
             }
         }
-        
+
         page.url.searchParams.set("page", newPage.toString());
         goto(`?${page.url.searchParams.toString()}`);
     }
@@ -126,14 +133,14 @@
         categories={page.data.categories}
         bind:filter
         {filterExpanded}
-        onupdate={handleFilterUpdate}
+        onupdate={() => handleFilterUpdate()}
     ></TrailFilterPanel>
     <TrailList
         bind:filter
         {loading}
         {trails}
         {pagination}
-        onupdate={handleFilterUpdate}
+        onupdate={() => handleFilterUpdate(false)}
         onpagination={paginate}
     ></TrailList>
 </main>

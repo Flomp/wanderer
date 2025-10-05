@@ -168,7 +168,7 @@
     } = createForm<z.infer<typeof ClientTrailCreateSchema>>({
         initialValues: {
             ...data.trail,
-            public: data.trail.id
+            public: data.trail.expand?.gpx_data
                 ? data.trail.public
                 : page.data.settings?.privacy?.trails === "public",
             category:
@@ -270,6 +270,7 @@
         clearUndoRedoStack();
 
         if ($formData.expand!.gpx_data) {
+            $formData.id ??= cryptoRandomString({ length: 15 });
             const gpx = GPX.parse($formData.expand!.gpx_data);
             if (!(gpx instanceof Error)) {
                 if (gpx.rte && !gpx.trk) {

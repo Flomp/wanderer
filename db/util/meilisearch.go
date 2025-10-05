@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"time"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/dbx"
@@ -359,8 +360,16 @@ func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meili
 	}
 	documents := []map[string]interface{}{doc}
 
-	if _, err := client.Index("trails").UpdateDocuments(documents); err != nil {
+	task, err := client.Index("trails").UpdateDocuments(documents)
+
+	if err != nil {
 		return err
+	}
+
+	interval := 500 * time.Millisecond
+	_, err = client.WaitForTask(task.TaskUID, interval)
+	if err != nil {
+		log.Fatalf("Error waiting for task completion: %v", err)
 	}
 
 	return nil
