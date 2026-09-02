@@ -133,6 +133,7 @@ export async function profile_stats_index(handle: string, filter: SummitLogFilte
 
     const r = await f(`/api/v1/profile/${handle}/stats?` + searchParams, {
         method: 'GET',
+        cache: 'no-store',
     })
 
     if (!r.ok) {

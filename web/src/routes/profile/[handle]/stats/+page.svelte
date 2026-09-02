@@ -13,6 +13,7 @@
     import { categories } from "$lib/stores/category_store.js";
     import { profile_stats_index } from "$lib/stores/profile_store.js";
     import { show_toast } from "$lib/stores/toast_store.svelte.js";
+    import { currentUser } from "$lib/stores/user_store.js";
     import {
         displayCategoryIcon,
         displayCategoryName,
@@ -29,6 +30,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import {
+        calendarMonthForDateRange,
         dateInputValue,
         datePeriodRange,
         datePeriodPresetForRange,
@@ -59,7 +61,7 @@
         Tooltip,
         type ChartDataset,
     } from "chart.js";
-    import { onMount, untrack } from "svelte";
+    import { untrack } from "svelte";
     import { _, locale } from "svelte-i18n";
 
     let { data } = $props();
@@ -74,29 +76,132 @@
         BarElement,
     );
 
-    const initialFilter: SummitLogFilter = untrack(() => data.filter);
+    function copyFilter(source: SummitLogFilter): SummitLogFilter {
+        return {
+            ...source,
+            category: [...source.category],
+            subcategory: [...(source.subcategory ?? [])],
+        };
+    }
+
+    function filtersEqual(a: SummitLogFilter, b: SummitLogFilter): boolean {
+        return (
+            a.startDate === b.startDate &&
+            a.endDate === b.endDate &&
+            a.trail === b.trail &&
+            a.category.length === b.category.length &&
+            a.category.every((value, index) => value === b.category[index]) &&
+            (a.subcategory ?? []).length === (b.subcategory ?? []).length &&
+            (a.subcategory ?? []).every(
+                (value, index) => value === (b.subcategory ?? [])[index],
+            )
+        );
+    }
+
+    const initialFilter: SummitLogFilter = untrack(() =>
+        copyFilter(data.filter),
+    );
     type PeriodMode = DatePeriodPreset | "custom";
     const initialPeriodMode: PeriodMode =
         datePeriodPresetForRange(
             initialFilter.startDate,
             initialFilter.endDate,
         ) ?? "custom";
-    const initialCalendarRange = monthDateRange(
-        initialFilter.startDate
-            ? parseDateValue(initialFilter.startDate)
-            : new Date(),
-    );
+    const initialCalendarRange =
+        initialFilter.startDate && initialFilter.endDate
+            ? calendarMonthForDateRange(
+                  initialFilter.startDate,
+                  initialFilter.endDate,
+              )
+            : monthDateRange(new Date());
 
     let activities: StatisticActivity[] = $state(untrack(() => data.activities));
-    let calendarActivities: StatisticActivity[] = $state(
-        untrack(() => data.activities),
-    );
-
     const filter: SummitLogFilter = $state(initialFilter);
     let periodMode = $state<PeriodMode>(initialPeriodMode);
     let appliedPeriodMode = $state<PeriodMode>(initialPeriodMode);
     let calendarRange = $state(initialCalendarRange);
     let periodRangeModal: DateRangeModal;
+
+    // Request-coordination guards, deliberately plain/non-reactive. Effects
+    // read and update them as generation snapshots; turning them into $state
+    // would make those bookkeeping writes dependencies and introduce cycles.
+    let displayedViewerId = untrack(() => data.viewerId);
+    let displayedHandle = untrack(() => data.handle);
+    let activityRequestVersion = 0;
+
+    // Clear immediately when auth changes (including in another tab) and
+    // invalidate any request that may still return data from the old session.
+    $effect(() => {
+        if ($currentUser === undefined) {
+            return;
+        }
+
+        const viewerId = $currentUser?.id ?? null;
+        if (viewerId !== displayedViewerId) {
+            activityRequestVersion += 1;
+            activities = [];
+        }
+    });
+
+    // Apply new load data only when the viewer or profile changed. Other
+    // invalidateAll calls must not discard the user's local filters.
+    $effect(() => {
+        const nextViewerId = data.viewerId;
+        const nextHandle = data.handle;
+        const nextFilter = copyFilter(data.filter);
+        const currentViewerId =
+            $currentUser === undefined ? undefined : ($currentUser?.id ?? null);
+
+        // A load that started under another auth identity must never restore
+        // its activities after login or logout, even when requests overlap.
+        if (
+            currentViewerId !== undefined &&
+            nextViewerId !== currentViewerId
+        ) {
+            activityRequestVersion += 1;
+            activities = [];
+            return;
+        }
+
+        if (
+            nextViewerId === displayedViewerId &&
+            nextHandle === displayedHandle
+        ) {
+            const currentFilter = untrack(() => copyFilter(filter));
+            if (filtersEqual(currentFilter, nextFilter)) {
+                activityRequestVersion += 1;
+                activities = data.activities;
+            } else {
+                untrack(() => void loadActivities());
+            }
+            return;
+        }
+
+        const nextPeriodMode: PeriodMode =
+            datePeriodPresetForRange(
+                nextFilter.startDate,
+                nextFilter.endDate,
+            ) ?? "custom";
+
+        displayedViewerId = nextViewerId;
+        displayedHandle = nextHandle;
+        activityRequestVersion += 1;
+        activities = data.activities;
+        filter.startDate = nextFilter.startDate;
+        filter.endDate = nextFilter.endDate;
+        filter.category = nextFilter.category;
+        filter.subcategory = nextFilter.subcategory;
+        filter.trail = nextFilter.trail;
+        periodMode = nextPeriodMode;
+        appliedPeriodMode = nextPeriodMode;
+        calendarRange =
+            nextFilter.startDate && nextFilter.endDate
+                ? calendarMonthForDateRange(
+                      nextFilter.startDate,
+                      nextFilter.endDate,
+                  )
+                : monthDateRange(new Date());
+    });
 
     const periodSelectItems: SelectItem[] = [
         { text: $_("current-month"), value: "current_month" },
@@ -292,36 +397,6 @@
             ),
         ),
     );
-    let calendarActivityCategoryColorMap = $derived.by(() => {
-        const colorMap = { ...activityCategoryColorMap };
-        const usedColors = new Set(Object.values(colorMap));
-        const calendarKeys = [
-            ...new Set(
-                calendarActivities.map((activity) =>
-                    trailCategoryKey(activity.expand?.trail),
-                ),
-            ),
-        ].sort();
-        let fallbackColorIndex = 0;
-
-        for (const key of calendarKeys) {
-            if (colorMap[key]) {
-                continue;
-            }
-
-            const unusedColor = categoryColors.find(
-                (color) => !usedColors.has(color),
-            );
-            const color =
-                unusedColor ??
-                categoryColors[fallbackColorIndex++ % categoryColors.length];
-            colorMap[key] = color;
-            usedColors.add(color);
-        }
-
-        return colorMap;
-    });
-
     let categoryChartData = $derived({
         labels: categoryLabels,
         datasets: [
@@ -614,9 +689,15 @@
 
         periodMode = value;
         appliedPeriodMode = value;
-        const range = datePeriodRange(value);
+        const today = new Date();
+        const range = datePeriodRange(value, today);
         filter.startDate = range.start;
         filter.endDate = range.end;
+        calendarRange = calendarMonthForDateRange(
+            range.start,
+            range.end,
+            today,
+        );
         loadActivities();
     }
 
@@ -660,6 +741,7 @@
     }) {
         filter.startDate = range.start;
         filter.endDate = range.end;
+        calendarRange = calendarMonthForDateRange(range.start, range.end);
         periodMode = "custom";
         appliedPeriodMode = "custom";
         loadActivities();
@@ -675,7 +757,6 @@
 
     function handleCalendarMonthChange(range: { start: string; end: string }) {
         calendarRange = range;
-        loadCalendarActivities();
     }
 
     function showLoadError() {
@@ -687,53 +768,40 @@
     }
 
     async function loadActivities() {
-        try {
-            activities = await profile_stats_index(page.params.handle!, filter);
-        } catch (e) {
-            showLoadError();
-        }
-    }
+        const requestVersion = ++activityRequestVersion;
+        const handle = page.params.handle!;
+        const viewerId = $currentUser?.id ?? null;
+        const requestFilter = copyFilter(filter);
 
-    async function loadCalendarActivities() {
+        if (handle !== displayedHandle || viewerId !== displayedViewerId) {
+            return;
+        }
+
         try {
-            calendarActivities = await profile_stats_index(
-                page.params.handle!,
-                {
-                    ...filter,
-                    startDate: calendarRange.start,
-                    endDate: calendarRange.end,
-                },
+            const nextActivities = await profile_stats_index(
+                handle,
+                requestFilter,
             );
+            const currentViewerId = $currentUser?.id ?? null;
+            if (
+                requestVersion === activityRequestVersion &&
+                handle === page.params.handle &&
+                handle === displayedHandle &&
+                viewerId === currentViewerId &&
+                viewerId === displayedViewerId
+            ) {
+                activities = nextActivities;
+            }
         } catch (e) {
-            showLoadError();
+            if (
+                requestVersion === activityRequestVersion &&
+                handle === page.params.handle &&
+                viewerId === ($currentUser?.id ?? null)
+            ) {
+                showLoadError();
+            }
         }
     }
-
-    async function loadAllActivities() {
-        try {
-            const [nextActivities, nextCalendarActivities] = await Promise.all([
-                profile_stats_index(page.params.handle!, filter),
-                profile_stats_index(page.params.handle!, {
-                    ...filter,
-                    startDate: calendarRange.start,
-                    endDate: calendarRange.end,
-                }),
-            ]);
-            activities = nextActivities;
-            calendarActivities = nextCalendarActivities;
-        } catch (e) {
-            showLoadError();
-        }
-    }
-
-    onMount(() => {
-        if (
-            filter.startDate !== calendarRange.start ||
-            filter.endDate !== calendarRange.end
-        ) {
-            loadCalendarActivities();
-        }
-    });
 </script>
 
 <svelte:head>
@@ -752,7 +820,7 @@
             <TrailCategoryFilter
                 categories={$categories}
                 {filter}
-                onupdate={loadAllActivities}
+                onupdate={loadActivities}
             />
         </div>
         <div
@@ -786,8 +854,10 @@
         <div class="border border-input-border rounded-xl p-6">
             <Calendar
                 month={calendarRange.start}
-                activities={calendarActivities}
-                colorMap={calendarActivityCategoryColorMap}
+                minMonth={filter.startDate}
+                maxMonth={filter.endDate}
+                {activities}
+                colorMap={activityCategoryColorMap}
                 onmonthchange={handleCalendarMonthChange}
             ></Calendar>
         </div>
@@ -856,7 +926,11 @@
                     values: { n: 2 },
                 })}</span
             >
-            <p class="text-3xl font-bold">{activities.length}</p>
+            <p
+                class="text-3xl font-bold"
+                data-testid="statistics-activity-count"
+                >{activities.length}</p
+            >
         </div>
         <div
             class="flex flex-col items-center gap-4 border border-input-border rounded-xl p-6"

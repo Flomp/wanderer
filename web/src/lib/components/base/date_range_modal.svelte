@@ -75,7 +75,11 @@
     bind:this={modal}
 >
     {#snippet content()}
-        <div class="grid grid-cols-2 gap-4 text-sm">
+        <div
+            class="grid grid-cols-2 gap-4 text-sm"
+            aria-live="polite"
+            aria-atomic="true"
+        >
             <div>
                 <div class="mb-1 text-gray-500">{$_("after")}</div>
                 <div class="font-semibold">{formatDate(draftStart)}</div>

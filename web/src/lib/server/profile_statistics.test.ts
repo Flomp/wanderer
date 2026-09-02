@@ -62,6 +62,19 @@ describe("profile statistics", () => {
         expect(filter).toContain("'category0000001'~category");
     });
 
+    it("excludes the fallback when the profile owner has any summit log", () => {
+        const filter = buildCompletedTrailFilter("actor0000000001", {
+            startDate: "2026-08-01",
+            endDate: "2026-08-31",
+            category: [],
+            subcategory: [],
+        });
+
+        expect(filter).toBe(
+            "author='actor0000000001'&&completed=true&&completed_at!=''&&summit_logs_via_trail.author!='actor0000000001'&&completed_at>='2026-08-01'&&completed_at<'2026-09-01'",
+        );
+    });
+
     it("builds an inclusive date range for summit logs", () => {
         const filter = buildSummitLogStatisticsFilter({
             startDate: "2026-08-01",
@@ -72,6 +85,15 @@ describe("profile statistics", () => {
 
         expect(filter).toContain("date>='2026-08-01'");
         expect(filter).toContain("date<'2026-09-01'");
+    });
+
+    it("includes summit logs even when their trail is not completed", () => {
+        const filter = buildSummitLogStatisticsFilter({
+            category: [],
+            subcategory: [],
+        });
+
+        expect(filter).not.toContain("completed");
     });
 
     it("combines broad categories and selected subcategories", () => {
@@ -133,7 +155,7 @@ describe("profile statistics", () => {
         });
 
         expect(filter).toBe(
-            "author='actor0000000001'&&completed=true&&completed_at!=''",
+            "author='actor0000000001'&&completed=true&&completed_at!=''&&summit_logs_via_trail.author!='actor0000000001'",
         );
     });
 });

@@ -49,6 +49,20 @@ export function monthDateRange(date: Date): { start: string; end: string } {
     };
 }
 
+export function calendarMonthForDateRange(
+    start: string,
+    end: string,
+    today: Date = new Date(),
+): { start: string; end: string } {
+    const currentMonth = monthDateRange(today);
+    const currentMonthOverlapsRange =
+        currentMonth.start <= end && currentMonth.end >= start;
+
+    return currentMonthOverlapsRange
+        ? currentMonth
+        : monthDateRange(parseDateValue(start));
+}
+
 export type DatePeriodPreset =
     | "current_month"
     | "current_quarter"

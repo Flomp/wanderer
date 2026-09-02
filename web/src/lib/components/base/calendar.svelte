@@ -9,11 +9,13 @@
 		monthDateRange,
 		parseDateValue,
 	} from "../../util/date_util";
-	import { _, date } from "svelte-i18n";
+	import { _, date, locale } from "svelte-i18n";
 	interface Props {
 		activities?: StatisticActivity[];
 		colorMap?: Record<string, string>;
 		month?: string;
+		minMonth?: string;
+		maxMonth?: string;
 		selectedStart?: string;
 		selectedEnd?: string;
 		onmonthchange?: (data: { start: string; end: string }) => void;
@@ -29,6 +31,8 @@
 		activities = [],
 		colorMap = {},
 		month,
+		minMonth,
+		maxMonth,
 		selectedStart,
 		selectedEnd,
 		onmonthchange,
@@ -40,6 +44,21 @@
 	let currentYear = $state(today.getFullYear());
 	let currentMonthArray: (CalendarDay | null)[] = $derived(
 		generateMonthArray(currentYear, currentMonth, activities),
+	);
+	let currentMonthValue = $derived(
+		dateInputValue(new Date(currentYear, currentMonth, 1)),
+	);
+	let minimumMonthValue = $derived(
+		minMonth ? monthDateRange(parseDateValue(minMonth)).start : undefined,
+	);
+	let maximumMonthValue = $derived(
+		maxMonth ? monthDateRange(parseDateValue(maxMonth)).start : undefined,
+	);
+	let canGoToPreviousMonth = $derived(
+		!minimumMonthValue || currentMonthValue > minimumMonthValue,
+	);
+	let canGoToNextMonth = $derived(
+		!maximumMonthValue || currentMonthValue < maximumMonthValue,
 	);
 
 	$effect(() => {
@@ -128,7 +147,31 @@
 		);
 	}
 
+	function calendarDayLabel(
+		day: CalendarDay,
+		includeActivityCount = false,
+	): string {
+		const dateLabel = day.date.toLocaleDateString($locale ?? undefined, {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		});
+
+		if (!includeActivityCount) {
+			return dateLabel;
+		}
+
+		const activityCount = day.activities.length;
+		return `${dateLabel}: ${activityCount} ${$_("activity", {
+			values: { n: activityCount },
+		})}`;
+	}
+
 	function monthPlus() {
+		if (!canGoToNextMonth) {
+			return;
+		}
 		if (currentMonth === 11) {
 			currentYear += 1;
 			currentMonth = 0;
@@ -139,6 +182,9 @@
 	}
 
 	function monthMinus() {
+		if (!canGoToPreviousMonth) {
+			return;
+		}
 		if (currentMonth === 0) {
 			currentYear -= 1;
 			currentMonth = 11;
@@ -157,14 +203,16 @@
 	<button
 		type="button"
 		aria-label="Previous month"
-		class="btn-icon mr-2"
-		onclick={monthMinus}><i class="fa fa-caret-left"></i></button
+		class="btn-icon mr-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+		disabled={!canGoToPreviousMonth}
+		onclick={monthMinus}><i class="fa fa-caret-left" aria-hidden="true"></i></button
 	>
 	<button
 		type="button"
 		aria-label="Next month"
-		class="btn-icon"
-		onclick={monthPlus}><i class="fa fa-caret-right"></i></button
+		class="btn-icon disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+		disabled={!canGoToNextMonth}
+		onclick={monthPlus}><i class="fa fa-caret-right" aria-hidden="true"></i></button
 	>
 </div>
 <div class="calendar-body">
@@ -184,32 +232,61 @@
 		{#each { length: 42 } as _, i}
 			{@const day = currentMonthArray[i]}
 			{@const colors = activityColors(currentMonthArray[i])}
-			<button
-				type="button"
-				class="calendar-day relative flex items-center justify-center rounded-xl"
-				class:today={day?.today}
-				class:has-activities={(day?.activities.length ?? 0) > 0}
-				class:range-selected={isSelected(day)}
-				class:range-boundary={isRangeBoundary(day)}
-				class:cursor-pointer={Boolean(day && onclick)}
-				disabled={!day || !onclick}
-				onclick={() => day && onclick?.(day.date)}
-			>
-				{day?.date.getDate() ?? ""}
-				{#if colors.length}
-					<span
-						class="absolute bottom-1 left-1/2 flex max-w-full -translate-x-1/2 flex-wrap justify-center gap-0.5"
-						aria-hidden="true"
-					>
-						{#each colors as color}
-							<span
-								class="h-1 w-1 rounded-full"
-								style="background-color: {color}"
-							></span>
-						{/each}
-					</span>
-				{/if}
-			</button>
+			{#if day && onclick}
+				<button
+					type="button"
+					aria-label={calendarDayLabel(day, true)}
+					aria-current={day.today ? "date" : undefined}
+					aria-pressed={isSelected(day)}
+					class="calendar-day relative flex cursor-pointer items-center justify-center rounded-xl"
+					class:today={day.today}
+					class:has-activities={day.activities.length > 0}
+					class:range-selected={isSelected(day)}
+					class:range-boundary={isRangeBoundary(day)}
+					onclick={() => onclick?.(day.date)}
+				>
+					<span aria-hidden="true">{day.date.getDate()}</span>
+					{#if colors.length}
+						<span
+							class="absolute bottom-1 left-1/2 flex max-w-full -translate-x-1/2 flex-wrap justify-center gap-0.5"
+							aria-hidden="true"
+						>
+							{#each colors as color}
+								<span
+									class="h-1 w-1 rounded-full"
+									style="background-color: {color}"
+								></span>
+							{/each}
+						</span>
+					{/if}
+				</button>
+			{:else if day}
+				<time
+					datetime={calendarDateValue(day)}
+					aria-current={day.today ? "date" : undefined}
+					class="calendar-day relative flex items-center justify-center rounded-xl"
+					class:today={day.today}
+					class:has-activities={day.activities.length > 0}
+				>
+					<span aria-hidden="true">{day.date.getDate()}</span>
+					<span class="sr-only">{calendarDayLabel(day, true)}</span>
+					{#if colors.length}
+						<span
+							class="absolute bottom-1 left-1/2 flex max-w-full -translate-x-1/2 flex-wrap justify-center gap-0.5"
+							aria-hidden="true"
+						>
+							{#each colors as color}
+								<span
+									class="h-1 w-1 rounded-full"
+									style="background-color: {color}"
+								></span>
+							{/each}
+						</span>
+					{/if}
+				</time>
+			{:else}
+				<div class="calendar-day" aria-hidden="true"></div>
+			{/if}
 		{/each}
 	</div>
 </div>

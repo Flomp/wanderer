@@ -7,12 +7,18 @@ import { subcategories_index } from "$lib/stores/subcategory_store";
 import { monthDateRange } from "$lib/util/date_util";
 import { error, type Load } from "@sveltejs/kit";
 
-export const load: Load = async ({ params, fetch, parent }) => {
+export const load: Load = async ({ params, fetch, parent, setHeaders }) => {
+
+    setHeaders({
+        "cache-control": "private, no-store",
+        vary: "Cookie, Authorization",
+    });
 
     if (!params.handle) {
         error(404, "Not found")
     }
 
+    const parentData = await parent();
     const currentMonth = monthDateRange(new Date());
 
     await Promise.all([
@@ -30,9 +36,19 @@ export const load: Load = async ({ params, fetch, parent }) => {
     }
     try {
         const activities = await profile_stats_index(params.handle, filter, fetch);
-        return { filter, activities }
+        return {
+            filter,
+            activities,
+            handle: params.handle,
+            viewerId: parentData.user?.id ?? null,
+        }
 
     } catch (e) {
-        return { activities: [], filter }
+        return {
+            activities: [],
+            filter,
+            handle: params.handle,
+            viewerId: parentData.user?.id ?? null,
+        }
     }
 };

@@ -105,6 +105,11 @@ export function buildCompletedTrailFilter(
         `author='${actorId}'`,
         "completed=true",
         "completed_at!=''",
+        // A regular inequality on a multi-valued PocketBase back-relation is an
+        // all-match and also includes empty relations. The fallback therefore
+        // remains available for trails without logs and trails with only logs
+        // by other users, but an owner's log suppresses it regardless of date.
+        `summit_logs_via_trail.author!='${actorId}'`,
     ];
 
     const categoryFilter = buildPocketBaseCategoryFilter(

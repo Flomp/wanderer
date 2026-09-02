@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    calendarMonthForDateRange,
     dateInputValue,
     datePeriodRange,
     datePeriodPresetForRange,
@@ -20,6 +21,32 @@ describe("date utilities", () => {
         expect(monthDateRange(new Date(2024, 1, 15))).toEqual({
             start: "2024-02-01",
             end: "2024-02-29",
+        });
+    });
+
+    it("uses the current month when it overlaps the selected date range", () => {
+        expect(
+            calendarMonthForDateRange(
+                "2026-07-01",
+                "2026-09-10",
+                new Date(2026, 8, 20),
+            ),
+        ).toEqual({
+            start: "2026-09-01",
+            end: "2026-09-30",
+        });
+    });
+
+    it("uses the first selected month when the current month is outside the range", () => {
+        expect(
+            calendarMonthForDateRange(
+                "2026-03-15",
+                "2026-05-10",
+                new Date(2026, 8, 20),
+            ),
+        ).toEqual({
+            start: "2026-03-01",
+            end: "2026-03-31",
         });
     });
 

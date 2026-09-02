@@ -21,7 +21,7 @@ import { ClientResponseError } from 'pocketbase';
  * /api/v1/profile/{handle}/stats:
  *   get:
  *     summary: Get user activity statistics
- *     description: Retrieves summit logs and completed trails without summit logs for a user, with federation support
+ *     description: Retrieves the profile owner's summit logs and completed trails for which that owner has no summit log. An owner's summit log supersedes the completed-trail fallback regardless of the requested date range; other users' logs have no effect. Supports federation.
  *     tags:
  *       - Profiles
  *     parameters:
@@ -154,7 +154,12 @@ export async function GET(event: RequestEvent) {
             })
         }
 
-        return json(activities)
+        return json(activities, {
+            headers: {
+                'Cache-Control': 'private, no-store',
+                Vary: 'Cookie, Authorization',
+            },
+        })
     } catch (e) {
         return handleError(e)
     }
