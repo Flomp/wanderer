@@ -70,6 +70,8 @@ describe("profile statistics", () => {
             subcategory: [],
         });
 
+        // The PocketBase semantics of this back-relation clause are verified in
+        // db/tests/profile_statistics_filter_test.go.
         expect(filter).toBe(
             "author='actor0000000001'&&completed=true&&completed_at!=''&&summit_logs_via_trail.author!='actor0000000001'&&completed_at>='2026-08-01'&&completed_at<'2026-09-01'",
         );
