@@ -4,9 +4,11 @@
 
     interface Props {
         onclick: () => void;
+        oninfo: () => void;
         ontoggle: (value: boolean) => void;
         active: boolean;
-        disabled: boolean;
+        toggleDisabled?: boolean;
+        settingsDisabled?: boolean;
         img?: string;
         title: string;
         description?: string;
@@ -19,9 +21,11 @@
 
     let {
         onclick,
+        oninfo,
         ontoggle,
         active = $bindable(),
-        disabled,
+        toggleDisabled = false,
+        settingsDisabled = false,
         img,
         title,
         description = "",
@@ -67,8 +71,22 @@
         </div>
     </div>
     <div class="flex shrink-0 flex-col gap-2 md:items-start">
-        <div class="flex items-center justify-between gap-4 md:justify-end">
-            <button class="btn-secondary" {onclick}
+        <div class="flex items-center justify-between gap-2 md:justify-end">
+            <button
+                class="btn-icon"
+                type="button"
+                onclick={oninfo}
+                title={$_("plugin-info-title", { values: { plugin: title } })}
+                aria-label={$_("plugin-info-title", { values: { plugin: title } })}
+            >
+                <i class="fa fa-circle-info" aria-hidden="true"></i>
+            </button>
+            <button
+                class="btn-secondary"
+                type="button"
+                class:btn-disabled={settingsDisabled}
+                {onclick}
+                disabled={settingsDisabled}
                 ><i class="fa fa-cogs mr-2"></i>{$_("settings")}</button
             >
             {#if onaction && actionLabel}
@@ -88,7 +106,7 @@
                 </button>
             {/if}
             <div class="plugin-card-toggle">
-                <Toggle bind:value={active} onchange={ontoggle} {disabled}></Toggle>
+                <Toggle bind:value={active} onchange={ontoggle} disabled={toggleDisabled}></Toggle>
             </div>
         </div>
         <div class="min-h-5 max-w-56 text-xs text-gray-500">
@@ -119,7 +137,7 @@
                         class="fa fa-triangle-exclamation shrink-0 text-[0.8rem]"
                         aria-hidden="true"
                     ></i>
-                    <span>Sync</span>
+                    <span class="truncate">{$_("plugin-setup-error")}</span>
                 </span>
             {/if}
         </div>
