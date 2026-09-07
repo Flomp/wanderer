@@ -9,6 +9,7 @@
 		monthDateRange,
 		parseDateValue,
 	} from "../../util/date_util";
+	import { untrack } from "svelte";
 	import { _, date, locale } from "svelte-i18n";
 	interface Props {
 		activities?: StatisticActivity[];
@@ -39,9 +40,9 @@
 		onclick,
 	}: Props = $props();
 
-	const today = new Date();
-	let currentMonth = $state(today.getMonth());
-	let currentYear = $state(today.getFullYear());
+	const initialMonth = untrack(() => month ? parseDateValue(month) : new Date());
+	let currentMonth = $state(initialMonth.getMonth());
+	let currentYear = $state(initialMonth.getFullYear());
 	let currentMonthArray: (CalendarDay | null)[] = $derived(
 		generateMonthArray(currentYear, currentMonth, activities),
 	);
