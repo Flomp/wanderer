@@ -13,6 +13,7 @@
     import type { Snippet } from "svelte";
     import TrailDropdown from "$lib/components/trail/trail_dropdown.svelte";
     import { goto } from "$app/navigation";
+    import { sanitizeTrailSort, sanitizeTrailSortOrder } from "$lib/util/trail_filter_util";
 
     interface Props {
         filter?: TrailFilter | null;
@@ -96,13 +97,8 @@
             selectedDisplayOption = storedDisplayOption;
         }
         if (filter) {
-            filter.sort =
-                (storedSort as typeof filter.sort | null) ?? filter.sort;
-        }
-        if (filter) {
-            filter.sortOrder =
-                (storedSortOrder as typeof filter.sortOrder | null) ??
-                filter.sortOrder;
+            filter.sort = sanitizeTrailSort(storedSort, filter.sort);
+            filter.sortOrder = sanitizeTrailSortOrder(storedSortOrder, filter.sortOrder);
         }
         if (paginationItems) {
             pagination.items = +paginationItems;

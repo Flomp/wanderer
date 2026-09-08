@@ -2,6 +2,8 @@ import { withTrailPreferenceMeiliFilter } from "$lib/server/category_preference_
 import { error, json, type RequestEvent } from "@sveltejs/kit";
 import Supercluster from "supercluster";
 import { MAP_MAX_POLYLINES } from "$lib/config/map";
+import { searchBatches } from "$lib/server/search_batches";
+import { getHTTPErrorStatus } from "$lib/util/api_util";
 
 function isFiniteNumber(value: unknown): value is number {
     return typeof value === "number" && Number.isFinite(value);
@@ -32,21 +34,17 @@ export async function POST(event: RequestEvent) {
         const geoFilter = `max_lat >= ${southWest.lat} AND min_lat <= ${northEast.lat} AND ${lonFilter}`;
         
         const summaryQuery = {
-            indexUid: "trails",
-            q,
             filter: await withTrailPreferenceMeiliFilter(
                 event,
                 [geoFilter, filterText].filter(f => f && f !== ""),
             ),
             attributesToRetrieve: ["id", "_geo", "bounding_box_diagonal"],
-            limit: 10000, 
         };
 
-        const r = await event.locals.ms.multiSearch({
-            queries: [summaryQuery]
-        });
-
-        const hits = r.results[0].hits;
+        const hits = [];
+        for await (const batch of searchBatches<{ id: string; _geo: { lat: number; lng: number }; bounding_box_diagonal: number }>(event.locals.ms.index("trails"), q, summaryQuery)) {
+            hits.push(...batch);
+        }
         
         const clusteringMaxZoom = event.locals.settings?.behavior?.mapClusteringMaxZoom ?? 11;
         const forceClustering = zoom < clusteringMaxZoom;
@@ -123,10 +121,10 @@ export async function POST(event: RequestEvent) {
         return json({
             type: "FeatureCollection",
             features: [...normalizedSmallFeatures, ...largeFeatures],
-            totalHits: r.results[0].estimatedTotalHits ?? r.results[0].totalHits
+            totalHits: hits.length
         });
     } catch (e: any) {
         console.error("Clustering error:", e);
-        throw error(e.httpStatus || 500, e.message ?? "Unable to cluster trails");
+        throw error(getHTTPErrorStatus(e), e.message ?? "Unable to cluster trails");
     }
 }

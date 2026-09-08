@@ -27,7 +27,16 @@ func UpdateActorHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
-		return util.UpdateActor(e.Record, client)
+		if err := util.UpdateActor(e.Record, client); err != nil {
+			return err
+		}
+		original := e.Record.Original()
+		for _, field := range []string{"preferred_username", "icon", "domain", "is_local"} {
+			if e.Record.GetString(field) != original.GetString(field) {
+				return util.UpdateActorReferences(e.App, e.Record.Id, client)
+			}
+		}
+		return nil
 	}
 }
 

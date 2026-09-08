@@ -6,7 +6,7 @@ import type { Waypoint } from "$lib/models/waypoint";
 import { APIError } from "$lib/util/api_util";
 import { deepEqual } from "$lib/util/deep_util";
 import { getFileURL, objectToFormData } from "$lib/util/file_util";
-import { noSubcategoryFilterCategory } from "$lib/util/trail_filter_util";
+import { noSubcategoryFilterCategory, sanitizeTrailSort, sanitizeTrailSortOrder, trailFilterDateBoundary } from "$lib/util/trail_filter_util";
 import * as M from "maplibre-gl";
 import type { Hits } from "meilisearch";
 import { type AuthRecord, type ListResult, type RecordModel } from "pocketbase";
@@ -68,7 +68,7 @@ export async function trails_search_filter(filter: TrailFilter, page: number = 1
             options: {
                 filter: filterText,
                 attributesToRetrieve: defaultTrailSearchAttributes,
-                sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
+                sort: [`${sanitizeTrailSort(filter.sort)}:${sanitizeTrailSortOrder(filter.sortOrder) === "+" ? "asc" : "desc"}`],
                 hitsPerPage: perPage,
                 page: page
             }
@@ -170,7 +170,7 @@ export async function trails_search_bounding_box(
             options: {
                 filter: listFilter,
                 attributesToRetrieve: defaultTrailSearchAttributes,
-                sort: [`${filter.sort}:${filter.sortOrder == "+" ? "asc" : "desc"}`],
+                sort: [`${sanitizeTrailSort(filter.sort)}:${sanitizeTrailSortOrder(filter.sortOrder, "-") === "+" ? "asc" : "desc"}`],
                 hitsPerPage: perPage,
                 page,
             },
@@ -719,7 +719,7 @@ export async function searchResultToTrailList(hits: Hits<TrailSearchResult>): Pr
             created: new Date(created * 1000).toISOString(),
             date: new Date(date * 1000).toISOString(),
             description: h.description,
-            difficulty: h.difficulty == 0 ? "easy" : h.difficulty == 1 ? "moderate" : "difficult",
+            difficulty: h.difficulty === 0 ? "easy" : h.difficulty === 1 ? "moderate" : h.difficulty === 2 ? "difficult" : undefined,
             distance: h.distance,
             duration: h.duration,
             elevation_gain: h.elevation_gain,
@@ -784,7 +784,7 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
         filterText += ` AND elevation_loss <= ${Math.ceil(filter.elevationLossMax)}`
     }
 
-    if (filter.difficulty.length > 0) {
+    if (filter.difficulty.length > 0 && ![0, 1, 2].every(value => filter.difficulty.includes(value as 0 | 1 | 2))) {
         filterText += ` AND difficulty IN [${filter.difficulty.join(",")}]`
     }
 
@@ -851,12 +851,14 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
         filterText += ` AND likes = ${user?.actor}`
     }
 
-    if (filter.startDate) {
-        filterText += ` AND date >= ${new Date(filter.startDate).getTime() / 1000}`
+    const startDate = trailFilterDateBoundary(filter.startDate);
+    if (startDate !== undefined) {
+        filterText += ` AND date >= ${startDate}`
     }
 
-    if (filter.endDate) {
-        filterText += ` AND date <= ${new Date(filter.endDate).getTime() / 1000}`
+    const endDate = trailFilterDateBoundary(filter.endDate, true);
+    if (endDate !== undefined) {
+        filterText += ` AND date < ${endDate}`
     }
 
     const selectedSubcategoryIds = filter.subcategory ?? [];
@@ -915,10 +917,9 @@ function buildFilterText(user: AuthRecord, filter: TrailFilter, includeGeo: bool
         filterText += ` AND completed = ${filter.completed}`;
     }
 
-    if (filter.near.lat && filter.near.lon && includeGeo) {
-        filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
-    }
-    if (filter.near.lat && filter.near.lon && includeGeo) {
+    if (includeGeo && typeof filter.near.lat === "number" && Number.isFinite(filter.near.lat) && Math.abs(filter.near.lat) <= 90
+        && typeof filter.near.lon === "number" && Number.isFinite(filter.near.lon) && Math.abs(filter.near.lon) <= 180
+        && Number.isFinite(filter.near.radius) && filter.near.radius > 0) {
         filterText += ` AND _geoRadius(${filter.near.lat}, ${filter.near.lon}, ${filter.near.radius})`
     }
 

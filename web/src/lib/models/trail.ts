@@ -103,7 +103,7 @@ class Trail {
         this.elevation_gain = params?.elevation_gain ?? 0;
         this.elevation_loss = params?.elevation_loss ?? 0;
         this.duration = params?.duration ?? 0;
-        this.difficulty = params?.difficulty ?? "easy";
+        this.difficulty = params?.difficulty;
         this.lat = params?.lat;
         this.lon = params?.lon;
         this.thumbnail = params?.thumbnail ?? 0;
@@ -325,7 +325,7 @@ interface TrailSearchResult {
     elevation_gain: number;
     elevation_loss: number;
     duration: number;
-    difficulty: 0 | 1 | 2;
+    difficulty: 0 | 1 | 2 | null;
     category: string;
     category_id?: string | null;
     category_icon?: string;

@@ -24,6 +24,24 @@ const TRAIL_SORT_OPTIONS = new Set([
     "date",
 ]);
 
+export function sanitizeTrailSort(value: unknown, fallback: TrailFilter["sort"] = "created"): TrailFilter["sort"] {
+    return typeof value === "string" && TRAIL_SORT_OPTIONS.has(value) ? value as TrailFilter["sort"] : fallback;
+}
+
+export function sanitizeTrailSortOrder(value: unknown, fallback: TrailFilter["sortOrder"] = "+"): TrailFilter["sortOrder"] {
+    return value === "+" || value === "-" ? value : fallback;
+}
+
+export function trailFilterDateBoundary(value?: string, nextDay = false): number | undefined {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+    // A date input represents a local calendar day, including 23/25-hour days.
+    const date = new Date(`${value}T00:00:00`);
+    const [year, month, day] = value.split("-").map(Number);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return undefined;
+    if (nextDay) date.setDate(date.getDate() + 1);
+    return date.getTime() / 1000;
+}
+
 function limitToRange(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
@@ -162,11 +180,8 @@ export function sanitizeTrailFilter(
         endDate: getString(source.endDate, defaultFilter.endDate),
         completed: getBoolean(source.completed, defaultFilter.completed),
         liked: getBoolean(source.liked, defaultFilter.liked),
-        sort:
-            typeof source.sort === "string" && TRAIL_SORT_OPTIONS.has(source.sort)
-                ? (source.sort as TrailFilter["sort"])
-                : defaultFilter.sort,
-        sortOrder: source.sortOrder === "-" ? "-" : "+",
+        sort: sanitizeTrailSort(source.sort, defaultFilter.sort),
+        sortOrder: sanitizeTrailSortOrder(source.sortOrder, defaultFilter.sortOrder),
     };
 
     if (restored.distanceMin > restored.distanceMax) {

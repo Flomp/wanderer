@@ -6,7 +6,6 @@ import (
 	"pocketbase/util"
 
 	"github.com/meilisearch/meilisearch-go"
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -47,25 +46,7 @@ func UpdateUserHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
-		trails, err := e.App.FindRecordsByFilter("trails", "author={:author}", "", -1, 0, dbx.Params{"author": actor.Id})
-		if err != nil {
-			return err
-		}
-		if len(trails) > 0 {
-			if err := util.IndexTrails(e.App, trails, client); err != nil {
-				return err
-			}
-		}
-
-		lists, err := e.App.FindRecordsByFilter("lists", "author={:author}", "", -1, 0, dbx.Params{"author": actor.Id})
-		if err != nil {
-			return err
-		}
-		if len(lists) > 0 {
-			if err := util.IndexLists(e.App, lists, client); err != nil {
-				return err
-			}
-		}
+		// Saving the actor also refreshes its dependent search metadata.
 
 		return e.Next()
 	}

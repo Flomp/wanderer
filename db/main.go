@@ -98,6 +98,8 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordUpdateRequest("categories").BindFunc(hooks.ValidateCategoryHandler())
 	app.OnRecordAfterCreateSuccess("categories").BindFunc(hooks.BackfillRemoteTrailCategoryHandler())
 	app.OnRecordAfterUpdateSuccess("categories").BindFunc(hooks.BackfillRemoteTrailCategoryHandler())
+	app.OnRecordAfterUpdateSuccess("categories").BindFunc(hooks.UpdateCategoryIndexHandler(client))
+	app.OnRecordAfterUpdateSuccess("tags").BindFunc(hooks.UpdateTagIndexHandler(client))
 	app.OnRecordCreateRequest("subcategories").BindFunc(hooks.ValidateSubcategoryHandler())
 	app.OnRecordUpdateRequest("subcategories").BindFunc(hooks.ValidateSubcategoryHandler())
 	app.OnRecordAfterCreateSuccess("subcategories").BindFunc(hooks.BackfillRemoteTrailSubcategoryHandler())
@@ -124,8 +126,10 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordUpdateRequest("comments").BindFunc(hooks.UpdateCommentHandler())
 	app.OnRecordDeleteRequest("comments").BindFunc(hooks.DeleteCommentHandler(client))
 
-	app.OnRecordCreateRequest("trail_share").BindFunc(hooks.CreateTrailShareHandler(client))
-	app.OnRecordDeleteRequest("trail_share").BindFunc(hooks.DeleteTrailShareHandler(client))
+	app.OnRecordCreateRequest("trail_share").BindFunc(hooks.CreateTrailShareHandler())
+	app.OnRecordAfterCreateSuccess("trail_share").BindFunc(hooks.UpdateTrailShareIndexHandler(client))
+	app.OnRecordAfterUpdateSuccess("trail_share").BindFunc(hooks.UpdateTrailShareIndexHandler(client))
+	app.OnRecordAfterDeleteSuccess("trail_share").BindFunc(hooks.UpdateTrailShareIndexHandler(client))
 
 	app.OnRecordAfterCreateSuccess("trail_like").BindFunc(hooks.CreateTrailLikeHandler(client))
 	app.OnRecordAfterDeleteSuccess("trail_like").BindFunc(hooks.DeleteTrailLikeHandler(client))
@@ -134,8 +138,10 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterUpdateSuccess("lists").BindFunc(hooks.UpdateListHandler(client))
 	app.OnRecordAfterDeleteSuccess("lists").BindFunc(hooks.DeleteListHandler(client))
 
-	app.OnRecordCreateRequest("list_share").BindFunc(hooks.CreateListShareHandler(client))
-	app.OnRecordDeleteRequest("list_share").BindFunc(hooks.DeleteListShareHandler(client))
+	app.OnRecordCreateRequest("list_share").BindFunc(hooks.CreateListShareHandler())
+	app.OnRecordAfterCreateSuccess("list_share").BindFunc(hooks.UpdateListShareIndexHandler(client))
+	app.OnRecordAfterUpdateSuccess("list_share").BindFunc(hooks.UpdateListShareIndexHandler(client))
+	app.OnRecordAfterDeleteSuccess("list_share").BindFunc(hooks.UpdateListShareIndexHandler(client))
 
 	app.OnRecordCreateRequest("follows").BindFunc(hooks.CreateFollowHandler())
 	app.OnRecordDeleteRequest("follows").BindFunc(hooks.DeleteFollowHandler())

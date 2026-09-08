@@ -20,7 +20,7 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 	thumbnail := ""
 	if len(photos) > 0 {
 		thumbnailIndex := r.GetInt("thumbnail")
-		if thumbnailIndex >= len(photos) {
+		if thumbnailIndex < 0 || thumbnailIndex >= len(photos) {
 			thumbnailIndex = 0
 		}
 		thumbnail = photos[thumbnailIndex]
@@ -140,7 +140,7 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 	return document, nil
 }
 
-func difficultyToNumber(difficulty string) int32 {
+func difficultyToNumber(difficulty string) any {
 	switch difficulty {
 	case "easy":
 		return 0
@@ -150,7 +150,7 @@ func difficultyToNumber(difficulty string) int32 {
 		return 2
 	}
 
-	return 0
+	return nil
 }
 
 func getStoredBounds(r *core.Record) [4]float64 {
@@ -318,45 +318,53 @@ func documentFromRemoteRecord(r *core.Record, index string) (map[string]any, err
 }
 
 func IndexTrails(app core.App, trails []*core.Record, client meilisearch.ServiceManager) error {
+	documents, err := trailSearchDocuments(app, trails)
+	if err != nil {
+		return err
+	}
+	_, err = client.Index("trails").AddDocuments(documents, nil)
+	return err
+}
+
+func trailSearchDocuments(app core.App, trails []*core.Record) ([]map[string]any, error) {
 	documents := make([]map[string]any, len(trails))
 
 	for i, r := range trails {
 		errs := app.ExpandRecord(r, []string{"tags"}, nil)
 		if len(errs) > 0 {
-			return fmt.Errorf("failed to expand tags: %v", errs)
+			return nil, fmt.Errorf("failed to expand tags: %v", errs)
 		}
 		errs = app.ExpandRecord(r, []string{"category"}, nil)
 		if len(errs) > 0 {
-			return fmt.Errorf("failed to expand category: %v", errs)
+			return nil, fmt.Errorf("failed to expand category: %v", errs)
 		}
 		errs = app.ExpandRecord(r, []string{"trail_share_via_trail"}, nil)
 		if len(errs) > 0 {
-			return fmt.Errorf("failed to expand trail_share_via_trail: %v", errs)
+			return nil, fmt.Errorf("failed to expand trail_share_via_trail: %v", errs)
 		}
 		errs = app.ExpandRecord(r, []string{"trail_like_via_trail"}, nil)
 		if len(errs) > 0 {
-			return fmt.Errorf("failed to expand trail_like_via_trail: %v", errs)
+			return nil, fmt.Errorf("failed to expand trail_like_via_trail: %v", errs)
 		}
 		errs = app.ExpandRecord(r, []string{"author"}, nil)
 		if len(errs) > 0 {
-			return fmt.Errorf("failed to expand author: %v", errs)
+			return nil, fmt.Errorf("failed to expand author: %v", errs)
 		}
 
 		author := r.ExpandedOne("author")
+		if author == nil {
+			return nil, fmt.Errorf("trail %s has no expanded author", r.Id)
+		}
 
 		doc, err := documentFromTrailRecord(r, author, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		documents[i] = doc
 	}
 
-	if _, err := client.Index("trails").AddDocuments(documents, nil); err != nil {
-		return err
-	}
-
-	return nil
+	return documents, nil
 }
 
 func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meilisearch.ServiceManager) error {

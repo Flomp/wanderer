@@ -700,7 +700,7 @@
                         {/if}
                         <h3>
                             <i class="fa fa-gauge mr-2"></i>
-                            {$_(trail.difficulty ?? "?")}
+                            {$_(trail.difficulty || "?")}
                         </h3>
                         <h3>
                             <i
