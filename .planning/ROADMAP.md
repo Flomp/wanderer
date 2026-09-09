@@ -509,7 +509,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 39-06-PLAN.md — delete `TrailMap.offline` and its three call-site arguments (D-16)
-- [ ] 39-07-PLAN.md — delete `NavigationScreen.isOffline` and every route/resume value that fed it (D-16)
+- [x] 39-07-PLAN.md — delete `NavigationScreen.isOffline` and every route/resume value that fed it (D-16)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
