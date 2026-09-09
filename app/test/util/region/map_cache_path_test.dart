@@ -96,4 +96,40 @@ void main() {
       expect(p.isWithin(root, dark), isTrue);
     });
   });
+
+  group('allowedSpriteFileNames', () {
+    test('has exactly 8 entries', () {
+      expect(allowedSpriteFileNames.length, 8);
+    });
+  });
+
+  group('spriteCacheFilePath', () {
+    test('accepts each of the 8 whitelisted names', () {
+      for (final name in allowedSpriteFileNames) {
+        final path = spriteCacheFilePath(root, name);
+        expect(path, p.join(root, 'sprite', name));
+        expect(path.endsWith(p.join('sprite', name)), isTrue);
+        expect(p.isWithin(root, path), isTrue);
+      }
+    });
+
+    test('rejects non-whitelisted names', () {
+      const rejected = <String>[
+        'light',
+        'light.jpg',
+        '../light.json',
+        'light.json/../..',
+        '/etc/passwd',
+        'LIGHT.JSON',
+        '',
+      ];
+      for (final name in rejected) {
+        expect(
+          () => spriteCacheFilePath(root, name),
+          throwsArgumentError,
+          reason: 'expected "$name" to be rejected',
+        );
+      }
+    });
+  });
 }

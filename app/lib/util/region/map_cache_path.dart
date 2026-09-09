@@ -56,3 +56,45 @@ String glyphCacheFilePath(String root, String fontstack, String range) {
 String spriteCacheBasePath(String root, {required bool dark}) {
   return p.join(root, 'sprite', dark ? 'dark' : 'light');
 }
+
+/// The 8 filenames the MapLibre sprite loader can request against a
+/// `<light|dark>` base — the `light`/`dark` variants (from
+/// [spriteCacheBasePath]) crossed with `glyph_sprite_cache_provider.dart`'s
+/// `_spriteSuffixes` (`.json`, `.png`, `@2x.json`, `@2x.png`).
+///
+/// This list and `_spriteSuffixes` MUST stay in lockstep: a suffix present in
+/// one and absent from the other means a sprite the warm downloads but the
+/// proxy refuses to serve, or vice versa.
+const List<String> allowedSpriteFileNames = <String>[
+  'light.json',
+  'light.png',
+  'light@2x.json',
+  'light@2x.png',
+  'dark.json',
+  'dark.png',
+  'dark@2x.json',
+  'dark@2x.png',
+];
+
+/// Whether [fileName] is one of the 8 whitelisted sprite file names.
+bool isAllowedSpriteFileName(String fileName) =>
+    allowedSpriteFileNames.contains(fileName);
+
+/// Build the on-disk cache path for a single sprite file under [root].
+///
+/// Returns `<root>/sprite/<fileName>`, joined via `package:path`. Throws
+/// [ArgumentError] if [fileName] is not one of the 8 whitelisted sprite file
+/// names — no path is returned in that case. Membership in a fixed
+/// eight-element list makes `..`, `/`, a percent-encoded separator and an
+/// absolute path all structurally unrepresentable, the same guarantee
+/// [allowedFontstacks] already gives [glyphCacheFilePath].
+String spriteCacheFilePath(String root, String fileName) {
+  if (!isAllowedSpriteFileName(fileName)) {
+    throw ArgumentError.value(
+      fileName,
+      'fileName',
+      'not a whitelisted sprite file name',
+    );
+  }
+  return p.join(root, 'sprite', fileName);
+}
