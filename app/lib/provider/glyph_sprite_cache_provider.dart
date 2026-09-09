@@ -36,8 +36,9 @@ const List<String> _spriteSuffixes = <String>[
 /// Resolves the on-disk layout of the shared glyph/sprite cache under
 /// `<app-docs>/map_cache` — pure path construction, no network and no
 /// downloads. Shared by [GlyphSpriteCache] (which then populates these paths
-/// online) and [offlineGlyphSpritePaths] (which returns them as-is for the
-/// network-free offline render path).
+/// online) and `TileProxyServer.start` (which reads them to serve
+/// local-first glyph/sprite requests with write-through into the same
+/// cache, D-11).
 Future<GlyphSpriteCachePaths> resolveGlyphSpriteCachePaths() async {
   final docs = await getApplicationDocumentsDirectory();
   final root = p.join(docs.path, 'map_cache');
@@ -47,17 +48,6 @@ Future<GlyphSpriteCachePaths> resolveGlyphSpriteCachePaths() async {
     spriteLightBase: spriteCacheBasePath(root, dark: false),
     spriteDarkBase: spriteCacheBasePath(root, dark: true),
   );
-}
-
-/// The offline counterpart to [GlyphSpriteCache]: returns the local
-/// glyph/sprite cache paths **without any network call or download**. Used by
-/// the offline map render path, where the cache was already populated online at
-/// download time and the style rewriter only needs the `file://` bases. Kept
-/// separate from [GlyphSpriteCache] so an offline map open never awaits (or
-/// hangs on) `mapStyleSourcesProvider`.
-@Riverpod(keepAlive: true)
-Future<GlyphSpriteCachePaths> offlineGlyphSpritePaths(Ref ref) {
-  return resolveGlyphSpriteCachePaths();
 }
 
 /// The one shared app-wide glyph/sprite cache.
