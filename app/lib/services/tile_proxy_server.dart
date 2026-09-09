@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart'
@@ -7,9 +8,22 @@ import 'package:maplibre/maplibre.dart' show LngLatBounds;
 import 'package:pmtiles/pmtiles.dart';
 import 'package:wanderer/entities/region_entity.dart';
 import 'package:wanderer/objectbox.g.dart';
+import 'package:wanderer/services/map_source_persistence.dart';
 import 'package:wanderer/services/tile_proxy_identity.dart';
 import 'package:wanderer/services/tile_repository_manager.dart';
 import 'package:wanderer/util/geo/xyz_tile_bounds.dart';
+
+/// TileJSON document for the operator's hillshade DEM source. MUST stay
+/// byte-identical to `hillshadeSource.url` in both
+/// `assets/map/wanderer_light.json` and `assets/map/wanderer_dark.json` —
+/// the same lockstep discipline `offline_style_rewriter.dart`'s
+/// `_offlineDemMaxZoom` already documents against `generator.go`'s
+/// `demMaxZoom`. `hillshadeSource.url` is a TileJSON URL, not an XYZ
+/// template, so the DEM upstream redirect target has to be resolved from
+/// this document's `tiles[0]` rather than read straight from a settings
+/// field (unlike the vector source, whose `/map/style-sources` `tileUrl` is
+/// already an XYZ template).
+const String kDemTileJsonUrl = 'https://tiles.mapterhorn.com/tilejson.json';
 
 /// Loopback-only `HttpServer` that serves vector/DEM map tiles from a
 /// downloaded region's `.pmtiles` archive, falling back to a redirect to the
@@ -53,6 +67,32 @@ class TileProxyServer {
   List<RegionEntity>? _regionCache;
   DateTime? _regionCacheAt;
   static const _regionCacheTtl = Duration(seconds: 5);
+
+  /// Short-TTL memo of the operator's upstream vector/DEM templates (D-09),
+  /// mirroring [_regionCache]'s exact shape. Read per request (rather than
+  /// injected at construction) is deliberate: the proxy starts in `main()`
+  /// before `ProviderScope` exists and before the first `/map/style-sources`
+  /// fetch completes, so a first-run-online user's templates land after the
+  /// server is already serving, and a construction-time injection would
+  /// never see them.
+  String? _vectorTemplate;
+  String? _demTemplate;
+  DateTime? _templatesAt;
+  static const _templateCacheTtl = Duration(seconds: 30);
+
+  /// True while a DEM TileJSON resolve is in flight, so at most one is ever
+  /// outstanding. Set before dispatching the HTTP GET in
+  /// [_resolveDemTemplate], cleared on every exit path (success or failure).
+  bool _demResolveInFlight = false;
+
+  void _refreshTemplatesIfStale() {
+    final now = DateTime.now();
+    final at = _templatesAt;
+    if (at != null && now.difference(at) < _templateCacheTtl) return;
+    _vectorTemplate = readPersistedMapStyleSources(_store)?.tileUrl;
+    _demTemplate = readPersistedDemTileTemplate(_store);
+    _templatesAt = now;
+  }
 
   List<RegionEntity> _regions() {
     final now = DateTime.now();
@@ -271,16 +311,77 @@ class TileProxyServer {
   }
 
   /// Resolves this request's upstream redirect target from the persisted
-  /// vector/DEM templates (D-09). Template resolution is wired in by Task 3
-  /// — until then this always answers `null`, which correctly means "no
-  /// upstream target known yet" and routes every retryable miss to 503.
+  /// vector/DEM templates (D-09), refreshing the TTL memo first.
+  ///
+  /// A DEM request whose template is not yet known kicks off a one-shot
+  /// background resolve of [kDemTileJsonUrl] (see [_resolveDemTemplate])
+  /// and answers `null` (503) immediately — the resolve is usually done
+  /// well within MapLibre's ~1s 503 retry window, so the next DEM request
+  /// for the same tile typically succeeds. The vector template needs no
+  /// such resolution step: `/map/style-sources`' `tileUrl` is already an
+  /// XYZ template (D-09).
   String? _upstreamRedirectTargetFor(
     String kind, {
     required int z,
     required int x,
     required int y,
   }) {
-    return null;
+    _refreshTemplatesIfStale();
+    if (kind == 'dem') {
+      if (_demTemplate == null && !_demResolveInFlight) {
+        _demResolveInFlight = true;
+        unawaited(_resolveDemTemplate());
+      }
+      return buildUpstreamRedirect(_demTemplate, z: z, x: x, y: y);
+    }
+    return buildUpstreamRedirect(_vectorTemplate, z: z, x: x, y: y);
+  }
+
+  /// One-shot resolution of the DEM upstream XYZ template from
+  /// [kDemTileJsonUrl]'s TileJSON document.
+  ///
+  /// Uses a plain `dart:io` HTTP client (not Dio) — the proxy runs before
+  /// `ProviderScope` exists and must not depend on the authenticated API
+  /// client. This single low-volume JSON fetch is the one exception to
+  /// D-02's "never fetch upstream bytes" rule, in the same class D-11
+  /// already sanctions for glyphs and sprites: it happens at most once per
+  /// install, not once per tile.
+  ///
+  /// Every failure path — a non-2xx response, malformed JSON, a missing or
+  /// empty `tiles` array, or a candidate that [buildUpstreamRedirect]
+  /// rejects — is swallowed with a `debugPrint`. A failed resolve must never
+  /// take the server down; DEM requests simply keep answering 503
+  /// (retried by MapLibre) until a later attempt succeeds. Only a validated
+  /// candidate is assigned to [_demTemplate] and persisted via
+  /// [writePersistedDemTileTemplate], so the next cold start starts with it.
+  Future<void> _resolveDemTemplate() async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse(kDemTileJsonUrl));
+      final response = await request.close();
+      if (response.statusCode != HttpStatus.ok) {
+        debugPrint(
+          'TileProxyServer: DEM TileJSON fetch returned '
+          '${response.statusCode}',
+        );
+        return;
+      }
+      final body = await response.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body);
+      if (decoded is! Map<String, dynamic>) return;
+      final tiles = decoded['tiles'];
+      if (tiles is! List || tiles.isEmpty) return;
+      final candidate = tiles[0];
+      if (candidate is! String || candidate.isEmpty) return;
+      if (buildUpstreamRedirect(candidate, z: 0, x: 0, y: 0) == null) return;
+      _demTemplate = candidate;
+      writePersistedDemTileTemplate(_store, candidate);
+    } catch (e) {
+      debugPrint('TileProxyServer: DEM TileJSON resolve failed: $e');
+    } finally {
+      client.close(force: true);
+      _demResolveInFlight = false;
+    }
   }
 
   /// Answers a retryable tile miss with either a 302 redirect to [target]
