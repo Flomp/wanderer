@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart'
+    show debugPrint, visibleForTesting;
 import 'package:maplibre/maplibre.dart' show LngLatBounds;
 import 'package:pmtiles/pmtiles.dart';
 import 'package:wanderer/entities/region_entity.dart';
@@ -191,6 +192,12 @@ class TileProxyServer {
       return request.response.close();
     }
 
+    // Computed once, reused by every retryable-miss branch below
+    // (_redirectOrUnavailable): an uncovered tile, a region with no package
+    // path, a vanished archive file, and a tile absent from a covering
+    // archive all redirect to the same resolved upstream target.
+    final target = _upstreamRedirectTargetFor(kind, z: z, x: x, y: y);
+
     final tileBounds = tileToBounds(z, x, y);
     // resolveRegionForTile is @visibleForTesting so its pure-function shape
     // stays unit-testable without a live Store (matches bboxOverlaps'/
@@ -211,8 +218,9 @@ class TileProxyServer {
     );
 
     if (region == null) {
-      request.response.statusCode = HttpStatus.notFound;
-      return request.response.close();
+      // No downloaded region covers this tile — redirect upstream (D-02,
+      // D-04), never 404: this tile could still succeed via the CDN.
+      return _redirectOrUnavailable(request, target);
     }
 
     // The archive path is read ONLY from the winning region's own
@@ -224,16 +232,14 @@ class TileProxyServer {
         ? region.demPackage.target?.localFilePath
         : region.vectorPackage.target?.localFilePath;
     if (localFilePath == null) {
-      request.response.statusCode = HttpStatus.notFound;
-      return request.response.close();
+      return _redirectOrUnavailable(request, target);
     }
 
     final archive = await _archiveCache.forPath(localFilePath);
     if (archive == null) {
       // The winning region's file no longer exists on disk (mid-session
-      // delete) — same 404 outcome as no coverage.
-      request.response.statusCode = HttpStatus.notFound;
-      return request.response.close();
+      // delete) — same retryable-miss outcome as no coverage.
+      return _redirectOrUnavailable(request, target);
     }
 
     final tile = await archive.tile(ZXY(z, x, y).toTileId());
@@ -241,8 +247,9 @@ class TileProxyServer {
     try {
       bytes = tile.bytes();
     } on TileNotFoundException {
-      request.response.statusCode = HttpStatus.notFound;
-      return request.response.close();
+      // Present in the covering archive's index but absent from its data —
+      // still retryable: the operator's upstream copy may have it.
+      return _redirectOrUnavailable(request, target);
     }
 
     // Serve decompressed bytes with NO Content-Encoding header (safer
@@ -262,6 +269,96 @@ class TileProxyServer {
     request.response.add(bytes);
     return request.response.close();
   }
+
+  /// Resolves this request's upstream redirect target from the persisted
+  /// vector/DEM templates (D-09). Template resolution is wired in by Task 3
+  /// — until then this always answers `null`, which correctly means "no
+  /// upstream target known yet" and routes every retryable miss to 503.
+  String? _upstreamRedirectTargetFor(
+    String kind, {
+    required int z,
+    required int x,
+    required int y,
+  }) {
+    return null;
+  }
+
+  /// Answers a retryable tile miss with either a 302 redirect to [target]
+  /// (when the proxy has a validated upstream target) or a 503 (when it does
+  /// not). This is the single shared answer for every retryable miss — an
+  /// uncovered tile, a region with no package path, a vanished archive file,
+  /// and a tile absent from a covering archive all reach this.
+  ///
+  /// The choice between 302 and 503 is deliberate and load-bearing: 503
+  /// (`Reason::Server`) backs off 1s ×3 then exponentially and IS retried by
+  /// MapLibre Native, whereas 404 (`Reason::NotFound`) backs off to
+  /// `Duration::max()` and a 204 (`noContent`) is persisted as an empty tile
+  /// row — both terminal. Never answer a tile that might succeed later with
+  /// either (D-04).
+  Future<void> _redirectOrUnavailable(HttpRequest request, String? target) {
+    if (target != null) {
+      request.response.statusCode = HttpStatus.found;
+      request.response.headers.set(HttpHeaders.locationHeader, target);
+      return request.response.close();
+    }
+    request.response.statusCode = HttpStatus.serviceUnavailable;
+    return request.response.close();
+  }
+}
+
+/// Whether [uri] is safe to use as a redirect `Location` target: an absolute
+/// `http`/`https` URI with a non-empty host that is neither `localhost` nor
+/// a loopback/link-local address.
+///
+/// Rejecting loopback and link-local targets is what prevents the proxy
+/// from redirecting a request back into itself — an infinite redirect loop
+/// that would exhaust OkHttp's 20-hop limit and burn the request — and is
+/// the guard that keeps a tampered or stale persisted template from turning
+/// the proxy into a relay to another local listener (T-39-11).
+@visibleForTesting
+bool isSafeRedirectTarget(Uri uri) {
+  if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+    return false;
+  }
+  if (uri.host.isEmpty || uri.host == 'localhost') return false;
+  final address = InternetAddress.tryParse(uri.host);
+  if (address != null && (address.isLoopback || address.isLinkLocal)) {
+    return false;
+  }
+  return true;
+}
+
+/// Substitutes `{z}`/`{x}`/`{y}` into [template] and validates the result as
+/// a safe absolute redirect target, returning `null` on any failure:
+/// [template] is `null`/empty, is missing one of the three tokens, fails to
+/// parse as a URI once substituted, or is rejected by
+/// [isSafeRedirectTarget].
+///
+/// Validation runs against the SUBSTITUTED URI, not the raw template, so a
+/// template whose host is only malformed once tokens are filled is still
+/// caught. The upstream vector template legitimately carries a query string
+/// (the operator's `?key=` parameter) — substitution does not touch it.
+@visibleForTesting
+String? buildUpstreamRedirect(
+  String? template, {
+  required int z,
+  required int x,
+  required int y,
+}) {
+  if (template == null || template.isEmpty) return null;
+  if (!template.contains('{z}') ||
+      !template.contains('{x}') ||
+      !template.contains('{y}')) {
+    return null;
+  }
+  final substituted = template
+      .replaceAll('{z}', '$z')
+      .replaceAll('{x}', '$x')
+      .replaceAll('{y}', '$y');
+  final uri = Uri.tryParse(substituted);
+  if (uri == null) return null;
+  if (!isSafeRedirectTarget(uri)) return null;
+  return substituted;
 }
 
 /// Constant-time equality, used by [TileProxyServer._handle] to compare a
