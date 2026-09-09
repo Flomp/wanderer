@@ -768,7 +768,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(8, 5734302023385580278),
     name: 'LocalSettingsEntity',
-    lastPropertyId: const obx_int.IdUid(4, 3385512587357651788),
+    lastPropertyId: const obx_int.IdUid(8, 143030534291058117),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -787,6 +787,30 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(4, 3385512587357651788),
         name: 'backgroundLocationAsked',
         type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 8115035759713055760),
+        name: 'tileProxyPort',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 6855151211241706250),
+        name: 'tileProxySecret',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 7983362523492084682),
+        name: 'mapStyleSourcesJson',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 143030534291058117),
+        name: 'demTileTemplate',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -2162,10 +2186,19 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (LocalSettingsEntity object, fb.Builder fbb) {
         final themeModeOffset = fbb.writeString(object.themeMode);
-        fbb.startTable(5);
+        final tileProxySecretOffset = fbb.writeString(object.tileProxySecret);
+        final mapStyleSourcesJsonOffset = fbb.writeString(
+          object.mapStyleSourcesJson,
+        );
+        final demTileTemplateOffset = fbb.writeString(object.demTileTemplate);
+        fbb.startTable(9);
         fbb.addInt64(0, object.obxId);
         fbb.addOffset(1, themeModeOffset);
         fbb.addBool(3, object.backgroundLocationAsked);
+        fbb.addInt64(4, object.tileProxyPort);
+        fbb.addOffset(5, tileProxySecretOffset);
+        fbb.addOffset(6, mapStyleSourcesJsonOffset);
+        fbb.addOffset(7, demTileTemplateOffset);
         fbb.finish(fbb.endTable());
         return object.obxId;
       },
@@ -2181,9 +2214,28 @@ obx_int.ModelDefinition getObjectBoxModel() {
           10,
           false,
         );
+        final tileProxyPortParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final tileProxySecretParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final mapStyleSourcesJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 16, '');
+        final demTileTemplateParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 18, '');
         final object = LocalSettingsEntity(
           themeMode: themeModeParam,
           backgroundLocationAsked: backgroundLocationAskedParam,
+          tileProxyPort: tileProxyPortParam,
+          tileProxySecret: tileProxySecretParam,
+          mapStyleSourcesJson: mapStyleSourcesJsonParam,
+          demTileTemplate: demTileTemplateParam,
         )..obxId = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
 
         return object;
@@ -3241,6 +3293,25 @@ class LocalSettingsEntity_ {
   /// See [LocalSettingsEntity.backgroundLocationAsked].
   static final backgroundLocationAsked =
       obx.QueryBooleanProperty<LocalSettingsEntity>(_entities[6].properties[2]);
+
+  /// See [LocalSettingsEntity.tileProxyPort].
+  static final tileProxyPort = obx.QueryIntegerProperty<LocalSettingsEntity>(
+    _entities[6].properties[3],
+  );
+
+  /// See [LocalSettingsEntity.tileProxySecret].
+  static final tileProxySecret = obx.QueryStringProperty<LocalSettingsEntity>(
+    _entities[6].properties[4],
+  );
+
+  /// See [LocalSettingsEntity.mapStyleSourcesJson].
+  static final mapStyleSourcesJson =
+      obx.QueryStringProperty<LocalSettingsEntity>(_entities[6].properties[5]);
+
+  /// See [LocalSettingsEntity.demTileTemplate].
+  static final demTileTemplate = obx.QueryStringProperty<LocalSettingsEntity>(
+    _entities[6].properties[6],
+  );
 }
 
 /// [SubcategoryEntity] entity fields to define ObjectBox queries.

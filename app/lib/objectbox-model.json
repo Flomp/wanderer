@@ -628,7 +628,7 @@
     },
     {
       "id": "8:5734302023385580278",
-      "lastPropertyId": "4:3385512587357651788",
+      "lastPropertyId": "8:143030534291058117",
       "name": "LocalSettingsEntity",
       "properties": [
         {
@@ -646,6 +646,26 @@
           "id": "4:3385512587357651788",
           "name": "backgroundLocationAsked",
           "type": 1
+        },
+        {
+          "id": "5:8115035759713055760",
+          "name": "tileProxyPort",
+          "type": 6
+        },
+        {
+          "id": "6:6855151211241706250",
+          "name": "tileProxySecret",
+          "type": 9
+        },
+        {
+          "id": "7:7983362523492084682",
+          "name": "mapStyleSourcesJson",
+          "type": 9
+        },
+        {
+          "id": "8:143030534291058117",
+          "name": "demTileTemplate",
+          "type": 9
         }
       ],
       "relations": []
