@@ -1,3 +1,4 @@
+import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -89,17 +90,12 @@ class _TrailSourceSelectScreenState
     if (!mounted) return;
     setState(() => _recorderLoading = true);
     try {
-      // Probe backend reachability concurrently with the GPS wait — running
-      // both under one spinner instead of serializing their timeouts — to
-      // decide whether `NavigationScreen` renders from the online style or the
-      // network-free offline style path. A recording session itself never
-      // needs the network; without this flag the recorder opens the online
-      // map, whose `/map/style-sources` fetch never resolves offline and
-      // leaves the screen stuck on its loading spinner.
-      final offlineFuture = ref
-          .read(onlineStatusProvider.notifier)
-          .refresh()
-          .then((online) => !online);
+      // Settles the app-wide online status before the session starts — fire
+      // and forget, not awaited. The recorder's map no longer depends on it:
+      // there is one style path (D-01) and it resolves from the persisted
+      // `/map/style-sources` copy when the network is unreachable, so the
+      // probe no longer gates anything the recorder waits on.
+      unawaited(ref.read(onlineStatusProvider.notifier).refresh());
       final pos = await ref
           .read(foregroundPositionStreamProvider.notifier)
           .currentFix(timeout: const Duration(seconds: 20));
@@ -108,8 +104,6 @@ class _TrailSourceSelectScreenState
         showError(l10n.location_unavailable);
         return;
       }
-      final isOffline = await offlineFuture;
-      if (!mounted) return;
       context.push(
         '/record',
         extra: {
@@ -117,7 +111,6 @@ class _TrailSourceSelectScreenState
           'lon': pos.longitude,
           'position': seedPositionFrom(pos),
           'costing': bucket.costing,
-          'isOffline': isOffline,
         },
       );
     } finally {
