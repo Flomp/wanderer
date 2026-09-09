@@ -28,7 +28,6 @@ class TrailMap extends ConsumerStatefulWidget {
   final void Function(ml.MapController controller)? onMapCreated;
 
   final bool disabled;
-  final bool offline;
 
   /// Set when this map is mounted inside a scrolling parent.
   ///
@@ -58,7 +57,6 @@ class TrailMap extends ConsumerStatefulWidget {
     this.onWaypointDragEnd,
     this.onMapEvent,
     this.disabled = false,
-    this.offline = false,
     this.embedded = false,
     this.controls = const [],
     this.showTrail = true,
@@ -96,15 +94,9 @@ class _TrailMapState extends ConsumerState<TrailMap>
     // Swap the style in place on theme toggle — no remount, no flash. Region
     // coverage is resolved by the loopback tile proxy per-tile,
     // so no separate region-change listener is needed here.
-    if (widget.offline) {
-      ref.listen(offlineMapStyleJsonProvider, (_, _) => _swapStyle());
-    } else {
-      ref.listen(mapStyleJsonProvider, (_, _) => _swapStyle());
-    }
+    ref.listen(mapStyleJsonProvider, (_, _) => _swapStyle());
 
-    final baseAsync = widget.offline
-        ? ref.watch(offlineMapStyleJsonProvider)
-        : ref.watch(mapStyleJsonProvider);
+    final baseAsync = ref.watch(mapStyleJsonProvider);
     final baseJson = baseAsync.value;
     final error = baseAsync.error;
 
@@ -122,23 +114,23 @@ class _TrailMapState extends ConsumerState<TrailMap>
     return _buildMap(context, styleJson);
   }
 
-  /// Composes the style JSON: [baseJson] as-is when online, or rewritten via
-  /// [rewriteStyleForProxy] when offline. Returns null while an input is
+  /// Composes the style JSON: always rewritten via [rewriteStyleForProxy],
+  /// online and offline alike (D-01). Returns null while [baseJson] is
   /// still resolving or the rewrite rejects it.
   ///
-  /// Offline tiles resolve through the loopback tile proxy — a
-  /// single static XYZ source baked into every composed style, with
-  /// per-tile region coverage resolved server-side
-  /// (`resolveRegionForTile`) rather than pre-queried here. This means
-  /// `TrailMap` now serves tiles for any downloaded region the (fixed,
-  /// trail-bounded) camera happens to render, not only the trail's own
-  /// bbox — intentional, and harmless because the camera stays fit to the
-  /// trail. An uncovered tile is redirected to the operator's upstream
-  /// template by the proxy, so coverage degrades per tile rather than per
-  /// screen, and no banner or empty state is added here.
+  /// One style is composed on one code path and always routed through the
+  /// loopback proxy; coverage is resolved per tile inside
+  /// `tile_proxy_server.dart`, which serves a downloaded region's archive
+  /// when one covers the tile and redirects to the operator's upstream
+  /// template when none does. A map opened without service therefore picks
+  /// up online tiles as soon as the radio returns, with no widget-level
+  /// mode to flip — unlike the deleted `TrailMap(offline: trail.isOffline)`,
+  /// which conflated "downloaded" with "no connectivity"
+  /// (`models/trail.dart:110-116`) and could never recover once pinned to a
+  /// style (see RESEARCH.md section 1). Deleting the parameter, rather than
+  /// fixing the flip, makes that whole bug class unrepresentable.
   String? _composeStyle(String? baseJson) {
     if (baseJson == null) return null;
-    if (!widget.offline) return baseJson;
     try {
       final decoded = jsonDecode(baseJson) as Map<String, dynamic>;
       final offlineStyle = rewriteStyleForProxy(
@@ -157,9 +149,7 @@ class _TrailMapState extends ConsumerState<TrailMap>
   void _swapStyle() {
     final controller = _controller;
     if (controller == null) return;
-    final baseJson = widget.offline
-        ? ref.read(offlineMapStyleJsonProvider).value
-        : ref.read(mapStyleJsonProvider).value;
+    final baseJson = ref.read(mapStyleJsonProvider).value;
     final json = _composeStyle(baseJson);
     if (json != null && json != _lastStyleJson) {
       _lastStyleJson = json;
