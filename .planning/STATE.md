@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 39-01-PLAN.md (risk gate closed: setstyle)"
-last_updated: "2026-09-09T21:07:56.778Z"
+stopped_at: Completed 39-04-PLAN.md
+last_updated: "2026-09-09T21:31:43.195Z"
 last_activity: 2026-09-09 -- Phase 39 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 53
-  completed_plans: 48
+  completed_plans: 49
   percent: 63
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-07)
 ## Current Position
 
 Phase: 39 (unified-tile-model) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 -- Phase 39 execution started
 
@@ -192,6 +192,7 @@ v1.8 phase history archived — see `.planning/milestones/v1.8-ROADMAP.md` / MIL
 | Phase 39 P02 | 25min | 3 tasks | 8 files |
 | Phase 39 P03 | 40min | 3 tasks | 3 files |
 | Phase 39 P01 | ~2min + on-device wait | 3 tasks | 3 files |
+| Phase 39 P04 | 15min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -454,6 +455,7 @@ Recent decisions affecting current work:
 - [Phase ?]: DEM background resolve is kicked from _upstreamRedirectTargetFor once per DEM request (hit or miss), guarded by _demResolveInFlight, rather than only from the miss branches -- functionally equivalent and avoids duplicating the kick at four call sites
 - [Phase 39]: Risk gate verdict: setstyle — the setConnected pulse does not recover Connection-failed tiles on physical Android hardware; Plan 39-09 wires the setStyle reload fallback instead — Confirmed via on-device logcat: 82 Connection-class tile failures, zero requests after the pulse, tiles only recovered on manual zoom
 - [Phase 39]: Pulse channel is now dead code — Plan 39-09 will remove maplibre_connectivity_pulse.dart, the Kotlin MethodChannel handler, the harness button, and revert MainActivity.kt's comment — Developer decision made immediately after the risk gate verdict
+- [Phase 39]: Glyph/sprite proxy routes (D-11): reverse-proxied with write-through, unlike tiles which stay redirect-only (D-02) — A style load issues only a handful of glyph/sprite requests, so reverse-proxying is affordable there where it isn't for per-pan tile volume
 
 ### Roadmap Evolution
 
@@ -610,8 +612,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-24 (recorded 
 
 ## Session Continuity
 
-Last session: 2026-09-09T21:07:56.752Z
-Stopped at: Completed 39-01-PLAN.md (risk gate closed: setstyle)
+Last session: 2026-09-09T21:31:43.179Z
+Stopped at: Completed 39-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

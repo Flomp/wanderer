@@ -500,7 +500,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 39-04-PLAN.md — proxy serves glyphs and sprites local-first with write-through into `map_cache` (D-11 server half)
+- [x] 39-04-PLAN.md — proxy serves glyphs and sprites local-first with write-through into `map_cache` (D-11 server half)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
