@@ -513,7 +513,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 39-08-PLAN.md — collapse to one style provider, retire the legacy N-cell transform, rename the file to match (D-10/17)
+- [x] 39-08-PLAN.md — collapse to one style provider, retire the legacy N-cell transform, rename the file to match (D-10/17)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 

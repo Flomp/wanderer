@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: milestone
 status: executing
-stopped_at: Completed 39-07-PLAN.md
-last_updated: "2026-09-09T22:04:09.473Z"
+stopped_at: Completed 39-08-PLAN.md
+last_updated: "2026-09-09T22:21:57.782Z"
 last_activity: 2026-09-09 -- Phase 39 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 53
-  completed_plans: 52
+  completed_plans: 53
   percent: 63
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-07)
 ## Current Position
 
 Phase: 39 (unified-tile-model) — EXECUTING
-Plan: 8 of 9
+Plan: 9 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 -- Phase 39 execution started
 
@@ -196,6 +196,7 @@ v1.8 phase history archived — see `.planning/milestones/v1.8-ROADMAP.md` / MIL
 | Phase 39-unified-tile-model P05 | 20min | 3 tasks | 6 files |
 | Phase 39 P06 | 15min | 2 tasks | 4 files |
 | Phase 39-unified-tile-model P07 | 25min | 3 tasks | 8 files |
+| Phase 39 P08 | 35min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -463,6 +464,10 @@ Recent decisions affecting current work:
 - [Phase 39]: TrailMap.offline deleted outright rather than fixed; retained onlineStatusProvider locals with other consumers at trail_panel.dart and trail_create_screen.dart — Makes the shipped TrailMap(offline: trail.isOffline) conflation a compile error; isOnline/isOffline locals still gate unrelated onTap/app-bar consumers
 - [Phase ?]: Deleted ActiveNavigationEntity.isOffline outright per plan amendment (D-16a) rather than retaining it — nothing reads it back after router_provider.dart's /record builder stops consulting resume?.isOffline.
 - [Phase ?]: Reverted two unrelated regenerated .g.dart files (auth_provider.g.dart, tile_proxy_provider.g.dart) produced as a side effect of dart run build_runner build — pre-existing stale drift outside this plan's files_modified scope.
+- [Phase ?]: 39-08: mapStyleJson doc comment now states the true D-01/D-09/D-10 single-provider contract instead of the stale Phase-18 flutter_map claim
+- [Phase ?]: 39-08: Deleting rewriteStyleForOffline's path-safety validator is not a D-07 loosening -- recorded in descriptive prose, not literal identifiers, to keep the plan's repo-wide zero-occurrence grep satisfiable
+- [Phase ?]: 39-08: Rule 3 applied to reword two stale rewriteStyleForOffline doc-comment references in tile_repository_manager.dart (out of plan scope) since the acceptance grep spans lib+test
+- [Phase ?]: 39-08: tile_proxy_spike_harness.dart's pulse control left untouched per the phase ownership boundary -- Plan 09 owns its removal
 
 ### Roadmap Evolution
 
@@ -619,8 +624,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-24 (recorded 
 
 ## Session Continuity
 
-Last session: 2026-09-09T22:04:09.453Z
-Stopped at: Completed 39-07-PLAN.md
+Last session: 2026-09-09T22:21:57.761Z
+Stopped at: Completed 39-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
