@@ -398,8 +398,8 @@ recovers per tile, per area, instead of the whole map flipping between two modes
 trail enrichment and shares no surface of consequence; see the conflict note below).
 **Depends on**: nothing outstanding. Phases 38 / 38.1 (downloaded trails as state) are complete,
 and this phase builds directly on the `TileProxyServer` they left in place.
-**Requirements**: TBD (derive from `39-RESEARCH-SOURCE.md` in this phase's directory)
-**Plans**: 0 plans
+**Requirements**: none mapped — this phase's coverage contract is the 17 locked decisions D-01..D-17 in `39-CONTEXT.md`
+**Plans**: 9 plans in 7 waves
 
 **Success Criteria** (what must be TRUE):
 
@@ -464,7 +464,15 @@ collision of the kind Phase 37 has with Phase 36. Sequence either way.
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 39 to break down)
+- [ ] 39-01-PLAN.md — Android `setConnected` pulse behind a platform channel, rewritten `MainActivity` comment, and the on-device risk gate (D-12/13/14)
+- [ ] 39-02-PLAN.md — persisted proxy identity (stable random port + per-install secret) and persisted `/map/style-sources` (D-05/06/09)
+- [ ] 39-03-PLAN.md — proxy binds the persisted port behind the secret path segment and answers a coverage miss with 302, never 404 (D-02/03/04/05/06/07)
+- [ ] 39-04-PLAN.md — proxy serves glyphs and sprites local-first with write-through into `map_cache` (D-11 server half)
+- [ ] 39-05-PLAN.md — `rewriteStyleForProxy` becomes the sole transform: loopback-only URLs, no cache root, maxzoom pins kept (D-01/08/11)
+- [ ] 39-06-PLAN.md — delete `TrailMap.offline` and its three call-site arguments (D-16)
+- [ ] 39-07-PLAN.md — delete `NavigationScreen.isOffline` and every route/resume value that fed it (D-16)
+- [ ] 39-08-PLAN.md — collapse to one style provider, retire the legacy N-cell transform, rename the file to match (D-10/17)
+- [ ] 39-09-PLAN.md — connectivity-regain re-probe, fire the recovery mechanism, verify criteria 1/2/5/6 on device (D-15/12/03)
 
 ---
 
