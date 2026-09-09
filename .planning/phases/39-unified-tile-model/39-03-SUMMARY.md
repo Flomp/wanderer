@@ -131,3 +131,11 @@ None — no external service configuration required. The developer will re-run `
 ---
 *Phase: 39-unified-tile-model*
 *Completed: 2026-09-09*
+
+## Self-Check: PASSED
+
+All created/modified files (`app/lib/services/tile_proxy_server.dart`,
+`app/lib/provider/region/tile_proxy_provider.dart`,
+`app/test/services/tile_proxy_redirect_test.dart`,
+`.planning/phases/39-unified-tile-model/39-03-SUMMARY.md`) and all four
+commit hashes (d30578fc, 873f3ff4, b9d85cc6, 0f68710f) verified present.
