@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: milestone
 status: executing
-stopped_at: Completed 39-03-PLAN.md
-last_updated: "2026-09-09T20:40:24.391Z"
+stopped_at: "Completed 39-01-PLAN.md (risk gate closed: setstyle)"
+last_updated: "2026-09-09T21:07:56.778Z"
 last_activity: 2026-09-09 -- Phase 39 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 53
-  completed_plans: 47
+  completed_plans: 48
   percent: 63
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-07)
 ## Current Position
 
 Phase: 39 (unified-tile-model) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 -- Phase 39 execution started
 
@@ -191,6 +191,7 @@ v1.8 phase history archived — see `.planning/milestones/v1.8-ROADMAP.md` / MIL
 | Phase 38.1 P05 | 35min | 3 tasks | 5 files |
 | Phase 39 P02 | 25min | 3 tasks | 8 files |
 | Phase 39 P03 | 40min | 3 tasks | 3 files |
+| Phase 39 P01 | ~2min + on-device wait | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -451,6 +452,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Task-2 stub target computation, wired to real persisted templates only in Task 3's commit, so each task's acceptance criteria could be verified against a compiling, testable intermediate state
 - [Phase ?]: Combined the segment-length and kind checks into a single unknown-route 404 branch so the final notFound count lands at exactly 3 (empty-path, bad-secret, unknown-route) per D-04's pinned count
 - [Phase ?]: DEM background resolve is kicked from _upstreamRedirectTargetFor once per DEM request (hit or miss), guarded by _demResolveInFlight, rather than only from the miss branches -- functionally equivalent and avoids duplicating the kick at four call sites
+- [Phase 39]: Risk gate verdict: setstyle — the setConnected pulse does not recover Connection-failed tiles on physical Android hardware; Plan 39-09 wires the setStyle reload fallback instead — Confirmed via on-device logcat: 82 Connection-class tile failures, zero requests after the pulse, tiles only recovered on manual zoom
+- [Phase 39]: Pulse channel is now dead code — Plan 39-09 will remove maplibre_connectivity_pulse.dart, the Kotlin MethodChannel handler, the harness button, and revert MainActivity.kt's comment — Developer decision made immediately after the risk gate verdict
 
 ### Roadmap Evolution
 
@@ -607,8 +610,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-24 (recorded 
 
 ## Session Continuity
 
-Last session: 2026-09-09T20:40:24.368Z
-Stopped at: Completed 39-03-PLAN.md
+Last session: 2026-09-09T21:07:56.752Z
+Stopped at: Completed 39-01-PLAN.md (risk gate closed: setstyle)
 Resume file: None
 
 ## Operator Next Steps

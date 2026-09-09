@@ -471,7 +471,7 @@ collision of the kind Phase 37 has with Phase 36. Sequence either way.
 Plans:
 **Wave 1**
 
-- [ ] 39-01-PLAN.md — Android `setConnected` pulse behind a platform channel, rewritten `MainActivity` comment, and the on-device risk gate (D-12/13/14)
+- [x] 39-01-PLAN.md — Android `setConnected` pulse behind a platform channel, rewritten `MainActivity` comment, and the on-device risk gate (D-12/13/14)
 - [x] 39-02-PLAN.md — persisted proxy identity (stable random port + per-install secret) and persisted `/map/style-sources` (D-05/06/09)
 
 **Wave 2** *(blocked on Wave 1 completion)*
