@@ -19,7 +19,7 @@ import 'package:wanderer/util/region/map_cache_path.dart';
 ///  * special-cases any `type: raster-dem` source (e.g. `hillshadeSource`) —
 ///    it is routed to its own [demCellPaths] archive instead, and gains
 ///    `encoding: terrarium` + `tileSize: 512` + a dedicated
-///    [_offlineDemMaxZoom], all three of which the online style relies on
+///    [_proxyDemMaxZoom], all three of which the online style relies on
 ///    Mapterhorn's tilejson to supply and therefore does not carry itself.
 ///    When [demCellPaths] is empty, the raster-dem source and every layer
 ///    that references it are dropped entirely (hillshade is cosmetic, so a
@@ -222,54 +222,80 @@ void _rewriteSourceGroup(
 /// The deepest zoom level actually present in a locally-extracted `.pmtiles`
 /// cell. Must match `maxZoom` in `db/services/tiles/generator.go` (currently
 /// 14) — the server runs `pmtiles extract --maxzoom=14`, which is shallower
-/// than the online style's `maxzoom: 15` (inherited from the live Protomaps
-/// CDN's own, deeper tile pyramid). If the offline source keeps the online
-/// `maxzoom`, MapLibre requests nonexistent z15+ tiles directly from the local
-/// archive instead of overzooming the z14 tile — rendering blank above z14.
-const int _offlinePmtilesMaxZoom = 14;
+/// than a naive online `maxzoom: 15` would be (inherited from the live
+/// Protomaps CDN's own, deeper tile pyramid). If a source keeps that deeper
+/// online `maxzoom`, MapLibre requests nonexistent z15+ tiles directly from
+/// the local archive instead of overzooming the z14 tile — rendering blank
+/// above z14. This pin applies to [rewriteStyleForProxy]'s single unified
+/// style, online included (D-08): a little online sharpness is traded away
+/// so a downloaded region never goes blank above its local depth, since the
+/// proxy cannot fake overzoom (MVT coordinates are tile-local — serving a
+/// z14 parent's `.pbf` at z15 would crush the parent's geometry into the
+/// child tile rather than showing more detail).
+const int _proxyVectorMaxZoom = 14;
 
 /// The deepest zoom level actually present in a locally-extracted DEM
 /// `.pmtiles` cell. MUST equal the Go `demMaxZoom` const in
 /// `db/services/tiles/generator.go` (currently 12) — kept in lockstep for the
-/// same reason as [_offlinePmtilesMaxZoom]: a mismatch means MapLibre
-/// requests DEM tiles that were never extracted, leaving relief blank above
-/// the cap instead of overzooming. Deliberately a separate, lower constant
-/// than the vector basemap's z14 — hillshading doesn't need that much detail.
-const int _offlineDemMaxZoom = 12;
+/// same reason as [_proxyVectorMaxZoom]: a mismatch means MapLibre requests
+/// DEM tiles that were never extracted, leaving relief blank above the cap
+/// instead of overzooming. Deliberately a separate, lower constant than the
+/// vector basemap's z14 — hillshading doesn't need that much detail. This
+/// pin applies to [rewriteStyleForProxy]'s single unified style, online
+/// included (D-08), for the same "never blank above the local depth" reason
+/// as [_proxyVectorMaxZoom].
+const int _proxyDemMaxZoom = 12;
 
-/// Rewrites the online base [style] into a static-loopback-XYZ offline style
-/// backed by the client-local tile proxy (`tile_proxy_server.dart`)
-/// instead of per-cell `pmtiles://file://` archives.
+/// The single unconditional style transform (D-01): every composed style,
+/// online and offline alike, is routed through the client-local loopback
+/// tile proxy (`tile_proxy_server.dart`). There is no separate "offline
+/// style" produced by this function — tiles, glyphs and sprite all resolve
+/// through the proxy, so the transform emits no filesystem path and needs no
+/// cache root (D-11).
 ///
-/// Unlike [rewriteStyleForOffline]'s N-cell duplication (see that function's
-/// doc comment), this transform emits exactly ONE vector source and ONE
-/// `raster-dem` source, each pointed at the proxy's fixed
-/// `<proxyBaseUrl>/vector/{z}/{x}/{y}.pbf` / `.../dem/{z}/{x}/{y}.png` XYZ
-/// template — the literal `{z}`/`{x}`/`{y}` tokens survive verbatim for
-/// native runtime substitution. No `__cellN` source/layer cloning is
-/// produced, because the proxy resolves per-tile coverage server-side
-/// ([resolveRegionForTile]) rather than the style needing to
-/// enumerate every downloaded region's archive up front.
+/// Every URL-bearing field is rewritten to a `<proxyBaseUrl>/...` loopback
+/// URL:
 ///
-/// `glyphs`/`sprite` are rewritten to `file://<cacheRoot>/...` identically to
-/// [rewriteStyleForOffline] (light vs dark honored via [dark]), and
-/// [cacheRoot] is validated via the same [_assertSafePath] used there.
+///  * vector sources get a static XYZ tiles template,
+///    `<proxyBaseUrl>/vector/{z}/{x}/{y}.pbf`, pinned to [_proxyVectorMaxZoom]
+///    (D-08);
+///  * any `type: raster-dem` source (e.g. `hillshadeSource`) gets
+///    `<proxyBaseUrl>/dem/{z}/{x}/{y}.png`, pinned to [_proxyDemMaxZoom], and
+///    gains `encoding: terrarium` + `tileSize: 512`, which the online style
+///    relies on Mapterhorn's tilejson to supply and therefore does not carry
+///    itself;
+///  * `glyphs` becomes `<proxyBaseUrl>/glyphs/{fontstack}/{range}.pbf` — the
+///    literal `{fontstack}`/`{range}` tokens are preserved for native
+///    runtime substitution, exactly as `{z}`/`{x}`/`{y}` already are;
+///  * `sprite` becomes `<proxyBaseUrl>/sprite/<light|dark>` (via [dark]) —
+///    no file suffix is appended, since MapLibre's sprite loader appends
+///    `.json`/`.png`/`@2x.*` itself, matching the set
+///    `map_cache_path.dart`'s `allowedSpriteFileNames` whitelists.
+///
+/// No `__cellN` source/layer cloning is produced (unlike
+/// [rewriteStyleForOffline]'s N-cell duplication), because the proxy
+/// resolves per-tile coverage server-side ([resolveRegionForTile]) rather
+/// than the style needing to enumerate every downloaded region's archive up
+/// front. A tile the proxy has no local coverage for is redirected to the
+/// operator's upstream template rather than answered locally, so coverage
+/// degrades per tile rather than per screen; glyphs/sprites are answered
+/// local-first with write-through into `map_cache` — both decided inside
+/// `tile_proxy_server.dart` rather than by the style.
+///
 /// [proxyBaseUrl] must start with `http://127.0.0.1:` — any other base is
-/// rejected (defense in depth: this style must never point at a non-loopback
-/// host).
+/// rejected (D-07: defense in depth, this style must never point at a
+/// non-loopback host).
 ///
 /// The input [style] is deep-copied before any mutation, matching
 /// [rewriteStyleForOffline]'s "never mutate the shared base style" invariant.
 ///
-/// The legacy `rewriteStyleForOffline(cellPaths:...)` path is left intact
-/// pending a separate cleanup.
+/// `rewriteStyleForOffline` is retired by Plan 08 (D-17); it has no
+/// production caller once this transform is applied unconditionally.
 Map<String, dynamic> rewriteStyleForProxy(
   Map<String, dynamic> style, {
-  required String cacheRoot,
   required String proxyBaseUrl,
   bool dark = false,
 }) {
-  _assertSafePath(cacheRoot, 'cacheRoot');
   if (!proxyBaseUrl.startsWith('http://127.0.0.1:')) {
     throw ArgumentError.value(
       proxyBaseUrl,
@@ -281,9 +307,8 @@ Map<String, dynamic> rewriteStyleForProxy(
   // Deep copy so the shared online base style is never mutated in place.
   final out = jsonDecode(jsonEncode(style)) as Map<String, dynamic>;
 
-  out['glyphs'] =
-      'file://${p.join(cacheRoot, 'glyphs', '{fontstack}', '{range}.pbf')}';
-  out['sprite'] = 'file://${spriteCacheBasePath(cacheRoot, dark: dark)}';
+  out['glyphs'] = '$proxyBaseUrl/glyphs/{fontstack}/{range}.pbf';
+  out['sprite'] = '$proxyBaseUrl/sprite/${dark ? 'dark' : 'light'}';
 
   final sources = out['sources'];
   if (sources is Map<String, dynamic>) {
@@ -299,10 +324,10 @@ Map<String, dynamic> rewriteStyleForProxy(
         sourceMap['tiles'] = ['$proxyBaseUrl/dem/{z}/{x}/{y}.png'];
         sourceMap['encoding'] = 'terrarium';
         sourceMap['tileSize'] = 512;
-        sourceMap['maxzoom'] = _offlineDemMaxZoom;
+        sourceMap['maxzoom'] = _proxyDemMaxZoom;
       } else {
         sourceMap['tiles'] = ['$proxyBaseUrl/vector/{z}/{x}/{y}.pbf'];
-        sourceMap['maxzoom'] = _offlinePmtilesMaxZoom;
+        sourceMap['maxzoom'] = _proxyVectorMaxZoom;
       }
     }
   }
@@ -313,18 +338,18 @@ Map<String, dynamic> rewriteStyleForProxy(
 /// Repoints a single source [source] at the pmtiles archive at [cellPath]:
 /// drops any remote `tiles` template, sets `url` to `pmtiles://file://…`, and
 /// clamps `maxzoom` to the archive's actual depth (see
-/// [_offlinePmtilesMaxZoom]) so MapLibre overzooms past it instead of
+/// [_proxyVectorMaxZoom]) so MapLibre overzooms past it instead of
 /// requesting tiles that were never extracted.
 void _pointSourceAtCell(Map<String, dynamic> source, String cellPath) {
   source.remove('tiles');
   source['url'] = 'pmtiles://file://$cellPath';
-  source['maxzoom'] = _offlinePmtilesMaxZoom;
+  source['maxzoom'] = _proxyVectorMaxZoom;
 }
 
 /// Repoints a `raster-dem` source [source] at the DEM pmtiles archive at
 /// [demPath]: drops any remote `tiles` template, sets `url` to
 /// `pmtiles://file://…`, and injects `encoding: terrarium` + `tileSize: 512`
-/// + `maxzoom: `[_offlineDemMaxZoom]. These three fields are supplied online
+/// + `maxzoom: `[_proxyDemMaxZoom]. These three fields are supplied online
 /// by Mapterhorn's tilejson and are therefore absent from the style JSON's
 /// `hillshadeSource` definition (which carries only `type` + `url`) — a
 /// `pmtiles://` source has no tilejson, so they must be written explicitly or
@@ -335,7 +360,7 @@ void _pointDemSourceAtCell(Map<String, dynamic> source, String demPath) {
   source['url'] = 'pmtiles://file://$demPath';
   source['encoding'] = 'terrarium';
   source['tileSize'] = 512;
-  source['maxzoom'] = _offlineDemMaxZoom;
+  source['maxzoom'] = _proxyDemMaxZoom;
 }
 
 /// Rejects any [path] that is not an absolute, traversal-free local path.

@@ -384,7 +384,6 @@ void main() {
       () {
         final result = rewriteStyleForProxy(
           _onlineStyle(),
-          cacheRoot: _cacheRoot,
           proxyBaseUrl: proxyBaseUrl,
         );
 
@@ -404,7 +403,6 @@ void main() {
       () {
         final result = rewriteStyleForProxy(
           _onlineStyle(),
-          cacheRoot: _cacheRoot,
           proxyBaseUrl: proxyBaseUrl,
         );
 
@@ -420,52 +418,51 @@ void main() {
       },
     );
 
-    test('glyphs/sprite rewritten to file:// exactly as rewriteStyleForOffline', () {
+    test('glyphs/sprite rewritten to loopback proxy URLs', () {
       final result = rewriteStyleForProxy(
         _onlineStyle(),
-        cacheRoot: _cacheRoot,
         proxyBaseUrl: proxyBaseUrl,
       );
 
       expect(
         result['glyphs'],
-        'file://$_cacheRoot/glyphs/{fontstack}/{range}.pbf',
+        '$proxyBaseUrl/glyphs/{fontstack}/{range}.pbf',
       );
-      expect(result['sprite'], 'file://$_cacheRoot/sprite/light');
+      expect(result['sprite'], '$proxyBaseUrl/sprite/light');
     });
 
     test('dark variant points the sprite at sprite/dark', () {
       final result = rewriteStyleForProxy(
         _onlineStyle(),
-        cacheRoot: _cacheRoot,
         proxyBaseUrl: proxyBaseUrl,
         dark: true,
       );
 
-      expect(result['sprite'], 'file://$_cacheRoot/sprite/dark');
+      expect(result['sprite'], '$proxyBaseUrl/sprite/dark');
     });
 
-    test('{z}/{x}/{y} tokens survive verbatim for native runtime substitution', () {
-      final result = rewriteStyleForProxy(
-        _onlineStyle(),
-        cacheRoot: _cacheRoot,
-        proxyBaseUrl: proxyBaseUrl,
-      );
+    test(
+      '{z}/{x}/{y} and {fontstack}/{range} tokens survive verbatim for '
+      'native runtime substitution',
+      () {
+        final result = rewriteStyleForProxy(
+          _onlineStyle(),
+          proxyBaseUrl: proxyBaseUrl,
+        );
 
-      final sources = result['sources'] as Map<String, dynamic>;
-      final protomaps = sources['protomaps'] as Map<String, dynamic>;
-      final hillshade = sources['hillshadeSource'] as Map<String, dynamic>;
-      expect((protomaps['tiles'] as List).single, contains('{z}/{x}/{y}'));
-      expect((hillshade['tiles'] as List).single, contains('{z}/{x}/{y}'));
-    });
+        final sources = result['sources'] as Map<String, dynamic>;
+        final protomaps = sources['protomaps'] as Map<String, dynamic>;
+        final hillshade = sources['hillshadeSource'] as Map<String, dynamic>;
+        expect((protomaps['tiles'] as List).single, contains('{z}/{x}/{y}'));
+        expect((hillshade['tiles'] as List).single, contains('{z}/{x}/{y}'));
+        expect(result['glyphs'], contains('{fontstack}'));
+        expect(result['glyphs'], contains('{range}'));
+      },
+    );
 
     test('does not mutate the input style (deep copy)', () {
       final input = _onlineStyle();
-      rewriteStyleForProxy(
-        input,
-        cacheRoot: _cacheRoot,
-        proxyBaseUrl: proxyBaseUrl,
-      );
+      rewriteStyleForProxy(input, proxyBaseUrl: proxyBaseUrl);
 
       expect(
         input['glyphs'],
@@ -477,12 +474,12 @@ void main() {
     });
 
     test(
-      'no https:// or pmtiles:// survives anywhere in the output; exactly '
-      'one vector and one dem source, no __cellN duplication',
+      'every URL-bearing field starts with http://127.0.0.1: — no https://, '
+      'no file://, no pmtiles:// anywhere in the output; exactly one vector '
+      'and one dem source, no __cellN duplication',
       () {
         final result = rewriteStyleForProxy(
           _onlineStyle(),
-          cacheRoot: _cacheRoot,
           proxyBaseUrl: proxyBaseUrl,
         );
 
@@ -492,15 +489,14 @@ void main() {
         // Only inspect URL-bearing fields (tiles/url/glyphs/sprite), never
         // the attribution HTML, which legitimately carries https:// links
         // (matches rewriteStyleForOffline's own scheme-allowlist precedent).
-        expect((result['glyphs'] as String).contains('http'), isFalse);
-        expect((result['sprite'] as String).contains('http'), isFalse);
+        expect(result['glyphs'], startsWith('http://127.0.0.1:'));
+        expect(result['sprite'], startsWith('http://127.0.0.1:'));
         for (final dynamic s in sources.values) {
           final src = s as Map<String, dynamic>;
           expect(src.containsKey('url'), isFalse);
           final tiles = (src['tiles'] as List).cast<String>();
           for (final tile in tiles) {
-            expect(tile.contains('https://'), isFalse);
-            expect(tile.contains('pmtiles://'), isFalse);
+            expect(tile, startsWith('http://127.0.0.1:'));
           }
         }
 
@@ -512,22 +508,10 @@ void main() {
       },
     );
 
-    test('rejects a cacheRoot with a .. traversal segment', () {
-      expect(
-        () => rewriteStyleForProxy(
-          _onlineStyle(),
-          cacheRoot: '/data/user/0/app.wanderer/../map_cache',
-          proxyBaseUrl: proxyBaseUrl,
-        ),
-        throwsArgumentError,
-      );
-    });
-
     test('rejects a non-loopback proxyBaseUrl', () {
       expect(
         () => rewriteStyleForProxy(
           _onlineStyle(),
-          cacheRoot: _cacheRoot,
           proxyBaseUrl: 'https://evil.example.org',
         ),
         throwsArgumentError,
