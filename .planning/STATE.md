@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: milestone
-status: Awaiting next milestone
-stopped_at: Completed 38.1-05-PLAN.md
-last_updated: "2026-09-09T16:55:54.200Z"
-last_activity: "2026-09-06 — Completed quick task 260906-uwx: tuned tracelet position filters to stop stationary GPS jitter (awaiting field test)"
+status: executing
+stopped_at: Completed 39-02-PLAN.md
+last_updated: "2026-09-09T20:10:43.679Z"
+last_activity: 2026-09-09 -- Phase 39 execution started
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 44
-  completed_plans: 44
-  percent: 100
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 53
+  completed_plans: 46
+  percent: 63
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-07)
 
 **Core value:** A hiker can tap "Navigate" on any online trail and follow it step by step without leaving the app.
-**Current focus:** Planning next milestone (v1.9) — Phases 37 and 39 are scoped and unscheduled
+**Current focus:** Phase 39 — unified-tile-model
 
 ## Current Position
 
-Phase: Milestone v1.8 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-06 — Completed quick task 260906-uwx: tuned tracelet position filters to stop stationary GPS jitter (awaiting field test)
+Phase: 39 (unified-tile-model) — EXECUTING
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-09-09 -- Phase 39 execution started
 
 ## v1.8 Phases — SHIPPED 2026-08-07
 
@@ -189,6 +189,7 @@ v1.8 phase history archived — see `.planning/milestones/v1.8-ROADMAP.md` / MIL
 | Phase 38.1-downloaded-trail-blocker-closure P03 | 35min | 3 tasks | 5 files |
 | Phase 38.1 P04 | 12min | 2 tasks | 2 files |
 | Phase 38.1 P05 | 35min | 3 tasks | 5 files |
+| Phase 39 P02 | 25min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -443,6 +444,9 @@ Recent decisions affecting current work:
 - [Phase 38.1-04]: deleteTrail guards box.remove with isLiveCaptureRow(entity) consumed directly on the row in the transaction; membership drop is unconditional, library/<id>/ delete gated on rowRemoved (closes store half of CR-03)
 - [Phase 38.1]: Owner-scoped the delete gate and download-family guard in trail_dropdown.dart via ownLiveCaptureProvider, closing CR-01/CR-03's UI halves with one predicate — Isolated the escape-hatch and the Remove/Update/Download visibility from syncState on the shared cache row, per D-04/D-12/D-13
 - [Phase 38.1]: Guarded library_screen.dart's long-press Remove tile with the same ownLiveCaptureProvider predicate, matching the dropdown's hide-not-disable shape — D-14: the two remove-download surfaces must behave identically; this surface previously had no guard at all
+- [Phase 39]: Port and secret are re-minted together, never independently, when the persisted tile proxy identity is invalid
+- [Phase 39]: persistTileProxyPort never touches the secret, so a bind-retry rebind cannot churn glyph/sprite cache keys
+- [Phase 39]: MapStyleSourcesNotifier rethrows on fetch failure with no persisted fallback, rather than fabricating a value
 
 ### Roadmap Evolution
 
@@ -599,8 +603,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-24 (recorded 
 
 ## Session Continuity
 
-Last session: 2026-08-04T19:21:54.164Z
-Stopped at: Completed 38.1-05-PLAN.md
+Last session: 2026-09-09T20:10:43.657Z
+Stopped at: Completed 39-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
