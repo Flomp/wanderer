@@ -120,6 +120,16 @@ already satisfied — so even a later theme toggle cannot rescue it. Full trace 
   connectivity" conflation documented at `trail.dart:110-116` — unrepresentable rather than
   merely fixed.
 
+- **D-16a** *(added 2026-09-09, after planning)* — the deletion extends to storage: the persisted
+  `ActiveNavigationEntity.isOffline` ObjectBox column is dropped too, not retained. The developer
+  confirmed the app is not in production, but that is the weaker reason. The stronger one: the
+  column only ever passed a value between `main.dart`'s `_pushRecordingResume` and
+  `router_provider.dart`'s `/record` builder one call later in the same process, and D-16 deletes
+  both ends. `main.dart` already documents that the persisted value "is deliberately not trusted"
+  and re-probes on every resume, so it was never durable state. Retaining it would leave a write
+  with no reader. Cost is one generated `retiredPropertyUids` entry — `lib/objectbox-model.json`
+  already carries 41.
+
 - **D-17** — The legacy `rewriteStyleForOffline` N-cell duplication path is retired in this
   phase. Its own doc comment already marks it as pending cleanup, and D-01 leaves it with no
   production caller.
