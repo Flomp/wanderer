@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
     show debugPrint, visibleForTesting;
@@ -8,10 +9,12 @@ import 'package:maplibre/maplibre.dart' show LngLatBounds;
 import 'package:pmtiles/pmtiles.dart';
 import 'package:wanderer/entities/region_entity.dart';
 import 'package:wanderer/objectbox.g.dart';
+import 'package:wanderer/provider/glyph_sprite_cache_provider.dart';
 import 'package:wanderer/services/map_source_persistence.dart';
 import 'package:wanderer/services/tile_proxy_identity.dart';
 import 'package:wanderer/services/tile_repository_manager.dart';
 import 'package:wanderer/util/geo/xyz_tile_bounds.dart';
+import 'package:wanderer/util/region/map_cache_path.dart';
 
 /// TileJSON document for the operator's hillshade DEM source. MUST stay
 /// byte-identical to `hillshadeSource.url` in both
@@ -25,10 +28,19 @@ import 'package:wanderer/util/geo/xyz_tile_bounds.dart';
 /// already an XYZ template).
 const String kDemTileJsonUrl = 'https://tiles.mapterhorn.com/tilejson.json';
 
-/// Loopback-only `HttpServer` that serves vector/DEM map tiles from a
-/// downloaded region's `.pmtiles` archive, falling back to a redirect to the
-/// operator's upstream CDN when no downloaded region covers a requested
-/// tile.
+/// Loopback-only `HttpServer` serving four route families: vector/DEM map
+/// tiles from a downloaded region's `.pmtiles` archive (falling back to a
+/// redirect to the operator's upstream CDN when no downloaded region covers
+/// a requested tile), and glyphs/sprites from the shared `map_cache`
+/// (falling back to a reverse-proxied, write-through-cached fetch).
+///
+/// **Tiles are never reverse-proxied (D-02)** — their per-pan volume is
+/// exactly what must stay off the root isolate, so a coverage miss answers a
+/// 302/503 pointing MapLibre at the upstream CDN directly. **Glyphs and
+/// sprites ARE reverse-proxied (D-11)** — a style load issues only a handful
+/// of them, and write-through caching is what lets a first-run-offline map
+/// render labels and icons at all, retiring the explicit cache warm this
+/// phase deletes from `trail_map.dart`.
 ///
 /// Both `TrailMap` and `navigation_screen` bake a single STATIC
 /// `tiles: ['<baseUrl>/vector/{z}/{x}/{y}.pbf']` /
@@ -56,6 +68,17 @@ class TileProxyServer {
   final HttpServer _server;
   final Store _store;
   final String _secret;
+
+  /// The shared glyph/sprite cache root, `<app-docs>/map_cache` — resolved
+  /// once via [resolveGlyphSpriteCachePaths] in [start] so the proxy, the
+  /// cache warm and the offline render path all agree on the same layout
+  /// (D-11).
+  final String _cacheRoot;
+
+  /// In-flight upstream glyph/sprite fetches, keyed by local cache path, so a
+  /// style load requesting the same range/sprite file from several layers at
+  /// once produces exactly one upstream request (T-39-17).
+  final Map<String, Future<List<int>?>> _inFlightAssetFetches = {};
   final _ArchiveCache _archiveCache = _ArchiveCache();
 
   /// Short-TTL memo of the region table. Every tile request used to run a
@@ -109,7 +132,12 @@ class TileProxyServer {
     return fresh;
   }
 
-  TileProxyServer._(this._server, this._store, this._secret);
+  TileProxyServer._(
+    this._server,
+    this._store,
+    this._secret,
+    this._cacheRoot,
+  );
 
   /// The resolved loopback base URL, e.g.
   /// `http://127.0.0.1:54321/<32-hex-secret>` — exposed to the widget tree
@@ -134,6 +162,7 @@ class TileProxyServer {
     final identity = resolveTileProxyIdentity(store);
     final secret = identity.secret;
     var port = identity.port;
+    final cachePaths = await resolveGlyphSpriteCachePaths();
 
     HttpServer? server;
     const maxBindAttempts = 4;
@@ -157,7 +186,7 @@ class TileProxyServer {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     }
 
-    final proxy = TileProxyServer._(server, store, secret);
+    final proxy = TileProxyServer._(server, store, secret, cachePaths.root);
     unawaited(proxy._serve());
     return proxy;
   }
@@ -183,8 +212,10 @@ class TileProxyServer {
     await _server.close(force: true);
   }
 
-  /// Routes `/<secret>/vector/{z}/{x}/{y}.pbf` and
-  /// `/<secret>/dem/{z}/{x}/{y}.png`.
+  /// Routes four families under `/<secret>/…`: `vector/{z}/{x}/{y}.pbf` and
+  /// `dem/{z}/{x}/{y}.png` (D-02 — never reverse-proxied, redirect-or-503
+  /// only), and `glyphs/{fontstack}/{range}.pbf` and `sprite/<fileName>`
+  /// (D-11 — local-first, reverse-proxied with write-through on a miss).
   ///
   /// An empty path, a wrong/absent secret, an unknown route shape or kind,
   /// or an out-of-range z/x/y answer HTTP 404/400 — these are genuinely
@@ -193,7 +224,12 @@ class TileProxyServer {
   /// tile, a region with no package path, a vanished archive file and a tile
   /// absent from a covering archive all redirect (302) to the operator's
   /// upstream template; a request the proxy cannot yet name an upstream
-  /// target for answers 503 (retryable). See [_redirectOrUnavailable].
+  /// target for answers 503 (retryable). See [_redirectOrUnavailable]. A
+  /// glyph/sprite request whose fontstack/range/filename is not whitelisted
+  /// 404s (genuinely permanent); one whose asset is not yet cached and has
+  /// no known upstream, or whose upstream fetch fails, answers 503 via
+  /// [_serveCachedAsset] — never 404, for the same D-04 reason tiles never
+  /// 404 on a retryable miss.
   Future<void> _handle(HttpRequest request) async {
     final segments = request.uri.pathSegments;
     if (segments.isEmpty) {
@@ -205,109 +241,318 @@ class TileProxyServer {
       return request.response.close();
     }
 
-    if (segments.length != 5 ||
-        (segments[1] != 'vector' && segments[1] != 'dem')) {
+    final kind = segments.length >= 2 ? segments[1] : '';
+
+    if (kind == 'vector' || kind == 'dem') {
+      if (segments.length != 5) {
+        request.response.statusCode = HttpStatus.notFound;
+        return request.response.close();
+      }
+
+      final z = int.tryParse(segments[2]);
+      final x = int.tryParse(segments[3]);
+      final y = int.tryParse(segments[4].split('.').first);
+
+      // Explicit bounds check BEFORE constructing a ZXY — never rely on
+      // ZXY's constructor `assert`, which is stripped in release builds
+      // — trusting that assert is an anti-pattern.
+      if (z == null ||
+          x == null ||
+          y == null ||
+          z < 0 ||
+          z > 26 ||
+          x < 0 ||
+          x >= (1 << z) ||
+          y < 0 ||
+          y >= (1 << z)) {
+        request.response.statusCode = HttpStatus.badRequest;
+        return request.response.close();
+      }
+
+      // Computed once, reused by every retryable-miss branch below
+      // (_redirectOrUnavailable): an uncovered tile, a region with no
+      // package path, a vanished archive file, and a tile absent from a
+      // covering archive all redirect to the same resolved upstream target.
+      final target = _upstreamRedirectTargetFor(kind, z: z, x: x, y: y);
+
+      final tileBounds = tileToBounds(z, x, y);
+      // resolveRegionForTile is @visibleForTesting so its pure-function
+      // shape stays unit-testable without a live Store (matches
+      // bboxOverlaps'/splitRegionTilePaths' precedent) — this proxy handler
+      // is its one sanctioned production caller, mirroring the pmtiles
+      // package's own `fromReadAt` cross-file @visibleForTesting usage
+      // (pmtiles-1.2.0/lib/src/archive.dart).
+      // ignore: invalid_use_of_visible_for_testing_member
+      final region = resolveRegionForTile(
+        _regions(),
+        LngLatBounds(
+          longitudeWest: tileBounds.west,
+          longitudeEast: tileBounds.east,
+          latitudeSouth: tileBounds.south,
+          latitudeNorth: tileBounds.north,
+        ),
+        dem: kind == 'dem',
+      );
+
+      if (region == null) {
+        // No downloaded region covers this tile — redirect upstream (D-02,
+        // D-04), never 404: this tile could still succeed via the CDN.
+        return _redirectOrUnavailable(request, target);
+      }
+
+      // The archive path is read ONLY from the winning region's own
+      // DownloadedTilePackageEntity.localFilePath — a DB-derived value
+      // already validated at write time via util/region/file_path.dart's
+      // assertValidRegionPath, NEVER assembled from the request path. This
+      // structurally eliminates path traversal.
+      final localFilePath = kind == 'dem'
+          ? region.demPackage.target?.localFilePath
+          : region.vectorPackage.target?.localFilePath;
+      if (localFilePath == null) {
+        return _redirectOrUnavailable(request, target);
+      }
+
+      final archive = await _archiveCache.forPath(localFilePath);
+      if (archive == null) {
+        // The winning region's file no longer exists on disk (mid-session
+        // delete) — same retryable-miss outcome as no coverage.
+        return _redirectOrUnavailable(request, target);
+      }
+
+      final tile = await archive.tile(ZXY(z, x, y).toTileId());
+      List<int> bytes;
+      try {
+        bytes = tile.bytes();
+      } on TileNotFoundException {
+        // Present in the covering archive's index but absent from its
+        // data — still retryable: the operator's upstream copy may have
+        // it.
+        return _redirectOrUnavailable(request, target);
+      }
+
+      // Serve decompressed bytes with NO Content-Encoding header (safer
+      // default than serving compressed bytes + Content-Encoding: gzip).
+      request.response.headers.contentType = ContentType.parse(
+        tile.type.mimeType(),
+      );
+      // Without a Cache-Control header MapLibre treats every offline tile
+      // as immediately expired and re-runs the whole HTTP →
+      // region-resolve → pmtiles read per pan revisit; with one, its
+      // ambient cache serves revisits directly. One day balances that
+      // against a re-downloaded region's updated tiles (same URLs)
+      // becoming visible.
+      request.response.headers.set(
+        HttpHeaders.cacheControlHeader,
+        'public, max-age=86400',
+      );
+      request.response.add(bytes);
+      return request.response.close();
+    }
+
+    if (kind == 'glyphs') {
+      return _handleGlyphRequest(request, segments);
+    }
+    if (kind == 'sprite') {
+      return _handleSpriteRequest(request, segments);
+    }
+
+    request.response.statusCode = HttpStatus.notFound;
+    return request.response.close();
+  }
+
+  /// Handles `/<secret>/glyphs/{fontstack}/{range}.pbf` (D-11).
+  ///
+  /// A non-whitelisted fontstack or a malformed range is a permanently
+  /// invalid route — [glyphCacheFilePath] throws [ArgumentError] and this
+  /// answers 404 without touching the filesystem (T-39-15). A whitelisted
+  /// request is served local-first, falling back to a reverse-proxied,
+  /// write-through-cached fetch of the operator's `glyphUrl` template (see
+  /// [_serveCachedAsset]).
+  Future<void> _handleGlyphRequest(
+    HttpRequest request,
+    List<String> segments,
+  ) async {
+    if (segments.length != 4) {
       request.response.statusCode = HttpStatus.notFound;
       return request.response.close();
     }
-    final kind = segments[1];
+    final fontstack = segments[2];
+    final range = segments[3].split('.').first;
 
-    final z = int.tryParse(segments[2]);
-    final x = int.tryParse(segments[3]);
-    final y = int.tryParse(segments[4].split('.').first);
-
-    // Explicit bounds check BEFORE constructing a ZXY — never rely on ZXY's
-    // constructor `assert`, which is stripped in release builds
-    // — trusting that assert is an anti-pattern.
-    if (z == null ||
-        x == null ||
-        y == null ||
-        z < 0 ||
-        z > 26 ||
-        x < 0 ||
-        x >= (1 << z) ||
-        y < 0 ||
-        y >= (1 << z)) {
-      request.response.statusCode = HttpStatus.badRequest;
+    String localPath;
+    try {
+      localPath = glyphCacheFilePath(_cacheRoot, fontstack, range);
+    } on ArgumentError {
+      request.response.statusCode = HttpStatus.notFound;
       return request.response.close();
     }
 
-    // Computed once, reused by every retryable-miss branch below
-    // (_redirectOrUnavailable): an uncovered tile, a region with no package
-    // path, a vanished archive file, and a tile absent from a covering
-    // archive all redirect to the same resolved upstream target.
-    final target = _upstreamRedirectTargetFor(kind, z: z, x: x, y: y);
+    // {fontstack} carries spaces — encode only for the REMOTE fetch URL; the
+    // on-disk directory keeps the literal name (glyphCacheFilePath, above),
+    // mirroring glyph_sprite_cache_provider.dart's exact substitution.
+    final sources = readPersistedMapStyleSources(_store);
+    final upstreamUrl = sources?.glyphUrl
+        .replaceAll('{fontstack}', Uri.encodeComponent(fontstack))
+        .replaceAll('{range}', range);
 
-    final tileBounds = tileToBounds(z, x, y);
-    // resolveRegionForTile is @visibleForTesting so its pure-function shape
-    // stays unit-testable without a live Store (matches bboxOverlaps'/
-    // splitRegionTilePaths' precedent) — this proxy handler is its one
-    // sanctioned production caller, mirroring the pmtiles package's own
-    // `fromReadAt` cross-file @visibleForTesting usage
-    // (pmtiles-1.2.0/lib/src/archive.dart).
-    // ignore: invalid_use_of_visible_for_testing_member
-    final region = resolveRegionForTile(
-      _regions(),
-      LngLatBounds(
-        longitudeWest: tileBounds.west,
-        longitudeEast: tileBounds.east,
-        latitudeSouth: tileBounds.south,
-        latitudeNorth: tileBounds.north,
-      ),
-      dem: kind == 'dem',
+    return _serveCachedAsset(
+      request,
+      localPath: localPath,
+      upstreamUrl: upstreamUrl,
+      contentType: ContentType('application', 'x-protobuf'),
     );
+  }
 
-    if (region == null) {
-      // No downloaded region covers this tile — redirect upstream (D-02,
-      // D-04), never 404: this tile could still succeed via the CDN.
-      return _redirectOrUnavailable(request, target);
+  /// Handles `/<secret>/sprite/<fileName>` (D-11).
+  ///
+  /// A non-whitelisted filename is a permanently invalid route —
+  /// [spriteCacheFilePath] throws [ArgumentError] and this answers 404
+  /// without touching the filesystem (T-39-15). `spriteUrl` is a
+  /// theme-agnostic base (`.../sprites/v4`); the whitelisted filename
+  /// already carries its `light`/`dark` variant, so no variant is appended
+  /// separately — the same trap `map_style_json_provider.dart` documents.
+  Future<void> _handleSpriteRequest(
+    HttpRequest request,
+    List<String> segments,
+  ) async {
+    if (segments.length != 3) {
+      request.response.statusCode = HttpStatus.notFound;
+      return request.response.close();
     }
+    final fileName = segments[2];
 
-    // The archive path is read ONLY from the winning region's own
-    // DownloadedTilePackageEntity.localFilePath — a DB-derived value already
-    // validated at write time via util/region/file_path.dart's
-    // assertValidRegionPath, NEVER assembled from the request path. This
-    // structurally eliminates path traversal.
-    final localFilePath = kind == 'dem'
-        ? region.demPackage.target?.localFilePath
-        : region.vectorPackage.target?.localFilePath;
-    if (localFilePath == null) {
-      return _redirectOrUnavailable(request, target);
-    }
-
-    final archive = await _archiveCache.forPath(localFilePath);
-    if (archive == null) {
-      // The winning region's file no longer exists on disk (mid-session
-      // delete) — same retryable-miss outcome as no coverage.
-      return _redirectOrUnavailable(request, target);
-    }
-
-    final tile = await archive.tile(ZXY(z, x, y).toTileId());
-    List<int> bytes;
+    String localPath;
     try {
-      bytes = tile.bytes();
-    } on TileNotFoundException {
-      // Present in the covering archive's index but absent from its data —
-      // still retryable: the operator's upstream copy may have it.
-      return _redirectOrUnavailable(request, target);
+      localPath = spriteCacheFilePath(_cacheRoot, fileName);
+    } on ArgumentError {
+      request.response.statusCode = HttpStatus.notFound;
+      return request.response.close();
     }
 
-    // Serve decompressed bytes with NO Content-Encoding header (safer
-    // default than serving compressed bytes + Content-Encoding: gzip).
-    request.response.headers.contentType = ContentType.parse(
-      tile.type.mimeType(),
+    final sources = readPersistedMapStyleSources(_store);
+    final upstreamUrl = sources == null
+        ? null
+        : '${sources.spriteUrl}/$fileName';
+
+    final contentType = fileName.endsWith('.png')
+        ? ContentType('image', 'png')
+        : ContentType('application', 'json');
+
+    return _serveCachedAsset(
+      request,
+      localPath: localPath,
+      upstreamUrl: upstreamUrl,
+      contentType: contentType,
     );
-    // Without a Cache-Control header MapLibre treats every offline tile as
-    // immediately expired and re-runs the whole HTTP → region-resolve →
-    // pmtiles read per pan revisit; with one, its ambient cache serves
-    // revisits directly. One day balances that against a re-downloaded
-    // region's updated tiles (same URLs) becoming visible.
+  }
+
+  /// Serves a glyph/sprite asset local-first, falling back to a
+  /// reverse-proxied, write-through-cached upstream fetch (D-11 — the one
+  /// place this proxy fetches upstream bytes itself, affordable because a
+  /// style load issues only a handful of these).
+  ///
+  /// 1. If [localPath] exists on disk, serve it directly.
+  /// 2. Otherwise, if [upstreamUrl] is null or unsafe
+  ///    ([isSafeRedirectTarget]), answer 503 (never 404 — D-04: the
+  ///    template may simply not have been fetched yet and MapLibre must
+  ///    retry).
+  /// 3. Otherwise fetch [upstreamUrl] (deduplicated per [localPath] via
+  ///    [_inFlightAssetFetches]), write the bytes through to
+  ///    `<localPath>.part` and atomically [File.rename] to [localPath] on
+  ///    success, then serve them. On any failure, delete a partial `.part`
+  ///    if present and answer 503.
+  Future<void> _serveCachedAsset(
+    HttpRequest request, {
+    required String localPath,
+    required String? upstreamUrl,
+    required ContentType contentType,
+  }) async {
+    final cached = File(localPath);
+    if (await cached.exists()) {
+      final bytes = await cached.readAsBytes();
+      request.response.headers.contentType = contentType;
+      request.response.headers.set(
+        HttpHeaders.cacheControlHeader,
+        'public, max-age=86400',
+      );
+      request.response.add(bytes);
+      return request.response.close();
+    }
+
+    final upstreamUri = upstreamUrl == null
+        ? null
+        : Uri.tryParse(upstreamUrl);
+    if (upstreamUri == null || !isSafeRedirectTarget(upstreamUri)) {
+      return _redirectOrUnavailable(request, null);
+    }
+
+    final bytes = await _fetchAndCacheAsset(localPath, upstreamUrl!);
+    if (bytes == null) {
+      return _redirectOrUnavailable(request, null);
+    }
+
+    request.response.headers.contentType = contentType;
     request.response.headers.set(
       HttpHeaders.cacheControlHeader,
       'public, max-age=86400',
     );
     request.response.add(bytes);
     return request.response.close();
+  }
+
+  /// Fetches [upstreamUrl] into [localPath], deduplicated by [localPath] so
+  /// concurrent requests for the same asset produce exactly one upstream
+  /// fetch (T-39-17). Returns the fetched bytes on success, `null` on any
+  /// failure (non-200 response, or a thrown exception).
+  Future<List<int>?> _fetchAndCacheAsset(String localPath, String upstreamUrl) {
+    final inFlight = _inFlightAssetFetches[localPath];
+    if (inFlight != null) return inFlight;
+    final future = _downloadAndWriteThrough(localPath, upstreamUrl);
+    _inFlightAssetFetches[localPath] = future;
+    unawaited(
+      future.whenComplete(() => _inFlightAssetFetches.remove(localPath)),
+    );
+    return future;
+  }
+
+  /// Downloads [upstreamUrl] via a plain `dart:io` HTTP client and writes
+  /// the bytes through to [localPath] atomically: written first to
+  /// `<localPath>.part`, then [File.rename]d — never left as a truncated
+  /// file a later local-first read could serve as complete (T-39-16).
+  /// Returns `null` and cleans up any partial file on any failure.
+  Future<List<int>?> _downloadAndWriteThrough(
+    String localPath,
+    String upstreamUrl,
+  ) async {
+    final partialPath = '$localPath.part';
+    final client = HttpClient();
+    try {
+      final httpRequest = await client.getUrl(Uri.parse(upstreamUrl));
+      final response = await httpRequest.close();
+      if (response.statusCode != HttpStatus.ok) {
+        return null;
+      }
+      final builder = BytesBuilder();
+      await for (final chunk in response) {
+        builder.add(chunk);
+      }
+      final bytes = builder.takeBytes();
+      final file = File(localPath);
+      await file.parent.create(recursive: true);
+      final partialFile = File(partialPath);
+      await partialFile.writeAsBytes(bytes);
+      await partialFile.rename(localPath);
+      return bytes;
+    } catch (e) {
+      debugPrint('TileProxyServer: asset fetch failed for $upstreamUrl: $e');
+      final partialFile = File(partialPath);
+      if (await partialFile.exists()) {
+        await partialFile.delete();
+      }
+      return null;
+    } finally {
+      client.close(force: true);
+    }
   }
 
   /// Resolves this request's upstream redirect target from the persisted
