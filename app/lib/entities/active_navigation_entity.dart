@@ -32,9 +32,6 @@ class ActiveNavigationEntity {
   @Index()
   String? trailId;
 
-  /// Nullable, trail-specific.
-  bool? isOffline;
-
   /// Nullable, `rec`-specific — the Valhalla costing string (`'pedestrian'`
   /// or `'bicycle'`) chosen via `showTravelProfileSheet` at record start
   /// (`trail_source_select_screen.dart`'s `_openRecorder`). Persisted so a
@@ -82,7 +79,6 @@ class ActiveNavigationEntity {
     this.obxId = 0,
     this.sessionType = ActiveSessionType.nav,
     this.trailId,
-    this.isOffline,
     this.recordingCosting,
     this.currentManeuverIndex,
     this.breadcrumbPolyline,

@@ -32,6 +32,7 @@ import 'package:wanderer/provider/map_style_json_provider.dart';
 import 'package:wanderer/provider/navigation_provider.dart';
 import 'package:wanderer/provider/navigation_stats_provider.dart';
 import 'package:wanderer/provider/objectbox_store_provider.dart';
+import 'package:wanderer/provider/online_status_provider.dart';
 import 'package:wanderer/provider/region/tile_proxy_provider.dart';
 import 'package:wanderer/provider/subcategory_preference_provider.dart';
 import 'package:wanderer/provider/toast_provider.dart';
@@ -84,7 +85,6 @@ int liveElevationChartRevision(int breadcrumbLength) =>
 class NavigationScreen extends ConsumerStatefulWidget {
   final String id;
   final NavigateResponse response;
-  final bool isOffline;
   final ActiveNavigationEntity? resumeSession;
 
   /// True for a trail-less GPS-recording session (pushed via the top-level
@@ -121,7 +121,6 @@ class NavigationScreen extends ConsumerStatefulWidget {
     super.key,
     required this.id,
     required this.response,
-    this.isOffline = false,
     this.resumeSession,
     this.isRecording = false,
     this.initialCenter,
@@ -834,7 +833,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
           ? ActiveSessionType.rec
           : ActiveSessionType.nav,
       trailId: widget.isRecording ? null : widget.id,
-      isOffline: widget.isOffline,
       recordingCosting: widget.isRecording ? _recordingCosting : null,
       navResponseJson: _sessionNavJson,
       currentManeuverIndex: navState.currentManeuverIndex,
@@ -1101,23 +1099,22 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  /// Composes the style JSON to hand to the map from the resolved input.
+  /// Composes the style JSON to hand to the map from the resolved input:
+  /// always rewritten via [rewriteStyleForProxy], online and offline alike
+  /// (D-01). Returns null while [baseJson] is still resolving — the caller
+  /// then shows the loading passthrough (initStyle path) or leaves the
+  /// mounted style unchanged (`_swapStyle` path).
   ///
-  /// Online: [baseJson] as-is. Offline: [baseJson] rewritten via
-  /// [rewriteStyleForProxy] so `glyphs`/`sprite`/tiles all resolve through
-  /// the loopback tile proxy — a single static XYZ source, with per-tile
-  /// region coverage resolved server-side (`resolveRegionForTile`) rather
-  /// than a live viewport query here. This screen's camera moves freely
-  /// across a session, unlike `TrailMap`'s fixed trail bounds, but the
-  /// proxy's per-request resolution means no viewport parameter is needed at
-  /// all. Returns null while [baseJson] is still resolving — the caller then
-  /// shows the loading passthrough (initStyle path) or leaves the mounted
-  /// style unchanged (`_swapStyle` path). An uncovered viewport is
-  /// redirected to the operator's upstream template by the proxy, so
-  /// coverage degrades per tile rather than per screen.
+  /// One style is composed on one code path and always routed through the
+  /// loopback proxy, which resolves coverage per tile
+  /// (`tile_proxy_server.dart`) and redirects an uncovered tile to the
+  /// operator's upstream template — so a session started without service
+  /// fills in as soon as the radio returns, with no widget-level mode to
+  /// flip. This screen's camera moves freely across a session, unlike
+  /// `TrailMap`'s fixed trail bounds, but the proxy's per-request resolution
+  /// means no viewport parameter is needed here either.
   String? _composeStyle(String? baseJson) {
     if (baseJson == null) return null;
-    if (!widget.isOffline) return baseJson;
     try {
       final decoded = jsonDecode(baseJson) as Map<String, dynamic>;
       final offlineStyle = rewriteStyleForProxy(
@@ -1133,17 +1130,15 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     }
   }
 
-  /// Recomposes the (possibly offline-rewritten) style from current provider
-  /// state and swaps it onto the mounted controller in place. Theme path
-  /// only (unchanged mechanism) — the static proxy source is baked into
-  /// every composed style by construction, so no separate region-swap path
-  /// is needed here.
+  /// Recomposes the (proxy-rewritten) style from current provider state and
+  /// swaps it onto the mounted controller in place. Theme path only
+  /// (unchanged mechanism) — the static proxy source is baked into every
+  /// composed style by construction, so no separate region-swap path is
+  /// needed here.
   void _swapStyle() {
     final controller = _controller;
     if (controller == null) return;
-    final baseJson = widget.isOffline
-        ? ref.read(offlineMapStyleJsonProvider).value
-        : ref.read(mapStyleJsonProvider).value;
+    final baseJson = ref.read(mapStyleJsonProvider).value;
     final json = _composeStyle(baseJson);
     if (json != null && json != _lastStyleJson) {
       _lastStyleJson = json;
@@ -1292,13 +1287,13 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   @override
   Widget build(BuildContext context) {
     // Live style swap: theme toggle swaps the composed style in place on
-    // the already-mounted map. Region coverage is resolved by the loopback
-    // tile proxy per-tile:
-    // a newly-downloaded region's tiles resolve the next time MapLibre
-    // requests them (confirmed on-device, no remount needed) — no separate
-    // region-change listener is required.
-    // Offline reads the network-free providers so no `/map/style-sources`
-    // call is ever made.
+    // the already-mounted map. One style is composed on one path and always
+    // routed through the loopback proxy, which resolves coverage per tile
+    // and redirects an uncovered tile to the operator's upstream template —
+    // so a session started without service fills in when the radio returns,
+    // with no mode flip: a newly-downloaded region's tiles resolve the next
+    // time MapLibre requests them (confirmed on-device, no remount needed),
+    // no separate region-change listener is required.
     // The trail can resolve after the style has loaded: a resumed session
     // starts cold, with nothing having warmed `trailProvider`, so the read in
     // [_addTrailOutline] finds nothing and the blue outline never appears.
@@ -1316,11 +1311,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
       });
     }
 
-    if (widget.isOffline) {
-      ref.listen(offlineMapStyleJsonProvider, (_, _) => _swapStyle());
-    } else {
-      ref.listen(mapStyleJsonProvider, (_, _) => _swapStyle());
-    }
+    ref.listen(mapStyleJsonProvider, (_, _) => _swapStyle());
 
     // Breadcrumb in-place update: swap the native tail source's data on every
     // new position fix, never remove/re-add sources. Keyed on
@@ -1349,15 +1340,13 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     final localizations = AppLocalizations.of(context)!;
     final unit = ref.watch(unitProvider);
 
-    final baseAsync = widget.isOffline
-        ? ref.watch(offlineMapStyleJsonProvider)
-        : ref.watch(mapStyleJsonProvider);
+    final baseAsync = ref.watch(mapStyleJsonProvider);
     final baseJson = baseAsync.value;
     final error = baseAsync.error;
 
-    // Memoized on input identity: the offline path's compose is a full
-    // style-JSON decode → rewrite → encode round-trip (100s of KB), far too
-    // heavy to re-run on every incidental rebuild of this screen.
+    // Memoized on input identity: the compose is a full style-JSON
+    // decode → rewrite → encode round-trip (100s of KB), far too heavy to
+    // re-run on every incidental rebuild of this screen.
     if (!identical(baseJson, _composeBaseInput)) {
       _composeBaseInput = baseJson;
       _composeOutput = _composeStyle(baseJson);
@@ -1709,7 +1698,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
             ],
           ),
         ),
-        if (widget.isOffline) ...[
+        if (!ref.watch(onlineStatusProvider)) ...[
           const SizedBox(width: 8),
           Icon(
             Icons.cloud_off,
