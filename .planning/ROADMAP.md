@@ -334,13 +334,11 @@ See `.planning/milestones/v1.8-ROADMAP.md` for full details.
 
 </details>
 
-
 ## Unscheduled
 
 Phases below are **not part of any milestone yet**. They are parked here rather than in the
 backlog because their scope is already understood at file level. When the next milestone is
 opened, `/gsd-new-milestone` should claim them explicitly.
-
 
 ### Phase 37: Way Types & Surfaces Breakdown (mobile-first)
 
@@ -407,20 +405,25 @@ and this phase builds directly on the `TileProxyServer` they left in place.
      basemap, then regains service — and online tiles fill in around the downloaded region
      *on the same screen*, without navigating away or reopening the trail. This is the defect
      the phase exists to kill; it must be demonstrated on a physical device.
+
   2. **No offline regression.** With the device in airplane mode, a downloaded trail still
      renders basemap, place-name labels, icons and hillshade at every zoom the map allows —
      including above the local pmtiles depth, via overzoom rather than blank tiles.
+
   3. **The split is gone, not patched.** `TrailMap` has no `offline` parameter and
      `NavigationScreen` no `isOffline`; one style is composed on one code path, with a single
      style-JSON provider. `TrailMap(offline: trail.isOffline)` — the conflation of "downloaded"
      with "no connectivity" documented at `app/lib/models/trail.dart:110-116` — is no longer
      expressible.
+
   4. **No blank-forever tiles.** A tile that failed while the device was offline is re-requested
      once service returns. Specifically: the proxy never answers a retryable tile with 404,
      because MapLibre persists `noContent` as an empty tile row and never retries `NotFound`.
+
   5. **The cache survives a cold start.** Tiles fetched in one app run are served from MapLibre's
      ambient cache after the app is killed and relaunched — which requires the loopback port to be
      stable across launches while remaining unguessable to a co-resident app.
+
   6. **No thermal regression while panning.** Online tile bytes must not start transiting the root
      isolate; panning cost stays at or below today's measured profile.
 
@@ -439,18 +442,22 @@ with file+symbol citations. Load-bearing conclusions:
 - **302 redirect on a coverage miss is viable.** MapLibre Native follows 3xx on tile requests on
   both platforms, verified for Android against the shipped `13.0.3-pre0` AAR. Redirecting (rather
   than reverse-proxying bytes) is what keeps online tiles off the root isolate — see criterion 6.
+
 - **Never 404 a retryable tile.** `noContent` is persisted as an empty tile row and `NotFound`
   backs off to `Duration::max()`. An earlier draft of this design had the proxy 404 when offline;
   that would have reproduced the original bug in a more durable form. Do not reintroduce it.
+
 - **A stable loopback port is a prerequisite, not a nice-to-have.** The ambient cache keys on
   `resource.url` — the loopback URL — and the proxy binds an ephemeral port today, so the cache is
   orphaned on every cold start. This already makes the `max-age=86400` at
   `tile_proxy_server.dart:203-206` useless across launches; unification turns it into a real data
   and battery regression. Persist the port at install and add a per-install secret path segment to
   preserve the unguessability property `tile_proxy_server.dart:29-32` deliberately chose.
+
 - **`MainActivity.kt`'s comment becomes false.** It justifies the `setConnected(true)` pin with
   "offline styles never carry an online URL to (fail to) reach." This phase deletes that premise;
   the comment must be rewritten, not left standing.
+
 - **Scope boundary:** CDN-fetched tiles are *not* captured for durable offline use. Downloaded
   regions stay the only promised offline coverage, so "downloaded" keeps meaning exactly one
   thing in the regions UI. No writable tile store, no eviction policy, no storage-usage screen.
@@ -461,17 +468,35 @@ Phase 39 reads but does not modify `app/lib/models/trail.dart`, so there is no g
 collision of the kind Phase 37 has with Phase 36. Sequence either way.
 
 **UI hint**: no — no new surfaces; this removes a mode rather than adding a screen.
-
 Plans:
+**Wave 1**
 
 - [ ] 39-01-PLAN.md — Android `setConnected` pulse behind a platform channel, rewritten `MainActivity` comment, and the on-device risk gate (D-12/13/14)
 - [ ] 39-02-PLAN.md — persisted proxy identity (stable random port + per-install secret) and persisted `/map/style-sources` (D-05/06/09)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 39-03-PLAN.md — proxy binds the persisted port behind the secret path segment and answers a coverage miss with 302, never 404 (D-02/03/04/05/06/07)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 39-04-PLAN.md — proxy serves glyphs and sprites local-first with write-through into `map_cache` (D-11 server half)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 39-05-PLAN.md — `rewriteStyleForProxy` becomes the sole transform: loopback-only URLs, no cache root, maxzoom pins kept (D-01/08/11)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 39-06-PLAN.md — delete `TrailMap.offline` and its three call-site arguments (D-16)
 - [ ] 39-07-PLAN.md — delete `NavigationScreen.isOffline` and every route/resume value that fed it (D-16)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 39-08-PLAN.md — collapse to one style provider, retire the legacy N-cell transform, rename the file to match (D-10/17)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 39-09-PLAN.md — connectivity-regain re-probe, fire the recovery mechanism, verify criteria 1/2/5/6 on device (D-15/12/03)
 
 ---
