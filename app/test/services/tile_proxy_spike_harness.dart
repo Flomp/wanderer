@@ -73,7 +73,6 @@ import 'package:wanderer/entities/region_entity.dart';
 import 'package:wanderer/objectbox.g.dart';
 import 'package:wanderer/provider/api_provider.dart';
 import 'package:wanderer/provider/cookie_jar_provider.dart';
-import 'package:wanderer/provider/glyph_sprite_cache_provider.dart';
 import 'package:wanderer/provider/map_style_json_provider.dart';
 import 'package:wanderer/provider/objectbox_store_provider.dart';
 import 'package:wanderer/provider/region/tile_proxy_provider.dart';
@@ -203,26 +202,25 @@ class _TileProxySpikeScreenState extends ConsumerState<TileProxySpikeScreen> {
     );
   }
 
-  /// Composes the offline style through the REAL production
-  /// `rewriteStyleForProxy` transform -- mirrors the body Plan 04 will give
-  /// `TrailMap`/`navigation_screen`'s `_composeStyle`. The resulting style
-  /// carries exactly one static `<proxyBaseUrl>/vector/{z}/{x}/{y}.pbf`
-  /// source (and, if a DEM archive is downloaded anywhere, one
-  /// `.../dem/{z}/{x}/{y}.png` source) -- the proxy itself resolves per-tile
-  /// region coverage server-side ([resolveRegionForTile]), so this composed
-  /// style is NOT region-specific; the region picker only drives which
-  /// region the map flies to.
+  /// Composes the style through the REAL production `rewriteStyleForProxy`
+  /// transform -- mirrors the body `TrailMap`/`navigation_screen`'s
+  /// `_composeStyle` gives it. The resulting style carries exactly one
+  /// static `<proxyBaseUrl>/vector/{z}/{x}/{y}.pbf` source (and, if a DEM
+  /// archive is downloaded anywhere, one `.../dem/{z}/{x}/{y}.png` source)
+  /// -- the proxy itself resolves per-tile region coverage server-side
+  /// ([resolveRegionForTile]), so this composed style is NOT
+  /// region-specific; the region picker only drives which region the map
+  /// flies to. Glyphs and sprites now resolve through the proxy too (D-11),
+  /// so this harness no longer has to warm anything before composing.
   Future<void> _loadStyle() async {
     setState(() => _loadingStyle = true);
     try {
       final baseJson = await ref.read(mapStyleJsonProvider.future);
-      final cache = await ref.read(glyphSpriteCacheProvider.future);
       final decoded = jsonDecode(baseJson) as Map<String, dynamic>;
       final proxyBaseUrl = ref.read(tileProxyBaseUrlProvider);
 
       final composed = rewriteStyleForProxy(
         decoded,
-        cacheRoot: cache.root,
         proxyBaseUrl: proxyBaseUrl,
         dark: false,
       );

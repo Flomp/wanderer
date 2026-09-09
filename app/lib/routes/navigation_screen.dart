@@ -22,13 +22,11 @@ import 'package:wanderer/components/trail/elevation_profile.dart';
 import 'package:wanderer/components/trail/waypoint_sheet.dart';
 import 'package:wanderer/entities/active_navigation_entity.dart';
 import 'package:wanderer/i18n/app_localizations.dart';
-import 'package:wanderer/models/glyph_sprite_cache_paths.dart';
 import 'package:wanderer/models/navigate_response.dart';
 import 'package:wanderer/models/trail.dart';
 import 'package:wanderer/models/waypoint.dart';
 import 'package:wanderer/provider/auth_provider.dart';
 import 'package:wanderer/provider/foreground_position_stream_provider.dart';
-import 'package:wanderer/provider/glyph_sprite_cache_provider.dart';
 import 'package:wanderer/provider/local_settings_provider.dart';
 import 'package:wanderer/provider/map_style_json_provider.dart';
 import 'package:wanderer/provider/navigation_provider.dart';
@@ -359,10 +357,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   /// through [ml.MapController.setStyle] instead.
   String? _lastStyleJson;
 
-  /// Identity-keyed memo of [_composeStyle]'s last inputs/output — see the
+  /// Identity-keyed memo of [_composeStyle]'s last input/output — see the
   /// build() comment at the compose call site.
   String? _composeBaseInput;
-  GlyphSpriteCachePaths? _composeCacheInput;
   String? _composeOutput;
 
   /// [ml.MapOptions] built exactly once (first build with a resolved style):
@@ -372,8 +369,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   /// init-only anyway (style/theme changes post-creation go through
   /// [_swapStyle], never through options).
   ml.MapOptions? _mapOptions;
-
-  bool _cacheWarmed = false;
 
   /// Active pointer count on the map surface. `CameraChangeReason.apiGesture`
   /// fires identically for pan/pinch/rotate (no native sub-classification
@@ -1106,30 +1101,27 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  /// Composes the style JSON to hand to the map from the two resolved
-  /// inputs.
+  /// Composes the style JSON to hand to the map from the resolved input.
   ///
   /// Online: [baseJson] as-is. Offline: [baseJson] rewritten via
-  /// [rewriteStyleForProxy] so `glyphs`/`sprite` resolve from [cache] and the
-  /// protomaps/hillshade tiles resolve from the loopback tile proxy
-  /// — a single static XYZ source, with per-tile region coverage
-  /// resolved server-side (`resolveRegionForTile`) rather than a live
-  /// viewport query here. This screen's camera moves freely across a
-  /// session, unlike `TrailMap`'s fixed trail bounds, but the proxy's
-  /// per-request resolution means no viewport parameter is needed at all.
-  /// Returns null while a required input is still resolving — the caller
-  /// then shows the loading passthrough (initStyle path) or leaves the
-  /// mounted style unchanged (`_swapStyle` path). An uncovered viewport
-  /// resolves to a blank basemap via the proxy's own 404 responses.
-  String? _composeStyle(String? baseJson, GlyphSpriteCachePaths? cache) {
+  /// [rewriteStyleForProxy] so `glyphs`/`sprite`/tiles all resolve through
+  /// the loopback tile proxy — a single static XYZ source, with per-tile
+  /// region coverage resolved server-side (`resolveRegionForTile`) rather
+  /// than a live viewport query here. This screen's camera moves freely
+  /// across a session, unlike `TrailMap`'s fixed trail bounds, but the
+  /// proxy's per-request resolution means no viewport parameter is needed at
+  /// all. Returns null while [baseJson] is still resolving — the caller then
+  /// shows the loading passthrough (initStyle path) or leaves the mounted
+  /// style unchanged (`_swapStyle` path). An uncovered viewport is
+  /// redirected to the operator's upstream template by the proxy, so
+  /// coverage degrades per tile rather than per screen.
+  String? _composeStyle(String? baseJson) {
     if (baseJson == null) return null;
     if (!widget.isOffline) return baseJson;
-    if (cache == null) return null;
     try {
       final decoded = jsonDecode(baseJson) as Map<String, dynamic>;
       final offlineStyle = rewriteStyleForProxy(
         decoded,
-        cacheRoot: cache.root,
         proxyBaseUrl: ref.read(tileProxyBaseUrlProvider),
         dark:
             effectiveBrightness(ref.read(themeModeProvider)) == Brightness.dark,
@@ -1142,8 +1134,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   }
 
   /// Recomposes the (possibly offline-rewritten) style from current provider
-  /// state and swaps it onto the mounted controller in place. Theme/glyph
-  /// path only (unchanged mechanism) — the static proxy source is baked into
+  /// state and swaps it onto the mounted controller in place. Theme path
+  /// only (unchanged mechanism) — the static proxy source is baked into
   /// every composed style by construction, so no separate region-swap path
   /// is needed here.
   void _swapStyle() {
@@ -1152,10 +1144,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     final baseJson = widget.isOffline
         ? ref.read(offlineMapStyleJsonProvider).value
         : ref.read(mapStyleJsonProvider).value;
-    final cache = widget.isOffline
-        ? ref.read(offlineGlyphSpritePathsProvider).value
-        : null;
-    final json = _composeStyle(baseJson, cache);
+    final json = _composeStyle(baseJson);
     if (json != null && json != _lastStyleJson) {
       _lastStyleJson = json;
       controller.setStyle(json);
@@ -1302,18 +1291,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Cache warm on first open (mirrors TrailMap's caching pattern) —
-    // idempotent against the trail-download trigger. Skipped when offline:
-    // the warm is a network download, and the cache is already populated by
-    // the time an offline navigation session renders from it.
-    if (!_cacheWarmed && !widget.isOffline) {
-      _cacheWarmed = true;
-      ref.read(glyphSpriteCacheProvider.future).ignore();
-    }
-
-    // Live style swap: theme toggle or (offline) glyph/sprite cache warm
-    // swaps the composed style in place on the already-mounted map. Region
-    // coverage is resolved by the loopback tile proxy per-tile:
+    // Live style swap: theme toggle swaps the composed style in place on
+    // the already-mounted map. Region coverage is resolved by the loopback
+    // tile proxy per-tile:
     // a newly-downloaded region's tiles resolve the next time MapLibre
     // requests them (confirmed on-device, no remount needed) — no separate
     // region-change listener is required.
@@ -1338,7 +1318,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
     if (widget.isOffline) {
       ref.listen(offlineMapStyleJsonProvider, (_, _) => _swapStyle());
-      ref.listen(offlineGlyphSpritePathsProvider, (_, _) => _swapStyle());
     } else {
       ref.listen(mapStyleJsonProvider, (_, _) => _swapStyle());
     }
@@ -1374,23 +1353,14 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         ? ref.watch(offlineMapStyleJsonProvider)
         : ref.watch(mapStyleJsonProvider);
     final baseJson = baseAsync.value;
-    Object? error = baseAsync.error;
-
-    GlyphSpriteCachePaths? cache;
-    if (widget.isOffline) {
-      final cacheAsync = ref.watch(offlineGlyphSpritePathsProvider);
-      cache = cacheAsync.value;
-      error ??= cacheAsync.error;
-    }
+    final error = baseAsync.error;
 
     // Memoized on input identity: the offline path's compose is a full
     // style-JSON decode → rewrite → encode round-trip (100s of KB), far too
     // heavy to re-run on every incidental rebuild of this screen.
-    if (!identical(baseJson, _composeBaseInput) ||
-        !identical(cache, _composeCacheInput)) {
+    if (!identical(baseJson, _composeBaseInput)) {
       _composeBaseInput = baseJson;
-      _composeCacheInput = cache;
-      _composeOutput = _composeStyle(baseJson, cache);
+      _composeOutput = _composeStyle(baseJson);
     }
     final composed = _composeOutput;
     if (composed != null) _lastStyleJson = composed;

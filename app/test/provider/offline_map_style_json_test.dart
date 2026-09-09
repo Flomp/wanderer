@@ -71,7 +71,6 @@ void main() {
 
         final result = rewriteStyleForProxy(
           decoded,
-          cacheRoot: '/data/user/0/app.wanderer/app_flutter/map_cache',
           proxyBaseUrl: proxyBaseUrl,
         );
 
@@ -81,9 +80,9 @@ void main() {
           '$proxyBaseUrl/vector/{z}/{x}/{y}.pbf',
         ]);
 
-        // Glyphs + sprite resolve from the local file:// cache.
-        expect(result['glyphs'], startsWith('file://'));
-        expect(result['sprite'], startsWith('file://'));
+        // Glyphs + sprite resolve through the loopback proxy too.
+        expect(result['glyphs'], startsWith('http://127.0.0.1:'));
+        expect(result['sprite'], startsWith('http://127.0.0.1:'));
 
         // The inert placeholder is fully overwritten — it never reaches
         // MapLibre — and no live https:// endpoint survives in any URL field.
