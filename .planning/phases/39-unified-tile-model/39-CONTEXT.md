@@ -91,12 +91,44 @@ already satisfied — so even a later theme toggle cannot rescue it. Full trace 
 
 ### Connectivity and recovery
 
-- **D-12** — Recovery on Android is a deliberate `MapLibre.setConnected(false)` →
-  `setConnected(true)` pulse, exposed over a platform channel and fired when connectivity
-  returns. The permanent pin means the false→true edge that drives
-  `OnlineFileRequest::networkIsReachableAgain()` never occurs today. The `false` window must be
-  brief — the offline gate sits at `schedule()`. Documented fallback if the pulse drops
-  in-flight loopback requests: a full `setStyle` reload.
+- **D-12** — ~~Recovery on Android is a `setConnected(false)` → `setConnected(true)` pulse.~~
+  **REJECTED 2026-09-09 by on-device test** (see `39-01-SUMMARY.md` `## Risk gate outcome`).
+  The pulse fires correctly — channel round trip 2ms, `result.success(null)`, no exceptions —
+  and MapLibre re-schedules **nothing**: 82 Connection-class tile failures before the pulse,
+  **zero** tile requests after. The failed tiles are not pending requests waiting on a
+  connectivity edge; they are errored entries in the source's tile pyramid, already torn down
+  (`Request failed due to a permanent error: Canceled` appears *before* the pulse). There is
+  nothing for `networkIsReachableAgain()` to act on.
+
+  Note the D-12 rationale as originally written overstated its evidence: it could NOT be
+  confirmed that `UnknownHostException` maps to `Reason::Connection` in this build — the three
+  `org/maplibre/android/module/http/*` classes in the shipped
+  `android-sdk-opengl-13.0.3-pre0.aar` reference no exception types, so the classification is
+  C++-side and unverified from the artifact.
+
+- **D-12a** *(replaces D-12, decided 2026-09-09)* — **There is no automatic recovery
+  mechanism.** Recovery is user-initiated: panning or zooming requests tiles at new
+  coordinates, which are fresh requests and succeed immediately once service is back. The
+  developer accepted this explicitly. The `setStyle` reload fallback is NOT implemented — it
+  rebuilds every source, layer and image, dropping and re-adding the navigation screen's trail
+  track and breadcrumb on every connectivity regain, which is disproportionate to the problem.
+
+  This still kills the reported defect. The original complaint was that *nothing* on the screen
+  could bring online tiles back, because the offline style pointed every tile at the proxy with
+  no upstream to fall through to — panning into uncovered area meant blank forever. D-02's
+  redirect fixes that on its own.
+
+  **Known limitation, accepted:** `trail_panel.dart` mounts `TrailMap(disabled: true,
+  embedded: true, …)`, and `disabled` resolves to `MapGestures.none()`
+  (`trail_map.dart:225`). That map cannot be pan-recovered; its fixed camera never requests new
+  tile coordinates, so it recovers only when the widget remounts on navigation. Strictly better
+  than today (where it never recovers), and deliberately not mitigated.
+
+- **D-12b** — The now-dead pulse code is **removed**, not retained: `maplibre_connectivity_pulse.dart`,
+  the Kotlin `MethodChannel` handler and its `configureFlutterEngine` override, and the spike
+  harness's pulse control. `MainActivity.kt`'s comment reverts to justifying only the
+  `setConnected(true)` pin. Leaving an unused channel whose doc comment describes a rejected
+  mechanism is the exact hazard D-14 exists to prevent.
 
 - **D-13** — iOS gets no connectivity code. `MLNReachability` already fires `Reachable()` on
   regain, and Apple platform code contains no `NetworkStatus::Set(Offline)` call, so iOS never
@@ -107,9 +139,14 @@ already satisfied — so even a later theme toggle cannot rescue it. Full trace 
   URL to (fail to) reach" — a premise D-01 deletes. Leaving it standing would mislead the next
   reader into thinking the pin is still safe for the stated reason.
 
-- **D-15** — Something must re-probe connectivity when the radio regains service. Today nothing
-  does: `onlineStatusProvider` is optimistic-`true` and moves only on API traffic or an explicit
-  `refresh()`, and there is no `connectivity_plus` dependency.
+- **D-15** — ~~Something must re-probe connectivity when the radio regains service.~~
+  **DESCOPED 2026-09-09.** This existed only to trigger D-12's recovery. With D-12a there is
+  nothing to trigger, and the map no longer consults `onlineStatusProvider` at all — D-03 makes
+  the proxy connectivity-blind, so tile rendering is fully decoupled from that provider.
+  `onlineStatusProvider`'s optimistic-`true` staleness remains exactly as it was before this
+  phase, affecting the same non-map consumers (`guard_online`, `resolve_track_save_options`,
+  `import_trail_file`, `trail_sync_provider`, the offline banner). Pre-existing, not this
+  phase's to fix.
 
 ### Deletions
 

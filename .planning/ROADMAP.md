@@ -402,9 +402,16 @@ and this phase builds directly on the `TileProxyServer` they left in place.
 **Success Criteria** (what must be TRUE):
 
   1. **The recovery case.** A hiker opens a trail map in airplane mode, sees the downloaded
-     basemap, then regains service — and online tiles fill in around the downloaded region
-     *on the same screen*, without navigating away or reopening the trail. This is the defect
-     the phase exists to kill; it must be demonstrated on a physical device.
+     basemap, then regains service — and online tiles appear around the downloaded region
+     *on the same screen*, on the next pan or zoom, without navigating away or reopening the
+     trail. **Revised 2026-09-09:** originally worded as automatic fill-in with no interaction.
+     On-device testing rejected the mechanism that would have delivered that (see the risk-gate
+     note below), and the developer accepted user-initiated recovery instead. The defect the
+     phase exists to kill is that *nothing* on the screen could bring online tiles back — with
+     the offline style every tile pointed at the proxy with no upstream, so panning into
+     uncovered area was blank forever. Redirect-on-miss kills that on its own. Accepted
+     limitation: the gesture-disabled embedded map in `trail_panel.dart` recovers only on
+     remount.
 
   2. **No offline regression.** With the device in airplane mode, a downloaded trail still
      renders basemap, place-name labels, icons and hillshade at every zoom the map allows —
@@ -427,13 +434,26 @@ and this phase builds directly on the `TileProxyServer` they left in place.
   6. **No thermal regression while panning.** Online tile bytes must not start transiting the root
      isolate; panning cost stays at or below today's measured profile.
 
-**Risk gate**: criterion 1 rests on forcing MapLibre to retry Connection-failed requests. The
-intended mechanism is a deliberate `setConnected(false)` → `setConnected(true)` pulse on Android
-(the app pins the override permanently today, so the false→true edge that triggers
-`networkIsReachableAgain()` never occurs). **It is untested whether a brief `false` window drops
-in-flight loopback requests.** Prove that on a physical device before the phase invests in the
-style/provider collapse — the documented fallback is a full `setStyle` reload, which works but is
-heavy-handed. iOS needs no equivalent: `MLNReachability` already fires `Reachable()` on regain.
+**Risk gate — RESOLVED 2026-09-09, outcome: no automatic recovery.** The gate asked whether a
+`setConnected(false)` → `setConnected(true)` pulse could force MapLibre to retry Connection-failed
+requests. Tested on a physical Android device: **it cannot.** The pulse fires correctly (2ms channel
+round trip, `result.success(null)`, no exceptions) and MapLibre re-schedules nothing — 82
+Connection-class tile failures before, **zero** tile requests after. The failures are errored
+entries in the source's tile pyramid, not pending requests, so a connectivity edge has nothing to
+act on. Full evidence in `39-01-SUMMARY.md` `## Risk gate outcome`.
+
+The documented `setStyle` fallback was then **declined** as disproportionate (it rebuilds every
+source, layer and image, dropping the navigation screen's trail track and breadcrumb on each
+regain). Recovery is user-initiated instead — see criterion 1 and CONTEXT.md D-12a. The dead pulse
+code is removed by Plan 09 (D-12b).
+
+The gate also had to run *after* Plan 03 rather than before it: until redirect-on-miss existed,
+every tile pointed at loopback — reachable even in airplane mode — so no Connection-class failure
+could occur to test against. See `39-SEQUENCING-NOTE.md`.
+
+**Incidental confirmation:** the on-device DNS failures for `api.protomaps.com` prove MapLibre
+Native follows the 302 from loopback to the CDN on real hardware — the architecture's single
+load-bearing assumption, previously verified only from source.
 
 **Source material:** `39-RESEARCH-SOURCE.md` in this phase's directory carries the complete
 design and the MapLibre Native research behind it — each finding marked CONFIRMED or UNCERTAIN,
