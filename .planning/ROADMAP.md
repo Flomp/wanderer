@@ -504,7 +504,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 39-05-PLAN.md — `rewriteStyleForProxy` becomes the sole transform: loopback-only URLs, no cache root, maxzoom pins kept (D-01/08/11)
+- [x] 39-05-PLAN.md — `rewriteStyleForProxy` becomes the sole transform: loopback-only URLs, no cache root, maxzoom pins kept (D-01/08/11)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
