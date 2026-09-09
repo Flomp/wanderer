@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-07)
 
 **Core value:** A hiker can tap "Navigate" on any online trail and follow it step by step without leaving the app.
-**Current focus:** Planning next milestone (v1.9) — Phase 37 is the only phase already scoped and unscheduled
+**Current focus:** Planning next milestone (v1.9) — Phases 37 and 39 are scoped and unscheduled
 
 ## Current Position
 
