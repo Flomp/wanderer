@@ -77,6 +77,7 @@ import 'package:wanderer/provider/glyph_sprite_cache_provider.dart';
 import 'package:wanderer/provider/map_style_json_provider.dart';
 import 'package:wanderer/provider/objectbox_store_provider.dart';
 import 'package:wanderer/provider/region/tile_proxy_provider.dart';
+import 'package:wanderer/provider/online_status_provider.dart';
 import 'package:wanderer/services/maplibre_connectivity_pulse.dart';
 import 'package:wanderer/services/tile_proxy_server.dart';
 import 'package:wanderer/util/region/offline_style_rewriter.dart';
@@ -251,12 +252,29 @@ class _TileProxySpikeScreenState extends ConsumerState<TileProxySpikeScreen> {
   /// this file's header comment.
   Future<void> _pulseConnectivity() async {
     final timestamp = DateTime.now().toIso8601String();
+
+    // Probe BEFORE pulsing and refuse to fire while offline. A pulse fired
+    // into a still-offline device re-schedules every Connection-failed
+    // request into an immediate second failure, which is indistinguishable
+    // from "the pulse does not work" -- the exact false-negative that
+    // invalidated the first gate attempt (see 39-SEQUENCING-NOTE.md).
+    final online = await ref.read(onlineStatusProvider.notifier).refresh();
+    if (!online) {
+      _appendLog(
+        '[$timestamp] REFUSED -- backend still unreachable. Restore '
+        'connectivity, confirm it is really up, THEN pulse. A pulse fired '
+        'offline proves nothing.',
+      );
+      return;
+    }
+
+    _appendLog('[$timestamp] online confirmed -- pulse ARMED');
     _appendLog('[$timestamp] pulseMapLibreConnectivity() -- invoking...');
     await pulseMapLibreConnectivity();
     _appendLog(
-      '[$timestamp] pulseMapLibreConnectivity() -- returned. Watch for 30s: '
-      'do previously-blank tiles fill in? Do already-rendered downloaded '
-      'tiles blank or flicker?',
+      '[$timestamp] pulseMapLibreConnectivity() -- returned. Watch for 30s '
+      'WITHOUT touching the map: do previously-blank tiles fill in? Do any '
+      'already-rendered downloaded tiles blank or flicker?',
     );
   }
 
