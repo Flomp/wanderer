@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wanderer/util/region/offline_style_rewriter.dart';
+import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 
 /// Collects the URL-bearing string fields of a composed style — every source's
 /// `tiles` entries + `url`, plus top-level `glyphs`/`sprite`. Deliberately
 /// excludes `attribution` HTML, which legitimately carries `https://` links
-/// (mirrors offline_style_rewriter_test.dart's scheme-allowlist precedent).
+/// (mirrors proxy_style_rewriter_test.dart's scheme-allowlist precedent).
 List<String> _urlFields(Map<String, dynamic> style) {
   final urls = <String>[];
   final glyphs = style['glyphs'];

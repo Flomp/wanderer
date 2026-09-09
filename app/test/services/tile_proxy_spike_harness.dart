@@ -16,7 +16,7 @@
 //
 // It starts the REAL `TileProxyServer` (`lib/services/tile_proxy_server.dart`)
 // and composes the map's offline style through the REAL production
-// `rewriteStyleForProxy` transform (`lib/util/region/offline_style_rewriter.dart`)
+// `rewriteStyleForProxy` transform (`lib/util/region/proxy_style_rewriter.dart`)
 // -- exactly the wiring `main.dart` uses -- so a pass here
 // means the real pipeline works, not a bespoke test path.
 //
@@ -79,7 +79,7 @@ import 'package:wanderer/provider/region/tile_proxy_provider.dart';
 import 'package:wanderer/provider/online_status_provider.dart';
 import 'package:wanderer/services/maplibre_connectivity_pulse.dart';
 import 'package:wanderer/services/tile_proxy_server.dart';
-import 'package:wanderer/util/region/offline_style_rewriter.dart';
+import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -19,7 +19,7 @@ import 'package:wanderer/util/region/map_cache_path.dart';
 /// TileJSON document for the operator's hillshade DEM source. MUST stay
 /// byte-identical to `hillshadeSource.url` in both
 /// `assets/map/wanderer_light.json` and `assets/map/wanderer_dark.json` —
-/// the same lockstep discipline `offline_style_rewriter.dart`'s
+/// the same lockstep discipline `proxy_style_rewriter.dart`'s
 /// `_offlineDemMaxZoom` already documents against `generator.go`'s
 /// `demMaxZoom`. `hillshadeSource.url` is a TileJSON URL, not an XYZ
 /// template, so the DEM upstream redirect target has to be resolved from
@@ -45,7 +45,7 @@ const String kDemTileJsonUrl = 'https://tiles.mapterhorn.com/tilejson.json';
 /// Both `TrailMap` and `navigation_screen` bake a single STATIC
 /// `tiles: ['<baseUrl>/vector/{z}/{x}/{y}.pbf']` /
 /// `['<baseUrl>/dem/{z}/{x}/{y}.png']` XYZ source into every composed style
-/// (see `offline_style_rewriter.dart`'s `rewriteStyleForProxy`) instead
+/// (see `proxy_style_rewriter.dart`'s `rewriteStyleForProxy`) instead
 /// of incrementally `addSource`/`removeSource`-ing per-region `pmtiles://`
 /// archives. That incremental reconcile (an earlier
 /// `_reconcileRegionComposition` in `navigation_screen.dart`) had no

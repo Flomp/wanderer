@@ -42,7 +42,7 @@ import 'package:wanderer/provider/trail/trail_provider.dart';
 import 'package:wanderer/store/active_navigation_store.dart' as active_nav;
 import 'package:wanderer/util/format.dart';
 import 'package:wanderer/util/gpx/gpx.dart';
-import 'package:wanderer/util/region/offline_style_rewriter.dart';
+import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 import 'package:wanderer/util/geo/polyline.dart';
 import 'package:wanderer/util/route/planner_handoff.dart';
 import 'package:wanderer/models/route_travel_bucket.dart';

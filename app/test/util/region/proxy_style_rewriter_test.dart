@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wanderer/util/region/offline_style_rewriter.dart';
+import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 
 /// A minimal but representative online style: a `protomaps` vector source with an
 /// `https://` tile template, a `hillshadeSource` `raster-dem` source (only
