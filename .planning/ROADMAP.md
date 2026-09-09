@@ -476,7 +476,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 39-03-PLAN.md — proxy binds the persisted port behind the secret path segment and answers a coverage miss with 302, never 404 (D-02/03/04/05/06/07)
+- [x] 39-03-PLAN.md — proxy binds the persisted port behind the secret path segment and answers a coverage miss with 302, never 404 (D-02/03/04/05/06/07)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

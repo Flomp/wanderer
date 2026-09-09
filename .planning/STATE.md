@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: milestone
 status: executing
-stopped_at: Completed 39-02-PLAN.md
-last_updated: "2026-09-09T20:10:43.679Z"
+stopped_at: Completed 39-03-PLAN.md
+last_updated: "2026-09-09T20:40:24.391Z"
 last_activity: 2026-09-09 -- Phase 39 execution started
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 53
-  completed_plans: 46
+  completed_plans: 47
   percent: 63
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-07)
 ## Current Position
 
 Phase: 39 (unified-tile-model) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-09-09 -- Phase 39 execution started
 
@@ -190,6 +190,7 @@ v1.8 phase history archived — see `.planning/milestones/v1.8-ROADMAP.md` / MIL
 | Phase 38.1 P04 | 12min | 2 tasks | 2 files |
 | Phase 38.1 P05 | 35min | 3 tasks | 5 files |
 | Phase 39 P02 | 25min | 3 tasks | 8 files |
+| Phase 39 P03 | 40min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -447,6 +448,9 @@ Recent decisions affecting current work:
 - [Phase 39]: Port and secret are re-minted together, never independently, when the persisted tile proxy identity is invalid
 - [Phase 39]: persistTileProxyPort never touches the secret, so a bind-retry rebind cannot churn glyph/sprite cache keys
 - [Phase 39]: MapStyleSourcesNotifier rethrows on fetch failure with no persisted fallback, rather than fabricating a value
+- [Phase ?]: Task-2 stub target computation, wired to real persisted templates only in Task 3's commit, so each task's acceptance criteria could be verified against a compiling, testable intermediate state
+- [Phase ?]: Combined the segment-length and kind checks into a single unknown-route 404 branch so the final notFound count lands at exactly 3 (empty-path, bad-secret, unknown-route) per D-04's pinned count
+- [Phase ?]: DEM background resolve is kicked from _upstreamRedirectTargetFor once per DEM request (hit or miss), guarded by _demResolveInFlight, rather than only from the miss branches -- functionally equivalent and avoids duplicating the kick at four call sites
 
 ### Roadmap Evolution
 
@@ -603,8 +607,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-24 (recorded 
 
 ## Session Continuity
 
-Last session: 2026-09-09T20:10:43.657Z
-Stopped at: Completed 39-02-PLAN.md
+Last session: 2026-09-09T20:40:24.368Z
+Stopped at: Completed 39-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
