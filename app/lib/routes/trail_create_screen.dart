@@ -1229,7 +1229,6 @@ class _TrailCreateScreenState extends ConsumerState<TrailCreateScreen> {
                   trail: trail,
                   elevationMarkerPosition: _elevationMarkerPosition,
                   showLocation: true,
-                  offline: isOffline,
                   initialCameraFitPadding: EdgeInsets.only(
                     bottom: MediaQuery.of(context).size.height * 0.4 + 40,
                     left: 40,

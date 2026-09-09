@@ -152,11 +152,6 @@ class TrailPanel extends ConsumerWidget {
                         // surface scrolls in sync with the rest of the
                         // panel. See TrailMap's build site.
                         embedded: true,
-                        // Connectivity, NOT trail.isOffline — see
-                        // that field's doc comment. Online we
-                        // always prefer network tiles, even for a
-                        // downloaded trail.
-                        offline: !isOnline,
                         onTap: mapLocation == null
                             ? null
                             : (_) => context.push(mapLocation),
