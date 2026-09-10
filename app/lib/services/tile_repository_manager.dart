@@ -152,11 +152,10 @@ RegionEntity? resolveRegionForTile(
 /// no lifecycle-driven auto-cancel — since cancelling would now mean losing
 /// progress rather than merely pausing it.
 ///
-/// Mirrors `TrailDownloadService`'s construction-injection
-/// (`Store` + `Dio`) and `CancelToken`-based cancellation shape, but adds
-/// the region-archive-scale concerns that phase's small per-cell files
-/// never needed. The Riverpod wiring lives in `tile_repository_provider.dart`
-/// (Plan 05).
+/// Mirrors `TrailDownloadService`'s construction-injection (`Store` + `Dio`)
+/// and `CancelToken` cancellation, plus the archive-scale concerns its small
+/// per-cell files never needed. Riverpod wiring lives in
+/// `tile_repository_provider.dart`.
 class TileRepositoryManager {
   final Store _store;
   final Dio _api;

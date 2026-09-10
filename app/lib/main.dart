@@ -531,12 +531,11 @@ class _MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
 
   /// Reopens a navigation session, re-probing connectivity first.
   ///
-  /// The probe no longer selects a map style path — there is one style path
-  /// (D-01) and it resolves from a persisted `/map/style-sources` copy when
-  /// the network is unavailable, so a resumed session can no longer hang on
-  /// a loading spinner for want of that fetch. Resuming is still a good
-  /// moment to settle the app-wide `onlineStatusProvider`, though — Plan 09's
-  /// watchdog and the sync drain both key off it.
+  /// The probe no longer selects a style path — there is one, and it resolves
+  /// from a persisted `/map/style-sources` copy when the network is down, so a
+  /// resumed session cannot hang waiting on that fetch. Resuming is still a
+  /// good moment to settle `onlineStatusProvider`, which the sync drain keys
+  /// off.
   Future<void> _pushNavigationResume(
     ActiveNavigationEntity row,
     NavigateResponse response,

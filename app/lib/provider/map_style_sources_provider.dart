@@ -6,15 +6,13 @@ import 'package:wanderer/services/map_source_persistence.dart';
 
 part 'map_style_sources_provider.g.dart';
 
-/// D-09: the proxy needs the operator's upstream tile/glyph/sprite templates
-/// to build redirect targets, and an offline cold start must know them with
-/// no network call available. This notifier fetches `/map/style-sources` as
-/// its primary path and writes the result through to app-private ObjectBox
-/// storage on success — the same trust class as the value the app already
-/// embeds in every composed style today, just persisted rather than
-/// recomputed. On a failed fetch it falls back to the persisted copy; a
-/// first-ever run with no network and no persisted copy has genuinely no
-/// sources, so the original error is rethrown rather than fabricating one.
+/// Fetches `/map/style-sources` and writes the result through to app-private
+/// storage. The proxy builds redirect targets from these templates, and an
+/// offline cold start must know them with no network call available.
+///
+/// On a failed fetch it falls back to the persisted copy. A first-ever run
+/// with no network and nothing persisted genuinely has no sources, so the
+/// original error is rethrown rather than fabricated away.
 @Riverpod(keepAlive: true)
 class MapStyleSourcesNotifier extends _$MapStyleSourcesNotifier {
   @override

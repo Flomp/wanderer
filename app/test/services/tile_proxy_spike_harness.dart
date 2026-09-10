@@ -77,10 +77,9 @@ Future<void> main() async {
     ignoreExpires: false,
   );
 
-  // Start the REAL production proxy BEFORE runApp, and override the REAL
-  // tileProxyBaseUrlProvider with its resolved baseUrl -- exactly the
-  // wiring Plan 04 will add to main.dart. This harness never fakes the
-  // server; a pass here is a pass on the real pipeline.
+  // Start the real production proxy before runApp and override the real
+  // tileProxyBaseUrlProvider with its baseUrl -- the same wiring main.dart
+  // uses. This harness never fakes the server.
   final proxy = await TileProxyServer.start(store);
   debugPrint('[spike] TileProxyServer.start -> ${proxy.baseUrl}');
 
@@ -188,8 +187,8 @@ class _TileProxySpikeScreenState extends ConsumerState<TileProxySpikeScreen> {
   /// -- the proxy itself resolves per-tile region coverage server-side
   /// ([resolveRegionForTile]), so this composed style is NOT
   /// region-specific; the region picker only drives which region the map
-  /// flies to. Glyphs and sprites now resolve through the proxy too (D-11),
-  /// so this harness no longer has to warm anything before composing.
+  /// flies to. Glyphs and sprites resolve through the proxy too, so nothing
+  /// needs warming before composing.
   Future<void> _loadStyle() async {
     setState(() => _loadingStyle = true);
     try {

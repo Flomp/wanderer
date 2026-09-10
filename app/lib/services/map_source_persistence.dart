@@ -1,12 +1,9 @@
 /// Store-backed read/write of the operator's upstream tile/glyph/sprite
-/// templates and the resolved DEM template (D-09).
+/// templates and the resolved DEM template.
 ///
-/// The proxy needs the operator's upstream tile template to build redirect
-/// targets, and an offline cold start must know it with no network call
-/// available. This is the single home for reading and writing those
-/// persisted values, shared by the Riverpod side (`MapStyleSourcesNotifier`,
-/// which has a `Store` via `objectBoxProvider`) and the proxy (Plan 03,
-/// which has a raw `Store` and no `ProviderScope`).
+/// The proxy builds redirect targets from these, and an offline cold start
+/// must know them with no network call available. Single home for both the
+/// Riverpod side and the proxy, which holds a raw [Store].
 library;
 
 import 'dart:convert';

@@ -6,8 +6,8 @@ import 'package:wanderer/provider/map_style_sources_provider.dart';
 
 part 'map_style_json_provider.g.dart';
 
-/// The single style-JSON provider for the app (D-01, D-10). Loads the
-/// theme-appropriate MapLibre style asset and substitutes the operator's
+/// The app's single style-JSON provider. Loads the theme-appropriate
+/// MapLibre style asset and substitutes the operator's
 /// tile, glyph, and sprite endpoints from [mapStyleSourcesProvider], which
 /// resolves from the network when reachable and from its persisted copy when
 /// not — so this provider never blocks on connectivity.

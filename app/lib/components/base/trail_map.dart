@@ -114,21 +114,13 @@ class _TrailMapState extends ConsumerState<TrailMap>
     return _buildMap(context, styleJson);
   }
 
-  /// Composes the style JSON: always rewritten via [rewriteStyleForProxy],
-  /// online and offline alike (D-01). Returns null while [baseJson] is
-  /// still resolving or the rewrite rejects it.
+  /// Composes the style JSON, always via [rewriteStyleForProxy]. Returns null
+  /// while [baseJson] is still resolving or the rewrite rejects it.
   ///
-  /// One style is composed on one code path and always routed through the
-  /// loopback proxy; coverage is resolved per tile inside
-  /// `tile_proxy_server.dart`, which serves a downloaded region's archive
-  /// when one covers the tile and redirects to the operator's upstream
-  /// template when none does. A map opened without service therefore picks
-  /// up online tiles as soon as the radio returns, with no widget-level
-  /// mode to flip — unlike the deleted `TrailMap(offline: trail.isOffline)`,
-  /// which conflated "downloaded" with "no connectivity"
-  /// (`models/trail.dart:110-116`) and could never recover once pinned to a
-  /// style (see RESEARCH.md section 1). Deleting the parameter, rather than
-  /// fixing the flip, makes that whole bug class unrepresentable.
+  /// Coverage is resolved per tile inside `tile_proxy_server.dart` — a
+  /// downloaded region's archive when one covers the tile, a redirect upstream
+  /// when none does. A map opened without service therefore picks up online
+  /// tiles once the radio returns, with no widget-level mode to flip.
   String? _composeStyle(String? baseJson) {
     if (baseJson == null) return null;
     try {

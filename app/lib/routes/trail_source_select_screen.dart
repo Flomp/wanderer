@@ -91,10 +91,9 @@ class _TrailSourceSelectScreenState
     setState(() => _recorderLoading = true);
     try {
       // Settles the app-wide online status before the session starts — fire
-      // and forget, not awaited. The recorder's map no longer depends on it:
-      // there is one style path (D-01) and it resolves from the persisted
-      // `/map/style-sources` copy when the network is unreachable, so the
-      // probe no longer gates anything the recorder waits on.
+      // and forget. The recorder's map no longer depends on it: the one style
+      // path resolves from the persisted `/map/style-sources` copy when the
+      // network is unreachable.
       unawaited(ref.read(onlineStatusProvider.notifier).refresh());
       final pos = await ref
           .read(foregroundPositionStreamProvider.notifier)

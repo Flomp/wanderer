@@ -41,10 +41,9 @@ void main() {
       expect(isSafeRedirectTarget(Uri.parse('http://169.254.1.1/x')), isFalse);
     });
 
-    // 0.0.0.0 and :: are the unspecified ("any") addresses. They are neither
-    // loopback nor link-local, so they slipped past the two checks that catch
-    // 127.0.0.1 and ::1 -- yet connecting to them resolves to localhost, which
-    // is the same local-relay this guard exists to prevent (T-39-11).
+    // 0.0.0.0 and :: are the unspecified addresses: neither loopback nor
+    // link-local, so they slip past the checks catching 127.0.0.1 and ::1 --
+    // yet they resolve to localhost, the same local relay this guard prevents.
     test('rejects the IPv4 unspecified address', () {
       expect(isSafeRedirectTarget(Uri.parse('http://0.0.0.0/x')), isFalse);
     });

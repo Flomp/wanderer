@@ -15,28 +15,26 @@ class LocalSettingsEntity {
   /// reappear on every recording for anyone who has not gone to settings.
   bool backgroundLocationAsked;
 
-  /// D-05: the loopback tile proxy's persisted port. `0` means "not yet
-  /// minted". MapLibre's ambient cache keys on `resource.url` — the loopback
-  /// URL — so a port that changes every launch orphans the whole tile cache
-  /// on every cold start. Persisted (rather than recomputed) so the port
-  /// stays stable across launches while remaining random per install.
+  /// Loopback tile proxy port; `0` means not yet minted.
+  ///
+  /// MapLibre's ambient cache keys on the request URL, so a port that
+  /// changes every launch orphans the whole tile cache on each cold start.
+  /// Random per install, but persisted so it stays stable.
   int tileProxyPort;
 
-  /// D-06: the loopback tile proxy's per-install secret path segment.
-  /// Empty string means "not yet minted". A per-launch secret would defeat
-  /// D-05 by churning the cache key exactly as an ephemeral port does, so
-  /// this is minted once and persisted alongside the port.
+  /// Loopback tile proxy secret path segment; empty means not yet minted.
+  /// Minted once and persisted — a per-launch secret would churn the cache
+  /// key exactly as an unstable port does.
   String tileProxySecret;
 
-  /// D-09: `jsonEncode` of the last successful `/map/style-sources`
-  /// response. Empty string means "never fetched". Persisted so the proxy
-  /// can build an upstream redirect target on an offline cold start, when no
-  /// network call is available to re-fetch it.
+  /// `jsonEncode` of the last successful `/map/style-sources` response;
+  /// empty means never fetched. Lets the proxy build an upstream redirect
+  /// target on an offline cold start.
   String mapStyleSourcesJson;
 
-  /// D-09: the resolved hillshade DEM XYZ template. Empty string means
-  /// "not yet resolved". Persisted for the same offline-cold-start reason as
-  /// [mapStyleSourcesJson]; written by Plan 03.
+  /// Resolved hillshade DEM XYZ template; empty means not yet resolved.
+  /// Persisted for the same offline-cold-start reason as
+  /// [mapStyleSourcesJson].
   String demTileTemplate;
 
   LocalSettingsEntity({

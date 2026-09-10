@@ -36,9 +36,8 @@ const List<String> _spriteSuffixes = <String>[
 /// Resolves the on-disk layout of the shared glyph/sprite cache under
 /// `<app-docs>/map_cache` — pure path construction, no network and no
 /// downloads. Shared by [GlyphSpriteCache] (which then populates these paths
-/// online) and `TileProxyServer.start` (which reads them to serve
-/// local-first glyph/sprite requests with write-through into the same
-/// cache, D-11).
+/// online) and `TileProxyServer.start` (which reads them to serve local-first
+/// glyph/sprite requests with write-through into the same cache).
 Future<GlyphSpriteCachePaths> resolveGlyphSpriteCachePaths() async {
   final docs = await getApplicationDocumentsDirectory();
   final root = p.join(docs.path, 'map_cache');

@@ -16,96 +16,68 @@ import 'package:wanderer/services/tile_repository_manager.dart';
 import 'package:wanderer/util/geo/xyz_tile_bounds.dart';
 import 'package:wanderer/util/region/map_cache_path.dart';
 
-/// TileJSON document for the operator's hillshade DEM source. MUST stay
-/// byte-identical to `hillshadeSource.url` in both
-/// `assets/map/wanderer_light.json` and `assets/map/wanderer_dark.json` —
-/// the same lockstep discipline `proxy_style_rewriter.dart`'s
-/// `_offlineDemMaxZoom` already documents against `generator.go`'s
-/// `demMaxZoom`. `hillshadeSource.url` is a TileJSON URL, not an XYZ
-/// template, so the DEM upstream redirect target has to be resolved from
-/// this document's `tiles[0]` rather than read straight from a settings
-/// field (unlike the vector source, whose `/map/style-sources` `tileUrl` is
-/// already an XYZ template).
+/// TileJSON document for the operator's hillshade DEM source. Must stay
+/// byte-identical to `hillshadeSource.url` in `assets/map/wanderer_*.json`.
+///
+/// It is a TileJSON URL, not an XYZ template, so the DEM redirect target must
+/// be resolved from its `tiles[0]` — unlike the vector source, whose
+/// `/map/style-sources` `tileUrl` is already a template.
 const String kDemTileJsonUrl = 'https://tiles.mapterhorn.com/tilejson.json';
 
-/// Loopback-only `HttpServer` serving four route families: vector/DEM map
-/// tiles from a downloaded region's `.pmtiles` archive (falling back to a
-/// redirect to the operator's upstream CDN when no downloaded region covers
-/// a requested tile), and glyphs/sprites from the shared `map_cache`
-/// (falling back to a reverse-proxied, write-through-cached fetch).
+/// Loopback-only `HttpServer` serving four route families: vector/DEM tiles
+/// from a downloaded region's `.pmtiles` archive, and glyphs/sprites from the
+/// shared `map_cache`.
 ///
-/// **Tiles are never reverse-proxied (D-02)** — their per-pan volume is
-/// exactly what must stay off the root isolate, so a coverage miss answers a
-/// 302/503 pointing MapLibre at the upstream CDN directly. **Glyphs and
-/// sprites ARE reverse-proxied (D-11)** — a style load issues only a handful
-/// of them, and write-through caching is what lets a first-run-offline map
-/// render labels and icons at all, retiring the explicit cache warm this
-/// phase deletes from `trail_map.dart`.
+/// Tiles are never reverse-proxied — their per-pan volume must stay off the
+/// root isolate, so a coverage miss answers 302/503 and lets MapLibre fetch
+/// from the CDN itself. Glyphs and sprites are, since a style load issues only
+/// a handful and write-through caching is what lets a first-run-offline map
+/// render labels at all.
 ///
-/// Both `TrailMap` and `navigation_screen` bake a single STATIC
-/// `tiles: ['<baseUrl>/vector/{z}/{x}/{y}.pbf']` /
-/// `['<baseUrl>/dem/{z}/{x}/{y}.png']` XYZ source into every composed style
-/// (see `proxy_style_rewriter.dart`'s `rewriteStyleForProxy`) instead
-/// of incrementally `addSource`/`removeSource`-ing per-region `pmtiles://`
-/// archives. That incremental reconcile (an earlier
-/// `_reconcileRegionComposition` in `navigation_screen.dart`) had no
-/// reentrancy guard and desynced its tracking sets from the real native style
-/// under overlapping camera-idle events. Routing every tile request
-/// through this single static-source server structurally eliminates that bug
-/// class: there is no reconcile call left to race, because MapLibre Native's
-/// own viewport tracking decides which tiles to request, and every request
-/// resolves its winning region fresh, per-request, via [resolveRegionForTile].
+/// Every composed style bakes in one static XYZ source per kind rather than
+/// adding and removing per-region `pmtiles://` sources as the camera moves.
+/// That incremental reconcile used to desync its tracking sets under
+/// overlapping camera-idle events; here there is nothing left to race, because
+/// each request resolves its own region via [resolveRegionForTile].
 ///
-/// Binds `InternetAddress.loopbackIPv4` (never the wildcard-bind address) on
-/// a port drawn once at install from the IANA dynamic range and persisted
-/// (`tile_proxy_identity.dart`), because MapLibre's ambient cache keys on the
-/// loopback URL and a port that changes every launch orphans the whole tile
-/// cache on every cold start (RESEARCH.md 4.5). Unguessability is preserved
-/// by the port being random rather than fixed, and by every route requiring
-/// a per-install 128-bit secret path segment (`/$secret/vector/{z}/{x}/{y}.pbf`)
-/// that a co-resident app on the same device cannot predict.
+/// Binds `InternetAddress.loopbackIPv4` on a port drawn once at install from
+/// the IANA dynamic range and persisted (`tile_proxy_identity.dart`) —
+/// MapLibre's ambient cache keys on the loopback URL, so a port that changes
+/// every launch orphans the tile cache. Unguessability comes from that port
+/// being random and from every route requiring a per-install 128-bit secret
+/// path segment.
 class TileProxyServer {
   final HttpServer _server;
   final Store _store;
   final String _secret;
 
-  /// The shared glyph/sprite cache root, `<app-docs>/map_cache` — resolved
-  /// once via [resolveGlyphSpriteCachePaths] in [start] so the proxy, the
-  /// cache warm and the offline render path all agree on the same layout
-  /// (D-11).
+  /// Shared glyph/sprite cache root, `<app-docs>/map_cache` — resolved once in
+  /// [start] so the proxy and the render path agree on the layout.
   final String _cacheRoot;
 
-  /// In-flight upstream glyph/sprite fetches, keyed by local cache path, so a
-  /// style load requesting the same range/sprite file from several layers at
-  /// once produces exactly one upstream request (T-39-17).
+  /// In-flight upstream glyph/sprite fetches keyed by local cache path, so a
+  /// style load requesting the same range from several layers fetches once.
   final Map<String, Future<List<int>?>> _inFlightAssetFetches = {};
   final _ArchiveCache _archiveCache = _ArchiveCache();
 
-  /// Short-TTL memo of the region table. Every tile request used to run a
-  /// full `RegionEntity` `getAll()` — during a pan that's an ObjectBox table
-  /// scan per tile. Regions change on the order of user actions (download /
-  /// delete), so a few seconds of staleness is imperceptible: a deleted
-  /// region's file-vanished path already 404s via [_ArchiveCache.forPath],
-  /// and a fresh download's tiles appear within the TTL.
+  /// Short-TTL memo of the region table — a full `getAll()` per tile is a
+  /// table scan per tile during a pan. Regions change on user actions, so a
+  /// few seconds of staleness is imperceptible.
   List<RegionEntity>? _regionCache;
   DateTime? _regionCacheAt;
   static const _regionCacheTtl = Duration(seconds: 5);
 
-  /// Short-TTL memo of the operator's upstream vector/DEM templates (D-09),
-  /// mirroring [_regionCache]'s exact shape. Read per request (rather than
-  /// injected at construction) is deliberate: the proxy starts in `main()`
-  /// before `ProviderScope` exists and before the first `/map/style-sources`
-  /// fetch completes, so a first-run-online user's templates land after the
-  /// server is already serving, and a construction-time injection would
-  /// never see them.
+  /// Short-TTL memo of the operator's upstream templates. Read per request
+  /// rather than injected at construction: the proxy starts before the first
+  /// `/map/style-sources` fetch completes, so a first-run-online user's
+  /// templates land after the server is already serving.
   String? _vectorTemplate;
   String? _demTemplate;
   DateTime? _templatesAt;
   static const _templateCacheTtl = Duration(seconds: 30);
 
   /// True while a DEM TileJSON resolve is in flight, so at most one is ever
-  /// outstanding. Set before dispatching the HTTP GET in
-  /// [_resolveDemTemplate], cleared on every exit path (success or failure).
+  /// outstanding. Cleared on every exit path.
   bool _demResolveInFlight = false;
 
   void _refreshTemplatesIfStale() {
@@ -139,25 +111,18 @@ class TileProxyServer {
     this._cacheRoot,
   );
 
-  /// The resolved loopback base URL, e.g.
-  /// `http://127.0.0.1:54321/<32-hex-secret>` — exposed to the widget tree
-  /// via the [tile_proxy_provider.dart] `keepAlive` provider, overridden in
-  /// `main.dart` immediately after this starts. Carries the per-install
-  /// secret (D-06) and must never be logged or surfaced in user-visible UI.
+  /// Resolved loopback base URL, e.g.
+  /// `http://127.0.0.1:54321/<32-hex-secret>`. Carries the per-install secret
+  /// — never log it or surface it in UI.
   String get baseUrl => 'http://127.0.0.1:${_server.port}/$_secret';
 
-  /// Binds the loopback server and starts serving. Must be called after
-  /// `openStore()` (the request handler queries [RegionEntity] rows) and
-  /// before the first composed style is built, since the resolved [baseUrl]
-  /// is baked into that style's tile source templates.
+  /// Binds and starts serving. Must run after `openStore()` and before the
+  /// first composed style is built, since [baseUrl] is baked into that style.
   ///
-  /// Binds the persisted port (D-05) so the ambient tile cache survives a
-  /// cold start. If that port is occupied by another process, mints and
-  /// persists a fresh port (never re-minting the secret — D-06) and retries,
-  /// up to 4 total bind attempts. As a last resort, if every attempt fails,
-  /// binds an OS-assigned port (port `0`) so the app can still start; that
-  /// only orphans the ambient tile cache for this one launch, since the
-  /// still-persisted identity is retried on the next cold start.
+  /// Binds the persisted port so the ambient cache survives a cold start. If
+  /// it is occupied, mints and persists a fresh port (never re-minting the
+  /// secret) and retries, up to 4 attempts, then falls back to an OS-assigned
+  /// port — which orphans the cache for one launch only.
   static Future<TileProxyServer> start(Store store) async {
     final identity = resolveTileProxyIdentity(store);
     final secret = identity.secret;
@@ -172,9 +137,8 @@ class TileProxyServer {
         break;
       } catch (e) {
         // Catch every bind failure, not just SocketException: anything else
-        // (a platform channel error, an OS-level refusal surfaced as a plain
-        // Exception) would otherwise escape `start()` and crash before
-        // `runApp`, skipping the OS-assigned-port fallback documented above.
+        // would escape `start()` and crash before `runApp`, skipping the
+        // fallback above.
         debugPrint(
           'TileProxyServer: bind attempt $attempt/$maxBindAttempts on port '
           '$port failed — $e',
@@ -201,11 +165,9 @@ class TileProxyServer {
 
   /// Subscribes to the request stream.
   ///
-  /// Uses [Stream.listen] with `cancelOnError: false` rather than `await for`:
-  /// an `await for` loop terminates on the first stream-level error, which
-  /// would silently kill the proxy for the rest of the process lifetime and
-  /// leave every map blank until relaunch. A per-connection error must not be
-  /// fatal to the listener.
+  /// `Stream.listen` with `cancelOnError: false` rather than `await for`,
+  /// which terminates on the first stream error and would silently kill the
+  /// proxy for the rest of the process lifetime.
   void _serve() {
     _server.listen(
       (request) {
@@ -223,34 +185,25 @@ class TileProxyServer {
     );
   }
 
-  /// Closes the server and every cached archive handle. Used by tests /
-  /// defensive shutdown — production keeps the server alive for the process
-  /// lifetime (matches the `keepAlive` ObjectBox [Store] precedent; no
-  /// app-lifecycle-driven start/stop, since loopback binding has no
-  /// battery/network cost while idle).
+  /// Closes the server and every cached archive handle. Tests and defensive
+  /// shutdown only — production keeps it alive for the process lifetime, since
+  /// a loopback bind costs nothing while idle.
   Future<void> stop() async {
     await _archiveCache.closeAll();
     await _server.close(force: true);
   }
 
   /// Routes four families under `/<secret>/…`: `vector/{z}/{x}/{y}.pbf` and
-  /// `dem/{z}/{x}/{y}.png` (D-02 — never reverse-proxied, redirect-or-503
-  /// only), and `glyphs/{fontstack}/{range}.pbf` and `sprite/<fileName>`
-  /// (D-11 — local-first, reverse-proxied with write-through on a miss).
+  /// `dem/{z}/{x}/{y}.png` (redirect-or-503 only), plus
+  /// `glyphs/{fontstack}/{range}.pbf` and `sprite/<fileName>` (local-first,
+  /// reverse-proxied with write-through on a miss).
   ///
-  /// An empty path, a wrong/absent secret, an unknown route shape or kind,
-  /// or an out-of-range z/x/y answer HTTP 404/400 — these are genuinely
-  /// permanent: a request MapLibre would never legitimately repeat. A
-  /// covered tile is served from the winning region's archive; an uncovered
-  /// tile, a region with no package path, a vanished archive file and a tile
-  /// absent from a covering archive all redirect (302) to the operator's
-  /// upstream template; a request the proxy cannot yet name an upstream
-  /// target for answers 503 (retryable). See [_redirectOrUnavailable]. A
-  /// glyph/sprite request whose fontstack/range/filename is not whitelisted
-  /// 404s (genuinely permanent); one whose asset is not yet cached and has
-  /// no known upstream, or whose upstream fetch fails, answers 503 via
-  /// [_serveCachedAsset] — never 404, for the same D-04 reason tiles never
-  /// 404 on a retryable miss.
+  /// 404/400 is reserved for requests that can never succeed: empty path,
+  /// wrong secret, unknown route shape, out-of-range z/x/y, or a
+  /// non-whitelisted fontstack or filename. Every retryable miss — uncovered
+  /// tile, region with no package path, vanished archive, tile absent from a
+  /// covering archive, uncached asset with no known upstream — goes to
+  /// [_redirectOrUnavailable] instead.
   Future<void> _handle(HttpRequest request) async {
     final segments = request.uri.pathSegments;
     if (segments.isEmpty) {
@@ -274,9 +227,8 @@ class TileProxyServer {
       final x = int.tryParse(segments[3]);
       final y = int.tryParse(segments[4].split('.').first);
 
-      // Explicit bounds check BEFORE constructing a ZXY — never rely on
-      // ZXY's constructor `assert`, which is stripped in release builds
-      // — trusting that assert is an anti-pattern.
+      // Bounds-check before constructing a ZXY — its constructor `assert` is
+      // stripped in release builds.
       if (z == null ||
           x == null ||
           y == null ||
@@ -290,19 +242,13 @@ class TileProxyServer {
         return request.response.close();
       }
 
-      // Computed once, reused by every retryable-miss branch below
-      // (_redirectOrUnavailable): an uncovered tile, a region with no
-      // package path, a vanished archive file, and a tile absent from a
-      // covering archive all redirect to the same resolved upstream target.
+      // Computed once and reused by every retryable-miss branch below.
       final target = _upstreamRedirectTargetFor(kind, z: z, x: x, y: y);
 
       final tileBounds = tileToBounds(z, x, y);
-      // resolveRegionForTile is @visibleForTesting so its pure-function
-      // shape stays unit-testable without a live Store (matches
-      // bboxOverlaps'/splitRegionTilePaths' precedent) — this proxy handler
-      // is its one sanctioned production caller, mirroring the pmtiles
-      // package's own `fromReadAt` cross-file @visibleForTesting usage
-      // (pmtiles-1.2.0/lib/src/archive.dart).
+      // resolveRegionForTile is @visibleForTesting so its pure shape stays
+      // testable without a live Store; this handler is its one production
+      // caller.
       // ignore: invalid_use_of_visible_for_testing_member
       final region = resolveRegionForTile(
         _regions(),
@@ -316,16 +262,14 @@ class TileProxyServer {
       );
 
       if (region == null) {
-        // No downloaded region covers this tile — redirect upstream (D-02,
-        // D-04), never 404: this tile could still succeed via the CDN.
+        // No downloaded region covers this tile — redirect upstream rather
+        // than 404: it could still succeed via the CDN.
         return _redirectOrUnavailable(request, target);
       }
 
-      // The archive path is read ONLY from the winning region's own
-      // DownloadedTilePackageEntity.localFilePath — a DB-derived value
-      // already validated at write time via util/region/file_path.dart's
-      // assertValidRegionPath, NEVER assembled from the request path. This
-      // structurally eliminates path traversal.
+      // Archive path comes ONLY from the winning region's own localFilePath,
+      // validated at write time — never assembled from the request path. That
+      // is what eliminates traversal structurally.
       final localFilePath = kind == 'dem'
           ? region.demPackage.target?.localFilePath
           : region.vectorPackage.target?.localFilePath;
@@ -335,8 +279,8 @@ class TileProxyServer {
 
       final archive = await _archiveCache.forPath(localFilePath);
       if (archive == null) {
-        // The winning region's file no longer exists on disk (mid-session
-        // delete) — same retryable-miss outcome as no coverage.
+        // File gone mid-session (region deleted) — same retryable outcome as
+        // no coverage.
         return _redirectOrUnavailable(request, target);
       }
 
@@ -345,23 +289,20 @@ class TileProxyServer {
       try {
         bytes = tile.bytes();
       } on TileNotFoundException {
-        // Present in the covering archive's index but absent from its
-        // data — still retryable: the operator's upstream copy may have
-        // it.
+        // In the archive's index but absent from its data — still retryable
+        // via the operator's upstream copy.
         return _redirectOrUnavailable(request, target);
       }
 
-      // Serve decompressed bytes with NO Content-Encoding header (safer
-      // default than serving compressed bytes + Content-Encoding: gzip).
+      // Decompressed bytes with no Content-Encoding header — safer than
+      // serving compressed bytes plus the header.
       request.response.headers.contentType = ContentType.parse(
         tile.type.mimeType(),
       );
-      // Without a Cache-Control header MapLibre treats every offline tile
-      // as immediately expired and re-runs the whole HTTP →
-      // region-resolve → pmtiles read per pan revisit; with one, its
-      // ambient cache serves revisits directly. One day balances that
-      // against a re-downloaded region's updated tiles (same URLs)
-      // becoming visible.
+      // Without Cache-Control MapLibre treats every tile as immediately
+      // expired and re-runs the whole resolve + pmtiles read per pan revisit.
+      // One day balances that against a re-downloaded region's updated tiles
+      // (same URLs) becoming visible.
       request.response.headers.set(
         HttpHeaders.cacheControlHeader,
         'public, max-age=86400',
@@ -381,14 +322,11 @@ class TileProxyServer {
     return request.response.close();
   }
 
-  /// Handles `/<secret>/glyphs/{fontstack}/{range}.pbf` (D-11).
+  /// Handles `/<secret>/glyphs/{fontstack}/{range}.pbf`.
   ///
-  /// A non-whitelisted fontstack or a malformed range is a permanently
-  /// invalid route — [glyphCacheFilePath] throws [ArgumentError] and this
-  /// answers 404 without touching the filesystem (T-39-15). A whitelisted
-  /// request is served local-first, falling back to a reverse-proxied,
-  /// write-through-cached fetch of the operator's `glyphUrl` template (see
-  /// [_serveCachedAsset]).
+  /// A non-whitelisted fontstack or malformed range 404s without touching the
+  /// filesystem. A whitelisted request is served local-first, falling back to
+  /// a write-through-cached fetch of the operator's `glyphUrl`.
   Future<void> _handleGlyphRequest(
     HttpRequest request,
     List<String> segments,
@@ -408,9 +346,8 @@ class TileProxyServer {
       return request.response.close();
     }
 
-    // {fontstack} carries spaces — encode only for the REMOTE fetch URL; the
-    // on-disk directory keeps the literal name (glyphCacheFilePath, above),
-    // mirroring glyph_sprite_cache_provider.dart's exact substitution.
+    // {fontstack} carries spaces — encode only for the remote URL; the
+    // on-disk directory keeps the literal name.
     final sources = readPersistedMapStyleSources(_store);
     final upstreamUrl = sources?.glyphUrl
         .replaceAll('{fontstack}', Uri.encodeComponent(fontstack))
@@ -424,14 +361,11 @@ class TileProxyServer {
     );
   }
 
-  /// Handles `/<secret>/sprite/<fileName>` (D-11).
+  /// Handles `/<secret>/sprite/<fileName>`.
   ///
-  /// A non-whitelisted filename is a permanently invalid route —
-  /// [spriteCacheFilePath] throws [ArgumentError] and this answers 404
-  /// without touching the filesystem (T-39-15). `spriteUrl` is a
-  /// theme-agnostic base (`.../sprites/v4`); the whitelisted filename
-  /// already carries its `light`/`dark` variant, so no variant is appended
-  /// separately — the same trap `map_style_json_provider.dart` documents.
+  /// A non-whitelisted filename 404s without touching the filesystem.
+  /// `spriteUrl` is a theme-agnostic base and the whitelisted filename already
+  /// carries its `light`/`dark` variant, so no variant is appended.
   Future<void> _handleSpriteRequest(
     HttpRequest request,
     List<String> segments,
@@ -467,21 +401,15 @@ class TileProxyServer {
     );
   }
 
-  /// Serves a glyph/sprite asset local-first, falling back to a
-  /// reverse-proxied, write-through-cached upstream fetch (D-11 — the one
-  /// place this proxy fetches upstream bytes itself, affordable because a
-  /// style load issues only a handful of these).
+  /// Serves a glyph/sprite local-first, falling back to a write-through-cached
+  /// upstream fetch — the one place this proxy fetches bytes itself.
   ///
-  /// 1. If [localPath] exists on disk, serve it directly.
-  /// 2. Otherwise, if [upstreamUrl] is null or unsafe
-  ///    ([isSafeRedirectTarget]), answer 503 (never 404 — D-04: the
-  ///    template may simply not have been fetched yet and MapLibre must
-  ///    retry).
-  /// 3. Otherwise fetch [upstreamUrl] (deduplicated per [localPath] via
-  ///    [_inFlightAssetFetches]), write the bytes through to
-  ///    `<localPath>.part` and atomically [File.rename] to [localPath] on
-  ///    success, then serve them. On any failure, delete a partial `.part`
-  ///    if present and answer 503.
+  /// 1. Serve [localPath] if it exists.
+  /// 2. If [upstreamUrl] is null or unsafe, answer 503, never 404: the
+  ///    template may simply not have been fetched yet.
+  /// 3. Otherwise fetch it (deduplicated per [localPath]), write through via
+  ///    `<localPath>.part` + [File.rename], and serve. Any failure deletes the
+  ///    partial file and answers 503.
   Future<void> _serveCachedAsset(
     HttpRequest request, {
     required String localPath,
@@ -521,10 +449,8 @@ class TileProxyServer {
     return request.response.close();
   }
 
-  /// Fetches [upstreamUrl] into [localPath], deduplicated by [localPath] so
-  /// concurrent requests for the same asset produce exactly one upstream
-  /// fetch (T-39-17). Returns the fetched bytes on success, `null` on any
-  /// failure (non-200 response, or a thrown exception).
+  /// Fetches [upstreamUrl] into [localPath], deduplicated so concurrent
+  /// requests for the same asset produce one fetch. `null` on failure.
   Future<List<int>?> _fetchAndCacheAsset(String localPath, String upstreamUrl) {
     final inFlight = _inFlightAssetFetches[localPath];
     if (inFlight != null) return inFlight;
@@ -536,11 +462,9 @@ class TileProxyServer {
     return future;
   }
 
-  /// Downloads [upstreamUrl] via a plain `dart:io` HTTP client and writes
-  /// the bytes through to [localPath] atomically: written first to
-  /// `<localPath>.part`, then [File.rename]d — never left as a truncated
-  /// file a later local-first read could serve as complete (T-39-16).
-  /// Returns `null` and cleans up any partial file on any failure.
+  /// Downloads [upstreamUrl] and writes it through atomically — to
+  /// `<localPath>.part`, then [File.rename]d — so a truncated file is never
+  /// left where a later local-first read would serve it as complete.
   Future<List<int>?> _downloadAndWriteThrough(
     String localPath,
     String upstreamUrl,
@@ -577,15 +501,12 @@ class TileProxyServer {
   }
 
   /// Resolves this request's upstream redirect target from the persisted
-  /// vector/DEM templates (D-09), refreshing the TTL memo first.
+  /// templates, refreshing the TTL memo first.
   ///
-  /// A DEM request whose template is not yet known kicks off a one-shot
-  /// background resolve of [kDemTileJsonUrl] (see [_resolveDemTemplate])
-  /// and answers `null` (503) immediately — the resolve is usually done
-  /// well within MapLibre's ~1s 503 retry window, so the next DEM request
-  /// for the same tile typically succeeds. The vector template needs no
-  /// such resolution step: `/map/style-sources`' `tileUrl` is already an
-  /// XYZ template (D-09).
+  /// A DEM request with no known template kicks off a one-shot background
+  /// resolve and answers `null` (503) immediately; the resolve usually
+  /// completes within MapLibre's ~1s retry window. The vector template needs
+  /// no such step — `tileUrl` is already an XYZ template.
   String? _upstreamRedirectTargetFor(
     String kind, {
     required int z,
@@ -603,23 +524,15 @@ class TileProxyServer {
     return buildUpstreamRedirect(_vectorTemplate, z: z, x: x, y: y);
   }
 
-  /// One-shot resolution of the DEM upstream XYZ template from
-  /// [kDemTileJsonUrl]'s TileJSON document.
+  /// One-shot resolution of the DEM XYZ template from [kDemTileJsonUrl].
   ///
-  /// Uses a plain `dart:io` HTTP client (not Dio) — the proxy runs before
-  /// `ProviderScope` exists and must not depend on the authenticated API
-  /// client. This single low-volume JSON fetch is the one exception to
-  /// D-02's "never fetch upstream bytes" rule, in the same class D-11
-  /// already sanctions for glyphs and sprites: it happens at most once per
-  /// install, not once per tile.
+  /// Uses a plain `dart:io` client, not Dio: the proxy runs before
+  /// `ProviderScope` and must not depend on the authenticated API client.
   ///
-  /// Every failure path — a non-2xx response, malformed JSON, a missing or
-  /// empty `tiles` array, or a candidate that [buildUpstreamRedirect]
-  /// rejects — is swallowed with a `debugPrint`. A failed resolve must never
-  /// take the server down; DEM requests simply keep answering 503
-  /// (retried by MapLibre) until a later attempt succeeds. Only a validated
-  /// candidate is assigned to [_demTemplate] and persisted via
-  /// [writePersistedDemTileTemplate], so the next cold start starts with it.
+  /// Every failure — non-2xx, malformed JSON, missing `tiles`, or a candidate
+  /// [buildUpstreamRedirect] rejects — is swallowed with a `debugPrint`. DEM
+  /// requests keep answering 503 until a later attempt succeeds. Only a
+  /// validated candidate is persisted.
   Future<void> _resolveDemTemplate() async {
     final client = HttpClient();
     try {
@@ -650,18 +563,12 @@ class TileProxyServer {
     }
   }
 
-  /// Answers a retryable tile miss with either a 302 redirect to [target]
-  /// (when the proxy has a validated upstream target) or a 503 (when it does
-  /// not). This is the single shared answer for every retryable miss — an
-  /// uncovered tile, a region with no package path, a vanished archive file,
-  /// and a tile absent from a covering archive all reach this.
+  /// Answers a retryable miss: 302 to [target] when one is known, 503 when not.
   ///
-  /// The choice between 302 and 503 is deliberate and load-bearing: 503
-  /// (`Reason::Server`) backs off 1s ×3 then exponentially and IS retried by
-  /// MapLibre Native, whereas 404 (`Reason::NotFound`) backs off to
-  /// `Duration::max()` and a 204 (`noContent`) is persisted as an empty tile
-  /// row — both terminal. Never answer a tile that might succeed later with
-  /// either (D-04).
+  /// The choice is load-bearing. 503 (`Reason::Server`) backs off 1s ×3 then
+  /// exponentially and IS retried; 404 (`Reason::NotFound`) backs off to
+  /// `Duration::max()` and 204 is persisted as an empty tile — both terminal.
+  /// Never answer a tile that might succeed later with either.
   Future<void> _redirectOrUnavailable(HttpRequest request, String? target) {
     if (target != null) {
       request.response.statusCode = HttpStatus.found;
@@ -673,15 +580,13 @@ class TileProxyServer {
   }
 }
 
-/// Whether [uri] is safe to use as a redirect `Location` target: an absolute
-/// `http`/`https` URI with a non-empty host that is neither `localhost` nor
-/// a loopback/link-local address.
+/// Whether [uri] is safe as a redirect `Location`: absolute `http`/`https`,
+/// non-empty host, not `localhost` or a loopback/link-local address.
 ///
-/// Rejecting loopback and link-local targets is what prevents the proxy
-/// from redirecting a request back into itself — an infinite redirect loop
-/// that would exhaust OkHttp's 20-hop limit and burn the request — and is
-/// the guard that keeps a tampered or stale persisted template from turning
-/// the proxy into a relay to another local listener (T-39-11).
+/// Rejecting local targets prevents the proxy redirecting into itself — an
+/// infinite loop that would exhaust OkHttp's 20-hop limit — and stops a
+/// tampered or stale template turning it into a relay to another local
+/// listener.
 @visibleForTesting
 bool isSafeRedirectTarget(Uri uri) {
   if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
@@ -690,10 +595,9 @@ bool isSafeRedirectTarget(Uri uri) {
   if (uri.host.isEmpty || uri.host == 'localhost') return false;
   final address = InternetAddress.tryParse(uri.host);
   if (address != null) {
-    // `0.0.0.0` / `::` are the unspecified ("any") addresses. They are neither
-    // loopback nor link-local, so the two checks below miss them, yet
-    // connecting to them resolves to localhost on every platform this app
-    // ships to — the exact local-relay the guard exists to prevent (T-39-11).
+    // `0.0.0.0` / `::` are the unspecified addresses: neither loopback nor
+    // link-local, so the checks below miss them, yet they resolve to
+    // localhost — the same local relay this guard exists to prevent.
     if (address == InternetAddress.anyIPv4 ||
         address == InternetAddress.anyIPv6) {
       return false;
@@ -703,16 +607,13 @@ bool isSafeRedirectTarget(Uri uri) {
   return true;
 }
 
-/// Substitutes `{z}`/`{x}`/`{y}` into [template] and validates the result as
-/// a safe absolute redirect target, returning `null` on any failure:
-/// [template] is `null`/empty, is missing one of the three tokens, fails to
-/// parse as a URI once substituted, or is rejected by
-/// [isSafeRedirectTarget].
+/// Substitutes `{z}`/`{x}`/`{y}` into [template] and validates the result,
+/// returning `null` if the template is empty, missing a token, unparseable
+/// once substituted, or rejected by [isSafeRedirectTarget].
 ///
-/// Validation runs against the SUBSTITUTED URI, not the raw template, so a
-/// template whose host is only malformed once tokens are filled is still
-/// caught. The upstream vector template legitimately carries a query string
-/// (the operator's `?key=` parameter) — substitution does not touch it.
+/// Validation runs against the substituted URI, so a host that is only
+/// malformed once tokens are filled is still caught. The vector template
+/// legitimately carries a `?key=` query string; substitution leaves it alone.
 @visibleForTesting
 String? buildUpstreamRedirect(
   String? template, {
@@ -736,11 +637,9 @@ String? buildUpstreamRedirect(
   return substituted;
 }
 
-/// Constant-time equality, used by [TileProxyServer._handle] to compare a
-/// request's secret path segment against the per-install secret (D-06).
-/// Compares lengths once, then XOR-accumulates every code unit with no
-/// early exit on the first mismatched character — an early return would let
-/// a co-resident process on the same device time-oracle the secret one
+/// Constant-time equality for the request's secret path segment. Compares
+/// lengths once, then XOR-accumulates every code unit with no early exit — an
+/// early return would let a co-resident process time-oracle the secret one
 /// character at a time.
 bool _constantTimeEquals(String a, String b) {
   if (a.length != b.length) return false;
@@ -751,31 +650,23 @@ bool _constantTimeEquals(String a, String b) {
   return accumulator == 0;
 }
 
-/// Bounded LRU cache of open [PmTilesArchive] handles, keyed by absolute file
-/// path — never reopen `PmTilesArchive.fromFile` per request (each open
-/// re-reads/parses the archive header and root directory). Capped at a small
-/// fixed size so an unbounded number of distinct regions visited in one
-/// session can't leave an ever-growing set of open file handles. Evicts (and
-/// treats as a cache miss) any path whose backing file no longer exists on
-/// disk, covering a mid-session region delete.
+/// Bounded LRU cache of open [PmTilesArchive] handles keyed by absolute path —
+/// each open re-reads the archive header and root directory, so never reopen
+/// per request. Capped so many distinct regions in one session cannot leave an
+/// ever-growing set of open handles. Treats a vanished file as a miss.
 class _ArchiveCache {
   static const int _capacity = 8;
 
-  /// Insertion-ordered (Dart `Map` guarantees this), doubling as the LRU
-  /// recency list: [forPath] re-inserts an entry on every hit, so
-  /// `_open.keys.first` is genuinely the least-recently-USED entry rather
-  /// than merely the oldest-opened one.
+  /// Insertion-ordered, doubling as the LRU recency list: [forPath] re-inserts
+  /// on every hit, so `_open.keys.first` is the least-recently-used entry.
   final Map<String, PmTilesArchive> _open = {};
 
   /// Opens currently in flight, keyed by path.
   ///
   /// Without this, two concurrent requests for the same uncached path both
-  /// miss the cache, both `await PmTilesArchive.fromFile`, and the second
-  /// assignment orphans the first handle without closing it — a file
-  /// descriptor leaked past [_capacity] on every occurrence. MapLibre bursts
-  /// many tile requests at once when the camera enters a region, so that race
-  /// is the normal case rather than an edge case. Mirrors the
-  /// `_inFlightAssetFetches` memo the server uses for glyph/sprite fetches.
+  /// miss, both open a handle, and the second assignment orphans the first
+  /// without closing it. MapLibre bursts tile requests when the camera enters
+  /// a region, so that race is the normal case.
   final Map<String, Future<PmTilesArchive?>> _opening = {};
 
   /// Returns the archive at [path], opening (and caching) it if not already
@@ -786,8 +677,7 @@ class _ArchiveCache {
       return null;
     }
 
-    // Hit: remove + re-insert so this entry moves to the most-recently-used
-    // end of the insertion order.
+    // Hit: remove + re-insert to move this entry to most-recently-used.
     final cached = _open.remove(path);
     if (cached != null) {
       _open[path] = cached;
@@ -808,18 +698,17 @@ class _ArchiveCache {
     try {
       final archive = await PmTilesArchive.fromFile(File(path));
 
-      // Defensive: never overwrite a live handle. If another caller installed
-      // one while this open was in flight, close the loser rather than
-      // orphaning it — that leak is the bug this memo exists to prevent.
+      // Never overwrite a live handle: if another caller installed one while
+      // this open was in flight, close the loser rather than orphaning it.
       final existing = _open[path];
       if (existing != null) {
         await archive.close();
         return existing;
       }
 
-      // Evict AFTER the open succeeds, so a failed open never costs a live
-      // handle. Briefly exceeding [_capacity] by one is cheaper than closing
-      // a handle a concurrent request is about to read from.
+      // Evict AFTER a successful open, so a failed open never costs a live
+      // handle. Briefly exceeding [_capacity] beats closing a handle a
+      // concurrent request is about to read.
       while (_open.length >= _capacity) {
         await _evict(_open.keys.first);
       }

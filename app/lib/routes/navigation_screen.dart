@@ -1099,9 +1099,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  /// Composes the style JSON to hand to the map from the resolved input:
-  /// always rewritten via [rewriteStyleForProxy], online and offline alike
-  /// (D-01). Returns null while [baseJson] is still resolving — the caller
+  /// Composes the style JSON to hand to the map, always via
+  /// [rewriteStyleForProxy].
+  /// Returns null while [baseJson] is still resolving — the caller
   /// then shows the loading passthrough (initStyle path) or leaves the
   /// mounted style unchanged (`_swapStyle` path).
   ///
