@@ -33,26 +33,6 @@
 //       confirmed necessary/sufficient on real hardware (watch `adb logcat`
 //       for `CLEARTEXT ... not permitted`, or iOS ATS failures, alongside
 //       this harness's own log panel/debugPrint output)
-//   (f) the D-12 `setConnected` recovery pulse, on a physical Android
-//       device, with a region already downloaded so local tiles exist:
-//         1. `cd app && flutter run -t test/services/tile_proxy_spike_harness.dart`
-//         2. Load the map and pan until tiles render.
-//         3. Enable airplane mode. Pan into an area with no downloaded
-//            coverage. Expect those tiles to stay blank (their loopback
-//            request failed with `Reason::Connection`) while the
-//            downloaded-region tiles keep rendering.
-//         4. While still panning slowly (so loopback requests are genuinely
-//            in flight), disable airplane mode and wait ~5 seconds for the
-//            radio to attach.
-//         5. Press "Pulse connectivity (Android)" exactly once.
-//         6. Observe for 30 seconds without touching the map: do the
-//            previously-blank areas fill in? And -- the load-bearing
-//            question -- do any tiles that were already rendering from the
-//            downloaded region go blank or flicker?
-//       Read: previously-blank areas filling in and downloaded tiles
-//       staying intact => pulse works. Downloaded tiles blanking/flickering,
-//       or nothing filling in => pulse is unsafe or ineffective.
-//
 // This file is throwaway -- delete or ignore it once the question above is
 // settled. It is intentionally
 // kept out of `router_provider.dart` / production navigation (its location
@@ -76,8 +56,6 @@ import 'package:wanderer/provider/cookie_jar_provider.dart';
 import 'package:wanderer/provider/map_style_json_provider.dart';
 import 'package:wanderer/provider/objectbox_store_provider.dart';
 import 'package:wanderer/provider/region/tile_proxy_provider.dart';
-import 'package:wanderer/provider/online_status_provider.dart';
-import 'package:wanderer/services/maplibre_connectivity_pulse.dart';
 import 'package:wanderer/services/tile_proxy_server.dart';
 import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 
@@ -242,40 +220,6 @@ class _TileProxySpikeScreenState extends ConsumerState<TileProxySpikeScreen> {
     }
   }
 
-  /// Test case (f): calls the REAL production [pulseMapLibreConnectivity]
-  /// (the D-12 `setConnected(false)` -> `setConnected(true)` pulse over the
-  /// `pulseConnected` method channel) and logs the attempt with a
-  /// timestamp so a human can correlate it against on-screen tile behavior
-  /// during the six-step airplane-mode-recovery procedure documented in
-  /// this file's header comment.
-  Future<void> _pulseConnectivity() async {
-    final timestamp = DateTime.now().toIso8601String();
-
-    // Probe BEFORE pulsing and refuse to fire while offline. A pulse fired
-    // into a still-offline device re-schedules every Connection-failed
-    // request into an immediate second failure, which is indistinguishable
-    // from "the pulse does not work" -- the exact false-negative that
-    // invalidated the first gate attempt (see 39-SEQUENCING-NOTE.md).
-    final online = await ref.read(onlineStatusProvider.notifier).refresh();
-    if (!online) {
-      _appendLog(
-        '[$timestamp] REFUSED -- backend still unreachable. Restore '
-        'connectivity, confirm it is really up, THEN pulse. A pulse fired '
-        'offline proves nothing.',
-      );
-      return;
-    }
-
-    _appendLog('[$timestamp] online confirmed -- pulse ARMED');
-    _appendLog('[$timestamp] pulseMapLibreConnectivity() -- invoking...');
-    await pulseMapLibreConnectivity();
-    _appendLog(
-      '[$timestamp] pulseMapLibreConnectivity() -- returned. Watch for 30s '
-      'WITHOUT touching the map: do previously-blank tiles fill in? Do any '
-      'already-rendered downloaded tiles blank or flicker?',
-    );
-  }
-
   /// Flies the already-mounted map to the selected region's bounds -- used
   /// so a human can move between regions (including a newly-downloaded one,
   /// test case d) without ever remounting the `ml.MapLibreMap` widget.
@@ -413,10 +357,6 @@ class _TileProxySpikeScreenState extends ConsumerState<TileProxySpikeScreen> {
                           ? null
                           : _flyToSelectedRegion,
                       child: const Text('Fly to selected region'),
-                    ),
-                    ElevatedButton(
-                      onPressed: _pulseConnectivity,
-                      child: const Text('Pulse connectivity (Android)'),
                     ),
                   ],
                 ),
