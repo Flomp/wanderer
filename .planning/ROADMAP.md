@@ -517,7 +517,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 39-09-PLAN.md — connectivity-regain re-probe, fire the recovery mechanism, verify criteria 1/2/5/6 on device (D-15/12/03)
+- [x] 39-09-PLAN.md — connectivity-regain re-probe, fire the recovery mechanism, verify criteria 1/2/5/6 on device (D-15/12/03)
 
 ---
 
