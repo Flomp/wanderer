@@ -37,7 +37,9 @@ findings:
   warning: 4
   info: 0
   total: 5
-status: issues_found
+status: resolved
+resolved: 5
+resolved_in: 39-unified-tile-model (post-review fix pass)
 ---
 
 # Phase 39: Unified Tile Model — Code Review Report
@@ -222,3 +224,41 @@ Future<void> _serve() async {
 _Reviewed: 2026-09-10_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+
+---
+
+## Resolution
+
+All five findings were fixed in a single post-review pass on
+`app/lib/services/tile_proxy_server.dart`. `flutter analyze` clean; `flutter test`
+1134 passed + 1 skip, unchanged, plus 3 new cases in `tile_proxy_redirect_test.dart`.
+
+| Finding | Fix |
+|---|---|
+| **Critical** — fd leak in `_ArchiveCache.forPath` | Added an `_opening` in-flight memo keyed by path, mirroring the server's existing `_inFlightAssetFetches` pattern, so concurrent misses share one open instead of each opening a handle. Added a defensive never-overwrite-a-live-handle branch that closes the loser rather than orphaning it. Eviction moved to *after* a successful open, so a failed open never costs a live handle. |
+| **W1** — cache documented LRU but behaved FIFO | `forPath` now removes and re-inserts on a hit, so `_open.keys.first` is genuinely least-recently-*used*. Doc comment corrected to state the invariant rather than hedge with "LRU-style". |
+| **W2** — `isSafeRedirectTarget` accepted `0.0.0.0` | Explicit rejection of `InternetAddress.anyIPv4` and `anyIPv6`. Covered by 3 new tests (`0.0.0.0`, `0.0.0.0:8080`, `[::]`). |
+| **W3** — `_serve()` died silently on a stream error | Switched from `await for` (which terminates on the first error, killing the proxy for the process lifetime) to `Stream.listen` with `cancelOnError: false` and an `onError` that logs and continues. `_serve()` is now `void`; its call site dropped `unawaited`. |
+| **W4** — bind retry caught only `SocketException` | Widened to `catch (e)` with a diagnostic `debugPrint`, so any bind failure still reaches the documented OS-assigned-port fallback instead of escaping `start()` and crashing before `runApp`. |
+
+### Residual, knowingly accepted
+
+**Capacity eviction can still close a handle an in-flight request holds.** Fully
+eliminating it needs refcounting on `PmTilesArchive`, which is disproportionate: eviction
+only triggers past 8 distinct archives in one session, true-LRU ordering now makes the
+victim the least-recently-used entry, and a lost race surfaces as the proxy's existing
+HTTP 500 — `Reason::Server` in MapLibre, which retries with backoff. It degrades to a
+retried tile, not a permanently blank one.
+
+**The Critical fix has no direct unit test.** `_ArchiveCache` is private and exercising
+the concurrent-open path needs a live `HttpServer` plus real `.pmtiles` archives. The
+change is reasoned and analyzer-clean, but it is not proven by a regression test — worth
+knowing if this code is touched again.
+
+### Provenance note
+
+`_ArchiveCache` was introduced in Phase 25.1 (`71643353`); Phase 39 did not change
+`forPath`'s logic. The leak predates this phase. Phase 39 made it materially worse by
+turning the proxy from an offline-only path into the single always-on tile path for every
+map in the app, so the burst-on-region-entry case now happens constantly.

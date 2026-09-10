@@ -170,7 +170,15 @@ class TileProxyServer {
       try {
         server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
         break;
-      } on SocketException {
+      } catch (e) {
+        // Catch every bind failure, not just SocketException: anything else
+        // (a platform channel error, an OS-level refusal surfaced as a plain
+        // Exception) would otherwise escape `start()` and crash before
+        // `runApp`, skipping the OS-assigned-port fallback documented above.
+        debugPrint(
+          'TileProxyServer: bind attempt $attempt/$maxBindAttempts on port '
+          '$port failed — $e',
+        );
         if (attempt == maxBindAttempts) break;
         port = mintTileProxyIdentity().port;
         persistTileProxyPort(store, port);
@@ -187,19 +195,32 @@ class TileProxyServer {
     }
 
     final proxy = TileProxyServer._(server, store, secret, cachePaths.root);
-    unawaited(proxy._serve());
+    proxy._serve();
     return proxy;
   }
 
-  Future<void> _serve() async {
-    await for (final request in _server) {
-      unawaited(
-        _handle(request).catchError((Object _) {
-          request.response.statusCode = HttpStatus.internalServerError;
-          return request.response.close();
-        }),
-      );
-    }
+  /// Subscribes to the request stream.
+  ///
+  /// Uses [Stream.listen] with `cancelOnError: false` rather than `await for`:
+  /// an `await for` loop terminates on the first stream-level error, which
+  /// would silently kill the proxy for the rest of the process lifetime and
+  /// leave every map blank until relaunch. A per-connection error must not be
+  /// fatal to the listener.
+  void _serve() {
+    _server.listen(
+      (request) {
+        unawaited(
+          _handle(request).catchError((Object _) {
+            request.response.statusCode = HttpStatus.internalServerError;
+            return request.response.close();
+          }),
+        );
+      },
+      onError: (Object e) {
+        debugPrint('TileProxyServer: request stream error (continuing) — $e');
+      },
+      cancelOnError: false,
+    );
   }
 
   /// Closes the server and every cached archive handle. Used by tests /
@@ -668,8 +689,16 @@ bool isSafeRedirectTarget(Uri uri) {
   }
   if (uri.host.isEmpty || uri.host == 'localhost') return false;
   final address = InternetAddress.tryParse(uri.host);
-  if (address != null && (address.isLoopback || address.isLinkLocal)) {
-    return false;
+  if (address != null) {
+    // `0.0.0.0` / `::` are the unspecified ("any") addresses. They are neither
+    // loopback nor link-local, so the two checks below miss them, yet
+    // connecting to them resolves to localhost on every platform this app
+    // ships to — the exact local-relay the guard exists to prevent (T-39-11).
+    if (address == InternetAddress.anyIPv4 ||
+        address == InternetAddress.anyIPv6) {
+      return false;
+    }
+    if (address.isLoopback || address.isLinkLocal) return false;
   }
   return true;
 }
@@ -722,18 +751,32 @@ bool _constantTimeEquals(String a, String b) {
   return accumulator == 0;
 }
 
-/// Bounded LRU-style cache of open [PmTilesArchive] handles, keyed by
-/// absolute file path — never reopen `PmTilesArchive.fromFile` per request
-/// (each open re-reads/parses the archive header and root directory).
-/// Capped at a small fixed size so an unbounded number of distinct regions
-/// visited in one session can't leave an ever-growing set of open file
-/// handles. Evicts (and treats as a cache miss) any path whose
-/// backing file no longer exists on disk, covering a mid-session region
-/// delete.
+/// Bounded LRU cache of open [PmTilesArchive] handles, keyed by absolute file
+/// path — never reopen `PmTilesArchive.fromFile` per request (each open
+/// re-reads/parses the archive header and root directory). Capped at a small
+/// fixed size so an unbounded number of distinct regions visited in one
+/// session can't leave an ever-growing set of open file handles. Evicts (and
+/// treats as a cache miss) any path whose backing file no longer exists on
+/// disk, covering a mid-session region delete.
 class _ArchiveCache {
   static const int _capacity = 8;
 
+  /// Insertion-ordered (Dart `Map` guarantees this), doubling as the LRU
+  /// recency list: [forPath] re-inserts an entry on every hit, so
+  /// `_open.keys.first` is genuinely the least-recently-USED entry rather
+  /// than merely the oldest-opened one.
   final Map<String, PmTilesArchive> _open = {};
+
+  /// Opens currently in flight, keyed by path.
+  ///
+  /// Without this, two concurrent requests for the same uncached path both
+  /// miss the cache, both `await PmTilesArchive.fromFile`, and the second
+  /// assignment orphans the first handle without closing it — a file
+  /// descriptor leaked past [_capacity] on every occurrence. MapLibre bursts
+  /// many tile requests at once when the camera enters a region, so that race
+  /// is the normal case rather than an edge case. Mirrors the
+  /// `_inFlightAssetFetches` memo the server uses for glyph/sprite fetches.
+  final Map<String, Future<PmTilesArchive?>> _opening = {};
 
   /// Returns the archive at [path], opening (and caching) it if not already
   /// cached. Returns `null` when [path] no longer exists on disk.
@@ -743,17 +786,49 @@ class _ArchiveCache {
       return null;
     }
 
-    final cached = _open[path];
-    if (cached != null) return cached;
-
-    if (_open.length >= _capacity) {
-      final oldestPath = _open.keys.first;
-      await _evict(oldestPath);
+    // Hit: remove + re-insert so this entry moves to the most-recently-used
+    // end of the insertion order.
+    final cached = _open.remove(path);
+    if (cached != null) {
+      _open[path] = cached;
+      return cached;
     }
 
-    final archive = await PmTilesArchive.fromFile(File(path));
-    _open[path] = archive;
-    return archive;
+    final inFlight = _opening[path];
+    if (inFlight != null) return inFlight;
+
+    final future = _openAndCache(path);
+    _opening[path] = future;
+    return future;
+  }
+
+  /// Opens [path] and installs it in [_open], evicting down to [_capacity]
+  /// first. Always clears its own [_opening] entry.
+  Future<PmTilesArchive?> _openAndCache(String path) async {
+    try {
+      final archive = await PmTilesArchive.fromFile(File(path));
+
+      // Defensive: never overwrite a live handle. If another caller installed
+      // one while this open was in flight, close the loser rather than
+      // orphaning it — that leak is the bug this memo exists to prevent.
+      final existing = _open[path];
+      if (existing != null) {
+        await archive.close();
+        return existing;
+      }
+
+      // Evict AFTER the open succeeds, so a failed open never costs a live
+      // handle. Briefly exceeding [_capacity] by one is cheaper than closing
+      // a handle a concurrent request is about to read from.
+      while (_open.length >= _capacity) {
+        await _evict(_open.keys.first);
+      }
+
+      _open[path] = archive;
+      return archive;
+    } finally {
+      _opening.remove(path);
+    }
   }
 
   Future<void> _evict(String path) async {
