@@ -45,12 +45,23 @@ func RemoteListGet(e *core.RequestEvent) error {
 		}
 
 		if record.Id == "" || record.GetBool("needs_full_sync") {
+			cachedID := record.Id
 			record, err = performFullListSync(e.App, ctx, e.Request.URL, record)
 			if err != nil {
-				if errors.Is(err, util.ErrRateLimited) {
-					return e.TooManyRequestsError("Too many requests", err)
+				cached := cachedRecordFallback(e.App, "lists", cachedID, err)
+				if cached == nil {
+					if errors.Is(err, util.ErrRateLimited) {
+						return e.TooManyRequestsError("Too many requests", err)
+					}
+					return e.InternalServerError("Sync failed", err)
 				}
-				return e.InternalServerError("Sync failed", err)
+
+				e.App.Logger().Warn(
+					"serving cached list after failed remote sync",
+					"iri", cached.GetString("iri"),
+					"error", err,
+				)
+				record = cached
 			}
 			if record.Id == "" {
 				// Local content that does not exist: performFullListSync
@@ -176,11 +187,15 @@ func performFullListSync(app core.App, ctx context.Context, reqURL *url.URL, loc
 
 	res, err := client.Do(req)
 	if err != nil {
-		return localList, err
+		return localList, fmt.Errorf("%w: %w", errRemoteUnavailable, err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return localList, fmt.Errorf("remote list fetch %s returned: %d", remoteUrl.String(), res.StatusCode)
+		statusErr := fmt.Errorf("remote list fetch %s returned: %d", remoteUrl.String(), res.StatusCode)
+		if res.StatusCode >= http.StatusInternalServerError {
+			return localList, fmt.Errorf("%w: %w", errRemoteUnavailable, statusErr)
+		}
+		return localList, statusErr
 	}
 
 	var remoteMap map[string]any

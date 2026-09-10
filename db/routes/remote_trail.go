@@ -36,7 +36,29 @@ var remoteSyncThreshold = func() time.Duration {
 var trailSyncing sync.Map
 var listSyncing sync.Map
 
-// --- Main Handler ---
+var errRemoteUnavailable = errors.New("remote instance unavailable")
+
+// cachedRecordFallback returns the locally cached record to serve when a
+// blocking sync failed for a reason that says nothing about the content
+// itself
+func cachedRecordFallback(app core.App, collection, id string, err error) *core.Record {
+	if id == "" || !isDegradableSyncError(err) {
+		return nil
+	}
+
+	cached, findErr := app.FindRecordById(collection, id)
+	if findErr != nil {
+		return nil
+	}
+
+	return cached
+}
+
+// isDegradableSyncError reports whether a failed sync may be answered from the
+// local cache
+func isDegradableSyncError(err error) bool {
+	return errors.Is(err, errRemoteUnavailable) || errors.Is(err, util.ErrRateLimited)
+}
 
 func RemoteTrailGet(e *core.RequestEvent) error {
 	handle := e.Request.URL.Query().Get("handle")
@@ -71,12 +93,23 @@ func RemoteTrailGet(e *core.RequestEvent) error {
 		// If the record has no ID, it's a new Shell
 		if record.Id == "" || record.GetBool("needs_full_sync") {
 			// Blocking sync for new records
+			cachedID := record.Id
 			record, err = performFullSync(e.App, ctx, e.Request.URL, record)
 			if err != nil {
-				if errors.Is(err, util.ErrRateLimited) {
-					return e.TooManyRequestsError("Too many requests", err)
+				cached := cachedRecordFallback(e.App, "trails", cachedID, err)
+				if cached == nil {
+					if errors.Is(err, util.ErrRateLimited) {
+						return e.TooManyRequestsError("Too many requests", err)
+					}
+					return e.InternalServerError("Sync failed", err)
 				}
-				return e.InternalServerError("Sync failed", err)
+
+				e.App.Logger().Warn(
+					"serving cached trail after failed remote sync",
+					"iri", cached.GetString("iri"),
+					"error", err,
+				)
+				record = cached
 			}
 			if record.Id == "" {
 				// Local content that does not exist (e.g. a stale URL to a
@@ -202,11 +235,15 @@ func performFullSync(app core.App, ctx context.Context, reqURL *url.URL, localTr
 	req, _ := http.NewRequestWithContext(ctx, "GET", remoteUrl.String(), nil)
 	res, err := client.Do(req)
 	if err != nil {
-		return localTrail, err
+		return localTrail, fmt.Errorf("%w: %w", errRemoteUnavailable, err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return localTrail, fmt.Errorf("remote trail fetch %s returned: %d", remoteUrl.String(), res.StatusCode)
+		statusErr := fmt.Errorf("remote trail fetch %s returned: %d", remoteUrl.String(), res.StatusCode)
+		if res.StatusCode >= http.StatusInternalServerError {
+			return localTrail, fmt.Errorf("%w: %w", errRemoteUnavailable, statusErr)
+		}
+		return localTrail, statusErr
 	}
 
 	var remoteMap map[string]any
