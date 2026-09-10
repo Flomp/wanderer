@@ -94,6 +94,15 @@ class ForegroundPositionStream extends Notifier<Stream<LocationMarkerPosition?>>
   /// "Turn on GPS?" dialog this session. See [_startPositionStream].
   bool _promptedForService = false;
 
+  /// How stale the platform's [Geolocator.getLastKnownPosition] can be and
+  /// still stand in for a fresh fix in [currentFix]. `launch_navigation.dart`
+  /// trusts that call unconditionally because its seed is best-effort and
+  /// self-corrects the moment tracelet's own GPS arrives; `currentFix()`'s
+  /// result can become the actual initial center for a recording session or
+  /// route plan (`_openRecorder`, `_resolveInitialCenter`), so an old cached
+  /// fix needs a bound rather than being trusted outright.
+  static const Duration _cachedFixMaxAge = Duration(minutes: 2);
+
   /// `best` requests the most expensive mode the hardware offers; `high`
   /// (~10m) is ample for a map dot. The distance filter is what actually
   /// stops the Play Services location churn — a stationary device produces
@@ -176,9 +185,43 @@ class ForegroundPositionStream extends Notifier<Stream<LocationMarkerPosition?>>
   /// Resolves a single GPS fix, holding the receiver open only as long as it
   /// takes. Returns `null` on timeout, denial, or a disabled location
   /// service — every existing caller already treats a miss as non-fatal.
+  ///
+  /// Checks the OS's cached last-known position first — it returns near-
+  /// instantly (no new GPS callback required), which is exactly what
+  /// Geolocator's own docs recommend pairing with a live fix. Waiting on a
+  /// brand-new stream tick first (the previous approach) fails far more
+  /// often than it succeeds: a stationary device never produces a new
+  /// callback at all under `_settings`' 10m distance filter (and, on iOS,
+  /// `pauseLocationUpdatesAutomatically`), and reference counting means
+  /// `acquire()` frequently attaches to an existing, already-silent
+  /// subscription (e.g. one held open by a map screen's live location
+  /// marker sitting in the back stack) rather than starting a fresh one.
+  /// See launch_navigation.dart's `launchNavigation`, which independently
+  /// applied this same fix at a single call site before it was centralized
+  /// here — unlike that best-effort marker seed, this result can become an
+  /// actual session's initial center, so the cached fix is only trusted
+  /// within [_cachedFixMaxAge] of its own timestamp; a stale one falls
+  /// through to the live stream exactly like a missing one.
   Future<LocationMarkerPosition?> currentFix({
     Duration timeout = const Duration(seconds: 10),
   }) async {
+    try {
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null &&
+          DateTime.now().difference(lastKnown.timestamp).abs() <=
+              _cachedFixMaxAge) {
+        return LocationMarkerPosition(
+          latitude: lastKnown.latitude,
+          longitude: lastKnown.longitude,
+          accuracy: lastKnown.accuracy,
+          heading: lastKnown.heading,
+          headingAccuracy: lastKnown.headingAccuracy,
+        );
+      }
+    } catch (_) {
+      // Fall through to the live stream below.
+    }
+
     acquire();
     try {
       return await state.firstWhere((p) => p != null).timeout(timeout);

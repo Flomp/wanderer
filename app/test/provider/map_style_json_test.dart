@@ -2,13 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wanderer/provider/map_style_json_provider.dart';
-import 'package:wanderer/util/region/offline_style_rewriter.dart';
+import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 
 /// Collects the URL-bearing string fields of a composed style — every source's
 /// `tiles` entries + `url`, plus top-level `glyphs`/`sprite`. Deliberately
 /// excludes `attribution` HTML, which legitimately carries `https://` links
-/// (mirrors offline_style_rewriter_test.dart's scheme-allowlist precedent).
+/// (mirrors proxy_style_rewriter_test.dart's scheme-allowlist precedent).
 List<String> _urlFields(Map<String, dynamic> style) {
   final urls = <String>[];
   final glyphs = style['glyphs'];
@@ -42,36 +41,14 @@ void main() {
     'assets/map/wanderer_dark.json',
   ];
 
-  group('fillOfflineStyleSentinels', () {
+  group('shipped style assets composed through rewriteStyleForProxy', () {
     for (final asset in assets) {
-      test('$asset — replaces every operator sentinel, no network value', () async {
+      test('$asset — emits only loopback URL fields', () async {
         final raw = await rootBundle.loadString(asset);
-        // Guard: the asset really does carry the sentinels this logic targets.
-        expect(raw, contains('__TILE_URL__'));
-        expect(raw, contains('__GLYPH_URL__'));
-        expect(raw, contains('__SPRITE_URL__'));
-
-        final filled = fillOfflineStyleSentinels(raw);
-
-        expect(filled.contains('__TILE_URL__'), isFalse);
-        expect(filled.contains('__GLYPH_URL__'), isFalse);
-        expect(filled.contains('__SPRITE_URL__'), isFalse);
-        // Parses cleanly — placeholders keep the JSON syntactically valid.
-        expect(() => jsonDecode(filled), returnsNormally);
-      });
-    }
-  });
-
-  group('offline base style composed through rewriteStyleForProxy', () {
-    for (final asset in assets) {
-      test('$asset — no placeholder or https:// leaks into URL fields', () async {
-        final raw = await rootBundle.loadString(asset);
-        final filled = fillOfflineStyleSentinels(raw);
-        final decoded = jsonDecode(filled) as Map<String, dynamic>;
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
 
         final result = rewriteStyleForProxy(
           decoded,
-          cacheRoot: '/data/user/0/app.wanderer/app_flutter/map_cache',
           proxyBaseUrl: proxyBaseUrl,
         );
 
@@ -81,17 +58,19 @@ void main() {
           '$proxyBaseUrl/vector/{z}/{x}/{y}.pbf',
         ]);
 
-        // Glyphs + sprite resolve from the local file:// cache.
-        expect(result['glyphs'], startsWith('file://'));
-        expect(result['sprite'], startsWith('file://'));
+        // Glyphs + sprite resolve through the loopback proxy too.
+        expect(result['glyphs'], startsWith('http://127.0.0.1:'));
+        expect(result['sprite'], startsWith('http://127.0.0.1:'));
 
-        // The inert placeholder is fully overwritten — it never reaches
-        // MapLibre — and no live https:// endpoint survives in any URL field.
+        // No shipped-asset sentinel token or live https:// endpoint survives
+        // in any URL field — rewriteStyleForProxy overwrites every one.
         for (final url in _urlFields(result)) {
           expect(
-            url.contains(offlineSentinelPlaceholder),
+            url.contains('__TILE_URL__') ||
+                url.contains('__GLYPH_URL__') ||
+                url.contains('__SPRITE_URL__'),
             isFalse,
-            reason: 'placeholder leaked into $url',
+            reason: 'unsubstituted sentinel leaked into $url',
           );
           expect(
             url.contains('https://'),

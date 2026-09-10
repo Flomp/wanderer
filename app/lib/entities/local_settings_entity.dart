@@ -15,8 +15,34 @@ class LocalSettingsEntity {
   /// reappear on every recording for anyone who has not gone to settings.
   bool backgroundLocationAsked;
 
+  /// Loopback tile proxy port; `0` means not yet minted.
+  ///
+  /// MapLibre's ambient cache keys on the request URL, so a port that
+  /// changes every launch orphans the whole tile cache on each cold start.
+  /// Random per install, but persisted so it stays stable.
+  int tileProxyPort;
+
+  /// Loopback tile proxy secret path segment; empty means not yet minted.
+  /// Minted once and persisted — a per-launch secret would churn the cache
+  /// key exactly as an unstable port does.
+  String tileProxySecret;
+
+  /// `jsonEncode` of the last successful `/map/style-sources` response;
+  /// empty means never fetched. Lets the proxy build an upstream redirect
+  /// target on an offline cold start.
+  String mapStyleSourcesJson;
+
+  /// Resolved hillshade DEM XYZ template; empty means not yet resolved.
+  /// Persisted for the same offline-cold-start reason as
+  /// [mapStyleSourcesJson].
+  String demTileTemplate;
+
   LocalSettingsEntity({
     this.themeMode = 'system',
     this.backgroundLocationAsked = false,
+    this.tileProxyPort = 0,
+    this.tileProxySecret = '',
+    this.mapStyleSourcesJson = '',
+    this.demTileTemplate = '',
   });
 }

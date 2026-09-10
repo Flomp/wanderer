@@ -531,13 +531,11 @@ class _MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
 
   /// Reopens a navigation session, re-probing connectivity first.
   ///
-  /// The persisted `isOffline` flag is deliberately not trusted: connectivity
-  /// may have changed since the session was last saved (saved online,
-  /// relaunched in airplane mode). A stale `isOffline=false` sends
-  /// NavigationScreen down the online style path, whose `/map/style-sources`
-  /// fetch hangs offline and freezes the map on its loading spinner. The
-  /// cached response already makes navigation itself work offline; this flag
-  /// only selects the map style path.
+  /// The probe no longer selects a style path — there is one, and it resolves
+  /// from a persisted `/map/style-sources` copy when the network is down, so a
+  /// resumed session cannot hang waiting on that fetch. Resuming is still a
+  /// good moment to settle `onlineStatusProvider`, which the sync drain keys
+  /// off.
   Future<void> _pushNavigationResume(
     ActiveNavigationEntity row,
     NavigateResponse response,
@@ -546,22 +544,22 @@ class _MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
     // screen seeds itself from this row — its resume seeds are family provider
     // keys, resolved once in initState, so they cannot be amended afterwards.
     await backfillSessionGap(row);
-    final isOffline = !await ref.read(onlineStatusProvider.notifier).refresh();
+    await ref.read(onlineStatusProvider.notifier).refresh();
     navigatorKey.currentContext?.push(
       '/trail/${row.trailId}/navigate',
       // No fresh fix to seed on resume — same as a brand-new session pending
       // its first tracelet fix.
-      extra: (response, isOffline, row, null),
+      extra: (response, row, null),
     );
   }
 
   /// Reopens a recording session. Re-probes connectivity for the same reason
-  /// as [_pushNavigationResume]; the router reads it back off
-  /// `resume.isOffline`.
+  /// as [_pushNavigationResume] — to settle the app-wide online status, not
+  /// to select a map style path.
   Future<void> _pushRecordingResume(ActiveNavigationEntity row) async {
     // See [_pushNavigationResume] — must land before the screen reads the row.
     await backfillSessionGap(row);
-    row.isOffline = !await ref.read(onlineStatusProvider.notifier).refresh();
+    await ref.read(onlineStatusProvider.notifier).refresh();
     navigatorKey.currentContext?.push('/record', extra: row);
   }
 

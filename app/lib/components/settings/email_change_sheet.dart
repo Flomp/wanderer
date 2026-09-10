@@ -103,33 +103,41 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
       child: FormBuilder(
         key: _formKey,
         autovalidateMode: AutovalidateMode.onUnfocus,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 16,
-          children: [
-            WandererTextField(
-              name: 'email',
-              label: l10n.email,
-              validator: FormBuilderValidators.compose([
-                FormBuilderValidators.required(),
-                FormBuilderValidators.email(),
-              ]),
-            ),
-            WandererTextField(
-              name: 'currentPassword',
-              label: l10n.current_password,
-              isPassword: true,
-              validator: FormBuilderValidators.required(),
-            ),
-            WandererButton(
-              primary: true,
-              large: true,
-              loading: _isLoading,
-              onPressed: _submit,
-              child: Text(l10n.change_email),
-            ),
-          ],
+        child: AutofillGroup(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              WandererTextField(
+                name: 'email',
+                label: l10n.email,
+                autofillHints: const [AutofillHints.email],
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                validator: FormBuilderValidators.compose([
+                  FormBuilderValidators.required(),
+                  FormBuilderValidators.email(),
+                ]),
+              ),
+              WandererTextField(
+                name: 'currentPassword',
+                label: l10n.current_password,
+                isPassword: true,
+                autofillHints: const [AutofillHints.password],
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+                validator: FormBuilderValidators.required(),
+              ),
+              WandererButton(
+                primary: true,
+                large: true,
+                loading: _isLoading,
+                onPressed: _submit,
+                child: Text(l10n.change_email),
+              ),
+            ],
+          ),
         ),
       ),
     );

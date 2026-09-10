@@ -12,7 +12,6 @@ import 'package:wanderer/models/trail.dart';
 import 'package:wanderer/models/trail_sync_state.dart';
 import 'package:wanderer/models/waypoint.dart';
 import 'package:wanderer/provider/auth_provider.dart';
-import 'package:wanderer/provider/online_status_provider.dart';
 import 'package:wanderer/provider/trail/local_trail_provider.dart';
 import 'package:wanderer/provider/trail/trail_provider.dart';
 import 'package:wanderer/actions/launch_navigation.dart';
@@ -116,10 +115,6 @@ class _TrailDetailMapScreenState extends ConsumerState<TrailDetailMapScreen> {
             onWaypointTap: _onWaypointSelected,
             selectedWaypoint: selectedWaypoint,
             showLocation: true,
-            // Connectivity, NOT trail.isOffline — see that field's doc
-            // comment. Online we always prefer network tiles, even for
-            // a downloaded trail.
-            offline: !ref.watch(onlineStatusProvider),
             initialCameraFitPadding: EdgeInsets.only(
               bottom: 300,
               left: 40,

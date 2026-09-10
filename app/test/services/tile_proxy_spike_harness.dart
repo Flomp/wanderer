@@ -16,7 +16,7 @@
 //
 // It starts the REAL `TileProxyServer` (`lib/services/tile_proxy_server.dart`)
 // and composes the map's offline style through the REAL production
-// `rewriteStyleForProxy` transform (`lib/util/region/offline_style_rewriter.dart`)
+// `rewriteStyleForProxy` transform (`lib/util/region/proxy_style_rewriter.dart`)
 // -- exactly the wiring `main.dart` uses -- so a pass here
 // means the real pipeline works, not a bespoke test path.
 //
@@ -33,7 +33,6 @@
 //       confirmed necessary/sufficient on real hardware (watch `adb logcat`
 //       for `CLEARTEXT ... not permitted`, or iOS ATS failures, alongside
 //       this harness's own log panel/debugPrint output)
-//
 // This file is throwaway -- delete or ignore it once the question above is
 // settled. It is intentionally
 // kept out of `router_provider.dart` / production navigation (its location
@@ -54,12 +53,11 @@ import 'package:wanderer/entities/region_entity.dart';
 import 'package:wanderer/objectbox.g.dart';
 import 'package:wanderer/provider/api_provider.dart';
 import 'package:wanderer/provider/cookie_jar_provider.dart';
-import 'package:wanderer/provider/glyph_sprite_cache_provider.dart';
 import 'package:wanderer/provider/map_style_json_provider.dart';
 import 'package:wanderer/provider/objectbox_store_provider.dart';
 import 'package:wanderer/provider/region/tile_proxy_provider.dart';
 import 'package:wanderer/services/tile_proxy_server.dart';
-import 'package:wanderer/util/region/offline_style_rewriter.dart';
+import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,10 +77,9 @@ Future<void> main() async {
     ignoreExpires: false,
   );
 
-  // Start the REAL production proxy BEFORE runApp, and override the REAL
-  // tileProxyBaseUrlProvider with its resolved baseUrl -- exactly the
-  // wiring Plan 04 will add to main.dart. This harness never fakes the
-  // server; a pass here is a pass on the real pipeline.
+  // Start the real production proxy before runApp and override the real
+  // tileProxyBaseUrlProvider with its baseUrl -- the same wiring main.dart
+  // uses. This harness never fakes the server.
   final proxy = await TileProxyServer.start(store);
   debugPrint('[spike] TileProxyServer.start -> ${proxy.baseUrl}');
 
@@ -182,26 +179,25 @@ class _TileProxySpikeScreenState extends ConsumerState<TileProxySpikeScreen> {
     );
   }
 
-  /// Composes the offline style through the REAL production
-  /// `rewriteStyleForProxy` transform -- mirrors the body Plan 04 will give
-  /// `TrailMap`/`navigation_screen`'s `_composeStyle`. The resulting style
-  /// carries exactly one static `<proxyBaseUrl>/vector/{z}/{x}/{y}.pbf`
-  /// source (and, if a DEM archive is downloaded anywhere, one
-  /// `.../dem/{z}/{x}/{y}.png` source) -- the proxy itself resolves per-tile
-  /// region coverage server-side ([resolveRegionForTile]), so this composed
-  /// style is NOT region-specific; the region picker only drives which
-  /// region the map flies to.
+  /// Composes the style through the REAL production `rewriteStyleForProxy`
+  /// transform -- mirrors the body `TrailMap`/`navigation_screen`'s
+  /// `_composeStyle` gives it. The resulting style carries exactly one
+  /// static `<proxyBaseUrl>/vector/{z}/{x}/{y}.pbf` source (and, if a DEM
+  /// archive is downloaded anywhere, one `.../dem/{z}/{x}/{y}.png` source)
+  /// -- the proxy itself resolves per-tile region coverage server-side
+  /// ([resolveRegionForTile]), so this composed style is NOT
+  /// region-specific; the region picker only drives which region the map
+  /// flies to. Glyphs and sprites resolve through the proxy too, so nothing
+  /// needs warming before composing.
   Future<void> _loadStyle() async {
     setState(() => _loadingStyle = true);
     try {
       final baseJson = await ref.read(mapStyleJsonProvider.future);
-      final cache = await ref.read(glyphSpriteCacheProvider.future);
       final decoded = jsonDecode(baseJson) as Map<String, dynamic>;
       final proxyBaseUrl = ref.read(tileProxyBaseUrlProvider);
 
       final composed = rewriteStyleForProxy(
         decoded,
-        cacheRoot: cache.root,
         proxyBaseUrl: proxyBaseUrl,
         dark: false,
       );

@@ -725,11 +725,10 @@ class _TrailCreateScreenState extends ConsumerState<TrailCreateScreen> {
   /// that the drain promoted this trail to `synced` while the save was already
   /// under way ([LocalUpdateOutcome.alreadySynced]).
   ///
-  /// Editing a synced server trail offline remains out of scope for this phase:
-  /// with no connection this fails and reports `error_saving_trail`.
-  /// That is the point -- the user is told the edit did not land, instead of
-  /// being shown a success toast over an edit that no longer has anywhere to
-  /// go.
+  /// Editing a synced server trail offline is unsupported: with no connection
+  /// this fails and reports `error_saving_trail`. That is deliberate — the user
+  /// is told the edit did not land, rather than shown a success toast over an
+  /// edit that has nowhere to go.
   ///
   /// [reconcileLocalId], when non-null, names the local row (still owned by
   /// this account) that should be reconciled onto the just-accepted server
@@ -1229,7 +1228,6 @@ class _TrailCreateScreenState extends ConsumerState<TrailCreateScreen> {
                   trail: trail,
                   elevationMarkerPosition: _elevationMarkerPosition,
                   showLocation: true,
-                  offline: isOffline,
                   initialCameraFitPadding: EdgeInsets.only(
                     bottom: MediaQuery.of(context).size.height * 0.4 + 40,
                     left: 40,

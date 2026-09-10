@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -49,6 +50,10 @@ class _PasswordChangeSheetState extends ConsumerState<PasswordChangeSheet> {
           );
 
       if (!mounted) return;
+
+      // Fields are still mounted here — closing the autofill context now is
+      // what prompts the password manager to update the stored entry.
+      TextInput.finishAutofillContext();
 
       ref
           .read(toastProvider.notifier)
@@ -113,45 +118,54 @@ class _PasswordChangeSheetState extends ConsumerState<PasswordChangeSheet> {
       child: FormBuilder(
         key: _formKey,
         autovalidateMode: AutovalidateMode.onUnfocus,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 16,
-          children: [
-            WandererTextField(
-              name: 'currentPassword',
-              label: l10n.current_password,
-              isPassword: true,
-              validator: FormBuilderValidators.required(),
-            ),
-            WandererTextField(
-              name: 'newPassword',
-              label: l10n.new_password,
-              isPassword: true,
-              validator: FormBuilderValidators.required(),
-            ),
-            WandererTextField(
-              name: 'confirmNewPassword',
-              label: l10n.password_confirm,
-              isPassword: true,
-              validator: FormBuilderValidators.compose([
-                FormBuilderValidators.required(),
-                (val) {
-                  final pw =
-                      _formKey.currentState?.fields['newPassword']?.value
-                          as String?;
-                  return (val != pw) ? l10n.passwords_must_match : null;
-                },
-              ]),
-            ),
-            WandererButton(
-              primary: true,
-              large: true,
-              loading: _isLoading,
-              onPressed: _submit,
-              child: Text(l10n.change_password),
-            ),
-          ],
+        child: AutofillGroup(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              WandererTextField(
+                name: 'currentPassword',
+                label: l10n.current_password,
+                isPassword: true,
+                autofillHints: const [AutofillHints.password],
+                textInputAction: TextInputAction.next,
+                validator: FormBuilderValidators.required(),
+              ),
+              WandererTextField(
+                name: 'newPassword',
+                label: l10n.new_password,
+                isPassword: true,
+                autofillHints: const [AutofillHints.newPassword],
+                textInputAction: TextInputAction.next,
+                validator: FormBuilderValidators.required(),
+              ),
+              WandererTextField(
+                name: 'confirmNewPassword',
+                label: l10n.password_confirm,
+                isPassword: true,
+                autofillHints: const [AutofillHints.newPassword],
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+                validator: FormBuilderValidators.compose([
+                  FormBuilderValidators.required(),
+                  (val) {
+                    final pw =
+                        _formKey.currentState?.fields['newPassword']?.value
+                            as String?;
+                    return (val != pw) ? l10n.passwords_must_match : null;
+                  },
+                ]),
+              ),
+              WandererButton(
+                primary: true,
+                large: true,
+                loading: _isLoading,
+                onPressed: _submit,
+                child: Text(l10n.change_password),
+              ),
+            ],
+          ),
         ),
       ),
     );

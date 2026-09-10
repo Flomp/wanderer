@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -25,7 +26,24 @@ class LoginScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loginState = ref.watch(authProvider);
 
+    void submit() {
+      if (_formKey.currentState?.saveAndValidate() ?? false) {
+        final data = _formKey.currentState!.value;
+        ref
+            .read(authProvider.notifier)
+            .login(data['username'], data['password']);
+      }
+    }
+
     ref.listen(authProvider, (previous, next) {
+      // Sign-in worked: close the autofill context so the password manager
+      // offers to save (or update) the credentials that were just used. Has
+      // to happen while the fields are still mounted, i.e. before the router
+      // swaps this screen out.
+      if (next is AsyncData && next.value != null) {
+        TextInput.finishAutofillContext();
+      }
+
       next.whenOrNull(
         error: (error, _) {
           String displayMessage = "An unexpected error occurred";
@@ -74,57 +92,63 @@ class LoginScreen extends ConsumerWidget {
                 key: _formKey,
                 autovalidateMode: AutovalidateMode.onUnfocus,
                 child: SingleChildScrollView(
-                  child: Column(
-                    spacing: 12,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        "assets/svgs/logo_text_twoline_${Theme.of(context).brightness.name}.svg",
-                        semanticsLabel: 'wanderer logo with text',
-                      ),
-                      Text(
-                        AppLocalizations.of(context)!.slogan,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      SizedBox(height: 12),
-
-                      ServerSelector(icon: FontAwesomeIcons.pencil),
-                      WandererTextField(
-                        name: 'username',
-                        label:
-                            "${AppLocalizations.of(context)!.username}/${AppLocalizations.of(context)!.email}",
-                        validator: FormBuilderValidators.required(),
-                      ),
-                      WandererTextField(
-                        name: 'password',
-                        label: AppLocalizations.of(context)!.password,
-                        isPassword: true,
-                        validator: FormBuilderValidators.compose([
-                          FormBuilderValidators.required(),
-                          FormBuilderValidators.minLength(8),
-                        ]),
-                      ),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: WandererButton(
-                          primary: true,
-                          large: true,
-                          loading: loginState.isLoading,
-                          child: Text(AppLocalizations.of(context)!.login),
-                          onPressed: () async {
-                            if (_formKey.currentState?.saveAndValidate() ??
-                                false) {
-                              final data = _formKey.currentState!.value;
-                              ref
-                                  .read(authProvider.notifier)
-                                  .login(data['username'], data['password']);
-                            }
-                          },
+                  // Groups the two credential fields into one autofill
+                  // context, so a password manager fills them together and
+                  // knows they belong to the same login.
+                  child: AutofillGroup(
+                    child: Column(
+                      spacing: 12,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SvgPicture.asset(
+                          "assets/svgs/logo_text_twoline_${Theme.of(context).brightness.name}.svg",
+                          semanticsLabel: 'wanderer logo with text',
                         ),
-                      ),
-                    ],
+                        Text(
+                          AppLocalizations.of(context)!.slogan,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        SizedBox(height: 12),
+
+                        ServerSelector(icon: FontAwesomeIcons.pencil),
+                        WandererTextField(
+                          name: 'username',
+                          label:
+                              "${AppLocalizations.of(context)!.username}/${AppLocalizations.of(context)!.email}",
+                          autofillHints: const [
+                            AutofillHints.username,
+                            AutofillHints.email,
+                          ],
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          validator: FormBuilderValidators.required(),
+                        ),
+                        WandererTextField(
+                          name: 'password',
+                          label: AppLocalizations.of(context)!.password,
+                          isPassword: true,
+                          autofillHints: const [AutofillHints.password],
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => submit(),
+                          validator: FormBuilderValidators.compose([
+                            FormBuilderValidators.required(),
+                            FormBuilderValidators.minLength(8),
+                          ]),
+                        ),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: WandererButton(
+                            primary: true,
+                            large: true,
+                            loading: loginState.isLoading,
+                            onPressed: submit,
+                            child: Text(AppLocalizations.of(context)!.login),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

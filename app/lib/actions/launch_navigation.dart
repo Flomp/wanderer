@@ -236,11 +236,11 @@ Future<void> launchNavigation({
 
     if (!context.mounted) return;
 
-    // extra: (response, isOffline, resumeSeed, seedFix) — null resumeSeed
-    // for a fresh launch.
+    // extra: (response, resumeSeed, seedFix) — null resumeSeed for a fresh
+    // launch.
     context.push(
       '/trail/${trail.id}/navigate',
-      extra: (response, false, null, seedFix),
+      extra: (response, null, seedFix),
     );
 
     final store = ref.read(objectBoxProvider);
@@ -254,7 +254,7 @@ Future<void> launchNavigation({
         cached.shape.isNotEmpty) {
       context.push(
         '/trail/${trail.id}/navigate',
-        extra: (cached, true, null, seedFix),
+        extra: (cached, null, seedFix),
       );
       return;
     }

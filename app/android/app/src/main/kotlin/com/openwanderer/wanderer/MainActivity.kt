@@ -8,15 +8,18 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // MapLibre Native suppresses ALL online-file-source HTTP requests when
-        // its ConnectivityReceiver reports no network (e.g. airplane mode) —
-        // including requests to our in-app loopback tile proxy
-        // (http://127.0.0.1). Forcing the connectivity override to `true`
-        // disables that gate so the proxy is always queried regardless of
-        // radio state. Our own offline gate (trail.isOffline) already decides
-        // when the style points at the loopback proxy vs. real online tiles,
-        // so this is safe offline — offline styles never carry an online URL
-        // to (fail to) reach.
+        // MapLibre suppresses every online-file-source request when its
+        // ConnectivityReceiver reports no network -- including requests to our
+        // loopback tile proxy. Every style routes through that proxy, so this
+        // must stay pinned `true` or the proxy becomes unreachable the moment
+        // the radio drops.
+        //
+        // Accepted consequence: a permanent pin means MapLibre never sees the
+        // false->true edge networkIsReachableAgain() needs, so it never
+        // retries a Connection-failed tile on its own. Recovery is
+        // user-initiated -- a pan or zoom issues fresh requests at new
+        // coordinates. Driving that edge deliberately was tried on a device
+        // and does not work: MapLibre re-schedules nothing.
         MapLibre.getInstance(applicationContext)
         MapLibre.setConnected(true)
     }

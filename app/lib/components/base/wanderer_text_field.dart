@@ -9,6 +9,16 @@ class WandererTextField extends FormBuilderField<String> {
   final bool disabled;
   final bool isPassword;
 
+  /// Platform autofill hints (e.g. [AutofillHints.username]).
+  ///
+  /// This is what makes a password manager — Bitwarden, 1Password, the
+  /// system keychain — recognise the field. It only works when the field
+  /// also sits inside an [AutofillGroup]; see login_screen.dart.
+  final Iterable<String>? autofillHints;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+
   WandererTextField({
     super.key,
     required super.name,
@@ -19,6 +29,10 @@ class WandererTextField extends FormBuilderField<String> {
     this.icon,
     this.disabled = false,
     this.isPassword = false,
+    this.autofillHints,
+    this.keyboardType,
+    this.textInputAction,
+    this.onSubmitted,
   }) : super(
          builder: (FormFieldState<String?> field) {
            final theme = Theme.of(field.context);
@@ -60,44 +74,16 @@ class WandererTextField extends FormBuilderField<String> {
                      ),
 
                    Expanded(
-                     child: TextField(
-                       controller: TextEditingController(text: field.value)
-                         ..selection = TextSelection.fromPosition(
-                           TextPosition(offset: (field.value ?? '').length),
-                         ),
-                       onChanged: (val) => field.didChange(val),
-                       enabled: !disabled,
-                       obscureText: isPassword,
-                       style: TextStyle(
-                         color: disabled
-                             ? Colors.grey
-                             : theme.colorScheme.onSurface,
-                       ),
-                       decoration: InputDecoration(
-                         hintText: placeholder,
-                         filled: true,
-                         fillColor: isError
-                             ? const Color(0xFFFEF2F2)
-                             : theme.inputDecorationTheme.fillColor,
-                         contentPadding: const EdgeInsets.all(12),
-                         enabledBorder: OutlineInputBorder(
-                           borderRadius: BorderRadius.circular(6),
-                           borderSide: BorderSide(
-                             color: isError
-                                 ? Colors.red.shade400
-                                 : theme.colorScheme.outline,
-                           ),
-                         ),
-                         focusedBorder: OutlineInputBorder(
-                           borderRadius: BorderRadius.circular(6),
-                           borderSide: BorderSide(
-                             color: isError
-                                 ? Colors.red.shade400
-                                 : theme.colorScheme.primary,
-                             width: 1.5,
-                           ),
-                         ),
-                       ),
+                     child: _WandererTextFieldInput(
+                       field: field,
+                       placeholder: placeholder,
+                       disabled: disabled,
+                       isPassword: isPassword,
+                       isError: isError,
+                       autofillHints: autofillHints,
+                       keyboardType: keyboardType,
+                       textInputAction: textInputAction,
+                       onSubmitted: onSubmitted,
                      ),
                    ),
                  ],
@@ -115,4 +101,113 @@ class WandererTextField extends FormBuilderField<String> {
            );
          },
        );
+}
+
+/// The [TextField] itself, split out so it can own a [TextEditingController]
+/// that outlives a rebuild.
+///
+/// The controller has to be stable for autofill to work: a password manager
+/// fills every field in the [AutofillGroup] at once, including ones that are
+/// not focused, by writing straight into their controllers. A controller
+/// rebuilt on every frame would drop that write (and, before this, was also
+/// never disposed and reset the caret on every keystroke).
+class _WandererTextFieldInput extends StatefulWidget {
+  const _WandererTextFieldInput({
+    required this.field,
+    required this.disabled,
+    required this.isPassword,
+    required this.isError,
+    this.placeholder,
+    this.autofillHints,
+    this.keyboardType,
+    this.textInputAction,
+    this.onSubmitted,
+  });
+
+  final FormFieldState<String?> field;
+  final bool disabled;
+  final bool isPassword;
+  final bool isError;
+  final String? placeholder;
+  final Iterable<String>? autofillHints;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  State<_WandererTextFieldInput> createState() =>
+      _WandererTextFieldInputState();
+}
+
+class _WandererTextFieldInputState extends State<_WandererTextFieldInput> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.field.value ?? '',
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WandererTextFieldInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Pick up value changes that did not come from typing here — a form
+    // reset, or a programmatic setValue. Typing already leaves the two in
+    // sync, so this never fights the caret.
+    final value = widget.field.value ?? '';
+    if (value != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return TextField(
+      controller: _controller,
+      onChanged: widget.field.didChange,
+      onSubmitted: widget.onSubmitted,
+      enabled: !widget.disabled,
+      obscureText: widget.isPassword,
+      autocorrect: !widget.isPassword,
+      enableSuggestions: !widget.isPassword,
+      autofillHints: widget.disabled ? null : widget.autofillHints,
+      keyboardType: widget.keyboardType,
+      textInputAction: widget.textInputAction,
+      style: TextStyle(
+        color: widget.disabled ? Colors.grey : theme.colorScheme.onSurface,
+      ),
+      decoration: InputDecoration(
+        hintText: widget.placeholder,
+        filled: true,
+        fillColor: widget.isError
+            ? const Color(0xFFFEF2F2)
+            : theme.inputDecorationTheme.fillColor,
+        contentPadding: const EdgeInsets.all(12),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(
+            color: widget.isError
+                ? Colors.red.shade400
+                : theme.colorScheme.outline,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(
+            color: widget.isError
+                ? Colors.red.shade400
+                : theme.colorScheme.primary,
+            width: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
 }

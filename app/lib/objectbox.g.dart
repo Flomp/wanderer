@@ -768,7 +768,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(8, 5734302023385580278),
     name: 'LocalSettingsEntity',
-    lastPropertyId: const obx_int.IdUid(4, 3385512587357651788),
+    lastPropertyId: const obx_int.IdUid(8, 143030534291058117),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -787,6 +787,30 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(4, 3385512587357651788),
         name: 'backgroundLocationAsked',
         type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 8115035759713055760),
+        name: 'tileProxyPort',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 6855151211241706250),
+        name: 'tileProxySecret',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 7983362523492084682),
+        name: 'mapStyleSourcesJson',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 143030534291058117),
+        name: 'demTileTemplate',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -883,12 +907,6 @@ final _entities = <obx_int.ModelEntity>[
         type: 9,
         flags: 2048,
         indexId: const obx_int.IdUid(18, 2115373350521693955),
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(4, 5220757162905877938),
-        name: 'isOffline',
-        type: 1,
-        flags: 0,
       ),
       obx_int.ModelProperty(
         id: const obx_int.IdUid(5, 2526828348485933512),
@@ -1246,6 +1264,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       1802378494213556929,
       1531949722887503626,
       1385314773466755533,
+      5220757162905877938,
     ],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -2162,10 +2181,19 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (LocalSettingsEntity object, fb.Builder fbb) {
         final themeModeOffset = fbb.writeString(object.themeMode);
-        fbb.startTable(5);
+        final tileProxySecretOffset = fbb.writeString(object.tileProxySecret);
+        final mapStyleSourcesJsonOffset = fbb.writeString(
+          object.mapStyleSourcesJson,
+        );
+        final demTileTemplateOffset = fbb.writeString(object.demTileTemplate);
+        fbb.startTable(9);
         fbb.addInt64(0, object.obxId);
         fbb.addOffset(1, themeModeOffset);
         fbb.addBool(3, object.backgroundLocationAsked);
+        fbb.addInt64(4, object.tileProxyPort);
+        fbb.addOffset(5, tileProxySecretOffset);
+        fbb.addOffset(6, mapStyleSourcesJsonOffset);
+        fbb.addOffset(7, demTileTemplateOffset);
         fbb.finish(fbb.endTable());
         return object.obxId;
       },
@@ -2181,9 +2209,28 @@ obx_int.ModelDefinition getObjectBoxModel() {
           10,
           false,
         );
+        final tileProxyPortParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final tileProxySecretParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final mapStyleSourcesJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 16, '');
+        final demTileTemplateParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 18, '');
         final object = LocalSettingsEntity(
           themeMode: themeModeParam,
           backgroundLocationAsked: backgroundLocationAskedParam,
+          tileProxyPort: tileProxyPortParam,
+          tileProxySecret: tileProxySecretParam,
+          mapStyleSourcesJson: mapStyleSourcesJsonParam,
+          demTileTemplate: demTileTemplateParam,
         )..obxId = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
 
         return object;
@@ -2301,7 +2348,6 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(0, object.obxId);
         fbb.addInt64(1, object.dbSessionType);
         fbb.addOffset(2, trailIdOffset);
-        fbb.addBool(3, object.isOffline);
         fbb.addInt64(4, object.currentManeuverIndex);
         fbb.addFloat64(6, object.distanceMeters);
         fbb.addFloat64(7, object.elevationGainMeters);
@@ -2330,11 +2376,6 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final trailIdParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 8);
-        final isOfflineParam = const fb.BoolReader().vTableGetNullable(
-          buffer,
-          rootOffset,
-          10,
-        );
         final recordingCostingParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 38);
@@ -2398,7 +2439,6 @@ obx_int.ModelDefinition getObjectBoxModel() {
             ActiveNavigationEntity(
                 obxId: obxIdParam,
                 trailId: trailIdParam,
-                isOffline: isOfflineParam,
                 recordingCosting: recordingCostingParam,
                 currentManeuverIndex: currentManeuverIndexParam,
                 breadcrumbPolyline: breadcrumbPolylineParam,
@@ -3241,6 +3281,25 @@ class LocalSettingsEntity_ {
   /// See [LocalSettingsEntity.backgroundLocationAsked].
   static final backgroundLocationAsked =
       obx.QueryBooleanProperty<LocalSettingsEntity>(_entities[6].properties[2]);
+
+  /// See [LocalSettingsEntity.tileProxyPort].
+  static final tileProxyPort = obx.QueryIntegerProperty<LocalSettingsEntity>(
+    _entities[6].properties[3],
+  );
+
+  /// See [LocalSettingsEntity.tileProxySecret].
+  static final tileProxySecret = obx.QueryStringProperty<LocalSettingsEntity>(
+    _entities[6].properties[4],
+  );
+
+  /// See [LocalSettingsEntity.mapStyleSourcesJson].
+  static final mapStyleSourcesJson =
+      obx.QueryStringProperty<LocalSettingsEntity>(_entities[6].properties[5]);
+
+  /// See [LocalSettingsEntity.demTileTemplate].
+  static final demTileTemplate = obx.QueryStringProperty<LocalSettingsEntity>(
+    _entities[6].properties[6],
+  );
 }
 
 /// [SubcategoryEntity] entity fields to define ObjectBox queries.
@@ -3308,84 +3367,79 @@ class ActiveNavigationEntity_ {
     _entities[8].properties[2],
   );
 
-  /// See [ActiveNavigationEntity.isOffline].
-  static final isOffline = obx.QueryBooleanProperty<ActiveNavigationEntity>(
-    _entities[8].properties[3],
-  );
-
   /// See [ActiveNavigationEntity.currentManeuverIndex].
   static final currentManeuverIndex =
       obx.QueryIntegerProperty<ActiveNavigationEntity>(
-        _entities[8].properties[4],
+        _entities[8].properties[3],
       );
 
   /// See [ActiveNavigationEntity.distanceMeters].
   static final distanceMeters = obx.QueryDoubleProperty<ActiveNavigationEntity>(
-    _entities[8].properties[5],
+    _entities[8].properties[4],
   );
 
   /// See [ActiveNavigationEntity.elevationGainMeters].
   static final elevationGainMeters =
       obx.QueryDoubleProperty<ActiveNavigationEntity>(
-        _entities[8].properties[6],
+        _entities[8].properties[5],
       );
 
   /// See [ActiveNavigationEntity.elevationLossMeters].
   static final elevationLossMeters =
       obx.QueryDoubleProperty<ActiveNavigationEntity>(
-        _entities[8].properties[7],
+        _entities[8].properties[6],
       );
 
   /// See [ActiveNavigationEntity.currentElapsedSeconds].
   static final currentElapsedSeconds =
       obx.QueryIntegerProperty<ActiveNavigationEntity>(
-        _entities[8].properties[8],
+        _entities[8].properties[7],
       );
 
   /// See [ActiveNavigationEntity.pausedAccumSeconds].
   static final pausedAccumSeconds =
       obx.QueryIntegerProperty<ActiveNavigationEntity>(
-        _entities[8].properties[9],
+        _entities[8].properties[8],
       );
 
   /// See [ActiveNavigationEntity.isPaused].
   static final isPaused = obx.QueryBooleanProperty<ActiveNavigationEntity>(
-    _entities[8].properties[10],
+    _entities[8].properties[9],
   );
 
   /// See [ActiveNavigationEntity.updatedAtUtc].
   static final updatedAtUtc = obx.QueryDateProperty<ActiveNavigationEntity>(
-    _entities[8].properties[11],
+    _entities[8].properties[10],
   );
 
   /// See [ActiveNavigationEntity.breadcrumbPolyline].
   static final breadcrumbPolyline =
       obx.QueryStringProperty<ActiveNavigationEntity>(
-        _entities[8].properties[12],
+        _entities[8].properties[11],
       );
 
   /// See [ActiveNavigationEntity.elevations].
   static final elevations =
       obx.QueryDoubleVectorProperty<ActiveNavigationEntity>(
-        _entities[8].properties[13],
+        _entities[8].properties[12],
       );
 
   /// See [ActiveNavigationEntity.timestampsUtc].
   static final timestampsUtc =
       obx.QueryIntegerVectorProperty<ActiveNavigationEntity>(
-        _entities[8].properties[14],
+        _entities[8].properties[13],
       );
 
   /// See [ActiveNavigationEntity.recordingCosting].
   static final recordingCosting =
       obx.QueryStringProperty<ActiveNavigationEntity>(
-        _entities[8].properties[15],
+        _entities[8].properties[14],
       );
 
   /// See [ActiveNavigationEntity.navResponseJson].
   static final navResponseJson =
       obx.QueryStringProperty<ActiveNavigationEntity>(
-        _entities[8].properties[16],
+        _entities[8].properties[15],
       );
 }
 

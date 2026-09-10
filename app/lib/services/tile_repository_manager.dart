@@ -38,12 +38,11 @@ bool bboxOverlaps({
 /// `localTilePathsForBounds` previously returning ONE flat, untyped
 /// `List<String>` with vector and DEM paths interleaved and no
 /// discriminator. Returning two SEPARATE lists makes it structurally
-/// impossible for a DEM `.pmtiles` archive to be mis-fed into
-/// `rewriteStyleForOffline`'s vector `cellPaths` param (which would route it
-/// through the vector cell-duplication path instead of the DEM one —
-/// reproducing the bug class already found and fixed once in commit
-/// `3f67cf37`, quick-260711-lzb: "hillshadeSource swept into the vector-cell
-/// repoint path").
+/// impossible for a DEM `.pmtiles` archive to be mis-fed into a vector-only
+/// archive-path param (which would route it through the vector-source
+/// handling instead of the DEM one — reproducing the bug class already
+/// found and fixed once in commit `3f67cf37`, quick-260711-lzb:
+/// "hillshadeSource swept into the vector-cell repoint path").
 ///
 /// Takes an `Iterable<RegionEntity>` (not `_store`) so this "which list does
 /// a path land in" logic is unit-testable without a live ObjectBox store —
@@ -153,11 +152,10 @@ RegionEntity? resolveRegionForTile(
 /// no lifecycle-driven auto-cancel — since cancelling would now mean losing
 /// progress rather than merely pausing it.
 ///
-/// Mirrors `TrailDownloadService`'s construction-injection
-/// (`Store` + `Dio`) and `CancelToken`-based cancellation shape, but adds
-/// the region-archive-scale concerns that phase's small per-cell files
-/// never needed. The Riverpod wiring lives in `tile_repository_provider.dart`
-/// (Plan 05).
+/// Mirrors `TrailDownloadService`'s construction-injection (`Store` + `Dio`)
+/// and `CancelToken` cancellation, plus the archive-scale concerns its small
+/// per-cell files never needed. Riverpod wiring lives in
+/// `tile_repository_provider.dart`.
 class TileRepositoryManager {
   final Store _store;
   final Dio _api;
@@ -367,9 +365,8 @@ class TileRepositoryManager {
   /// region whose bbox overlaps [query] — feeds Phase
   /// 25's viewport-based tile-reading pipeline. Vector and DEM paths are
   /// returned as two SEPARATE lists (never merged into one), so they can
-  /// never be conflated when fed to `rewriteStyleForOffline`'s
-  /// `cellPaths`/`demCellPaths` params — see [splitRegionTilePaths]'s doc
-  /// comment for the exact bug class this prevents. Regions whose vector/DEM
+  /// never be conflated when fed downstream — see [splitRegionTilePaths]'s
+  /// doc comment for the exact bug class this prevents. Regions whose vector/DEM
   /// package target is null (not downloaded) or whose bbox doesn't overlap
   /// [query] contribute nothing to the result.
   ({List<String> vectorPaths, List<String> demPaths}) localTilePathsForBounds(

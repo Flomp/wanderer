@@ -7,7 +7,8 @@ import 'package:wanderer/components/base/wanderer_error.dart';
 import 'package:wanderer/i18n/app_localizations.dart';
 import 'package:wanderer/models/server_instance.dart';
 import 'package:wanderer/provider/api_provider.dart';
-import 'package:wanderer/provider/welcome/server_selection_provider.dart'; // Your custom button
+import 'package:wanderer/provider/welcome/server_selection_provider.dart';
+import 'package:wanderer/util/server_url.dart';
 
 class ServerSelectionScreen extends ConsumerStatefulWidget {
   const ServerSelectionScreen({super.key});
@@ -21,22 +22,57 @@ class _ServerSelectionScreenState extends ConsumerState<ServerSelectionScreen> {
   final _urlController = TextEditingController();
   String _searchQuery = "";
 
+  bool _prefilled = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _prefillFromSelection(
+      ref.read(serverSelectionProvider).value?.selectedServer,
+      notify: false,
+    );
+  }
+
   @override
   void dispose() {
     _urlController.dispose();
     super.dispose();
   }
 
-  void _selectAndGoBack(ServerInstance server) {
-    var url = server.url.trim();
+  void _prefillFromSelection(ServerInstance? selected, {required bool notify}) {
+    if (_prefilled || selected == null) return;
+    final url = selected.url;
     if (url.isEmpty) return;
 
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://$url';
-    }
+    _prefilled = true;
+    _urlController.value = TextEditingValue(
+      text: url,
+      selection: TextSelection.collapsed(offset: url.length),
+    );
+    _searchQuery = url;
+    if (notify) setState(() {});
+  }
 
-    ref.read(serverSelectionProvider.notifier).setSelectedServer(server);
-    ref.read(apiProvider.notifier).updateBaseUrl(server.url);
+  /// Applies [server] as the selected instance and closes the picker.
+  ///
+  /// The normalised URL is what gets stored AND what the api client is pointed
+  /// at — passing the raw text to `updateBaseUrl` while normalising only a
+  /// local copy meant a bare host ("wanderer.to", exactly what this screen's
+  /// own hint suggests) reached Dio as the hostless "wanderer.to/api/v1". Dio's
+  /// `baseUrl` setter throws on that, so the screen never reached `pop()` and
+  /// simply appeared to ignore the input.
+  ///
+  /// Unusable input (empty, or still hostless after normalisation) leaves the
+  /// picker open rather than selecting something the client cannot talk to.
+  void _selectAndGoBack(ServerInstance server) {
+    final url = normalizeServerUrl(server.url);
+    if (url == null) return;
+
+    ref
+        .read(serverSelectionProvider.notifier)
+        .setSelectedServer(server.copyWith(url: url));
+    ref.read(apiProvider.notifier).updateBaseUrl(url);
 
     context.pop();
   }
@@ -46,6 +82,12 @@ class _ServerSelectionScreenState extends ConsumerState<ServerSelectionScreen> {
     final theme = Theme.of(context);
     final severSelection = ref.watch(serverSelectionProvider);
     final l10n = AppLocalizations.of(context)!;
+
+    // Late-resolution fallback for the initState prefill. Listener callbacks
+    // run after the frame, so touching the controller here is safe.
+    ref.listen(serverSelectionProvider, (_, next) {
+      _prefillFromSelection(next.value?.selectedServer, notify: true);
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.select_instance)),

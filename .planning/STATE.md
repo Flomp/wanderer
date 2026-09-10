@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.8
-milestone_name: Offline Recording & Deferred Upload
-status: Awaiting next milestone
-stopped_at: Completed 38.1-05-PLAN.md
-last_updated: "2026-08-07T16:09:16.256Z"
-last_activity: 2026-08-07 — Milestone v1.8 completed and archived
+milestone_name: milestone
+status: executing
+stopped_at: Completed 39-08-PLAN.md
+last_updated: "2026-09-10T06:24:24.328Z"
+last_activity: 2026-09-09 -- Phase 39 execution started
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 44
-  completed_plans: 44
-  percent: 100
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 53
+  completed_plans: 53
+  percent: 63
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-07)
 
 **Core value:** A hiker can tap "Navigate" on any online trail and follow it step by step without leaving the app.
-**Current focus:** Planning next milestone (v1.9) — Phase 37 is the only phase already scoped and unscheduled
+**Current focus:** Phase 39 — unified-tile-model
 
 ## Current Position
 
-Phase: Milestone v1.8 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-09 — Completed quick task 260809-vir: region boundary map screen (awaiting on-device verification)
+Phase: 39 (unified-tile-model) — EXECUTING
+Plan: 9 of 9
+Status: Ready to execute
+Last activity: 2026-09-09 -- Phase 39 execution started
 
 ## v1.8 Phases — SHIPPED 2026-08-07
 
@@ -189,6 +189,14 @@ v1.8 phase history archived — see `.planning/milestones/v1.8-ROADMAP.md` / MIL
 | Phase 38.1-downloaded-trail-blocker-closure P03 | 35min | 3 tasks | 5 files |
 | Phase 38.1 P04 | 12min | 2 tasks | 2 files |
 | Phase 38.1 P05 | 35min | 3 tasks | 5 files |
+| Phase 39 P02 | 25min | 3 tasks | 8 files |
+| Phase 39 P03 | 40min | 3 tasks | 3 files |
+| Phase 39 P01 | ~2min + on-device wait | 3 tasks | 3 files |
+| Phase 39 P04 | 15min | 2 tasks | 3 files |
+| Phase 39-unified-tile-model P05 | 20min | 3 tasks | 6 files |
+| Phase 39 P06 | 15min | 2 tasks | 4 files |
+| Phase 39-unified-tile-model P07 | 25min | 3 tasks | 8 files |
+| Phase 39 P08 | 35min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -443,6 +451,23 @@ Recent decisions affecting current work:
 - [Phase 38.1-04]: deleteTrail guards box.remove with isLiveCaptureRow(entity) consumed directly on the row in the transaction; membership drop is unconditional, library/<id>/ delete gated on rowRemoved (closes store half of CR-03)
 - [Phase 38.1]: Owner-scoped the delete gate and download-family guard in trail_dropdown.dart via ownLiveCaptureProvider, closing CR-01/CR-03's UI halves with one predicate — Isolated the escape-hatch and the Remove/Update/Download visibility from syncState on the shared cache row, per D-04/D-12/D-13
 - [Phase 38.1]: Guarded library_screen.dart's long-press Remove tile with the same ownLiveCaptureProvider predicate, matching the dropdown's hide-not-disable shape — D-14: the two remove-download surfaces must behave identically; this surface previously had no guard at all
+- [Phase 39]: Port and secret are re-minted together, never independently, when the persisted tile proxy identity is invalid
+- [Phase 39]: persistTileProxyPort never touches the secret, so a bind-retry rebind cannot churn glyph/sprite cache keys
+- [Phase 39]: MapStyleSourcesNotifier rethrows on fetch failure with no persisted fallback, rather than fabricating a value
+- [Phase ?]: Task-2 stub target computation, wired to real persisted templates only in Task 3's commit, so each task's acceptance criteria could be verified against a compiling, testable intermediate state
+- [Phase ?]: Combined the segment-length and kind checks into a single unknown-route 404 branch so the final notFound count lands at exactly 3 (empty-path, bad-secret, unknown-route) per D-04's pinned count
+- [Phase ?]: DEM background resolve is kicked from _upstreamRedirectTargetFor once per DEM request (hit or miss), guarded by _demResolveInFlight, rather than only from the miss branches -- functionally equivalent and avoids duplicating the kick at four call sites
+- [Phase 39]: Risk gate verdict: setstyle — the setConnected pulse does not recover Connection-failed tiles on physical Android hardware; Plan 39-09 wires the setStyle reload fallback instead — Confirmed via on-device logcat: 82 Connection-class tile failures, zero requests after the pulse, tiles only recovered on manual zoom
+- [Phase 39]: Pulse channel is now dead code — Plan 39-09 will remove maplibre_connectivity_pulse.dart, the Kotlin MethodChannel handler, the harness button, and revert MainActivity.kt's comment — Developer decision made immediately after the risk gate verdict
+- [Phase 39]: Glyph/sprite proxy routes (D-11): reverse-proxied with write-through, unlike tiles which stay redirect-only (D-02) — A style load issues only a handful of glyph/sprite requests, so reverse-proxying is affordable there where it isn't for per-pan tile volume
+- [Phase 39-05]: Renamed _offlinePmtilesMaxZoom/_offlineDemMaxZoom to _proxyVectorMaxZoom/_proxyDemMaxZoom as a true rename, not an alias, updating every doc-comment cross-reference and the legacy _pointSourceAtCell/_pointDemSourceAtCell call sites
+- [Phase 39]: TrailMap.offline deleted outright rather than fixed; retained onlineStatusProvider locals with other consumers at trail_panel.dart and trail_create_screen.dart — Makes the shipped TrailMap(offline: trail.isOffline) conflation a compile error; isOnline/isOffline locals still gate unrelated onTap/app-bar consumers
+- [Phase ?]: Deleted ActiveNavigationEntity.isOffline outright per plan amendment (D-16a) rather than retaining it — nothing reads it back after router_provider.dart's /record builder stops consulting resume?.isOffline.
+- [Phase ?]: Reverted two unrelated regenerated .g.dart files (auth_provider.g.dart, tile_proxy_provider.g.dart) produced as a side effect of dart run build_runner build — pre-existing stale drift outside this plan's files_modified scope.
+- [Phase ?]: 39-08: mapStyleJson doc comment now states the true D-01/D-09/D-10 single-provider contract instead of the stale Phase-18 flutter_map claim
+- [Phase ?]: 39-08: Deleting rewriteStyleForOffline's path-safety validator is not a D-07 loosening -- recorded in descriptive prose, not literal identifiers, to keep the plan's repo-wide zero-occurrence grep satisfiable
+- [Phase ?]: 39-08: Rule 3 applied to reword two stale rewriteStyleForOffline doc-comment references in tile_repository_manager.dart (out of plan scope) since the acceptance grep spans lib+test
+- [Phase ?]: 39-08: tile_proxy_spike_harness.dart's pulse control left untouched per the phase ownership boundary -- Plan 09 owns its removal
 
 ### Roadmap Evolution
 
@@ -503,6 +528,7 @@ Recent decisions affecting current work:
 | 260801-opr | Report raw distance instead of the 5 m-gated smoothed total, superseding CONV-05's smoothed-distance half. The gate chord-shortcuts switchbacks at real GPS sampling density: FIT ground truth (`19440058502_ACTIVITY.fit`, `session.total_distance` = 10912.01 m) put raw at +0.54% against the gate's −3.29%, and the corpus's own `04-switchback-scramble` asserted 0.000 m for an 88 m climb. Two report sites swapped (`gpx.ts:148`, `gpx_conversion_util.dart:442`); `thresholdXY_m` and both `GpxMetricsComputation(5, 5)` call sites left intact because the XY threshold is load-bearing for the elevation noise filter, so elevation is unchanged. Charts already used raw and converge for free — no chart code touched. Fixtures 04 (0.000 → 4.403 m) and 08 (100.075 → 110.083 m) regenerated; new `12-dense-switchback` fixture at 3.85 m mean spacing added as the regression guard the corpus lacked (`10-realistic-track` has zero sub-5 m hops). E2E import check on both platforms still outstanding | 2026-08-01 | a84e7ab9,b704c7bf,961888c4 | Needs Review | [260801-opr-…](./quick/260801-opr-report-raw-distance-instead-of-the-5m-ga/) |
 | 260808-vct | Add an "Available offline" toggle chip as the second chip in the trail quick filter bar, right after Sort. New `TrailFilter.offlineOnly` flag emitted server-side by `toFilterText()` as an explicit `id IN [...]` whitelist. The server tracks nothing about downloads — `savedByUserIds` is device-local and appears nowhere in `db/` or `web/` — so the device names the ids itself; `id` is already a filterable attribute on the trails index (`db/main.go:413`) and both search endpoints are POST, so the list rides in the body with no URL-length ceiling. The id set is narrowed to the profile's author before it is sent. That is a privacy measure, not a correctness one (`/profile/{handle}/trails` already ANDs `author = <actor>` server-side) and it matters because that route **proxies the request body verbatim to the origin instance for a federated actor** — an unnarrowed set would hand a third-party server this device's whole library. Resolution fails CLOSED: an unresolvable actor yields an empty set, which emits a never-matching `id IN ['']` rather than a silently unfiltered search. Ids are whitelisted to `[A-Za-z0-9_-]` before interpolation so a corrupt local row cannot inject filter syntax. A **client-side** clause is retained in `applyTrailFilter` for the local-merge half: an unsynced capture has no server id, is absent from the Meilisearch index entirely, and is covered by the `isLocal` branch instead. Server-side filtering means pagination, sort and relevance all behave normally — and it is what lets the **map** honor the chip, since clusters are aggregated over the already-filtered set (a client-side design could not do this: a cluster is a count, not a trail). Chip hidden only on the **Library** tab, where every row is downloaded by definition and it would be inert. An earlier client-side-only implementation (source inversion in `ProfileTrailsNotifier`, `totalPages` pinned to 1, map opted out) was built, then reverted unpushed before this one — it abandoned pagination, downgraded text search to local substring matching, and bought an offline property it did not actually deliver (the network fetch runs first either way, and a non-own handle rethrows before any device-only path is reached). Pre-existing `_isAnyActive`/`_isDistanceActive` bug observed and deliberately left unfixed. On-device verification still outstanding | 2026-08-08 | single commit on feature/app (`feat(app): add "Available offline" trail filter chip`) | Needs Review | [260808-vct-…](./quick/260808-vct-add-a-new-chip-to-the-filter-bar-that-fi/) |
 | 260809-vir | Region boundary map screen. New `GET /api/v1/regions/{path}/geometry` SvelteKit route reads the `region_geometry` PocketBase collection directly (`getFirstListItem` + `pb.filter` param binding, zod-validated path param) and returns `{path, polygon, bbox}`. It is deliberately NOT a proxy to the Go `/regions/{id}/geometry` route, which stays superuser-gated because it performs an outbound CoMaps fetch on cache miss (D-13) — this one is a pure cached-row read where a missing row is a 404, never a build trigger. Readable by any authenticated user via the `listRule`/`viewRule` opened in migration `1786307618_updated_region_geometry.go`. Client side: freezed `RegionGeometry` model, riverpod provider family keyed by region path, and a new full-screen `settings_offline_regions_map_screen.dart` reached from the map icon on each active region card (`/settings/region/map?path=…`, query param so the screen survives a deep link). The camera fits the region's bbox read from the **locally cached** `RegionEntity` — instant, no network wait — while the boundary polygon draws whenever the geometry resolves, through a single guarded `_maybeDrawPolygon` reached from both `onStyleLoaded` and the geometry listener so either resolution order renders. Paint values (`#1055c9` fill @ 0.18, same line @ width 2) are ported verbatim from the PocketBase admin region catalog (`regions_ext/regions_ui.html:1298-1300`) and are identical in light and dark. No loading UI by design: the map is up immediately and a fetch failure is a toast only, leaving the polygon undrawn. On-device verification still outstanding | 2026-08-09 | 8d964b91,9d05c543,59fa5370 | Needs Review | [260809-vir-…](./quick/260809-vir-region-geometry-map-screen/) |
+| 260906-uwx | Tune tracelet's position filters to stop the stationary GPS jitter a tester reported (a starburst of criss-crossing segments over one Leipzig block while standing still, against clean komoot/third-app tracks of the same walk). The app was disabling and under-tuning filtering tracelet already provides: `_foregroundConfig()` overrode the `Config.highAccuracy()` preset's own 5 m `distanceFilter` with 0.0, so every multipath-perturbed fix was recorded; `GeoConfig.filter` was never configured at all, leaving `trackingAccuracyThreshold` at 100 m and `maxImpliedSpeed` at 80 m/s (288 km/h) — vehicle-scale defaults no pedestrian spike can breach — under `policy: adjust`, which *corrects and records* a breaching fix rather than dropping it. The two profiles also filtered asymmetrically: `Config.highAccuracy()` enables the Kalman filter and `Config.balanced()` disables it, so a screen-off (backgrounded) recording lost GPS smoothing entirely. Fix is one shared `LocationFilter` constant — 30 m accuracy ceiling, 15 m/s implied speed, `policy: ignore`, Kalman + mock rejection on — applied to **both** profiles specifically so they cannot drift apart again. Foreground `distanceFilter` set to 3.0, deliberately below the preset's 5.0 to limit switchback chord-shortcutting, and `enableDeadReckoning` switched off: the preset turns it on with a 0 s activation delay, so handheld IMU estimation engages exactly in the street-canyon case where it drifts. Accuracy ceiling is 30 m not 25 because most recording is expected outdoors in non-urban terrain, where canopy and gorges routinely report 15–25 m. Acquisition-time SDK settings only — the CONV-05 distance smoothing and the load-bearing elevation `thresholdXY_m` / `GpxMetricsComputation(5, 5)` filter are measurement-time gates over an accumulated track and are untouched; elevation output unchanged. `flutter analyze` clean on the changed file, `flutter test` 1124 passed. **Not verified on device — field test required**, and nothing in the Dart suite exercises native acquisition settings. Known residual risk: multipath spikes often report optimistic accuracy, so `maxImpliedSpeed` is the load-bearing gate, not the accuracy ceiling; `distanceFilter: 3.0` is an unvalidated guess without raw GPX; dropouts now leave gaps rather than IMU estimates. Diagnosis in `.planning/debug/recording-gps-jitter-still.md` | 2026-09-06 | 14ee779f | Needs Review | [260906-uwx-…](./quick/260906-uwx-tune-tracelet-position-filters-to-stop-s/) |
 
 ## Deferred Items
 
@@ -598,8 +624,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-24 (recorded 
 
 ## Session Continuity
 
-Last session: 2026-08-04T19:21:54.164Z
-Stopped at: Completed 38.1-05-PLAN.md
+Last session: 2026-09-09T22:21:57.761Z
+Stopped at: Completed 39-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

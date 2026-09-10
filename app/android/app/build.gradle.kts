@@ -63,6 +63,13 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+
+            // The Flutter Gradle Plugin already turns R8 on for release and
+            // merges proguard-android-optimize.txt plus its own rules, so this
+            // only appends ours -- see proguard-rules.pro for what it protects
+            // and why. Keep this additive: setProguardFiles(..) would drop the
+            // defaults instead of adding to them.
+            proguardFiles("proguard-rules.pro")
         }
     }
 }
