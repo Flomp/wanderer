@@ -241,6 +241,7 @@ func syncListMetadata(record *core.Record, data map[string]any) {
 	delete(data, "author")
 	delete(data, "iri")
 
+	stripLocalSyncFields(data)
 	record.Load(data)
 }
 

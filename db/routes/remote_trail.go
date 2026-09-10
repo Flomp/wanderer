@@ -355,6 +355,7 @@ func syncTrailMetadata(app core.App, record *core.Record, data map[string]any) {
 	delete(data, "federated_category_name")
 	delete(data, "federated_subcategory_name")
 
+	stripLocalSyncFields(data)
 	record.Load(data)
 }
 
