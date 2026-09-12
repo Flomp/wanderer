@@ -109,7 +109,7 @@ func setupActorDeleteHooksTestApp(t *testing.T) *pbtests.TestApp {
 		t.Fatal(err)
 	}
 
-	// Read by deleteRecipientInboxes. Empty here; the recipient query itself is
+	// Read by actorDeleteInboxes. Empty here; the recipient query itself is
 	// covered in the federation package.
 	trails := core.NewBaseCollection("trails")
 	trails.Fields.Add(

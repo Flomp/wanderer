@@ -15,13 +15,13 @@ import (
 )
 
 // ActorDeleteRecipients returns every inbox that should be told a local actor
-// is gone (see deleteRecipientInboxes). Only local actors are ours to announce.
+// is gone (see actorDeleteInboxes). Only local actors are ours to announce.
 func ActorDeleteRecipients(app core.App, actor *core.Record) ([]string, error) {
 	if !actor.GetBool("is_local") {
 		return nil, nil
 	}
 
-	return deleteRecipientInboxes(app, actor.Id)
+	return actorDeleteInboxes(app, actor.Id)
 }
 
 func CreateActorDeleteActivity(app core.App, actor *core.Record, recipients []string) error {
@@ -160,21 +160,39 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 		return nil
 	}
 
+	object := r.GetString("iri")
+
+	// Everyone the comment text was sent to. The Create and any Update
+	// activities recorded the inboxes they went out to, mentioned actors and
+	// trail author alike, so the audience is read back rather than derived
+	// again, and it does not depend on the trail still existing.
+	recipients, err := commentInboxes(app, object)
+	if err != nil {
+		return err
+	}
+
+	to := "https://www.w3.org/ns/activitystreams#Public"
+
 	commentTrail, err := app.FindRecordById("trails", r.GetString("trail"))
-	if err != nil {
-		// The trail is gone too, so its own Delete already covers this comment.
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
+	switch {
+	case err == nil:
+		commentTrailAuthor, err := app.FindRecordById("activitypub_actors", commentTrail.GetString("author"))
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
 		}
+		if err == nil {
+			to = commentTrailAuthor.GetString("iri")
+			recipients = append(recipients, commentTrailAuthor.GetString("inbox"))
+		}
+	case errors.Is(err, sql.ErrNoRows):
+		// The trail went first and took this comment with it. Its author can
+		// no longer be looked up, but the recorded audience still stands.
+	default:
 		return err
 	}
 
-	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", commentTrail.GetString("author"))
-	if err != nil {
-		return err
-	}
-
-	if commentTrailAuthor.GetBool("is_local") {
+	recipients = remoteInboxes(recipients)
+	if len(recipients) == 0 {
 		return nil
 	}
 
@@ -186,15 +204,13 @@ func CreateCommentDeleteActivity(app core.App, client meilisearch.ServiceManager
 	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
-	to := commentTrailAuthor.GetString("iri")
-	object := r.GetString("iri")
 
 	activity := pub.DeleteNew(pub.IRI(id), pub.IRI(object))
 	activity.Actor = pub.IRI(author.GetString("iri"))
 	activity.To = pub.ItemCollection{pub.IRI(to)}
 	activity.Published = time.Now()
 
-	err = PostActivity(app, author, activity, []string{to + "/inbox"})
+	err = PostActivity(app, author, activity, recipients)
 	if err != nil {
 		return err
 	}
