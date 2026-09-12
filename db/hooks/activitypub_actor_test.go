@@ -128,6 +128,7 @@ func setupActorDeleteHooksTestApp(t *testing.T) *pbtests.TestApp {
 	for _, name := range []string{"comments", "summit_logs"} {
 		c := core.NewBaseCollection(name)
 		c.Fields.Add(
+			&core.TextField{Name: "iri"},
 			&core.RelationField{Name: "author", CollectionId: actors.Id, MaxSelect: 1, CascadeDelete: true},
 			&core.RelationField{Name: "trail", CollectionId: trails.Id, MaxSelect: 1, CascadeDelete: true},
 		)

@@ -96,17 +96,16 @@ func UpdateSummitLogHandler() func(e *core.RecordRequestEvent) error {
 func DeleteSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		trail, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
-		if err != nil {
-			// The trail is gone too, so this summit log was removed as part of
-			// that trail's own cascade. There is nothing left to reindex, and
-			// the trail's delete activity already covers what federated.
-			if errors.Is(err, sql.ErrNoRows) {
-				return e.Next()
+		switch {
+		case err == nil:
+			if err := util.IndexTrails(e.App, []*core.Record{trail}, client); err != nil {
+				return err
 			}
-			return err
-		}
-
-		if err := util.IndexTrails(e.App, []*core.Record{trail}, client); err != nil {
+		case errors.Is(err, sql.ErrNoRows):
+			// The trail went first and took this log with it. Nothing is left
+			// to reindex, but the log's own followers still have to be told;
+			// CreateSummitLogDeleteActivity handles the missing trail.
+		default:
 			return err
 		}
 

@@ -232,17 +232,33 @@ func CreateSummitLogDeleteActivity(app core.App, r *core.Record) error {
 		return nil
 	}
 
-	summitLogTrail, err := app.FindRecordById("trails", r.GetString("trail"))
+	// The log was handed to this author's followers when it was created, so
+	// they are told regardless of what happened to the trail.
+	recipients, err := followerInboxes(app, author.Id)
 	if err != nil {
-		// The trail is gone too, so its own Delete already covers this log.
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
 		return err
 	}
 
-	summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", summitLogTrail.GetString("author"))
-	if err != nil {
+	to := "https://www.w3.org/ns/activitystreams#Public"
+
+	summitLogTrail, err := app.FindRecordById("trails", r.GetString("trail"))
+	switch {
+	case err == nil:
+		summitLogTrailAuthor, err := app.FindRecordById("activitypub_actors", summitLogTrail.GetString("author"))
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if err == nil {
+			to = summitLogTrailAuthor.GetString("iri")
+			if author.Id != summitLogTrailAuthor.Id {
+				recipients = append(recipients, summitLogTrailAuthor.GetString("inbox"))
+			}
+		}
+	case errors.Is(err, sql.ErrNoRows):
+		// The trail went first and took this log with it. Its author can no
+		// longer be addressed, but the trail's own Delete only reaches the
+		// trail author's followers, not this author's. They still need to hear.
+	default:
 		return err
 	}
 
@@ -254,7 +270,6 @@ func CreateSummitLogDeleteActivity(app core.App, r *core.Record) error {
 	recordId := security.RandomStringWithAlphabet(core.DefaultIdLength, core.DefaultIdAlphabet)
 
 	id := fmt.Sprintf("%s/api/v1/activitypub/activity/%s", origin, recordId)
-	to := summitLogTrailAuthor.GetString("iri")
 	object := r.GetString("iri")
 	cc := pub.ItemCollection{pub.IRI(author.GetString("iri") + "/followers")}
 
@@ -263,15 +278,6 @@ func CreateSummitLogDeleteActivity(app core.App, r *core.Record) error {
 	activity.To = pub.ItemCollection{pub.IRI(to)}
 	activity.CC = cc
 	activity.Published = time.Now()
-
-	recipients, err := followerInboxes(app, author.Id)
-	if err != nil {
-		return err
-	}
-
-	if author.Id != summitLogTrailAuthor.Id {
-		recipients = append(recipients, summitLogTrailAuthor.GetString("inbox"))
-	}
 
 	err = PostActivity(app, author, activity, recipients)
 	if err != nil {
