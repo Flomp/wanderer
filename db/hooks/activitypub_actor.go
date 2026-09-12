@@ -32,7 +32,9 @@ func UpdateActorHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 	}
 }
 
-func BeforeDeleteActorHandler() func(e *core.RecordEvent) error {
+const actorDeleteRecipientsKey = "__delete_recipients"
+
+func CollectActorDeleteRecipientsHandler() func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		actor := e.Record
 
@@ -45,9 +47,17 @@ func BeforeDeleteActorHandler() func(e *core.RecordEvent) error {
 			recipients = nil
 		}
 
-		if err := e.Next(); err != nil {
-			return err
-		}
+		actor.Set(actorDeleteRecipientsKey, recipients)
+
+		return e.Next()
+	}
+}
+
+func AnnounceActorDeleteHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		actor := e.Record
+
+		recipients, _ := actor.GetRaw(actorDeleteRecipientsKey).([]string)
 
 		if err := federation.CreateActorDeleteActivity(e.App, actor, recipients); err != nil {
 			e.App.Logger().Error(
@@ -56,7 +66,7 @@ func BeforeDeleteActorHandler() func(e *core.RecordEvent) error {
 			)
 		}
 
-		return nil
+		return e.Next()
 	}
 }
 
