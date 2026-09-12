@@ -40,18 +40,24 @@ var errRemoteUnavailable = errors.New("remote instance unavailable")
 
 // cachedRecordFallback returns the locally cached record to serve when a
 // blocking sync failed for a reason that says nothing about the content
-// itself
+// itself. Only a copy that completed a full sync at least once qualifies: a
+// placeholder created from an inbound Create/Announce has a stored id but no
+// content, and serving it would present an empty trail/list as real.
 func cachedRecordFallback(app core.App, collection, id string, err error) *core.Record {
 	if id == "" || !isDegradableSyncError(err) {
 		return nil
 	}
 
 	cached, findErr := app.FindRecordById(collection, id)
-	if findErr != nil {
+	if findErr != nil || !hasCompletedFullSync(cached) {
 		return nil
 	}
 
 	return cached
+}
+
+func hasCompletedFullSync(record *core.Record) bool {
+	return record.GetBool("full_sync_completed")
 }
 
 // isDegradableSyncError reports whether a failed sync may be answered from the
@@ -261,6 +267,7 @@ func performFullSync(app core.App, ctx context.Context, reqURL *url.URL, localTr
 		syncTrailMetadata(txApp, localTrail, remoteMap)
 
 		localTrail.Set("needs_full_sync", false)
+		localTrail.Set("full_sync_completed", true)
 
 		if err := txApp.Save(localTrail); err != nil {
 			return err

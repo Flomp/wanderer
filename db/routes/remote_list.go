@@ -213,6 +213,7 @@ func performFullListSync(app core.App, ctx context.Context, reqURL *url.URL, loc
 		syncListMetadata(localList, remoteMap)
 
 		localList.Set("needs_full_sync", false)
+		localList.Set("full_sync_completed", true)
 
 		// 3. Sync Trails
 		if expand, ok := remoteMap["expand"].(map[string]any); ok {
