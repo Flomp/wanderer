@@ -785,11 +785,11 @@ List<TrackPoint> _simplifyTrackPoints(
 /// [buildElevationTrackPoints]) are a subset of these with identical
 /// `distanceM`.
 ///
-/// Top-level and `@visibleForTesting` purely so it can be exercised without a
-/// widget: this was a private State method, which put the chart's distance
+/// Top-level (was a private State method, which put the chart's distance
 /// accumulation out of reach of any unit test — and that is precisely where
-/// the raw-vs-smoothed mismatch below hid.
-@visibleForTesting
+/// the raw-vs-smoothed mismatch below hid) — also called directly by
+/// `navigation_screen.dart` to build the polyline `TrackPositionMatcher`
+/// matches against.
 List<TrackPoint> buildRawTrackPoints(Gpx gpx) {
   if (gpx.allWaypoints.isEmpty) return [];
 

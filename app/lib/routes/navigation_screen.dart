@@ -45,6 +45,7 @@ import 'package:wanderer/util/gpx/gpx.dart';
 import 'package:wanderer/util/region/proxy_style_rewriter.dart';
 import 'package:wanderer/util/geo/polyline.dart';
 import 'package:wanderer/util/route/planner_handoff.dart';
+import 'package:wanderer/util/route/track_position_matcher.dart';
 import 'package:wanderer/models/route_travel_bucket.dart';
 import 'package:wanderer/actions/resolve_track_save_options.dart';
 import 'package:wanderer/services/tracelet_position_source.dart';
@@ -238,6 +239,20 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   final ValueNotifier<LocationMarkerPosition?> _currentPosition = ValueNotifier(
     null,
   );
+
+  /// Resolves each raw fix to a distance along the navigated trail's GPX in
+  /// the elevation chart's x units. Built once the trail model resolves
+  /// (see the post-frame callback in [initState]). Stays null in recording
+  /// mode (the chart is the breadcrumb, the user is always at its end),
+  /// while the trail is loading, or when the trail has no plottable track.
+  TrackPositionMatcher? _trackMatcher;
+
+  /// Latest on-track along-track metres for the elevation chart's live
+  /// marker, null = off-track/unknown. A [ValueNotifier], like
+  /// [_currentPosition], so per-fix updates rebuild only the chart, never
+  /// the whole screen — [ValueNotifier] skips notification when the value
+  /// is unchanged, so a run of nulls is free.
+  final ValueNotifier<double?> _liveTrackMeters = ValueNotifier(null);
 
   /// Short per-fix position tween smoothing the marker/camera between raw GPS
   /// fixes — mirrors the 200ms `fastOutSlowIn` `flutter_map_location_marker`'s
@@ -486,20 +501,25 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         notificationText: _notificationText(localizations),
         seed: widget.initialPosition,
       );
-      // The navigating notification names the trail, and the trail model can
-      // still be loading right here — a session resumed at launch pushes
-      // straight to this route with nothing warm to read, so `start()` above
-      // had to fall back to the generic wording. Resolve it ONCE and rewrite
-      // the body; the trail is fixed for the session (switching trails means
-      // leaving this screen), so there is nothing further to watch. A no-op
-      // in the common case where the name was already known at `start()`.
+      // The navigating notification names the trail, and the elevation
+      // chart's live-position matcher needs the trail's GPX — the trail
+      // model can still be loading right here, since a session resumed at
+      // launch pushes straight to this route with nothing warm to read, so
+      // `start()` above had to fall back to the generic wording. Resolve it
+      // ONCE and use it for both; the trail is fixed for the session
+      // (switching trails means leaving this screen), so there is nothing
+      // further to watch. A no-op notification rewrite in the common case
+      // where the name was already known at `start()`.
       if (widget.isRecording) return;
       // Failure (offline with nothing cached) leaves the generic wording
-      // rather than naming a trail we don't have.
-      final name = await ref
+      // rather than naming a trail we don't have, and the chart marker off.
+      final trail = await ref
           .read(trailProvider(widget.id).future)
-          .then<String?>((trail) => trail.name, onError: (_) => null);
-      if (!mounted || name == null || name.isEmpty) return;
+          .then<Trail?>((trail) => trail, onError: (_) => null);
+      if (!mounted || trail == null) return;
+      _initTrackMatcher(trail.expand?.gpx);
+      final name = trail.name;
+      if (name.isEmpty) return;
       await _positionSource.setNotificationText(
         localizations.location_tracking_notification_text_navigating(name),
       );
@@ -521,8 +541,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         // and exported as the saved trail's GPX. Maneuver-advance detection
         // is unrelated bookkeeping and must keep running even while frozen,
         // so it's not gated here — only the breadcrumb append is.
+        final fix = ml.Geographic(lat: pos.latitude, lon: pos.longitude);
         final advanced = _navNotifier.onPosition(
-          ml.Geographic(lat: pos.latitude, lon: pos.longitude),
+          fix,
           // `null`, never a fabricated 0, when the fix carries no real
           // altitude (see [hasUsableAltitude]). The breadcrumb IS the saved
           // trail's GPX, and computeTrailMetrics deliberately skips waypoints
@@ -539,6 +560,19 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         );
         _statsNotifier.onPosition(pos);
         _onFix(pos);
+        // Same fix that just drove _onFix (the map marker), so the map
+        // marker and the elevation chart's marker never disagree. Not
+        // gated on _frozen — a paused user's position is still valid.
+        final matcher = _trackMatcher;
+        if (matcher != null) {
+          _liveTrackMeters.value = matcher.update(
+            fix,
+            heading: pos.heading,
+            headingAccuracy: pos.headingAccuracy,
+            speed: pos.speed,
+            accuracy: pos.accuracy,
+          );
+        }
         if (advanced) {
           _persistNow();
         }
@@ -549,6 +583,22 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
 
     _startHeadingSub();
+  }
+
+  /// Builds [_trackMatcher] from the navigated trail's [gpx], once, from the
+  /// post-frame callback in [initState] — never from the per-fix hot path.
+  /// Uses [buildRawTrackPoints] (not the chart's 250-point thinning) so
+  /// switchbacks are not chord-cut, and the same raw `distanceM` axis the
+  /// chart plots on. Leaves [_trackMatcher] null (no live marker) when
+  /// [gpx] is absent or has fewer than 2 plottable points.
+  void _initTrackMatcher(Gpx? gpx) {
+    if (gpx == null) return;
+    final raw = buildRawTrackPoints(gpx);
+    if (raw.length < 2) return;
+    _trackMatcher = TrackPositionMatcher(
+      shape: raw.map((p) => p.lonlat).toList(growable: false),
+      cumulativeMeters: raw.map((p) => p.distanceM).toList(growable: false),
+    );
   }
 
   /// Body of the Android foreground-service notification for this session.
@@ -814,6 +864,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
           : _positionSource.dispose(),
     );
     _currentPosition.dispose();
+    _liveTrackMeters.dispose();
     _sheetController.dispose();
     _waypointSheetController.dispose();
     super.dispose();
@@ -2052,6 +2103,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
             trail: trail,
             gpx: gpx,
             enableLineTouch: false,
+            livePositionMeters: _liveTrackMeters,
           ),
         );
       },
