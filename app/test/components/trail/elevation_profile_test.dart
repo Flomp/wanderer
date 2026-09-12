@@ -1,8 +1,13 @@
 import 'dart:collection';
 
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gpx/gpx.dart';
+import 'package:maplibre/maplibre.dart';
 import 'package:wanderer/components/trail/elevation_profile.dart';
+import 'package:wanderer/provider/local_settings_provider.dart';
 import 'package:wanderer/util/gpx/conversion.dart';
 import 'package:wanderer/util/gpx/gpx.dart';
 
@@ -223,6 +228,142 @@ void main() {
         buildElevationTrackPoints(after, 1).length,
         greaterThan(buildElevationTrackPoints(before, 1).length),
       );
+    });
+  });
+
+  group('buildRawTrackPoints', () {
+    test(
+      'is unsimplified and shares its axis with buildElevationTrackPoints',
+      () {
+        final gpx = _constantGradeTrack(points: 400);
+
+        final raw = buildRawTrackPoints(gpx);
+        final simplified = buildElevationTrackPoints(gpx, 1);
+
+        expect(raw, hasLength(400));
+        // _simplifyTrackPoints thins toward 250 (bucketed min/max extremes
+        // plus the first/last point), so the true ceiling is a couple over
+        // the nominal target — the meaningful assertion is that it is far
+        // fewer than the raw 400, not an exact cap.
+        expect(simplified.length, lessThan(raw.length));
+        expect(simplified.length, lessThanOrEqualTo(260));
+        expect(raw.last.distanceM, closeTo(simplified.last.distanceM, 1e-9));
+      },
+    );
+
+    test('skips points without a usable coordinate or elevation, same as '
+        'buildElevationTrackPoints', () {
+      final gpx = _constantGradeTrack(points: 20);
+      gpx.trks.single.trksegs.single.trkpts.insert(
+        10,
+        Wpt(lat: null, lon: null, ele: 1000),
+      );
+
+      final raw = buildRawTrackPoints(gpx);
+      final simplified = buildElevationTrackPoints(gpx, 1);
+
+      expect(raw, hasLength(20));
+      expect(raw.first.distanceM, closeTo(simplified.first.distanceM, 1e-9));
+      expect(raw.last.distanceM, closeTo(simplified.last.distanceM, 1e-9));
+    });
+  });
+
+  group('elevationAtDistance', () {
+    List<TrackPoint> twoPoints() => [
+      TrackPoint(
+        distanceM: 1000,
+        elevationM: 1000,
+        lonlat: const Geographic(lat: 47.0, lon: 11.0),
+      ),
+      TrackPoint(
+        distanceM: 1010,
+        elevationM: 1010,
+        lonlat: const Geographic(lat: 47.0001, lon: 11.0001),
+      ),
+    ];
+
+    test('interpolates linearly between the bracketing points', () {
+      final points = twoPoints();
+
+      expect(elevationAtDistance(points, 1005), closeTo(1005, 1e-9));
+    });
+
+    test('clamps to the first point below the track start', () {
+      final points = twoPoints();
+
+      expect(elevationAtDistance(points, 500), points.first.elevationM);
+    });
+
+    test('clamps to the last point past the track end', () {
+      final points = twoPoints();
+
+      expect(elevationAtDistance(points, 2000), points.last.elevationM);
+    });
+  });
+
+  group('live position marker', () {
+    Widget harness(Gpx gpx, ValueNotifier<double?> notifier) {
+      return ProviderScope(
+        overrides: [unitProvider.overrideWithValue('metric')],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 300,
+              child: ElevationProfile(gpx: gpx, livePositionMeters: notifier),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets(
+      'draws no marker bar/line while the listenable is null, and adds one '
+      'once it has a value',
+      (tester) async {
+        final gpx = _constantGradeTrack();
+        final notifier = ValueNotifier<double?>(null);
+
+        await tester.pumpWidget(harness(gpx, notifier));
+        await tester.pumpAndSettle();
+
+        var data = tester.widget<LineChart>(find.byType(LineChart)).data;
+        expect(data.lineBarsData, hasLength(1));
+        expect(data.extraLinesData.verticalLines, isEmpty);
+
+        notifier.value = 40.0;
+        await tester.pump();
+
+        data = tester.widget<LineChart>(find.byType(LineChart)).data;
+        expect(data.lineBarsData, hasLength(2));
+        expect(data.lineBarsData[1].spots, hasLength(1));
+        expect(data.lineBarsData[1].spots.single.x, 40.0);
+        expect(data.extraLinesData.verticalLines, hasLength(1));
+        expect(data.extraLinesData.verticalLines.single.x, 40.0);
+
+        notifier.value = null;
+        await tester.pump();
+
+        data = tester.widget<LineChart>(find.byType(LineChart)).data;
+        expect(data.lineBarsData, hasLength(1));
+        expect(data.extraLinesData.verticalLines, isEmpty);
+      },
+    );
+
+    testWidgets('clamps a value beyond the track end to the last point', (
+      tester,
+    ) async {
+      final gpx = _constantGradeTrack();
+      final notifier = ValueNotifier<double?>(1e9);
+
+      await tester.pumpWidget(harness(gpx, notifier));
+      await tester.pumpAndSettle();
+
+      final points = buildElevationTrackPoints(gpx, 30);
+      final data = tester.widget<LineChart>(find.byType(LineChart)).data;
+
+      expect(data.lineBarsData, hasLength(2));
+      expect(data.lineBarsData[1].spots.single.x, points.last.distanceM);
     });
   });
 }

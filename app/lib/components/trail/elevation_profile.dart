@@ -1,7 +1,9 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:duration/duration.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -9,6 +11,7 @@ import 'package:gpx/gpx.dart';
 import 'package:maplibre/maplibre.dart';
 import 'package:wanderer/i18n/app_localizations.dart';
 import 'package:wanderer/models/trail.dart';
+import 'package:wanderer/models/waypoint.dart';
 import 'package:wanderer/provider/local_settings_provider.dart';
 import 'package:wanderer/util/format.dart';
 import 'package:wanderer/util/gpx/conversion.dart';
@@ -27,6 +30,16 @@ class ElevationProfile extends ConsumerStatefulWidget {
   /// data (e.g. the route planner's in-progress `Gpx`, which has no
   /// timestamps). Ignored when `null`.
   final Duration? durationOverride;
+
+  /// The user's live along-track distance in the chart's own x units (raw
+  /// cumulative metres — see [buildElevationTrackPoints]). Non-null draws a
+  /// "you are here" vertical guide + dot on the curve; null hides it. A
+  /// [ValueListenable] so a per-fix update rebuilds only the chart, never
+  /// the parent widget. Producers should compute this with
+  /// `TrackPositionMatcher` over [buildRawTrackPoints] of the SAME [gpx], so
+  /// the marker lands on the identical axis the chart plots on.
+  final ValueListenable<double?>? livePositionMeters;
+
   const ElevationProfile({
     super.key,
     this.trail,
@@ -36,6 +49,7 @@ class ElevationProfile extends ConsumerStatefulWidget {
     this.onLineTouch,
     this.enableLineTouch = true,
     this.durationOverride,
+    this.livePositionMeters,
   });
 
   @override
@@ -192,6 +206,12 @@ class _ElevationProfileState extends ConsumerState<ElevationProfile> {
     );
   }
 
+  // Must match leftTitles reservedSize so icon X positions align with the
+  // plot area — a private State field (not local) since both _buildChart
+  // and _lineChart need it.
+  static const _leftAxisWidth = 36.0;
+  static const _iconSize = 14.0;
+
   Widget _buildChart(
     double minElev,
     double yMin,
@@ -206,13 +226,9 @@ class _ElevationProfileState extends ConsumerState<ElevationProfile> {
         )
         .toList();
 
-    // Must match leftTitles reservedSize so icon X positions align with the plot area
-    const leftAxisWidth = 36.0;
-    const iconSize = 14.0;
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        final plotWidth = constraints.maxWidth - leftAxisWidth;
+        final plotWidth = constraints.maxWidth - _leftAxisWidth;
 
         final spots = _points
             .map((p) => FlSpot(p.distanceM, p.elevationM))
@@ -233,165 +249,43 @@ class _ElevationProfileState extends ConsumerState<ElevationProfile> {
           clipBehavior: Clip.none,
           children: [
             // ── Chart ──────────────────────────────────────────────────────────
-            LineChart(
-              LineChartData(
-                minX: 0,
-                maxX: _points.last.distanceM,
-                minY: yMin,
-                maxY: yMax,
-                showingTooltipIndicators:
-                    _selectedIndex != null &&
-                        _selectedIndex! > 0 &&
-                        _selectedIndex! < spots.length
-                    ? [
-                        ShowingTooltipIndicators([
-                          LineBarSpot(barData, 0, spots[_selectedIndex!]),
-                        ]),
-                      ]
-                    : [],
-                clipData: const FlClipData.all(),
-                backgroundColor: Colors.transparent,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: yInterval,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    strokeWidth: 1,
-                    dashArray: [6, 4],
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: leftAxisWidth,
-                      interval: yInterval,
-                      getTitlesWidget: (value, meta) {
-                        if (value == meta.min || value == meta.max) {
-                          return const SizedBox.shrink();
-                        }
-                        return Text(
-                          formatElevation(value, unit: ref.read(unitProvider)),
-                          style: const TextStyle(
-                            color: Color(0xFF888899),
-                            fontSize: 10,
-                            fontFamily: 'monospace',
-                          ),
-                        );
-                      },
+            widget.livePositionMeters == null
+                ? _lineChart(
+                    context,
+                    null,
+                    barData: barData,
+                    spots: spots,
+                    waypoints: waypoints,
+                    yMin: yMin,
+                    yMax: yMax,
+                    maxDist: maxDist,
+                    xInterval: xInterval,
+                    yInterval: yInterval,
+                  )
+                : ValueListenableBuilder<double?>(
+                    valueListenable: widget.livePositionMeters!,
+                    builder: (context, liveMeters, _) => _lineChart(
+                      context,
+                      liveMeters,
+                      barData: barData,
+                      spots: spots,
+                      waypoints: waypoints,
+                      yMin: yMin,
+                      yMax: yMax,
+                      maxDist: maxDist,
+                      xInterval: xInterval,
+                      yInterval: yInterval,
                     ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 22,
-                      interval: xInterval,
-                      getTitlesWidget: (value, meta) {
-                        if (value == meta.max) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            formatDistance(value, unit: ref.read(unitProvider)),
-                            style: const TextStyle(
-                              color: Color(0xFF888899),
-                              fontSize: 10,
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  enabled: widget.enableLineTouch,
-                  handleBuiltInTouches: true,
-                  getTouchLineEnd: (_, _) {
-                    return yMax;
-                  },
-                  touchCallback: (event, response) {
-                    if (event is FlLongPressEnd ||
-                        event is FlPanEndEvent ||
-                        event is FlTapUpEvent) {
-                      setState(() {
-                        _selectedIndex = null;
-                      });
-                      widget.onLineTouch?.call(null);
-                    } else if (response?.lineBarSpots?.isNotEmpty == true) {
-                      final index = response!.lineBarSpots!.first.spotIndex;
-                      setState(() {
-                        _selectedIndex = index;
-                      });
-                      final point = _points[index];
-                      widget.onLineTouch?.call(point);
-                    }
-                  },
-                  getTouchedSpotIndicator: (barData, spotIndexes) {
-                    return spotIndexes.map((i) {
-                      return TouchedSpotIndicatorData(
-                        FlLine(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.4),
-                          strokeWidth: 1,
-                        ),
-                        FlDotData(
-                          getDotPainter: (spot, percent, bar, index) =>
-                              FlDotCirclePainter(
-                                radius: 5,
-                                color: _gradientColor(_points[index].gradient),
-                                strokeColor: Colors.white,
-                                strokeWidth: 1.5,
-                              ),
-                        ),
-                      );
-                    }).toList();
-                  },
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => Theme.of(context).primaryColor,
-                    tooltipBorderRadius: const BorderRadius.all(
-                      Radius.circular(8),
-                    ),
-                    getTooltipItems: (spots) {
-                      return spots.map((spot) => null).toList();
-                    },
-                  ),
-                ),
-                lineBarsData: [barData],
-
-                // ── Waypoint vertical lines ───────────────────────────────────
-                extraLinesData: ExtraLinesData(
-                  verticalLines: waypoints.map((w) {
-                    return VerticalLine(
-                      x: w.distanceFromStart!,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.2),
-                      strokeWidth: 1,
-                      dashArray: [4, 4],
-                    );
-                  }).toList(),
-                ),
-              ),
-              duration: const Duration(milliseconds: 0),
-            ),
 
             // ── Waypoint icon markers ─────────────────────────────────────────
             ...waypoints.map((w) {
               final fraction = (w.distanceFromStart! / maxDist).clamp(0.0, 1.0);
               final left =
-                  (leftAxisWidth + fraction * plotWidth - (iconSize + 8) / 2)
+                  (_leftAxisWidth + fraction * plotWidth - (_iconSize + 8) / 2)
                       .clamp(
-                        leftAxisWidth,
-                        constraints.maxWidth - (iconSize + 8),
+                        _leftAxisWidth,
+                        constraints.maxWidth - (_iconSize + 8),
                       );
               return Positioned(
                 left: left,
@@ -404,7 +298,7 @@ class _ElevationProfileState extends ConsumerState<ElevationProfile> {
                   ),
                   child: FaIcon(
                     w.icon,
-                    size: iconSize,
+                    size: _iconSize,
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                 ),
@@ -413,6 +307,229 @@ class _ElevationProfileState extends ConsumerState<ElevationProfile> {
           ],
         );
       },
+    );
+  }
+
+  /// Builds the actual `LineChart` — factored out of [_buildChart] so the
+  /// live-marker branch there can rebuild only this widget (via
+  /// [ValueListenableBuilder]) on every GPS fix, never the surrounding
+  /// [LayoutBuilder]/waypoint-icon tree. [liveMeters] is the along-track
+  /// distance of the live marker (chart x units), or null to hide it.
+  Widget _lineChart(
+    BuildContext context,
+    double? liveMeters, {
+    required LineChartBarData barData,
+    required List<FlSpot> spots,
+    required List<Waypoint> waypoints,
+    required double yMin,
+    required double yMax,
+    required double maxDist,
+    required double xInterval,
+    required double yInterval,
+  }) {
+    final lineBarsData = <LineChartBarData>[barData];
+
+    final verticalLines = waypoints.map((w) {
+      return VerticalLine(
+        x: w.distanceFromStart!,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+        strokeWidth: 1,
+        dashArray: [4, 4],
+      );
+    }).toList();
+
+    if (liveMeters != null && maxDist > 0) {
+      final x = liveMeters.clamp(0.0, maxDist);
+      final y = elevationAtDistance(_points, x);
+      final primary = Theme.of(context).colorScheme.primary;
+      // Solid — the waypoint lines above are dashed [4, 4] and the grid
+      // [6, 4], so solid reads as "live" rather than a static reference.
+      verticalLines.add(
+        VerticalLine(
+          x: x,
+          color: primary.withValues(alpha: 0.6),
+          strokeWidth: 1.5,
+        ),
+      );
+      // A single-spot bar: fl_chart's generateNormalBarPath explicitly
+      // supports `size == 1`, and its dot is drawn by drawDots when
+      // dotData.show is true. The dot mirrors the scrub indicator's
+      // radius-5/stroked look so the two read as the same family.
+      lineBarsData.add(
+        LineChartBarData(
+          spots: [FlSpot(x, y)],
+          isCurved: false,
+          color: Colors.transparent,
+          barWidth: 0,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+              radius: 5,
+              color: primary,
+              strokeColor: Theme.of(context).colorScheme.surface,
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: _points.last.distanceM,
+        minY: yMin,
+        maxY: yMax,
+        showingTooltipIndicators:
+            _selectedIndex != null &&
+                _selectedIndex! > 0 &&
+                _selectedIndex! < spots.length
+            ? [
+                ShowingTooltipIndicators([
+                  LineBarSpot(barData, 0, spots[_selectedIndex!]),
+                ]),
+              ]
+            : [],
+        clipData: const FlClipData.all(),
+        backgroundColor: Colors.transparent,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: yInterval,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: Colors.black.withValues(alpha: 0.1),
+            strokeWidth: 1,
+            dashArray: [6, 4],
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: _leftAxisWidth,
+              interval: yInterval,
+              getTitlesWidget: (value, meta) {
+                if (value == meta.min || value == meta.max) {
+                  return const SizedBox.shrink();
+                }
+                return Text(
+                  formatElevation(value, unit: ref.read(unitProvider)),
+                  style: const TextStyle(
+                    color: Color(0xFF888899),
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                  ),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 22,
+              interval: xInterval,
+              getTitlesWidget: (value, meta) {
+                if (value == meta.max) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    formatDistance(value, unit: ref.read(unitProvider)),
+                    style: const TextStyle(
+                      color: Color(0xFF888899),
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        lineTouchData: LineTouchData(
+          enabled: widget.enableLineTouch,
+          handleBuiltInTouches: true,
+          getTouchLineEnd: (_, _) {
+            return yMax;
+          },
+          touchCallback: (event, response) {
+            if (event is FlLongPressEnd ||
+                event is FlPanEndEvent ||
+                event is FlTapUpEvent) {
+              setState(() {
+                _selectedIndex = null;
+              });
+              widget.onLineTouch?.call(null);
+            } else {
+              // Touch collects the nearest spot from EVERY bar and sorts by
+              // pixel distance — with the live-marker bar present, `.first`
+              // could be its single spot instead of the profile line's.
+              // Only barIndex 0 (the profile line) should ever drive
+              // scrubbing.
+              final spot = response?.lineBarSpots?.firstWhereOrNull(
+                (s) => s.barIndex == 0,
+              );
+              if (spot != null) {
+                final index = spot.spotIndex;
+                setState(() {
+                  _selectedIndex = index;
+                });
+                final point = _points[index];
+                widget.onLineTouch?.call(point);
+              }
+            }
+          },
+          getTouchedSpotIndicator: (barData, spotIndexes) {
+            // fl_chart passes no bar index here. The profile line's own
+            // dotData is `show: false` while the live-marker bar's is
+            // `show: true`, so that flag is what discriminates the two —
+            // the marker bar must never render the scrub indicator.
+            if (barData.dotData.show) {
+              return List<TouchedSpotIndicatorData?>.filled(
+                spotIndexes.length,
+                null,
+              );
+            }
+            return spotIndexes.map((i) {
+              return TouchedSpotIndicatorData(
+                FlLine(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.4),
+                  strokeWidth: 1,
+                ),
+                FlDotData(
+                  getDotPainter: (spot, percent, bar, index) =>
+                      FlDotCirclePainter(
+                        radius: 5,
+                        color: _gradientColor(_points[index].gradient),
+                        strokeColor: Colors.white,
+                        strokeWidth: 1.5,
+                      ),
+                ),
+              );
+            }).toList();
+          },
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => Theme.of(context).primaryColor,
+            tooltipBorderRadius: const BorderRadius.all(Radius.circular(8)),
+            getTooltipItems: (spots) {
+              return spots.map((spot) => null).toList();
+            },
+          ),
+        ),
+        lineBarsData: lineBarsData,
+
+        // ── Waypoint (+ live marker) vertical lines ────────────────────────
+        extraLinesData: ExtraLinesData(verticalLines: verticalLines),
+      ),
+      duration: const Duration(milliseconds: 0),
     );
   }
 
@@ -659,14 +776,21 @@ List<TrackPoint> _simplifyTrackPoints(
   return uniqueResult;
 }
 
-/// Builds the elevation chart's track points from [gpx].
+/// Every plottable sample of [gpx], unsmoothed and unsimplified.
+///
+/// `distanceM` is the elevation chart's x-axis coordinate; `lonlat` the
+/// sample position — together they are the polyline `TrackPositionMatcher`
+/// matches live fixes against, so the marker lands on the chart's own axis.
+/// Keep this the single source of that axis: the chart's own points (see
+/// [buildElevationTrackPoints]) are a subset of these with identical
+/// `distanceM`.
 ///
 /// Top-level and `@visibleForTesting` purely so it can be exercised without a
 /// widget: this was a private State method, which put the chart's distance
 /// accumulation out of reach of any unit test — and that is precisely where
 /// the raw-vs-smoothed mismatch below hid.
 @visibleForTesting
-List<TrackPoint> buildElevationTrackPoints(Gpx gpx, int windowSize) {
+List<TrackPoint> buildRawTrackPoints(Gpx gpx) {
   if (gpx.allWaypoints.isEmpty) return [];
 
   final result = <TrackPoint>[];
@@ -737,6 +861,20 @@ List<TrackPoint> buildElevationTrackPoints(Gpx gpx, int windowSize) {
     }
   }
 
+  return result;
+}
+
+/// Builds the elevation chart's track points from [gpx]: the same raw walk
+/// as [buildRawTrackPoints], smoothed, coloured by gradient, and thinned to
+/// 250 points for the chart.
+///
+/// Top-level and `@visibleForTesting` purely so it can be exercised without a
+/// widget: this was a private State method, which put the chart's distance
+/// accumulation out of reach of any unit test — and that is precisely where
+/// the raw-vs-smoothed mismatch below hid.
+@visibleForTesting
+List<TrackPoint> buildElevationTrackPoints(Gpx gpx, int windowSize) {
+  final result = buildRawTrackPoints(gpx);
   if (result.isEmpty) return [];
 
   _smoothElevations(result, windowSize: windowSize);
@@ -754,4 +892,34 @@ List<TrackPoint> buildElevationTrackPoints(Gpx gpx, int windowSize) {
   result[0].color = result.length > 1 ? result[1].color : _gradientColor(0);
 
   return _simplifyTrackPoints(result, 250);
+}
+
+/// Linear-interpolated elevation at [distanceM] along [points] (chart x-axis
+/// units — see [buildElevationTrackPoints]). Clamps to the first/last
+/// point's elevation outside the track's range. Requires `points.length >=
+/// 2` and strictly ascending `distanceM` (guaranteed by the builders above).
+@visibleForTesting
+double elevationAtDistance(List<TrackPoint> points, double distanceM) {
+  assert(points.length >= 2, 'elevationAtDistance needs at least 2 points');
+
+  if (distanceM <= points.first.distanceM) return points.first.elevationM;
+  if (distanceM >= points.last.distanceM) return points.last.elevationM;
+
+  var lo = 0;
+  var hi = points.length - 1;
+  while (hi - lo > 1) {
+    final mid = (lo + hi) >> 1;
+    if (points[mid].distanceM <= distanceM) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+
+  final a = points[lo];
+  final b = points[hi];
+  final span = b.distanceM - a.distanceM;
+  if (span <= 0) return a.elevationM;
+  final t = (distanceM - a.distanceM) / span;
+  return a.elevationM + (b.elevationM - a.elevationM) * t;
 }
