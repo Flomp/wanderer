@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"log"
+	"pocketbase/federation"
 	"pocketbase/util"
 	"time"
 
@@ -28,6 +29,44 @@ func UpdateActorHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 		}
 
 		return util.UpdateActor(e.Record, client)
+	}
+}
+
+const actorDeleteRecipientsKey = "__delete_recipients"
+
+func CollectActorDeleteRecipientsHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		actor := e.Record
+
+		recipients, err := federation.ActorDeleteRecipients(e.App, actor)
+		if err != nil {
+			e.App.Logger().Error(
+				"could not collect recipients to announce actor deletion to",
+				"actor", actor.Id, "error", err,
+			)
+			recipients = nil
+		}
+
+		actor.Set(actorDeleteRecipientsKey, recipients)
+
+		return e.Next()
+	}
+}
+
+func AnnounceActorDeleteHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		actor := e.Record
+
+		recipients, _ := actor.GetRaw(actorDeleteRecipientsKey).([]string)
+
+		if err := federation.CreateActorDeleteActivity(e.App, actor, recipients); err != nil {
+			e.App.Logger().Error(
+				"could not announce actor deletion",
+				"actor", actor.Id, "error", err,
+			)
+		}
+
+		return e.Next()
 	}
 }
 
