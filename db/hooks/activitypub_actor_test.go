@@ -109,6 +109,51 @@ func setupActorDeleteHooksTestApp(t *testing.T) *pbtests.TestApp {
 		t.Fatal(err)
 	}
 
+	// Read by deleteRecipientInboxes. Empty here; the recipient query itself is
+	// covered in the federation package.
+	trails := core.NewBaseCollection("trails")
+	trails.Fields.Add(
+		&core.RelationField{Name: "author", CollectionId: actors.Id, MaxSelect: 1, CascadeDelete: true},
+	)
+	if err := app.Save(trails); err != nil {
+		t.Fatal(err)
+	}
+	lists := core.NewBaseCollection("lists")
+	lists.Fields.Add(
+		&core.RelationField{Name: "author", CollectionId: actors.Id, MaxSelect: 1, CascadeDelete: true},
+	)
+	if err := app.Save(lists); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"comments", "summit_logs"} {
+		c := core.NewBaseCollection(name)
+		c.Fields.Add(
+			&core.RelationField{Name: "author", CollectionId: actors.Id, MaxSelect: 1, CascadeDelete: true},
+			&core.RelationField{Name: "trail", CollectionId: trails.Id, MaxSelect: 1, CascadeDelete: true},
+		)
+		if err := app.Save(c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, name := range []string{"trail_like", "trail_share"} {
+		c := core.NewBaseCollection(name)
+		c.Fields.Add(
+			&core.RelationField{Name: "actor", CollectionId: actors.Id, MaxSelect: 1, CascadeDelete: true},
+			&core.RelationField{Name: "trail", CollectionId: trails.Id, MaxSelect: 1, CascadeDelete: true},
+		)
+		if err := app.Save(c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	listShare := core.NewBaseCollection("list_share")
+	listShare.Fields.Add(
+		&core.RelationField{Name: "actor", CollectionId: actors.Id, MaxSelect: 1, CascadeDelete: true},
+		&core.RelationField{Name: "list", CollectionId: lists.Id, MaxSelect: 1, CascadeDelete: true},
+	)
+	if err := app.Save(listShare); err != nil {
+		t.Fatal(err)
+	}
+
 	activities := core.NewBaseCollection("activitypub_activities")
 	activities.Fields.Add(
 		&core.TextField{Name: "iri"},

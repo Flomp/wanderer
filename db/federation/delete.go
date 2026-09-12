@@ -14,12 +14,14 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 )
 
-func ActorFollowerInboxes(app core.App, actor *core.Record) ([]string, error) {
+// ActorDeleteRecipients returns every inbox that should be told a local actor
+// is gone (see deleteRecipientInboxes). Only local actors are ours to announce.
+func ActorDeleteRecipients(app core.App, actor *core.Record) ([]string, error) {
 	if !actor.GetBool("is_local") {
 		return nil, nil
 	}
 
-	return followerInboxes(app, actor.Id)
+	return deleteRecipientInboxes(app, actor.Id)
 }
 
 func CreateActorDeleteActivity(app core.App, actor *core.Record, recipients []string) error {

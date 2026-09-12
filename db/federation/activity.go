@@ -52,6 +52,100 @@ func followerInboxes(app core.App, actorId string) ([]string, error) {
 	return inboxes, rows.Err()
 }
 
+// deleteRecipientInboxes returns the inboxes to notify when actorId is deleted:
+//   - accepted followers
+//   - actors it follows, any status
+//   - authors of remote trails it commented on, logged a summit on, or liked
+//   - remote actors who commented on, logged a summit on, or liked its trails
+//   - the other party of every trail or list share it is involved in
+func deleteRecipientInboxes(app core.App, actorId string) ([]string, error) {
+	rows, err := app.DB().NewQuery(`
+		SELECT aa.inbox
+		FROM follows f
+		INNER JOIN activitypub_actors aa ON f.follower = aa.id
+		WHERE f.followee = {:actor} AND f.status = 'accepted' AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM follows f
+		INNER JOIN activitypub_actors aa ON f.followee = aa.id
+		WHERE f.follower = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM comments c
+		INNER JOIN trails t ON c.trail = t.id
+		INNER JOIN activitypub_actors aa ON t.author = aa.id
+		WHERE c.author = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM summit_logs s
+		INNER JOIN trails t ON s.trail = t.id
+		INNER JOIN activitypub_actors aa ON t.author = aa.id
+		WHERE s.author = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM trail_like l
+		INNER JOIN trails t ON l.trail = t.id
+		INNER JOIN activitypub_actors aa ON t.author = aa.id
+		WHERE l.actor = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM comments c
+		INNER JOIN trails t ON c.trail = t.id
+		INNER JOIN activitypub_actors aa ON c.author = aa.id
+		WHERE t.author = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM summit_logs s
+		INNER JOIN trails t ON s.trail = t.id
+		INNER JOIN activitypub_actors aa ON s.author = aa.id
+		WHERE t.author = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM trail_like l
+		INNER JOIN trails t ON l.trail = t.id
+		INNER JOIN activitypub_actors aa ON l.actor = aa.id
+		WHERE t.author = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM trail_share ts
+		INNER JOIN trails t ON ts.trail = t.id
+		INNER JOIN activitypub_actors aa ON aa.id = ts.actor
+		WHERE t.author = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM trail_share ts
+		INNER JOIN trails t ON ts.trail = t.id
+		INNER JOIN activitypub_actors aa ON aa.id = t.author
+		WHERE ts.actor = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM list_share ls
+		INNER JOIN lists li ON ls.list = li.id
+		INNER JOIN activitypub_actors aa ON aa.id = ls.actor
+		WHERE li.author = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+		UNION
+		SELECT aa.inbox
+		FROM list_share ls
+		INNER JOIN lists li ON ls.list = li.id
+		INNER JOIN activitypub_actors aa ON aa.id = li.author
+		WHERE ls.actor = {:actor} AND aa.is_local = 0 AND aa.inbox != ''
+	`).Bind(dbx.Params{"actor": actorId}).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var inboxes []string
+	for rows.Next() {
+		var inbox string
+		if err := rows.Scan(&inbox); err != nil {
+			return nil, err
+		}
+		inboxes = append(inboxes, inbox)
+	}
+	return inboxes, rows.Err()
+}
+
 func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, recipients []string) error {
 	go func() {
 		defer func() {

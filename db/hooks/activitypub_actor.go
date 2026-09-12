@@ -38,10 +38,10 @@ func CollectActorDeleteRecipientsHandler() func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		actor := e.Record
 
-		recipients, err := federation.ActorFollowerInboxes(e.App, actor)
+		recipients, err := federation.ActorDeleteRecipients(e.App, actor)
 		if err != nil {
 			e.App.Logger().Error(
-				"could not collect followers to announce actor deletion to",
+				"could not collect recipients to announce actor deletion to",
 				"actor", actor.Id, "error", err,
 			)
 			recipients = nil
