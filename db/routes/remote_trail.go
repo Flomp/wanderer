@@ -233,7 +233,7 @@ func performFullSync(app core.App, ctx context.Context, reqURL *url.URL, localTr
 		return localTrail, nil
 	}
 
-	client := util.SafeHTTPClient()
+	client := newRemoteSyncHTTPClient()
 	remoteUrl, _ := url.Parse(iri)
 	query := reqURL.Query()
 	query.Del("handle")

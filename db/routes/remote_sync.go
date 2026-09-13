@@ -1,5 +1,9 @@
 package routes
 
+import "pocketbase/util"
+
+var newRemoteSyncHTTPClient = util.SafeHTTPClient
+
 // stripLocalSyncFields removes local sync state from a remote payload.
 // Remote values must not mark a placeholder as complete or discard a
 // previously completed full sync.
