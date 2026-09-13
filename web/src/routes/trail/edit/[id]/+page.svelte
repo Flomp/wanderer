@@ -102,6 +102,7 @@
     import { theme } from "$lib/stores/theme_store.js";
     import { currentUser } from "$lib/stores/user_store.js";
     import { designSelectableCategories } from "$lib/util/category_util";
+    import { dateInputValue } from "$lib/util/date_util";
     import { getIconForLocation } from "$lib/util/icon_util.js";
     import {
         createAnchorMarker,
@@ -322,6 +323,7 @@
 
     const getInitialFormValues = () => ({
         ...data.trail,
+        completed_at: completionDateValue(data.trail.completed_at),
         public: data.trail.id
             ? data.trail.public
             : page.data.settings?.privacy?.trails === "public",
@@ -423,6 +425,9 @@
                         photoFiles,
                         gpxFile,
                     );
+                    createdTrail.completed_at = completionDateValue(
+                        createdTrail.completed_at,
+                    );
                     setFields(createdTrail);
                     trail.set(createdTrail);
                     savedAtLeastOnce = true;
@@ -432,6 +437,9 @@
                         form as Trail,
                         photoFiles,
                         gpxFile,
+                    );
+                    updatedTrail.completed_at = completionDateValue(
+                        updatedTrail.completed_at,
                     );
                     setFields(updatedTrail);
                     savedAtLeastOnce = true;
@@ -2061,8 +2069,35 @@
         updateTrailWithRouteData();
     }
 
+    function completionDateValue(value?: string): string | undefined {
+        return value?.substring(0, 10) || undefined;
+    }
+
+    function ensureCompletedAt(defaultDate?: string) {
+        if (!$formData.completed_at) {
+            setFields(
+                "completed_at",
+                completionDateValue(defaultDate) ?? dateInputValue(new Date()),
+            );
+        }
+    }
+
+    function oldestSummitLogDate(): string | undefined {
+        return $formData.expand?.summit_logs_via_trail
+            ?.map((log) => log.date)
+            .sort()[0];
+    }
+
+    function handleCompletedChange(completed: boolean) {
+        setFields("completed", completed);
+        if (completed) {
+            ensureCompletedAt(oldestSummitLogDate());
+        }
+    }
+
     function markTrailAsCompleted() {
         setFields("completed", true);
+        ensureCompletedAt(oldestSummitLogDate());
     }
 </script>
 
@@ -2310,7 +2345,16 @@
             name="completed"
             label={$formData.completed ? $_("completed") : $_("not-completed")}
             icon={$formData.completed ? "flag-checkered" : "compass-drafting"}
+            onchange={handleCompletedChange}
         ></Toggle>
+        {#if $formData.completed}
+            <Datepicker
+                name="completed_at"
+                label={$_("completed-at")}
+                error={$errors.completed_at}
+                bind:value={$formData.completed_at}
+            ></Datepicker>
+        {/if}
         <Toggle
             name="public"
             label={$formData.public ? $_("public") : $_("private")}

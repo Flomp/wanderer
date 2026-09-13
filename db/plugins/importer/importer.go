@@ -256,6 +256,9 @@ func ImportTrail(ctx context.Context, app core.App, item pluginsystem.TrailImpor
 		"subcategory":    categoryTarget.SubcategoryID,
 		"author":         opts.ActorID,
 	})
+	if item.Kind == "completed" {
+		record.Set("completed_at", date)
+	}
 	record.Set("gpx", gpxFile)
 
 	if err := app.Save(record); err != nil {
