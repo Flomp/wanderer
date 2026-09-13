@@ -77,9 +77,11 @@ func RemoteListGet(e *core.RequestEvent) error {
 				if _, alreadySyncing := listSyncing.LoadOrStore(iri, struct{}{}); !alreadySyncing {
 					urlCopy := *e.Request.URL
 					bgCtx := context.WithValue(context.Background(), "actor", ctx.Value("actor"))
+					// Sync hooks and remote data must not mutate the response record.
+					syncRecord := record.Fresh()
 					go func() {
 						defer listSyncing.Delete(iri)
-						performFullListSync(e.App, bgCtx, &urlCopy, record)
+						performFullListSync(e.App, bgCtx, &urlCopy, syncRecord)
 					}()
 				}
 			}
@@ -173,7 +175,7 @@ func performFullListSync(app core.App, ctx context.Context, reqURL *url.URL, loc
 		return localList, nil
 	}
 
-	client := util.SafeHTTPClient()
+	client := newRemoteSyncHTTPClient()
 	remoteUrl, _ := url.Parse(iri)
 	query := reqURL.Query()
 	query.Del("handle")
@@ -241,6 +243,7 @@ func syncListMetadata(record *core.Record, data map[string]any) {
 	delete(data, "author")
 	delete(data, "iri")
 
+	stripLocalSyncFields(data)
 	record.Load(data)
 }
 
