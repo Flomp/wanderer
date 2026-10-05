@@ -97,6 +97,7 @@ export async function plugin_auth_validate(
         instanceId?: string;
         authContext?: string;
         auth: Record<string, string>;
+        config?: Record<string, unknown>;
     },
     f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch,
 ) {

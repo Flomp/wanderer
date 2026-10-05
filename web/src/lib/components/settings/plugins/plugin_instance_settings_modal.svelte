@@ -9,7 +9,7 @@
     import CategoryPicker from "$lib/components/trail/category_picker.svelte";
     import type { Category } from "$lib/models/category";
     import type { PluginInstance } from "$lib/models/plugin_instance";
-    import type { ConfigField, PluginProvider } from "$lib/models/plugin_provider";
+    import type { ConfigField, PluginAuthContext, PluginProvider } from "$lib/models/plugin_provider";
     import type { Subcategory } from "$lib/models/subcategory";
     import { plugin_auth_validate, plugin_oauth_start } from "$lib/stores/plugin_instance_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
@@ -18,6 +18,8 @@
         categoryMappingTargetToPickerValue,
         type CategoryMappingTarget,
     } from "$lib/util/category_util";
+    import { resolveProviderAuth } from "$lib/util/plugin_auth_context";
+    import { mergePluginConfig } from "$lib/util/plugin_config";
     import { translatePluginAPIError } from "$lib/util/plugin_error_i18n";
     import {
         configFieldDescription,
@@ -57,10 +59,12 @@
     let privacy = $state("original");
     let categoryMappingRows: CategoryMappingRow[] = $state(initialCategoryMappingRows());
     let categoryMappingList: HTMLDivElement | undefined = $state();
-    let authFields = $derived(plugin.auth.fields ?? []);
-    let secretFields = $derived(new Set(plugin.auth.secretFields ?? plugin.auth.fields ?? []));
-    let isOAuthPlugin = $derived(plugin.auth.type === "oauth2");
-    let isSessionPlugin = $derived(plugin.auth.type === "session");
+    let resolvedAuth = $derived(resolveAuth());
+    let authFields = $derived(resolvedAuth.auth.fields ?? resolvedAuth.auth.secretFields ??
+        (resolvedAuth.auth.secretField ? [resolvedAuth.auth.secretField] : []));
+    let secretFields = $derived(new Set(resolvedAuth.auth.secretFields ?? authFields));
+    let isOAuthPlugin = $derived(resolvedAuth.auth.type === "oauth2");
+    let isSessionPlugin = $derived(resolvedAuth.auth.type === "session");
     let isConnected = $derived(instance?.status === "configured");
     let isSaving = $state(false);
     let needsOAuthConnect = $derived(isOAuthPlugin && (!isConnected || authChanged()));
@@ -106,9 +110,19 @@
         clientSecret: "Client Secret",
     };
 
+    function resolveAuth(): { name?: string; auth: PluginAuthContext; error?: Error } {
+        try {
+            return resolveProviderAuth(plugin, instance);
+        } catch (error) {
+            return { auth: { type: "unresolved" }, error: error as Error };
+        }
+    }
+
     function initialAuth() {
+        const context = resolveAuth().auth;
+        const fields = context.fields ?? context.secretFields ?? (context.secretField ? [context.secretField] : []);
         return Object.fromEntries(
-            (plugin.auth.fields ?? []).map((field) => [
+            fields.map((field) => [
                 field,
                 instance?.auth?.[field] == null ? "" : String(instance.auth[field]),
             ]),
@@ -321,6 +335,14 @@
     }
 
     function validateConfig(): boolean {
+        if (resolvedAuth.error) {
+            show_toast({
+                text: $_("error-setting-up-plugin", { values: { provider: pluginTitle() } }),
+                icon: "close",
+                type: "error",
+            });
+            return false;
+        }
         const errors: Record<string, string> = {};
         const hiddenMissing: ConfigField[] = [];
         for (const field of configSchema) {
@@ -366,24 +388,7 @@
     }
 
     function hostConfig(): Record<string, any> {
-        const manifestConfig = plugin.hostConfig ?? {};
-        const instanceConfig = configSection("host");
-        const manifestMerge =
-            manifestConfig.merge && typeof manifestConfig.merge === "object"
-                ? (manifestConfig.merge as Record<string, unknown>)
-                : {};
-        const instanceMerge =
-            instanceConfig.merge && typeof instanceConfig.merge === "object"
-                ? (instanceConfig.merge as Record<string, unknown>)
-                : {};
-        return {
-            ...manifestConfig,
-            ...instanceConfig,
-            merge: {
-                ...manifestMerge,
-                ...instanceMerge,
-            },
-        };
+        return mergePluginConfig(plugin.hostConfig ?? {}, configSection("host"));
     }
 
     function authChanged() {
@@ -504,14 +509,16 @@
         };
     }
 
-    async function validateAuthIfNeeded() {
+    async function validateAuthIfNeeded(candidate: PluginInstanceForm) {
         if (!isSessionPlugin || !authChanged()) {
             return;
         }
         await plugin_auth_validate({
             pluginId: plugin.id,
-            instanceId: instance?.id,
-            auth,
+            instanceId: candidate.id,
+            authContext: resolvedAuth.name,
+            auth: candidate.auth ?? {},
+            config: candidate.config,
         });
     }
 
@@ -519,9 +526,12 @@
         if (!validateConfig()) {
             return;
         }
+        // Snapshot once before provider validation. The saved draft must be
+        // exactly the one validated even if an input changes while it is pending.
+        const candidate = pluginInstanceFromForm();
         try {
             isSaving = true;
-            await validateAuthIfNeeded();
+            await validateAuthIfNeeded(candidate);
         } catch (e) {
             show_toast({
                 text: translatePluginAPIError(e, $_("error-setting-up-plugin", { values: { provider: pluginTitle() } })),
@@ -533,7 +543,6 @@
         }
 
         try {
-            const candidate = pluginInstanceFromForm();
             if (candidate.mappingChanged) {
                 const shouldSave = await onbeforecategorymappingsave?.(candidate);
                 if (shouldSave === false) {
@@ -571,6 +580,7 @@
             const result = await plugin_oauth_start({
                 pluginId: plugin.id,
                 instanceId,
+                authContext: resolvedAuth.name,
                 redirectUri,
             });
             sessionStorage.setItem(`wanderer_plugin_oauth_${result.state}`, result.instanceId);

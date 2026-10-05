@@ -1,12 +1,18 @@
 package routes
 
 import (
+	"encoding/pem"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"pocketbase/pluginsystem"
 )
 
 func TestPluginInstancePolicyUsesHostConnectorConfig(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer server.Close()
+	certificate := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
 	plugin := pluginsystem.LocalPlugin{Manifest: pluginsystem.Manifest{
 		Permissions: pluginsystem.PermissionManifest{
 			Network: pluginsystem.NetworkPermissions{
@@ -31,14 +37,17 @@ func TestPluginInstancePolicyUsesHostConnectorConfig(t *testing.T) {
 					"allowPrivate": true,
 					"tls": map[string]any{
 						"mode":     pluginsystem.TLSModeCustomCA,
-						"caBundle": "test-ca",
+						"caBundle": string(certificate),
 					},
 				},
 			},
 		},
 	}
 
-	policy := pluginInstancePolicy(plugin, config)
+	policy, err := pluginInstancePolicy(plugin, config)
+	if err != nil {
+		t.Fatal(err)
+	}
 	connector, ok := policy.Connectors["media"]
 	if !ok {
 		t.Fatal("expected configured connector to be resolved from host config")
@@ -49,7 +58,7 @@ func TestPluginInstancePolicyUsesHostConnectorConfig(t *testing.T) {
 	if !connector.AllowPrivate {
 		t.Fatal("expected allowPrivate from host connector config")
 	}
-	if connector.TLS.Mode != pluginsystem.TLSModeCustomCA || string(connector.TLS.CABundle) != "test-ca" {
+	if connector.TLS.Mode != pluginsystem.TLSModeCustomCA || string(connector.TLS.CABundle) != string(certificate) {
 		t.Fatalf("unexpected TLS config: %#v", connector.TLS)
 	}
 }

@@ -151,7 +151,7 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 		return nil, err
 	}
 
-	auth, err := decryptedInstanceAuth(instance)
+	auth, err := decryptedActiveInstanceAuth(plugin, instance)
 	if err != nil {
 		setPluginInstanceStatus(app, instance, "needs_reauth", "auth_failed", err.Error())
 		return nil, err
@@ -162,6 +162,15 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 		return nil, err
 	}
 	config := effectivePluginConfig(app, plugin.Manifest.ID, instance)
+	policy, err := pluginInstancePolicy(plugin, config)
+	if err != nil {
+		setPluginInstanceStatus(app, instance, "error", "invalid_request", "invalid plugin configuration")
+		return nil, err
+	}
+	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
+	if err != nil {
+		return nil, err
+	}
 	pluginConfig := pluginRuntimeConfig(config)
 	hostConfig := pluginHostConfig(config)
 	defaultPublic := userDefaultPublic(app, instance.GetString("user"))
@@ -174,7 +183,7 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 	sessions := &pluginSyncRuntimeSession{
 		runtime: runtime,
 		plugin:  plugin,
-		policy:  pluginInstancePolicy(plugin, config).WithHostAuth(auth),
+		policy:  policy.WithHostAuth(activeAuth),
 	}
 	if err := sessions.open(ctx); err != nil {
 		setPluginInstanceStatusForError(app, instance, err)
