@@ -3,7 +3,6 @@ package pluginsystem
 import (
 	"context"
 	"errors"
-	"fmt"
 )
 
 var ErrRuntimeUnavailable = errors.New("plugin runtime is not available")
@@ -57,8 +56,5 @@ type PluginCallError struct {
 }
 
 func (e PluginCallError) Error() string {
-	if e.PluginError.Message == "" {
-		return fmt.Sprintf("call %s.%s: %s", e.PluginID, e.Export, e.PluginError.Code)
-	}
-	return fmt.Sprintf("call %s.%s: %s: %s", e.PluginID, e.Export, e.PluginError.Code, e.PluginError.Message)
+	return NormalizePluginError(e.PluginError).Message
 }

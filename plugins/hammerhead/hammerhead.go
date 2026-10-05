@@ -47,7 +47,7 @@ func login(email string, password string) (string, error) {
 		return "", err
 	}
 	if response.Status != 200 {
-		return "", fmt.Errorf("hammerhead login failed (%d): %s", response.Status, string(body))
+		return "", sdk.ResponseError("login", response)
 	}
 
 	var parsed loginResponse
@@ -66,7 +66,7 @@ func loginClient(auth map[string]any) (hammerheadClient, error) {
 	email := sdk.StringField(auth, "email")
 	password := sdk.StringField(auth, "password")
 	if email == "" || password == "" {
-		return hammerheadClient{}, fmt.Errorf("email and password are required")
+		return hammerheadClient{}, sdk.PluginFailure{PluginError: sdk.PluginError{Code: "auth_failed", Operation: "login"}}
 	}
 	token, err := login(email, password)
 	if err != nil {
@@ -101,7 +101,7 @@ func (c hammerheadClient) get(path string, query []sdk.QueryParam, out any) erro
 		return err
 	}
 	if response.Status != 200 {
-		return fmt.Errorf("hammerhead request failed (%d): %s", response.Status, string(body))
+		return sdk.ResponseError("detail", response)
 	}
 	return json.Unmarshal(body, out)
 }
@@ -145,7 +145,7 @@ func userIDForUpload(auth map[string]any) (string, error) {
 		email := sdk.StringField(auth, "email")
 		password := sdk.StringField(auth, "password")
 		if email == "" || password == "" {
-			return "", fmt.Errorf("email and password are required")
+			return "", sdk.PluginFailure{PluginError: sdk.PluginError{Code: "auth_failed", Operation: "login"}}
 		}
 		var err error
 		token, err = login(email, password)

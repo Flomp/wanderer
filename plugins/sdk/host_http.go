@@ -5,8 +5,6 @@ package sdk
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"strings"
 
 	"github.com/extism/go-pdk"
 )
@@ -49,25 +47,25 @@ func LogError(message string) {
 func HostRequest(spec HostRequestSpec) (HostResponse, []byte, error) {
 	requestMemory, err := pdk.AllocateJSON(spec)
 	if err != nil {
-		return HostResponse{}, nil, err
+		return HostResponse{}, nil, PluginFailure{PluginError{Code: "invalid_request", Operation: "host_http"}}
 	}
 	defer requestMemory.Free()
 
 	responsePointer := wandererHTTPRequest(requestMemory.Offset())
 	if responsePointer == 0 {
-		return HostResponse{}, nil, fmt.Errorf("host http request returned no response")
+		return HostResponse{}, nil, PluginFailure{PluginError{Code: "runtime_error", Operation: "host_http"}}
 	}
 	responseMemory := pdk.FindMemory(responsePointer)
 	var response HostResponse
 	if err := json.Unmarshal(responseMemory.ReadBytes(), &response); err != nil {
-		return HostResponse{}, nil, err
+		return HostResponse{}, nil, PluginFailure{PluginError{Code: "invalid_output", Operation: "host_http"}}
 	}
 	if response.Error != nil {
-		return response, nil, fmt.Errorf("%s: %s", response.Error.Code, response.Error.Message)
+		return response, nil, PluginFailure{NormalizePluginError(*response.Error)}
 	}
 	body, err := base64.StdEncoding.DecodeString(response.BodyBase64)
 	if err != nil {
-		return response, nil, err
+		return response, nil, PluginFailure{PluginError{Code: "invalid_output", Operation: "host_http"}}
 	}
 	return response, body, nil
 }
@@ -124,29 +122,6 @@ func PostForm(connector string, path string, query []QueryParam, headers map[str
 		},
 		Expect: expect,
 	})
-}
-
-func (r HostResponse) FirstHeader(name string) string {
-	values := r.HeaderValuesFor(name)
-	if len(values) == 0 {
-		return ""
-	}
-	return values[0]
-}
-
-func (r HostResponse) HeaderValuesFor(name string) []string {
-	if r.HeaderValues == nil {
-		return nil
-	}
-	if values, ok := r.HeaderValues[name]; ok {
-		return values
-	}
-	for key, values := range r.HeaderValues {
-		if strings.EqualFold(key, name) {
-			return values
-		}
-	}
-	return nil
 }
 
 func Bool(value bool) *bool {

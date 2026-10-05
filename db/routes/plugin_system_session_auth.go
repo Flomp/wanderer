@@ -57,7 +57,7 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 		instanceID = instance.Id
 		auth, err = decryptedInstanceAuth(instance)
 		if err != nil {
-			return err
+			return pluginOperationAPIError(pluginsystem.Failure("auth_failed", pluginsystem.OperationLogin))
 		}
 	}
 	for key, value := range data.Auth {
@@ -90,10 +90,10 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 	policy := pluginInstancePolicy(plugin, map[string]any{}).WithHostAuth(auth)
 	output, err := runtime.Call(e.Request.Context(), plugin, authContext.Refresh.Function, inputBytes, policy)
 	if err != nil {
-		return apis.NewBadRequestError("plugin credentials validation failed", err)
+		return pluginOperationAPIError(err)
 	}
 	if err := pluginsystem.ValidatePluginSessionRefreshOutput(output); err != nil {
-		return apis.NewBadRequestError("plugin credentials validation failed", err)
+		return pluginOperationAPIError(err)
 	}
 
 	return e.JSON(http.StatusOK, map[string]any{

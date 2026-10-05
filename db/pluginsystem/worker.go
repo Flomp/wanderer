@@ -41,7 +41,10 @@ type RuntimeSessionFatalError struct {
 }
 
 func (e RuntimeSessionFatalError) Error() string {
-	return e.Err.Error()
+	if errors.Is(e.Err, context.DeadlineExceeded) {
+		return "runtime_timeout"
+	}
+	return "runtime_error"
 }
 
 func (e RuntimeSessionFatalError) Unwrap() error {
@@ -68,7 +71,16 @@ func (r WorkerRuntime) Call(ctx context.Context, plugin LocalPlugin, export stri
 	return session.Call(ctx, export, input)
 }
 
-func (r WorkerRuntime) OpenSession(ctx context.Context, plugin LocalPlugin, policy RequestPolicyContext) (RuntimeSession, error) {
+func (r WorkerRuntime) OpenSession(ctx context.Context, plugin LocalPlugin, policy RequestPolicyContext) (sessionResult RuntimeSession, resultErr error) {
+	defer func() {
+		if resultErr != nil {
+			code := "runtime_error"
+			if errors.Is(resultErr, context.DeadlineExceeded) {
+				code = "runtime_timeout"
+			}
+			resultErr = Failure(code, OperationRuntime)
+		}
+	}()
 	slot, err := acquireWorkerSlot(ctx)
 	if err != nil {
 		return nil, err
@@ -163,7 +175,7 @@ func (s *workerRuntimeSession) Call(ctx context.Context, export string, input []
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
-		return nil, fmt.Errorf("worker session is closed")
+		return nil, Failure("runtime_error", OperationRuntime)
 	}
 	if s.fatal {
 		msg := s.fatalMsg
@@ -189,10 +201,7 @@ func (s *workerRuntimeSession) Call(ctx context.Context, export string, input []
 	case <-callCtx.Done():
 		s.markFatal("worker export timeout")
 		s.kill()
-		outcome := <-result
-		if outcome.err != nil && !errors.Is(outcome.err, io.EOF) {
-			return nil, RuntimeSessionFatalError{Err: fmt.Errorf("worker export timeout: %w", outcome.err)}
-		}
+		<-result
 		return nil, RuntimeSessionFatalError{Err: callCtx.Err()}
 	}
 }
@@ -245,7 +254,7 @@ func (s *workerRuntimeSession) call(ctx context.Context, export string, input []
 				return workerCallOutcome{err: PluginCallError{
 					PluginID:    s.plugin.Manifest.ID,
 					Export:      export,
-					PluginError: *result.PluginError,
+					PluginError: NormalizePluginError(*result.PluginError),
 				}}
 			}
 			output, err := decodeWorkerBytes(result.OutputBase64)
@@ -274,7 +283,7 @@ func (s *workerRuntimeSession) call(ctx context.Context, export string, input []
 func (s *workerRuntimeSession) handleHostLog(msg workerMessage) {
 	entry, err := workerData[workerHostLog](msg)
 	if err != nil {
-		log.Printf("plugin log invalid: session %s: %v", s.sessionID, err)
+		log.Printf("plugin log invalid: session %s", s.sessionID)
 		return
 	}
 	if entry.SessionID == "" {
@@ -282,7 +291,7 @@ func (s *workerRuntimeSession) handleHostLog(msg workerMessage) {
 	}
 	level, err := normalizeHostLogLevel(entry.Level)
 	if err != nil {
-		log.Printf("plugin log invalid: session %s: %v", s.sessionID, err)
+		log.Printf("plugin log invalid: session %s", s.sessionID)
 		return
 	}
 	message := sanitizeHostLogMessage(entry.Message)
@@ -290,7 +299,7 @@ func (s *workerRuntimeSession) handleHostLog(msg workerMessage) {
 		log.Printf("plugin log invalid: session %s: log message is required", s.sessionID)
 		return
 	}
-	log.Printf("plugin log [%s]: session %s: %s", level, entry.SessionID, message)
+	log.Printf("plugin log [%s]: session %s: guest log received", level, s.sessionID)
 }
 
 func (s *workerRuntimeSession) handleHostHTTPRequest(ctx context.Context, msg workerMessage) error {
@@ -389,11 +398,9 @@ func (s *workerRuntimeSession) withStderr(err error) error {
 	if err == nil {
 		return nil
 	}
-	stderr := strings.TrimSpace(s.stderr.String())
-	if stderr == "" {
-		return err
-	}
-	return fmt.Errorf("%w: worker stderr: %s", err, stderr)
+	// Captured stderr is untrusted guest output and may contain panic values,
+	// tokens or provider responses. Never attach it to a returned error.
+	return err
 }
 
 func acquireWorkerSlot(ctx context.Context) (*semaphore.Weighted, error) {

@@ -653,28 +653,44 @@ The host defines the semantics of these fields. Plugins only provide defaults
 or hints; custom plugin settings belong in `configSchema` and are passed to the
 plugin under `options`.
 
-Plugin errors should use the structured error format:
+Plugin exports signal failure by setting a structured JSON error and returning
+a nonzero code. The Go SDK provides `PluginFailure`, `ResponseError`, and
+`SafeError` to preserve operation-specific HTTP failures without provider bodies,
+credentials, URLs, or arbitrary error text. `HostResponse.error` uses the same
+error object for host-side request failures.
 
 ```json
 {
-  "error": {
-    "code": "rate_limited",
-    "message": "Provider rate limit exceeded",
-    "retryAfterSeconds": 3600
-  }
+  "code": "rate_limited",
+  "message": "rate_limited",
+  "operation": "list",
+  "httpStatus": 429,
+  "retryAfterSeconds": 37
 }
 ```
 
-Supported status-relevant error codes include:
+`operation`, `httpStatus`, and `retryAfterSeconds` are optional additions to the
+v1 contract. Existing code/message-only errors remain supported. The host
+normalizes messages to known codes and the UI translates them. Unknown codes
+become `plugin_error`.
 
-```text
-auth_failed
-invalid_grant
-unauthorized
-rate_limited
-provider_unavailable
-temporary_unavailable
-```
+Operations are `login`, `oauth_exchange`, `oauth_refresh`, `list`, `detail`,
+`send`, `host_http`, or `runtime`. Authentication errors depend on the operation:
+OAuth `invalid_grant` and rejected login credentials require repair, while
+network errors and provider 5xx responses are transient. An OAuth `invalid_scope`
+or unknown nonempty RFC error is a configuration error. A rejected detail or
+send request does not by itself prove that the whole connection needs repair.
+
+Supported codes include `auth_failed`, `invalid_grant`, `invalid_client`,
+`unauthorized_client`, `invalid_request`, `invalid_scope`,
+`unsupported_grant_type`, `unauthorized`, `access_denied`, `rate_limited`,
+`provider_unavailable`, `temporary_unavailable`, `runtime_error`,
+`runtime_timeout`, `invalid_output`, and `plugin_error`.
+
+`Retry-After` supports seconds and HTTP dates. Zero is an immediate retry;
+malformed or missing values use the existing host fallback (one hour for rate
+limits). Valid delays are capped at 24 hours. This metadata does not trigger an
+automatic retry of an upload.
 
 ## Host requests
 

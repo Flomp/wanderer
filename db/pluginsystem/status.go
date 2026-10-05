@@ -1,9 +1,6 @@
 package pluginsystem
 
 import (
-	"errors"
-	"fmt"
-	"strings"
 	"time"
 )
 
@@ -16,12 +13,9 @@ type PluginCapabilityError struct {
 
 func (e PluginCapabilityError) Error() string {
 	if e.Err == nil {
-		return "plugin error"
+		return "plugin_error"
 	}
-	if e.Err.Message == "" {
-		return fmt.Sprintf("plugin error %s", e.Err.Code)
-	}
-	return fmt.Sprintf("plugin error %s: %s", e.Err.Code, e.Err.Message)
+	return NormalizePluginError(*e.Err).Message
 }
 
 // InstanceStatusUpdate contains the normalized status fields that are written
@@ -30,43 +24,34 @@ type InstanceStatusUpdate struct {
 	Status         string
 	Code           string
 	Message        string
+	Operation      string
+	HTTPStatus     int
 	RetryNotBefore *time.Time
 }
 
 // InstanceStatusForError converts sync/runtime errors into the persisted
 // plugin_instances status fields used by the UI and cron backoff logic.
 func InstanceStatusForError(err error, now time.Time) InstanceStatusUpdate {
-	var capabilityErr PluginCapabilityError
-	var callErr PluginCallError
-	if errors.As(err, &capabilityErr) && capabilityErr.Err != nil {
-		return InstanceStatusForPluginError(*capabilityErr.Err, now)
-	}
-	if errors.As(err, &callErr) {
-		return InstanceStatusForPluginError(callErr.PluginError, now)
-	}
-	return InstanceStatusUpdate{
-		Status:  "error",
-		Code:    "provider_unavailable",
-		Message: err.Error(),
-	}
+	return InstanceStatusForPluginError(PublicPluginError(err), now)
 }
 
 // InstanceStatusForPluginError maps the stable plugin error codes from the ABI
 // to host instance states. retryAfterSeconds wins over default retry windows.
 func InstanceStatusForPluginError(pluginErr PluginError, now time.Time) InstanceStatusUpdate {
-	code := strings.TrimSpace(pluginErr.Code)
-	if code == "" {
-		code = "provider_unavailable"
-	}
-	message := strings.TrimSpace(pluginErr.Message)
-	if message == "" {
-		message = code
-	}
+	pluginErr = NormalizePluginError(pluginErr)
+	code := pluginErr.Code
+	message := pluginErr.Message
 
 	status := "error"
 	switch code {
-	case "auth_failed", "invalid_grant", "unauthorized":
+	case "auth_failed", "invalid_grant", "invalid_client", "unauthorized_client":
 		status = "needs_reauth"
+	case "unauthorized":
+		// A rejected item/upload alone does not invalidate the stored grant.
+		// Legacy guests without operation metadata retain their v1 behavior.
+		if pluginErr.Operation != OperationDetail && pluginErr.Operation != OperationSend {
+			status = "needs_reauth"
+		}
 	case "rate_limited":
 		status = "rate_limited"
 	case "provider_unavailable", "temporary_unavailable":
@@ -74,11 +59,13 @@ func InstanceStatusForPluginError(pluginErr PluginError, now time.Time) Instance
 	}
 
 	update := InstanceStatusUpdate{
-		Status:  status,
-		Code:    code,
-		Message: message,
+		Status:     status,
+		Code:       code,
+		Message:    message,
+		Operation:  pluginErr.Operation,
+		HTTPStatus: pluginErr.HTTPStatus,
 	}
-	if pluginErr.RetryAfterSeconds != nil && *pluginErr.RetryAfterSeconds > 0 {
+	if pluginErr.RetryAfterSeconds != nil && *pluginErr.RetryAfterSeconds >= 0 {
 		retryNotBefore := now.Add(time.Duration(*pluginErr.RetryAfterSeconds) * time.Second)
 		update.RetryNotBefore = &retryNotBefore
 	} else if code == "rate_limited" {

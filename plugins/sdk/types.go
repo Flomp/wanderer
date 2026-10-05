@@ -66,8 +66,11 @@ type HostResponse struct {
 }
 
 type PluginError struct {
-	Code    string `json:"code"`
-	Message string `json:"message,omitempty"`
+	Code              string `json:"code"`
+	Message           string `json:"message,omitempty"`
+	Operation         string `json:"operation,omitempty"`
+	HTTPStatus        int    `json:"httpStatus,omitempty"`
+	RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`
 }
 
 type LogLevel string

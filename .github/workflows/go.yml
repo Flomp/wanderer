@@ -44,3 +44,8 @@ jobs:
       - run: make db-test
       - run: make plugins-test
       - run: make plugins-build
+      - name: Check bundled plugin error contract
+        run: go test ./pluginsystem -run '^TestBundledPluginErrors$' -count=1
+        working-directory: db
+        env:
+          WANDERER_PLUGIN_BUNDLE_DIR: ${{ github.workspace }}/plugins

@@ -19,7 +19,7 @@ func TestInstanceStatusForPluginCapabilityError(t *testing.T) {
 	if update.Status != "rate_limited" {
 		t.Fatalf("expected status rate_limited, got %q", update.Status)
 	}
-	if update.Code != "rate_limited" || update.Message != "try later" {
+	if update.Code != "rate_limited" || update.Message != "rate_limited" {
 		t.Fatalf("unexpected error fields: %#v", update)
 	}
 	if update.RetryNotBefore == nil || !update.RetryNotBefore.Equal(now.Add(120*time.Second)) {
@@ -53,7 +53,19 @@ func TestInstanceStatusForGenericError(t *testing.T) {
 	if update.Status != "error" {
 		t.Fatalf("expected status error, got %q", update.Status)
 	}
-	if update.Code != "provider_unavailable" || update.Message != "network unavailable" {
+	if update.Code != "internal_error" || update.Message != "internal_error" {
 		t.Fatalf("unexpected error fields: %#v", update)
+	}
+}
+
+func TestUnauthorizedStatusDependsOnOperation(t *testing.T) {
+	for _, tc := range []struct{ operation, status string }{
+		{"", "needs_reauth"}, {OperationList, "needs_reauth"},
+		{OperationDetail, "error"}, {OperationSend, "error"},
+	} {
+		update := InstanceStatusForPluginError(PluginError{Code: "unauthorized", Operation: tc.operation}, time.Now())
+		if update.Status != tc.status {
+			t.Fatalf("%s status %s, want %s", tc.operation, update.Status, tc.status)
+		}
 	}
 }

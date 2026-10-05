@@ -7,6 +7,8 @@
     import { plugins_index } from "$lib/stores/plugin_store";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
+    import { APIError } from "$lib/util/api_util";
+    import { translatePluginAPIError } from "$lib/util/plugin_error_i18n";
     import { pluginTitle as localizedPluginTitle } from "$lib/util/plugin_i18n";
     import { onMount } from "svelte";
     import { _, locale } from "svelte-i18n";
@@ -88,7 +90,8 @@
                 body: JSON.stringify({ pluginId: plugin.id, trailId: trail.id, share }),
             });
             if (!response.ok) {
-                throw new Error(await response.text());
+                const body = await response.json().catch(() => undefined);
+                throw new APIError(response.status, "Plugin operation failed.", body);
             }
             show_toast({
                 type: "success",
@@ -97,11 +100,10 @@
             });
             modal.closeModal();
         } catch (e) {
-            console.error(e);
             show_toast({
                 type: "error",
                 icon: "close",
-                text: $_("error-sending-trail"),
+                text: translatePluginAPIError(e, $_("error-sending-trail")),
             });
         } finally {
             sending = "";

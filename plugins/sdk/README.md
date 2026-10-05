@@ -37,8 +37,27 @@ appear more than once.
 
 Plugins can emit host-visible logs with `LogDebug`, `LogInfo`, `LogWarn`, and
 `LogError`. Log levels are strict (`debug`, `info`, `warn`, `error`) and
-messages must be non-empty. Use logs for short diagnostics and timing markers;
-they are best-effort and should not be part of plugin control flow.
+messages must be non-empty. The host records receipt and level, but does not
+write arbitrary guest text to its logs because it may contain provider secrets.
+Logs are best-effort and should not be part of plugin control flow.
+
+Provider failures use `PluginFailure`, which carries a safe `PluginError`.
+`ResponseError(operation, response)` classifies a failed HTTP response, and
+`SafeError(err, operation)` preserves that classification across wrapped errors.
+Serialize this error with `pdk.SetErrorString` before returning a nonzero export
+code. Arbitrary error strings and provider bodies are discarded.
+
+`PluginError` retains the v1 `code` and `message` fields and adds optional
+`operation`, `httpStatus`, and `retryAfterSeconds` metadata. These additions do
+not require a new manifest version. Messages are generated from allowlisted
+codes; host and UI localize them. `Retry-After` accepts seconds or an HTTP date,
+including zero, with a maximum delay of 24 hours. A missing delay lets the host
+choose its fallback.
+
+Use `login`, `oauth_exchange`, `oauth_refresh`, `list`, `detail`, or `send` for
+the failing operation. A token refresh rejected with `invalid_grant` requires
+reconnection; an unavailable provider does not. A detail request rejected with
+401 or 403 does not by itself prove that the connection is invalid.
 
 Small sync helpers are included for the repeated mechanics that every provider
 needs:

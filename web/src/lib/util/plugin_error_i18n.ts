@@ -7,10 +7,33 @@ type PluginErrorLike = {
     message?: unknown;
 };
 
-const credentialErrorCodes = new Set(["auth_failed"]);
-const reconnectErrorCodes = new Set(["invalid_grant", "unauthorized"]);
-const unavailableErrorCodes = new Set(["provider_unavailable", "temporary_unavailable"]);
-const internalErrorCodes = new Set(["internal_error", "plugin_error"]);
+// This allowlist maps provider/runtime categories without ever displaying an
+// untrusted guest message, response body or URL (including historical errors).
+const pluginErrorKeys = new Map<string, string>([
+    ["auth_failed", "wrong-username-or-password"],
+    ["invalid_grant", "plugin-error-reconnect-required"],
+    ["unauthorized", "plugin-error-reconnect-required"],
+    ["invalid_client", "plugin-error-client-credentials"],
+    ["unauthorized_client", "plugin-error-client-credentials"],
+    ["invalid_request", "plugin-error-invalid-request"],
+    ["invalid_scope", "plugin-error-configuration"],
+    ["unsupported_grant_type", "plugin-error-configuration"],
+    ["access_denied", "plugin-error-access-denied"],
+    ["rate_limited", "plugin-error-rate-limited"],
+    ["provider_unavailable", "plugin-error-provider-unavailable"],
+    ["temporary_unavailable", "plugin-error-provider-unavailable"],
+    ["runtime_error", "plugin-error-internal"],
+    ["runtime_timeout", "plugin-error-timeout"],
+    ["invalid_output", "plugin-error-invalid-output"],
+    ["internal_error", "plugin-error-internal"],
+    ["plugin_error", "plugin-error-internal"],
+]);
+
+export function pluginErrorKey(code: unknown): string {
+    return typeof code === "string"
+        ? pluginErrorKeys.get(code.trim()) ?? "plugin-error-internal"
+        : "plugin-error-internal";
+}
 
 const pluginSetupErrorKeys = new Map<string, string>([
     ["manifest_missing", "plugin-setup-error-manifest-missing"],
@@ -28,29 +51,8 @@ const authErrorHints = [
     "email and password are required",
 ];
 
-export function translatePluginError(code?: string, message?: string): string {
-    const normalizedCode = code?.trim();
-
-    if (normalizedCode && credentialErrorCodes.has(normalizedCode)) {
-        return get(_)("wrong-username-or-password");
-    }
-    if (normalizedCode && reconnectErrorCodes.has(normalizedCode)) {
-        return get(_)("plugin-error-reconnect-required");
-    }
-    if (normalizedCode === "rate_limited") {
-        return get(_)("plugin-error-rate-limited");
-    }
-    if (normalizedCode && unavailableErrorCodes.has(normalizedCode)) {
-        return get(_)("plugin-error-provider-unavailable");
-    }
-    if (normalizedCode === "invalid_request") {
-        return get(_)("plugin-error-invalid-request");
-    }
-    if (normalizedCode && internalErrorCodes.has(normalizedCode)) {
-        return get(_)("plugin-error-internal");
-    }
-
-    return message?.trim() || get(_)("plugin-setup-error");
+export function translatePluginError(code?: string, _message?: string): string {
+    return get(_)(pluginErrorKey(code));
 }
 
 // Setup error codes come from plugin discovery and are deliberately mapped
@@ -73,10 +75,6 @@ export function translatePluginAPIError(error: unknown, fallback: string): strin
         if (authErrorHints.some((hint) => raw.includes(hint))) {
             return get(_)("wrong-username-or-password");
         }
-    }
-
-    if (error instanceof Error && error.message) {
-        return error.message;
     }
 
     return fallback;
