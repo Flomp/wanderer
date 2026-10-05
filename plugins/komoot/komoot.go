@@ -40,7 +40,7 @@ func login(email string, password string) (*komootClient, error) {
 		return nil, err
 	}
 	if response.Status != 200 {
-		return nil, fmt.Errorf("komoot login failed (%d): %s", response.Status, string(body))
+		return nil, sdk.ResponseError("login", response)
 	}
 
 	var parsed loginResponse
@@ -61,7 +61,7 @@ func loginClient(auth map[string]any) (*komootClient, error) {
 	email := sdk.StringField(auth, "email")
 	password := sdk.StringField(auth, "password")
 	if email == "" || password == "" {
-		return nil, fmt.Errorf("email and password are required")
+		return nil, sdk.PluginFailure{PluginError: sdk.PluginError{Code: "auth_failed", Operation: "login"}}
 	}
 	return login(email, password)
 }
@@ -102,7 +102,7 @@ func (c *komootClient) getRawFromConnector(connector string, path string, query 
 		return nil, err
 	}
 	if response.Status != 200 {
-		return body, fmt.Errorf("komoot request failed (%d): %s", response.Status, string(body))
+		return nil, sdk.ResponseError("detail", response)
 	}
 	return body, nil
 }

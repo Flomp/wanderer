@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/extism/go-pdk"
+	"github.com/open-wanderer/wanderer/plugins/sdk"
 )
 
 func main() {}
@@ -19,11 +20,11 @@ func listRoutesV1() int32 {
 	}
 	client, err := newClient(input.Auth)
 	if err != nil {
-		return fail("auth_failed", err.Error())
+		return failError("login", err)
 	}
 	output, err := syncRoutes(client, input)
 	if err != nil {
-		return fail("provider_unavailable", err.Error())
+		return failError("list", err)
 	}
 	if err := pdk.OutputJSON(output); err != nil {
 		return fail("internal_error", err.Error())
@@ -39,11 +40,11 @@ func listActivitiesV1() int32 {
 	}
 	client, err := newClient(input.Auth)
 	if err != nil {
-		return fail("auth_failed", err.Error())
+		return failError("login", err)
 	}
 	output, err := syncActivities(client, input)
 	if err != nil {
-		return fail("provider_unavailable", err.Error())
+		return failError("list", err)
 	}
 	if err := pdk.OutputJSON(output); err != nil {
 		return fail("internal_error", err.Error())
@@ -68,22 +69,22 @@ func getTrailDetail(kind string) int32 {
 	}
 	client, err := newClient(input.Auth)
 	if err != nil {
-		return fail("auth_failed", err.Error())
+		return failError("login", err)
 	}
 	var item trailImport
 	switch kind {
 	case "planned":
 		route, err := client.route(input.Summary.Source.ExternalID)
 		if err != nil {
-			return fail("provider_unavailable", err.Error())
+			return failError("detail", err)
 		}
 		gpxData, err := client.routeGPX(input.Summary.Source.ExternalID)
 		if err != nil {
-			return fail("provider_unavailable", err.Error())
+			return failError("detail", err)
 		}
 		item, err = routeImport(*route, gpxData)
 		if err != nil {
-			return fail("provider_unavailable", err.Error())
+			return failError("detail", err)
 		}
 	case "completed":
 		id, err := strconv.ParseInt(input.Summary.Source.ExternalID, 10, 64)
@@ -92,7 +93,7 @@ func getTrailDetail(kind string) int32 {
 		}
 		detail, err := client.activity(id)
 		if err != nil {
-			return fail("provider_unavailable", err.Error())
+			return failError("detail", err)
 		}
 		var photos []activityPhoto
 		if detail.Photos.Count > 0 {
@@ -100,11 +101,11 @@ func getTrailDetail(kind string) int32 {
 		}
 		streams, err := client.activityStreams(id)
 		if err != nil {
-			return fail("provider_unavailable", err.Error())
+			return failError("detail", err)
 		}
 		item, err = activityImport(detail, streams, photos)
 		if err != nil {
-			return fail("provider_unavailable", err.Error())
+			return failError("detail", err)
 		}
 	default:
 		return fail("invalid_request", "unsupported detail kind")
@@ -115,10 +116,18 @@ func getTrailDetail(kind string) int32 {
 	return 0
 }
 
-func fail(code string, message string) int32 {
-	data, err := json.Marshal(pluginError{Code: code, Message: message})
+func fail(code string, _ string) int32 {
+	return writeFailure(sdk.NormalizePluginError(pluginError{Code: code}))
+}
+
+func failError(operation string, err error) int32 {
+	return writeFailure(sdk.SafeError(err, operation))
+}
+
+func writeFailure(failure pluginError) int32 {
+	data, err := json.Marshal(failure)
 	if err != nil {
-		pdk.SetErrorString(message)
+		pdk.SetErrorString("runtime_error")
 		return 1
 	}
 	pdk.SetErrorString(string(data))

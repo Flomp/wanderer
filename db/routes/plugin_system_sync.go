@@ -119,7 +119,7 @@ func PluginSystemSyncConfigured(ctx context.Context, app core.App, client meilis
 			app.Logger().Info("plugin instance sync started", "plugin", plugin.Manifest.ID, "instance", instance.Id)
 			result, err := syncPluginInstance(ctx, app, client, plugin, instance)
 			if err != nil {
-				app.Logger().Warn("plugin instance sync failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "error", err)
+				app.Logger().Warn("plugin instance sync failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "error", pluginsystem.PublicPluginError(err).Code)
 				syncErr = err
 				continue
 			}
@@ -153,12 +153,13 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 
 	auth, err := decryptedActiveInstanceAuth(plugin, instance)
 	if err != nil {
-		setPluginInstanceStatus(app, instance, "needs_reauth", "auth_failed", err.Error())
-		return nil, err
+		safe := pluginAuthFailure(err)
+		setPluginInstanceStatusForError(app, instance, safe)
+		return nil, safe
 	}
 	auth, err = pluginsystem.RefreshOAuthAuthIfNeeded(ctx, app, plugin, instance, auth)
 	if err != nil {
-		setPluginInstanceStatus(app, instance, "needs_reauth", "auth_failed", err.Error())
+		setPluginInstanceStatusForError(app, instance, err)
 		return nil, err
 	}
 	config := effectivePluginConfig(app, plugin.Manifest.ID, instance)
@@ -316,7 +317,7 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 		}
 		var output pluginSystemListOutput
 		if err := json.Unmarshal(outputBytes, &output); err != nil {
-			return nil, fmt.Errorf("plugin returned invalid %s output: %w", capability.Export, err)
+			return nil, pluginsystem.Failure("invalid_output", pluginsystem.OperationList)
 		}
 		if output.Error != nil {
 			return nil, pluginsystem.PluginCapabilityError{Err: output.Error}
@@ -372,7 +373,7 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 			item, err := pluginDetail(ctx, sessions.session, plugin, detailCapability, instance, auth, pluginConfig, summary)
 			if err != nil {
 				result.Skipped++
-				app.Logger().Warn("skipping plugin item after detail fetch failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "provider", summary.Source.Provider, "external_id", summary.Source.ExternalID, "error", err)
+				app.Logger().Warn("skipping plugin item after detail fetch failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "provider", summary.Source.Provider, "external_id", summary.Source.ExternalID, "error", pluginsystem.PublicPluginError(err).Code)
 				if pluginsystem.IsRuntimeSessionFatalError(err) {
 					if reopenErr := sessions.reopen(ctx); reopenErr != nil {
 						return nil, reopenErr
@@ -401,7 +402,7 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 					settings := trailmerge.DefaultPluginAutoMergeSettings()
 					settings.Enabled = true
 					if err := trailmerge.TryAutoMergeImportedTrail(app, client, ctx, actor, imported.TrailID, settings); err != nil {
-						app.Logger().Warn("unable to auto-merge imported plugin trail", "provider", item.Source.Provider, "external_id", item.Source.ExternalID, "trail", imported.TrailID, "error", err)
+						app.Logger().Warn("unable to auto-merge imported plugin trail", "provider", item.Source.Provider, "external_id", item.Source.ExternalID, "trail", imported.TrailID, "error", pluginsystem.PublicPluginError(err).Code)
 					}
 				}
 			}
@@ -472,7 +473,7 @@ func backfillProviderCategoryDuringSync(ctx context.Context, app core.App, sessi
 
 	item, err := pluginDetail(ctx, sessions.session, plugin, detailCapability, instance, auth, pluginConfig, summary)
 	if err != nil {
-		app.Logger().Warn("skipping provider category backfill after detail fetch failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "provider", summary.Source.Provider, "external_id", summary.Source.ExternalID, "error", err)
+		app.Logger().Warn("skipping provider category backfill after detail fetch failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "provider", summary.Source.Provider, "external_id", summary.Source.ExternalID, "error", pluginsystem.PublicPluginError(err).Code)
 		if pluginsystem.IsRuntimeSessionFatalError(err) {
 			if reopenErr := sessions.reopen(ctx); reopenErr != nil {
 				return true, reopenErr
@@ -509,7 +510,7 @@ func pluginDetail(ctx context.Context, session pluginsystem.RuntimeSession, plug
 	}
 	var output pluginSystemDetailOutput
 	if err := json.Unmarshal(outputBytes, &output); err != nil {
-		return pluginsystem.TrailImport{}, fmt.Errorf("plugin returned invalid %s output: %w", capability.Export, err)
+		return pluginsystem.TrailImport{}, pluginsystem.Failure("invalid_output", pluginsystem.OperationDetail)
 	}
 	if output.Error != nil {
 		return pluginsystem.TrailImport{}, pluginsystem.PluginCapabilityError{Err: output.Error}
@@ -542,7 +543,7 @@ func setPluginInstanceStatus(app core.App, instance *core.Record, status string,
 		"message": message,
 	})
 	if err := app.Save(instance); err != nil {
-		app.Logger().Warn("failed to update plugin instance status", "instance", instance.Id, "error", err)
+		app.Logger().Warn("failed to update plugin instance status", "instance", instance.Id, "error", pluginsystem.PublicPluginError(err).Code)
 	}
 }
 
@@ -551,8 +552,10 @@ func setPluginInstanceStatusForError(app core.App, instance *core.Record, err er
 
 	instance.Set("status", update.Status)
 	instance.Set("last_error", map[string]any{
-		"code":    update.Code,
-		"message": update.Message,
+		"code":       update.Code,
+		"message":    update.Message,
+		"operation":  update.Operation,
+		"httpStatus": update.HTTPStatus,
 	})
 	if update.RetryNotBefore != nil {
 		instance.Set("retry_not_before", *update.RetryNotBefore)
@@ -560,7 +563,7 @@ func setPluginInstanceStatusForError(app core.App, instance *core.Record, err er
 		instance.Set("retry_not_before", "")
 	}
 	if saveErr := app.Save(instance); saveErr != nil {
-		app.Logger().Warn("failed to update plugin instance status", "instance", instance.Id, "error", saveErr)
+		app.Logger().Warn("failed to update plugin instance status", "instance", instance.Id, "error", pluginsystem.PublicPluginError(saveErr).Code)
 	}
 }
 

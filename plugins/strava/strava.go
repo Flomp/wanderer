@@ -38,7 +38,7 @@ type stravaClient struct {
 func newClient(auth map[string]any) (*stravaClient, error) {
 	token := sdk.StringField(auth, "accessToken")
 	if token == "" {
-		return nil, fmt.Errorf("accessToken is required")
+		return nil, sdk.PluginFailure{PluginError: sdk.PluginError{Code: "auth_failed"}}
 	}
 	return &stravaClient{accessToken: token}, nil
 }
@@ -99,7 +99,7 @@ func (c *stravaClient) getJSON(path string, query []sdk.QueryParam, out any) err
 		return err
 	}
 	if response.Status < 200 || response.Status >= 300 {
-		return fmt.Errorf("strava request failed (%d): %s", response.Status, string(body))
+		return sdk.ResponseError("detail", response)
 	}
 	return json.Unmarshal(body, out)
 }
@@ -110,7 +110,7 @@ func (c *stravaClient) getBytes(path string) ([]byte, error) {
 		return nil, err
 	}
 	if response.Status < 200 || response.Status >= 300 {
-		return nil, fmt.Errorf("strava request failed (%d): %s", response.Status, string(body))
+		return nil, sdk.ResponseError("detail", response)
 	}
 	return body, nil
 }

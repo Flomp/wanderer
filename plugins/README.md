@@ -109,7 +109,7 @@ Plugin sync starts from `plugin_instances.user`, the local wanderer user that ow
 
 ### Host request boundary
 
-Plugins cannot open provider connections themselves. They send a request spec to the host; the host resolves the connector, enforces policy, injects allowed auth, executes the HTTP request, and returns a bounded response. Host request failures after request decoding are returned to the plugin as `HostResponse.error` with the `provider_unavailable` code.
+Plugins cannot open provider connections themselves. They send a request spec to the host; the host resolves the connector, enforces policy, injects allowed auth, executes the HTTP request, and returns a bounded response. Host request failures are returned as a safe, structured `HostResponse.error`: configuration failures use `invalid_request`, provider I/O failures use `provider_unavailable`, and malformed successful responses use `invalid_output`. Failed HTTP responses retain their status and headers even when the provider body is too large or incomplete. Plugins classify them for the operation they were performing; arbitrary provider diagnostics do not become public error text.
 
 Host request bodies may be JSON, `application/x-www-form-urlencoded`, or
 multipart, subject to the manifest upload limits and content-type allow-list.
@@ -125,9 +125,9 @@ Plugins can emit host-visible diagnostics through the `wanderer:log` host
 function. The payload is a JSON object with a strict `level` (`debug`, `info`,
 `warn`, or `error`) and a non-empty `message`. The Go SDK exposes this as
 `sdk.LogDebug`, `sdk.LogInfo`, `sdk.LogWarn`, and `sdk.LogError`.
-Log messages are written to the host logs. Keep them short and never include
-secrets, credentials, cookies, tokens, authorization codes, or full URLs with
-query parameters.
+The host records the log level and receipt, without writing arbitrary guest
+message text. Never include secrets, credentials, cookies, tokens, authorization
+codes, or full URLs with query parameters in a log payload.
 
 ```go
 sdk.LogInfo("provider detail fetch took 420ms externalID=abc")
@@ -157,7 +157,7 @@ sequenceDiagram
   Host->>Host: Resolve connector
   Host->>Host: Validate manifest policy
   alt denied
-    Host-->>Worker: HostResponse.error provider_unavailable
+    Host-->>Worker: HostResponse.error invalid_request
     Worker-->>Plugin: HostResponse.error
   else allowed
     Host->>Host: Inject auth and apply limits

@@ -201,7 +201,7 @@ func TestWorkerHostLogFrameRoundTrip(t *testing.T) {
 func TestPluginErrorForCode(t *testing.T) {
 	t.Run("falls back when raw error is empty", func(t *testing.T) {
 		got := pluginErrorForCode("list_routes_v1", 7, "")
-		if got.Code != "plugin_error" || !strings.Contains(got.Message, "code 7") {
+		if got.Code != "plugin_error" || got.Message != "plugin_error" {
 			t.Fatalf("unexpected fallback error: %#v", got)
 		}
 	})
@@ -219,7 +219,7 @@ func TestPluginErrorForCode(t *testing.T) {
 	})
 	t.Run("passes through structured error", func(t *testing.T) {
 		got := pluginErrorForCode("list_routes_v1", 1, `{"code":"rate_limited","message":"slow down"}`)
-		if got.Code != "rate_limited" || got.Message != "slow down" {
+		if got.Code != "rate_limited" || got.Message != "rate_limited" {
 			t.Fatalf("expected structured error, got %#v", got)
 		}
 	})

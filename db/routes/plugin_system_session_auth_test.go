@@ -23,10 +23,11 @@ import (
 // The guest seam captures the actual route input and delegates its connector
 // request to the production Host HTTP implementation, including IP policy.
 type sessionValidateRuntime struct {
-	t      *testing.T
-	calls  atomic.Int32
-	input  pluginSessionAuthRefreshInput
-	policy pluginsystem.RequestPolicyContext
+	t          *testing.T
+	calls      atomic.Int32
+	input      pluginSessionAuthRefreshInput
+	policy     pluginsystem.RequestPolicyContext
+	guestError error
 }
 
 func (r *sessionValidateRuntime) Call(ctx context.Context, plugin pluginsystem.LocalPlugin, export string, input []byte, policy pluginsystem.RequestPolicyContext) ([]byte, error) {
@@ -41,6 +42,9 @@ func (r *sessionValidateRuntime) Call(ctx context.Context, plugin pluginsystem.L
 	response, err := pluginsystem.ExecuteHostRequest(ctx, plugin.Manifest, policy, pluginsystem.HostRequestSpec{Method: http.MethodGet, Target: pluginsystem.RequestTarget{Type: "connector", Connector: "api", Path: "/login"}}, pluginsystem.HostRequestOptions{})
 	if err != nil {
 		return nil, err
+	}
+	if r.guestError != nil {
+		return nil, r.guestError
 	}
 	return response.Body, nil
 }
@@ -298,5 +302,63 @@ func TestSessionValidateKeepsExistingNetworkRestriction(t *testing.T) {
 	}
 	if f.runtime.calls.Load() != 1 || f.providerRequests.Load() != 0 {
 		t.Fatal("private provider received a request without explicit allowance")
+	}
+}
+
+func TestSessionValidateDraftKeepsTypedGuestFailureWithoutPersisting(t *testing.T) {
+	for _, test := range []struct {
+		status int
+		code   string
+		retry  int
+	}{{http.StatusTooManyRequests, "rate_limited", 0}, {http.StatusServiceUnavailable, "provider_unavailable", 120}} {
+		t.Run(test.code, func(t *testing.T) {
+			f := newSessionValidateFixture(t)
+			originalAuth, originalConfig := f.instance.GetString("auth"), f.instance.GetString("config")
+			f.runtime.guestError = pluginsystem.PluginCallError{PluginID: f.manifest.ID, Export: "refresh_auth_v1", PluginError: pluginsystem.PluginError{Code: test.code, Message: "provider-body-secret replacement-password stored@example.test " + f.baseURL + "?token=token-url-secret", Operation: pluginsystem.OperationLogin, HTTPStatus: test.status, RetryAfterSeconds: &test.retry}}
+			status, response := f.request(t, f.body())
+			if status != http.StatusBadRequest {
+				t.Fatalf("typed guest failure status %d: %s", status, response)
+			}
+			var payload struct {
+				Data struct {
+					Operation struct {
+						Code   string
+						Params map[string]any
+					}
+				}
+			}
+			if err := json.Unmarshal([]byte(response), &payload); err != nil {
+				t.Fatal(err)
+			}
+			operation := payload.Data.Operation
+			if operation.Code != test.code || operation.Params["operation"] != pluginsystem.OperationLogin || operation.Params["httpStatus"] != float64(test.status) || operation.Params["retryAfterSeconds"] != float64(test.retry) {
+				t.Fatalf("typed guest metadata lost: %s", response)
+			}
+			if f.runtime.calls.Load() != 1 || f.providerRequests.Load() != 1 {
+				t.Fatal("replacement/draft did not reach its provider exactly once")
+			}
+			if f.runtime.input.Auth["password"] != "replacement-password" || f.runtime.input.Auth["email"] != "stored@example.test" || len(f.runtime.input.Auth) != 2 {
+				t.Fatalf("typed failure used wrong active credentials: %#v", f.runtime.input.Auth)
+			}
+			if f.runtime.input.Config["limit"] != float64(3) || f.runtime.input.Config["after"] != "2026-01-01" {
+				t.Fatalf("typed failure used wrong effective plugin config: %#v", f.runtime.input.Config)
+			}
+			connector := f.runtime.policy.Connectors["api"]
+			if connector.BaseURL != f.baseURL || connector.BasePath != "/draft" || !connector.AllowPrivate {
+				t.Fatalf("typed failure used old connector policy: %#v", connector)
+			}
+			for _, secret := range []string{"provider-body-secret", "replacement-password", "stored@example.test", "token-url-secret", f.baseURL} {
+				if bytes.Contains([]byte(response), []byte(secret)) {
+					t.Fatalf("guest failure leaked %q: %s", secret, response)
+				}
+			}
+			fresh, err := f.app.FindRecordById("plugin_instances", f.instance.Id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fresh.GetString("auth") != originalAuth || fresh.GetString("config") != originalConfig {
+				t.Fatal("failed validation persisted draft credentials/config")
+			}
+		})
 	}
 }

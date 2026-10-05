@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"strings"
+	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
@@ -78,7 +77,7 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 
 	auth, err := decryptedActiveInstanceAuth(plugin, instance)
 	if err != nil {
-		return err
+		return pluginOperationAPIError(pluginAuthFailure(err))
 	}
 
 	input := pluginSystemTrailSendInput{
@@ -97,7 +96,7 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	pluginConfig := pluginRuntimeConfig(config)
 	policy, err := pluginInstancePolicy(plugin, config)
 	if err != nil {
-		return apis.NewBadRequestError("invalid plugin configuration", nil)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_request", pluginsystem.OperationHostHTTP))
 	}
 	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
 	if err != nil {
@@ -115,25 +114,25 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	}
 	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy.WithHostAuth(activeAuth))
 	if err != nil {
-		return err
+		return pluginOperationAPIError(err)
 	}
 	defer func() {
 		_ = session.Close(context.Background())
 	}()
 	output, err := session.Call(e.Request.Context(), capability.Export, inputBytes)
 	if err != nil {
-		return err
+		return pluginOperationAPIError(err)
 	}
 
 	var plan pluginsystem.TrailSendPlan
 	if err := json.Unmarshal(output, &plan); err != nil {
-		return apis.NewBadRequestError("plugin returned an invalid send plan", err)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_output", pluginsystem.OperationSend))
 	}
 	if plan.Request.Method == "" {
 		return apis.NewBadRequestError("plugin returned an empty send request", nil)
 	}
 	if err := pluginsystem.ValidateHostRequestSpec(plugin.Manifest, plan.Request, policy); err != nil {
-		return apis.NewBadRequestError("plugin send request is not permitted by manifest", err)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_request", pluginsystem.OperationSend))
 	}
 
 	if err := pluginsystem.InjectHostRequestAuth(e.Request.Context(), pluginsystem.AuthInjectionInput{
@@ -147,7 +146,7 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 		Spec:     &plan.Request,
 		Policy:   policy,
 	}); err != nil {
-		return apis.NewBadRequestError("plugin auth injection failed", err)
+		return pluginOperationAPIError(err)
 	}
 	// Auth is fully resolved above (including OAuth refresh and plugin session
 	// refresh). Clearing the reference makes this handler the sole injector so the
@@ -168,13 +167,11 @@ func executeHostRequest(ctx context.Context, manifest pluginsystem.Manifest, pol
 		Trail: gpx,
 	})
 	if err != nil {
-		return err
+		return pluginOperationAPIError(err)
 	}
 	if resp.Status < 200 || resp.Status >= 300 {
-		return apis.NewBadRequestError(
-			fmt.Sprintf("provider request failed: %d", resp.Status),
-			strings.TrimSpace(string(resp.Body)),
-		)
+		return pluginOperationAPIError(pluginsystem.PluginFailure{PluginError: pluginsystem.ClassifyProviderError(pluginsystem.OperationSend, resp.Status,
+			firstProviderHeader(resp.HeaderValues, "Retry-After"), "", time.Now())})
 	}
 	return nil
 }

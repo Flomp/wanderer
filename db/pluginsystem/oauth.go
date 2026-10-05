@@ -91,21 +91,25 @@ func PKCEChallenge(verifier string) string {
 // ExchangeOAuthToken performs the host-owned OAuth token exchange or refresh.
 // The token endpoint must be allowed by the plugin manifest network policy.
 func ExchangeOAuthToken(ctx context.Context, manifest Manifest, authContext AuthContext, auth map[string]any, values map[string]string) (*OAuthTokenResponse, error) {
+	operation := OperationOAuthExchange
+	if values["grant_type"] != "authorization_code" {
+		operation = OperationOAuthRefresh
+	}
 	tokenURL, err := url.Parse(authContext.TokenURL)
 	if err != nil {
-		return nil, err
+		return nil, Failure("invalid_request", operation)
 	}
 	if tokenURL.Scheme != "http" && tokenURL.Scheme != "https" {
-		return nil, fmt.Errorf("oauth token url scheme must be http or https")
+		return nil, Failure("invalid_request", operation)
 	}
 	if !OAuthTokenURLAllowed(manifest, tokenURL) {
-		return nil, fmt.Errorf("oauth token host %q is not allowed by manifest permissions", tokenURL.Hostname())
+		return nil, Failure("invalid_request", operation)
 	}
 
 	clientID := StringFromAny(auth["clientId"])
 	clientSecret := StringFromAny(auth[AuthFieldClientSecret])
 	if clientID == "" {
-		return nil, fmt.Errorf("clientId is required")
+		return nil, Failure("invalid_client", operation)
 	}
 
 	bodyValues := url.Values{}
@@ -158,20 +162,33 @@ func ExchangeOAuthToken(ctx context.Context, manifest Manifest, authContext Auth
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, Failure("provider_unavailable", operation)
 	}
 	defer resp.Body.Close()
-	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
+	if readErr != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil, Failure("provider_unavailable", operation)
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(respBody)))
+		var rejection struct {
+			Error string `json:"error"`
+		}
+		if readErr == nil && len(respBody) <= 1<<20 {
+			_ = json.Unmarshal(respBody, &rejection)
+		}
+		return nil, PluginFailure{PluginError: ClassifyProviderError(operation, resp.StatusCode,
+			resp.Header.Get("Retry-After"), rejection.Error, time.Now())}
+	}
+	if len(respBody) > 1<<20 {
+		return nil, Failure("invalid_output", operation)
 	}
 	var token OAuthTokenResponse
 	token.Raw = append([]byte{}, respBody...)
 	if err := json.Unmarshal(respBody, &token); err != nil {
-		return nil, err
+		return nil, Failure("invalid_output", operation)
 	}
 	if token.AccessToken == "" {
-		return nil, fmt.Errorf("oauth token response has no access_token")
+		return nil, Failure("invalid_output", operation)
 	}
 	return &token, nil
 }
@@ -212,7 +229,7 @@ func RefreshOAuthToken(ctx context.Context, app core.App, plugin LocalPlugin, in
 	}
 	refreshToken := StringFromAny(auth[AuthFieldRefreshToken])
 	if refreshToken == "" {
-		return auth, fmt.Errorf("refreshToken is missing")
+		return auth, Failure("invalid_grant", OperationOAuthRefresh)
 	}
 	token, err := ExchangeOAuthToken(ctx, plugin.Manifest, authContext, auth, map[string]string{
 		"grant_type":    grantType,

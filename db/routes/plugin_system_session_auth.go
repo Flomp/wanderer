@@ -97,11 +97,11 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	pluginsystem.MergePluginConfig(config, draft)
 	policy, err := pluginInstancePolicy(plugin, config)
 	if err != nil {
-		return apis.NewBadRequestError("invalid plugin configuration", nil)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_request", pluginsystem.OperationHostHTTP))
 	}
 	auth = pluginsystem.AuthForPluginRefresh(auth, authContext)
 	if err := decryptActiveAuth(auth, authContext, plaintext); err != nil {
-		return apis.NewBadRequestError("active credentials cannot be decrypted", nil)
+		return pluginOperationAPIError(pluginAuthFailure(err))
 	}
 
 	for _, field := range authContext.Fields {
@@ -128,10 +128,10 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	policy = policy.WithHostAuth(auth)
 	output, err := runtime.Call(e.Request.Context(), plugin, authContext.Refresh.Function, inputBytes, policy)
 	if err != nil {
-		return apis.NewBadRequestError("plugin credentials validation failed", nil)
+		return pluginOperationAPIError(err)
 	}
 	if err := pluginsystem.ValidatePluginSessionRefreshOutput(output); err != nil {
-		return apis.NewBadRequestError("plugin credentials validation failed", nil)
+		return pluginOperationAPIError(err)
 	}
 
 	return e.JSON(http.StatusOK, map[string]any{

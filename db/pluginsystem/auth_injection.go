@@ -38,7 +38,7 @@ func InjectRequestAuthForContext(manifest Manifest, auth map[string]any, context
 	case AuthTypeOAuth2:
 		token := StringFromAny(auth[AuthFieldAccessToken])
 		if token == "" {
-			return fmt.Errorf("oauth access token is missing")
+			return Failure("invalid_grant", OperationOAuthRefresh)
 		}
 		scheme := StringFromAny(auth[AuthFieldTokenType])
 		if scheme == "" {
@@ -86,7 +86,7 @@ func InjectHostRequestAuthFromPolicy(manifest Manifest, auth map[string]any, spe
 	case AuthTypeOAuth2:
 		token := StringFromAny(auth[AuthFieldAccessToken])
 		if token == "" {
-			return fmt.Errorf("oauth access token is missing")
+			return Failure("invalid_grant", OperationOAuthRefresh)
 		}
 		scheme := StringFromAny(auth[AuthFieldTokenType])
 		if scheme == "" {
@@ -190,7 +190,7 @@ func injectOAuthAuth(ctx context.Context, input AuthInjectionInput, contextName 
 	}
 	token := StringFromAny(auth[AuthFieldAccessToken])
 	if token == "" {
-		return fmt.Errorf("oauth access token is missing")
+		return Failure("invalid_grant", OperationOAuthRefresh)
 	}
 	scheme := StringFromAny(auth[AuthFieldTokenType])
 	if scheme == "" {
@@ -288,10 +288,10 @@ func ValidatePluginSessionRefreshOutput(output []byte) error {
 
 func validatePluginSessionRefreshOutput(output []byte, session *pluginSessionResponse) error {
 	if err := json.Unmarshal(output, session); err != nil {
-		return fmt.Errorf("plugin returned an invalid session: %w", err)
+		return Failure("invalid_output", OperationLogin)
 	}
 	if session.Token == "" {
-		return fmt.Errorf("plugin returned an empty session token")
+		return Failure("invalid_output", OperationLogin)
 	}
 	return nil
 }

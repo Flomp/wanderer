@@ -201,6 +201,8 @@ type TrailSendPlan struct {
 }
 
 type PluginError struct {
+	Operation         string `json:"operation,omitempty"`
+	HTTPStatus        int    `json:"httpStatus,omitempty"`
 	Code              string `json:"code"`
 	Message           string `json:"message,omitempty"`
 	RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`

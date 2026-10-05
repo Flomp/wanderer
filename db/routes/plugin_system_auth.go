@@ -60,7 +60,7 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	}
 	auth, err := decryptedOAuthFlowAuth(instance, authContext, false)
 	if err != nil {
-		return err
+		return pluginOperationAPIError(pluginAuthFailure(err))
 	}
 	clientID := pluginsystem.StringFromAny(auth["clientId"])
 	if clientID == "" {
@@ -145,7 +145,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	}
 	auth, err := decryptedOAuthFlowAuth(instance, authContext, true)
 	if err != nil {
-		return err
+		return pluginOperationAPIError(pluginAuthFailure(err))
 	}
 	if data.State != pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthState]) {
 		return apis.NewBadRequestError("invalid oauth state", nil)
@@ -160,7 +160,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 		),
 	})
 	if err != nil {
-		return apis.NewBadRequestError("oauth token exchange failed", err)
+		return pluginOperationAPIError(err)
 	}
 	pluginsystem.StoreOAuthToken(auth, contextName, token)
 	for _, field := range pluginsystem.InternalOAuthTransientFields() {

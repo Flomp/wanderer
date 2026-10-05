@@ -24,7 +24,7 @@ func RunPluginWorker(ctx context.Context, stdin io.Reader, stdout io.Writer, std
 		responseMaxBytes: envInt("WANDERER_PLUGIN_WORKER_RESPONSE_BYTES", defaultWorkerResponseMaxBytes),
 	}
 	if err := worker.run(); err != nil {
-		_, _ = fmt.Fprintf(stderr, "plugin worker: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "plugin worker: %s\n", PublicPluginError(err).Code)
 		return 1
 	}
 	return 0
@@ -43,7 +43,13 @@ type pluginWorkerProcess struct {
 	fatalErr         error
 }
 
-func (w *pluginWorkerProcess) run() error {
+func (w *pluginWorkerProcess) run() (resultErr error) {
+	defer func() {
+		if recover() != nil {
+			_ = w.sendError("runtime_error")
+			resultErr = Failure("runtime_error", OperationRuntime)
+		}
+	}()
 	defer func() {
 		if w.instance != nil {
 			_ = w.instance.Close(w.ctx)
@@ -68,12 +74,12 @@ func (w *pluginWorkerProcess) run() error {
 			return nil
 		case workerMessageCallExport:
 			if err := w.handleCallExport(msg); err != nil {
-				_ = w.sendError(err.Error())
+				_ = w.sendError("runtime_error")
 				return err
 			}
 		default:
 			err := fmt.Errorf("unexpected worker message %q", msg.Type)
-			_ = w.sendError(err.Error())
+			_ = w.sendError("runtime_error")
 			return err
 		}
 	}
@@ -109,14 +115,33 @@ func (w *pluginWorkerProcess) handleCallExport(msg workerMessage) error {
 	if w.fatalErr != nil {
 		return w.errCtx(call.Export, w.fatalErr)
 	}
-	if err != nil {
-		return w.errCtx(call.Export, fmt.Errorf("call %s: %w", call.Export, err))
+	// Extism also returns a Go error when pdk.SetError accompanies a nonzero
+	// export code. A structured guest rejection belongs on call_result and
+	// must not be mistaken for a fatal WASM trap.
+	if pluginErr := pluginErrorForResult(call.Export, code, w.instance.GetErrorWithContext(w.ctx), err); pluginErr != nil {
+		return w.sendCallResult(workerCallResult{PluginError: pluginErr})
 	}
-	if code != 0 {
-		pluginErr := pluginErrorForCode(call.Export, code, w.instance.GetErrorWithContext(w.ctx))
-		return w.sendCallResult(workerCallResult{PluginError: &pluginErr})
+	if err != nil {
+		return w.errCtx(call.Export, err)
 	}
 	return w.sendCallResult(workerCallResult{OutputBase64: encodeWorkerBytes(output)})
+}
+
+// pluginErrorForResult distinguishes a business rejection from a runtime trap.
+// A Go call error is compatible with guest rejection only when the guest set a
+// bounded structured error; malformed trap text stays on the fatal channel.
+func pluginErrorForResult(export string, code uint32, rawErr string, callErr error) *PluginError {
+	if code == 0 {
+		return nil
+	}
+	if callErr != nil {
+		var guest PluginError
+		if len(rawErr) > 64*1024 || json.Unmarshal([]byte(rawErr), &guest) != nil || guest.Code == "" {
+			return nil
+		}
+	}
+	normalized := pluginErrorForCode(export, code, rawErr)
+	return &normalized
 }
 
 // pluginErrorForCode maps a non-zero export return code into the PluginError
@@ -128,10 +153,10 @@ func pluginErrorForCode(export string, code uint32, rawErr string) PluginError {
 	if rawErr == "" || json.Unmarshal([]byte(rawErr), &parsed) != nil || parsed.Code == "" {
 		return PluginError{
 			Code:    "plugin_error",
-			Message: fmt.Sprintf("call %s failed with code %d", export, code),
+			Message: "plugin_error",
 		}
 	}
-	return parsed
+	return NormalizePluginError(parsed)
 }
 
 func (w *pluginWorkerProcess) openPlugin(wasmPath string) error {
@@ -158,7 +183,7 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 			requestBytes, err := plugin.ReadBytes(stack[0])
 			if err != nil {
 				writeHostHTTPResponse(ctx, plugin, stack, hostHTTPResponse{
-					Error: &PluginError{Code: "invalid_request", Message: err.Error()},
+					Error: &PluginError{Code: "invalid_request", Message: "invalid_request"},
 				})
 				return
 			}
@@ -167,7 +192,7 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 			})
 			if err != nil {
 				writeHostHTTPResponse(ctx, plugin, stack, hostHTTPResponse{
-					Error: &PluginError{Code: "internal_error", Message: err.Error()},
+					Error: &PluginError{Code: "internal_error", Message: "internal_error"},
 				})
 				return
 			}
@@ -196,7 +221,7 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 			}
 			offset, err := plugin.WriteBytes(responseBytes)
 			if err != nil {
-				plugin.Log(extism.LogLevelError, "write host http response: "+err.Error())
+				plugin.Log(extism.LogLevelError, "write host http response failed")
 				stack[0] = 0
 				return
 			}
@@ -212,12 +237,12 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 		func(ctx context.Context, plugin *extism.CurrentPlugin, stack []uint64) {
 			message, err := readBoundedHostLogPayload(plugin, stack[0])
 			if err != nil {
-				plugin.Log(extism.LogLevelError, "read host log message: "+err.Error())
+				plugin.Log(extism.LogLevelError, "read host log message failed")
 				return
 			}
 			entry, err := parseHostLogEntry(message)
 			if err != nil {
-				_, _ = fmt.Fprintf(w.stderr, "plugin log invalid: session %s: %v\n", w.sessionID, err)
+				_, _ = fmt.Fprintf(w.stderr, "plugin log invalid: session %s\n", w.sessionID)
 				return
 			}
 			msg, err := workerMessageWithData(workerMessageHostLog, workerHostLog{
@@ -226,11 +251,11 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 				SessionID: w.sessionID,
 			})
 			if err != nil {
-				_, _ = fmt.Fprintf(w.stderr, "plugin log encode failed: session %s: %v\n", w.sessionID, err)
+				_, _ = fmt.Fprintf(w.stderr, "plugin log encode failed: session %s\n", w.sessionID)
 				return
 			}
 			if err := writeWorkerMessage(w.stdout, w.responseMaxBytes, msg); err != nil {
-				_, _ = fmt.Fprintf(w.stderr, "plugin log write failed: session %s: %v\n", w.sessionID, err)
+				_, _ = fmt.Fprintf(w.stderr, "plugin log write failed: session %s\n", w.sessionID)
 			}
 			_ = ctx
 		},

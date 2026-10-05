@@ -1,5 +1,6 @@
 <script lang="ts">
     import { plugin_oauth_callback } from "$lib/stores/plugin_instance_store";
+    import { translatePluginAPIError, translatePluginError } from "$lib/util/plugin_error_i18n";
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
     import { onMount } from "svelte";
@@ -15,11 +16,11 @@
         sessionStorage.removeItem(`wanderer_plugin_oauth_${state}`);
 
         if (providerError) {
-            error = providerError;
+            error = translatePluginError(providerError);
             return;
         }
         if (!code || !state || !instanceId) {
-            error = "invalid_oauth_callback";
+            error = $_("plugin-error-invalid-request");
             return;
         }
 
@@ -27,7 +28,7 @@
             await plugin_oauth_callback({ instanceId, code, state });
             await goto("/settings/plugins");
         } catch (e) {
-            error = e instanceof Error ? e.message : "oauth_error";
+            error = translatePluginAPIError(e, $_("plugin-error-internal"));
         }
     });
 </script>
