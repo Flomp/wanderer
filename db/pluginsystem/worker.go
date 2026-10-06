@@ -299,7 +299,7 @@ func (s *workerRuntimeSession) handleHostLog(msg workerMessage) {
 		log.Printf("plugin log invalid: session %s: log message is required", s.sessionID)
 		return
 	}
-	log.Printf("plugin log [%s]: session %s: guest log received", level, s.sessionID)
+	logGuestEntry(HostLogEntry{Level: level, Event: entry.Event, Error: entry.Error}, s.sessionID)
 }
 
 func (s *workerRuntimeSession) handleHostHTTPRequest(ctx context.Context, msg workerMessage) error {

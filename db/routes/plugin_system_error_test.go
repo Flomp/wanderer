@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/security"
 	"pocketbase/pluginsystem"
 )
 
@@ -192,7 +194,7 @@ func TestCronInvalidStoredAuthContextIsConfigurationFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("Cron accepted an undeclared stored auth context")
 	}
-	if safe := pluginsystem.PublicPluginError(err); safe.Code != "invalid_request" {
+	if safe := pluginsystem.PublicPluginError(err); safe.Code != "invalid_configuration" {
 		t.Fatalf("configuration failure classified as %#v", safe)
 	}
 	fresh, findErr := f.app.FindRecordById("plugin_instances", f.instanceID)
@@ -203,10 +205,45 @@ func TestCronInvalidStoredAuthContextIsConfigurationFailure(t *testing.T) {
 		t.Fatalf("invalid context status = %q, want error", fresh.GetString("status"))
 	}
 	diagnostic := pluginsystem.JSONMapFromRecord(fresh, "last_error")
-	if diagnostic["code"] != "invalid_request" || diagnostic["operation"] != pluginsystem.OperationLogin {
+	if diagnostic["code"] != "invalid_configuration" || diagnostic["operation"] != pluginsystem.OperationLogin {
 		t.Fatalf("stored invalid-context diagnostic = %#v", diagnostic)
 	}
 	if f.tokenRequests.Load() != 0 {
 		t.Fatal("invalid context reached the provider")
+	}
+}
+
+func TestOAuthStartUnreadableStoredClientSecretIsRepairable(t *testing.T) {
+	f := newOAuthMetadataFixture(t)
+	instance, err := f.app.FindRecordById("plugin_instances", f.instanceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth := pluginsystem.JSONMapFromRecord(instance, "auth")
+	// Bypass the encryption hook to reproduce a stored credential from a
+	// previous installation key, rather than a fresh plaintext write.
+	ciphertext, err := security.Encrypt([]byte("client-secret-under-a-previous-key"), "ffffffffffffffffffffffffffffffff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth["clientSecret"] = ciphertext
+	encoded, err := json.Marshal(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.app.DB().NewQuery("UPDATE plugin_instances SET auth = {:auth} WHERE id = {:id}").Bind(dbx.Params{"auth": string(encoded), "id": instance.Id}).Execute(); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := json.Marshal(map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
+	request := httptest.NewRequest(http.MethodPost, "/api/plugin-system/oauth/start", bytes.NewReader(data))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", f.authToken)
+	response := httptest.NewRecorder()
+	f.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), `"code":"credentials_unreadable"`) || !strings.Contains(response.Body.String(), `"operation":"oauth_exchange"`) || strings.Contains(response.Body.String(), ciphertext) {
+		t.Fatalf("unreadable OAuth credential error: %d %s", response.Code, response.Body.String())
+	}
+	if f.tokenRequests.Load() != 0 {
+		t.Fatal("unreadable client secret reached provider")
 	}
 }

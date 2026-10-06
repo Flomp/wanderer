@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -242,6 +243,13 @@ func TestSessionValidateRejectsInvalidDraftBeforeProvider(t *testing.T) {
 			status, response := f.request(t, body)
 			if status != http.StatusBadRequest {
 				t.Fatalf("status %d: %s", status, response)
+			}
+			expectedCode := "invalid_configuration"
+			if test.name == "unreadable active credential" {
+				expectedCode = "credentials_unreadable"
+			}
+			if !strings.Contains(response, `"code":"`+expectedCode+`"`) {
+				t.Fatalf("local failure lost %s classification: %s", expectedCode, response)
 			}
 			if f.runtime.calls.Load() != 0 || f.providerRequests.Load() != 0 {
 				t.Fatal("invalid candidate reached runtime/provider")

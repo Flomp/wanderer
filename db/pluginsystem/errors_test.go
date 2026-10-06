@@ -177,3 +177,15 @@ func TestHostHTTPFailurePreservesStatusInsteadOfMediaType(t *testing.T) {
 		t.Fatalf("transport leaked: %s", encoded)
 	}
 }
+
+func TestOAuthLocalEndpointRejectionIsConfigurationFailure(t *testing.T) {
+	for _, tokenURL := range []string{"https://[invalid", "file:///private", "https://not-in-manifest.example/token"} {
+		for _, grantType := range []string{"authorization_code", "refresh_token"} {
+			_, err := ExchangeOAuthToken(context.Background(), Manifest{}, AuthContext{TokenURL: tokenURL}, nil, map[string]string{"grant_type": grantType})
+			got := PublicPluginError(err)
+			if got.Code != "invalid_configuration" || got.HTTPStatus != 0 || strings.Contains(got.Message, tokenURL) {
+				t.Fatalf("local token URL %q classified as %#v", tokenURL, got)
+			}
+		}
+	}
+}

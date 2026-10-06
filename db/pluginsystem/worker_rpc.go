@@ -50,9 +50,11 @@ type workerHostHTTPResponse struct {
 }
 
 type workerHostLog struct {
-	Level     string `json:"level"`
-	Message   string `json:"message"`
-	SessionID string `json:"sessionId,omitempty"`
+	Level     string       `json:"level"`
+	Message   string       `json:"message"`
+	SessionID string       `json:"sessionId,omitempty"`
+	Event     string       `json:"event,omitempty"`
+	Error     *PluginError `json:"error,omitempty"`
 }
 
 type workerError struct {

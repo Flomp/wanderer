@@ -16,10 +16,16 @@ func wandererHTTPRequest(uint64) uint64
 func wandererLog(uint64)
 
 func Log(level LogLevel, message string) {
-	entry := HostLogEntry{
-		Level:   level,
-		Message: message,
-	}
+	logEntry(HostLogEntry{Level: level, Message: message})
+}
+
+// LogEvent emits a safe structured event. Use errors from ResponseError or
+// PluginFailure to retain operation and HTTP status, without provider text.
+func LogEvent(level LogLevel, event LogEventName, err error) {
+	logEntry(EventLogEntry(level, event, err))
+}
+
+func logEntry(entry HostLogEntry) {
 	memory, err := pdk.AllocateJSON(entry)
 	if err != nil {
 		return

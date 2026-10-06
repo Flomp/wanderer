@@ -11,6 +11,11 @@ init({ fallbackLocale: "en", initialLocale: "en" });
 describe("safe plugin error display", () => {
     it.each([
         ["invalid_client", "plugin-error-client-credentials"],
+        ["credentials_unreadable", "plugin-error-credentials-unreadable"],
+        ["invalid_configuration", "plugin-error-invalid-configuration"],
+        ["not_importable", "plugin-error-not-importable"],
+        ["not_found", "plugin-error-not-found"],
+        ["unsupported_protocol", "plugin-error-unsupported-protocol"],
         ["unauthorized_client", "plugin-error-client-credentials"],
         ["invalid_scope", "plugin-error-configuration"],
         ["unsupported_grant_type", "plugin-error-configuration"],

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"mime"
@@ -94,9 +95,8 @@ func ImportTrail(ctx context.Context, app core.App, item pluginsystem.TrailImpor
 	date := dateFromImport(item, metrics)
 	mediaBudget := &pluginMediaBudget{}
 	mediaContext := pluginMediaLogContext{
-		Provider:        item.Source.Provider,
-		TrailExternalID: item.Source.ExternalID,
-		TrailName:       fallbackName(item.Name),
+		PluginID: opts.Manifest.ID,
+		SourceID: pluginsystem.SourceDiagnosticID(item.Source.Provider, item.Source.ExternalID),
 	}
 	photos := photoFiles(ctx, app, collection, item.Photos, opts, mediaBudget, mediaContext)
 
@@ -482,7 +482,7 @@ func createWaypoints(ctx context.Context, app core.App, waypoints []pluginsystem
 			distanceFromStart = distance.fromStart
 		}
 		waypointMediaContext := mediaContext
-		waypointMediaContext.WaypointName = waypoint.Name
+		waypointMediaContext.TrailID = trailID
 		photos := photoFiles(ctx, app, collection, waypoint.Photos, opts, mediaBudget, waypointMediaContext)
 		record.Load(map[string]any{
 			"name":                waypoint.Name,
@@ -519,10 +519,9 @@ type pluginMediaBudget struct {
 }
 
 type pluginMediaLogContext struct {
-	Provider        string
-	TrailExternalID string
-	TrailName       string
-	WaypointName    string
+	PluginID string
+	SourceID string
+	TrailID  string
 }
 
 var pluginMediaRetryDelays = []time.Duration{time.Second, 3 * time.Second}
@@ -546,26 +545,26 @@ func photoFiles(ctx context.Context, app core.App, collection *core.Collection, 
 	items := 0
 	for _, photo := range photos {
 		if items >= util.DefaultPluginMaxMediaItemsPerEntity {
-			logSkippedPluginPhoto(app, "skipping plugin photo because photo item limit was reached", mediaContext, photo, "limit", util.DefaultPluginMaxMediaItemsPerEntity)
+			logSkippedPluginPhoto(app, "skipping plugin photo because photo item limit was reached", mediaContext, photo, nil, "limit", util.DefaultPluginMaxMediaItemsPerEntity)
 			continue
 		}
 		if err := ctx.Err(); err != nil {
-			logSkippedPluginPhoto(app, "skipping plugin photo because import context was cancelled", mediaContext, photo, "error", err)
+			logSkippedPluginPhoto(app, "skipping plugin photo because import context was cancelled", mediaContext, photo, err)
 			return files
 		}
 		if photo.Source.ExpiresAt != nil && photo.Source.ExpiresAt.Before(now) {
-			logSkippedPluginPhoto(app, "skipping expired plugin photo", mediaContext, photo)
+			logSkippedPluginPhoto(app, "skipping expired plugin photo", mediaContext, photo, nil)
 			continue
 		}
 		maxBytes := budget.remainingBytes()
 		if maxBytes <= 0 {
-			logSkippedPluginPhoto(app, "skipping plugin photo because aggregate media byte limit was reached", mediaContext, photo, "limit", util.DefaultPluginMaxImportMediaBytes)
+			logSkippedPluginPhoto(app, "skipping plugin photo because aggregate media byte limit was reached", mediaContext, photo, nil, "limit", util.DefaultPluginMaxImportMediaBytes)
 			continue
 		}
 
 		file, bytesRead, err := photoFile(ctx, photo, opts, maxBytes, allowedMimeTypes)
 		if err != nil {
-			logSkippedPluginPhoto(app, "skipping invalid plugin photo", mediaContext, photo, "error", err)
+			logSkippedPluginPhoto(app, "skipping invalid plugin photo", mediaContext, photo, err)
 			continue
 		}
 		if file != nil {
@@ -589,19 +588,35 @@ func photoMimeTypes(collection *core.Collection) []string {
 	return field.MimeTypes
 }
 
-func logSkippedPluginPhoto(app core.App, message string, mediaContext pluginMediaLogContext, photo pluginsystem.Photo, extra ...any) {
+func logSkippedPluginPhoto(app core.App, message string, mediaContext pluginMediaLogContext, photo pluginsystem.Photo, err error, extra ...any) {
 	attrs := []any{
-		"provider", mediaContext.Provider,
-		"trail_external_id", mediaContext.TrailExternalID,
-		"trail_name", mediaContext.TrailName,
-		"photo_external_id", photo.ExternalID,
-		"filename", photo.Filename,
-		"source_type", photo.Source.Type,
+		"plugin", mediaContext.PluginID,
+		"source_id", mediaContext.SourceID,
+		"photo_id", pluginsystem.SourceDiagnosticID(mediaContext.SourceID, photo.ExternalID),
+		"source_type", safePhotoSourceType(photo.Source.Type),
 	}
-	if mediaContext.WaypointName != "" {
-		attrs = append(attrs, "waypoint_name", mediaContext.WaypointName)
+	if mediaContext.TrailID != "" {
+		attrs = append(attrs, "trail", mediaContext.TrailID)
 	}
-	app.Logger().Warn(message, append(attrs, extra...)...)
+	attrs = append(attrs, extra...)
+	if err != nil {
+		var statusErr util.PluginMediaHTTPStatusError
+		if errors.As(err, &statusErr) {
+			err = pluginsystem.PluginFailure{PluginError: pluginsystem.ClassifyProviderError(pluginsystem.OperationHostHTTP, statusErr.StatusCode, "", "", time.Now())}
+		}
+		pluginsystem.LogPluginFailure(app.Logger(), message, pluginsystem.WithDiagnosticCause(err, "media_fetch_failed"), attrs...)
+		return
+	}
+	app.Logger().Warn(message, attrs...)
+}
+
+func safePhotoSourceType(value string) string {
+	switch value {
+	case "url", "connector":
+		return value
+	default:
+		return "unknown"
+	}
 }
 
 // photoFile fetches one plugin-provided photo source. URL sources are validated

@@ -83,8 +83,10 @@ const (
 )
 
 type HostLogEntry struct {
-	Level   LogLevel `json:"level"`
-	Message string   `json:"message"`
+	Level   LogLevel     `json:"level"`
+	Message string       `json:"message"`
+	Event   LogEventName `json:"event,omitempty"`
+	Error   *PluginError `json:"error,omitempty"`
 }
 
 type InstanceRef struct {

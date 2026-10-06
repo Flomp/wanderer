@@ -67,7 +67,10 @@ func decryptedOAuthFlowAuth(instance *core.Record, context pluginsystem.AuthCont
 	}
 	fields = append(fields, pluginsystem.AuthFieldClientSecret)
 	if callback {
-		fields = append(fields, pluginsystem.AuthFieldOAuthState, pluginsystem.AuthFieldOAuthCodeVerifier)
+		fields = append(fields, pluginsystem.AuthFieldOAuthState)
+		if context.PKCE {
+			fields = append(fields, pluginsystem.AuthFieldOAuthCodeVerifier)
+		}
 	}
 	scoped := pluginsystem.AuthContext{Type: pluginsystem.AuthTypeSession, SecretFields: fields}
 	if err := decryptActiveAuth(auth, scoped, nil); err != nil {

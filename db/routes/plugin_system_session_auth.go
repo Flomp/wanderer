@@ -62,16 +62,16 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	if requested == "" {
 		resolved, _, resolveErr := pluginsystem.EffectiveAuthContext(plugin.Manifest, auth)
 		if resolveErr != nil {
-			return apis.NewBadRequestError("invalid active auth context", nil)
+			return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 		}
 		requested = resolved
 	}
 	contextName, authContext, err := sessionAuthContext(plugin, requested)
 	if err != nil {
-		return apis.NewBadRequestError("plugin has no session auth context", err)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 	if authContext.Refresh == nil || authContext.Refresh.Function == "" {
-		return apis.NewBadRequestError("plugin session auth context has no refresh function", nil)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 
 	for key, value := range data.Auth {
@@ -91,17 +91,18 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	var draft map[string]any
 	if len(data.Config) > 0 {
 		if err := json.Unmarshal(data.Config, &draft); err != nil || draft == nil {
-			return apis.NewBadRequestError("config must be an object", nil)
+			return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 		}
 	}
 	pluginsystem.MergePluginConfig(config, draft)
 	policy, err := pluginInstancePolicy(plugin, config)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_request", pluginsystem.OperationHostHTTP))
+		pluginsystem.LogPluginFailure(e.App.Logger(), "plugin configuration rejected", err, "plugin", plugin.Manifest.ID)
+		return pluginOperationAPIError(err)
 	}
 	auth = pluginsystem.AuthForPluginRefresh(auth, authContext)
 	if err := decryptActiveAuth(auth, authContext, plaintext); err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err))
+		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationLogin))
 	}
 
 	for _, field := range authContext.Fields {

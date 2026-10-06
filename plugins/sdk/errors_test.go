@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +40,7 @@ func TestProviderErrorsKeepOperationSpecificMeaning(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("%s-%d-%s", tc.operation, tc.status, tc.rfc), func(t *testing.T) {
 			e := ClassifyProviderError(tc.operation, tc.status, "", tc.rfc, now)
-			if e.Code != tc.want || e.Message != tc.want || e.Operation != tc.operation || (tc.status > 0 && e.HTTPStatus != tc.status) {
+			if e.Code != tc.want || e.Message != publicErrorMessage(tc.want) || e.Operation != tc.operation || (tc.status > 0 && e.HTTPStatus != tc.status) {
 				t.Fatalf("unexpected public error: %+v", e)
 			}
 		})
@@ -102,12 +103,48 @@ func TestResponseErrorPreservesLegacyWireAndRetryHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := SafeError(ResponseError("login", response), "login")
-	if e.Code != "provider_unavailable" || e.Message != "provider_unavailable" || e.Operation != "login" {
+	if e.Code != "provider_unavailable" || e.Message != publicErrorMessage("provider_unavailable") || e.Operation != "login" {
 		t.Fatalf("legacy error was not preserved safely: %+v", e)
 	}
 	response = HostResponse{Status: 429, HeaderValues: map[string][]string{"retry-after": {"37"}}, BodyBase64: "sensitive-body"}
 	e = SafeError(ResponseError("list", response), "list")
 	if e.Code != "rate_limited" || e.HTTPStatus != 429 || e.RetryAfterSeconds == nil || *e.RetryAfterSeconds != 37 {
 		t.Fatalf("HTTP response metadata was not preserved: %+v", e)
+	}
+}
+
+// The shared wire fixture is also passed through the unchanged v0.21.0 UI in
+// web tests. Verify it against actual SDK output and a v1-only decoder here.
+func TestPublicErrorWireRemainsReadableByLegacyHosts(t *testing.T) {
+	data, err := os.ReadFile("testdata/public_errors.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var examples []PluginError
+	if err := json.Unmarshal(data, &examples); err != nil {
+		t.Fatal(err)
+	}
+	for _, example := range examples {
+		t.Run(example.Code, func(t *testing.T) {
+			retry := 17
+			actual := NormalizePluginError(PluginError{Code: example.Code, Message: "private-provider-body", Operation: "list", HTTPStatus: 403, RetryAfterSeconds: &retry})
+			encoded, err := json.Marshal(actual)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var legacy struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+			}
+			if err := json.Unmarshal(encoded, &legacy); err != nil {
+				t.Fatal(err)
+			}
+			if legacy.Code != example.Code || legacy.Message != example.Message || legacy.Message == legacy.Code || len(legacy.Message) > 200 {
+				t.Fatalf("unreadable v1 fallback: %s", encoded)
+			}
+			if strings.Contains(string(encoded), "private-provider-body") {
+				t.Fatalf("provider message leaked: %s", encoded)
+			}
+		})
 	}
 }

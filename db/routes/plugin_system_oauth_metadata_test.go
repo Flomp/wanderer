@@ -64,6 +64,9 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 				t.Error("refresh did not use the original stored refresh token")
 			}
 		case "authorization_code":
+			if !f.plugin.Manifest.Auth.Contexts["oauth_access_token"].PKCE && body["code_verifier"] != "" {
+				t.Error("non-PKCE callback sent an obsolete code verifier")
+			}
 			if body["code"] != "test-authorization-code" {
 				t.Error("callback did not send the authorization code")
 			}
@@ -470,12 +473,14 @@ func TestOAuthMetadataExplicitNullFieldsAreConsumed(t *testing.T) {
 
 func TestOAuthMetadataRevokeDoesNotDecryptUnreadableGrant(t *testing.T) {
 	f := newOAuthMetadataFixture(t)
+	clientSecret := rawOAuthMetadataAuth(t, f)["clientSecret"].(string)
 	// Simulate a grant encrypted with a key no longer available. The existing
 	// writer hooks stay in this fixture; Revoke needs neither token plaintext nor
 	// a remote request in order to clear these host fields.
 	t.Setenv("POCKETBASE_ENCRYPTION_KEY", "ffffffffffffffffffffffffffffffff")
 	f.request(t, http.MethodPost, "/api/plugin-system/oauth/revoke", map[string]any{"instanceId": f.instanceID})
 	f.assertAuthFieldsAbsent(t, "unreadable grant revoke", "accessToken", "refreshToken", "expiresAt", "tokenType", "oauthContext", "scope", "oauthState", "oauthCodeVerifier", "oauthRedirectURI")
+	assertUnreadableOAuthSecretUnchanged(t, f, "clientSecret", clientSecret)
 	if f.tokenRequests.Load() != 0 {
 		t.Fatal("revoke called provider")
 	}
@@ -519,10 +524,15 @@ func TestOAuthMetadataReconnectIgnoresUnreadableGrantAndInactiveSecrets(t *testi
 	if f.tokenRequests.Load() != 0 {
 		t.Fatal("OAuth start contacted the token provider")
 	}
+	for _, field := range []string{"accessToken", "refreshToken", "password"} {
+		assertUnreadableOAuthSecretUnchanged(t, f, field, unreadable)
+	}
+	f.assertAuthFieldsAbsent(t, "non-PKCE OAuth start", "oauthCodeVerifier")
 	f.request(t, http.MethodPost, "/api/plugin-system/oauth/callback", map[string]any{"instanceId": f.instanceID, "state": start["state"], "code": "test-authorization-code"})
 	if f.tokenRequests.Load() != 1 {
 		t.Fatal("callback did not exchange exactly one authorization code")
 	}
+	assertUnreadableOAuthSecretUnchanged(t, f, "password", unreadable)
 	_, saved := f.storedAuth(t)
 	if saved["accessToken"] != "strava-test-access-rotated" {
 		t.Fatal("new grant was not saved")

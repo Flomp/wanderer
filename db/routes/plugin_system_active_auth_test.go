@@ -64,7 +64,7 @@ func TestOAuthFlowDecryptsOnlyItsOwnPrerequisites(t *testing.T) {
 	collection.Fields.Add(&core.JSONField{Name: "auth"})
 	record := core.NewRecord(collection)
 	record.Set("auth", map[string]any{"clientSecret": client, "accessToken": unreadable, "refreshToken": unreadable, "password": unreadable, "oauthState": state, "oauthCodeVerifier": verifier})
-	context := pluginsystem.AuthContext{Type: pluginsystem.AuthTypeOAuth2, SecretFields: []string{"clientSecret", "accessToken", "refreshToken"}}
+	context := pluginsystem.AuthContext{Type: pluginsystem.AuthTypeOAuth2, PKCE: true, SecretFields: []string{"clientSecret", "accessToken", "refreshToken"}}
 	for _, callback := range []bool{false, true} {
 		auth, err := decryptedOAuthFlowAuth(record, context, callback)
 		if err != nil {
@@ -85,5 +85,33 @@ func TestOAuthFlowDecryptsOnlyItsOwnPrerequisites(t *testing.T) {
 		} else if auth["oauthState"] != state || auth["oauthCodeVerifier"] != verifier {
 			t.Fatal("start decrypted a previous flow")
 		}
+	}
+}
+
+func TestOAuthFlowWithoutPKCEDoesNotDecryptObsoleteVerifier(t *testing.T) {
+	t.Setenv("POCKETBASE_ENCRYPTION_KEY", oauthMetadataTestKey)
+	state, err := security.Encrypt([]byte("current-pending-state"), oauthMetadataTestKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	obsoleteVerifier, err := security.Encrypt([]byte("previous-pkce-verifier"), "ffffffffffffffffffffffffffffffff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	collection := core.NewBaseCollection("instances")
+	collection.Fields.Add(&core.JSONField{Name: "auth"})
+	record := core.NewRecord(collection)
+	record.Set("auth", map[string]any{"oauthState": state, "oauthCodeVerifier": obsoleteVerifier})
+	context := pluginsystem.AuthContext{Type: pluginsystem.AuthTypeOAuth2}
+	auth, err := decryptedOAuthFlowAuth(record, context, true)
+	if err != nil {
+		t.Fatal("non-PKCE callback depended on an obsolete verifier")
+	}
+	if auth["oauthState"] != "current-pending-state" || auth["oauthCodeVerifier"] != obsoleteVerifier {
+		t.Fatal("non-PKCE callback did not limit decryption to its current state")
+	}
+	context.PKCE = true
+	if _, err := decryptedOAuthFlowAuth(record, context, true); !errors.Is(err, pluginsystem.ErrActiveCredentialsUnreadable) {
+		t.Fatal("PKCE callback ignored its unreadable required verifier")
 	}
 }

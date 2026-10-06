@@ -41,10 +41,14 @@ func firstProviderHeader(headers map[string][]string, name string) string {
 
 // Active ciphertext failure requires credential repair. An unknown or ambiguous
 // context is a configuration error and must not masquerade as a rejected grant.
-func pluginAuthFailure(err error) error {
-	code := "invalid_request"
+func pluginAuthFailure(err error, operation string) error {
+	code := "invalid_configuration"
 	if errors.Is(err, pluginsystem.ErrActiveCredentialsUnreadable) {
-		code = "auth_failed"
+		code = "credentials_unreadable"
 	}
-	return pluginsystem.Failure(code, pluginsystem.OperationLogin)
+	cause := "auth_context_invalid"
+	if code == "credentials_unreadable" {
+		cause = "credentials_unreadable"
+	}
+	return pluginsystem.WithDiagnosticCause(pluginsystem.Failure(code, operation), cause)
 }

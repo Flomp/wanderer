@@ -51,7 +51,7 @@ func FindTrailByExternalReferenceForUser(app core.App, userID string, provider s
 	if deleteErr := app.Delete(refs[0]); deleteErr != nil {
 		return nil, fmt.Errorf("delete orphaned trail external reference: %w", deleteErr)
 	}
-	app.Logger().Warn("deleted orphaned trail external reference", "provider", provider, "external_id", externalID, "trail", trailID)
+	app.Logger().Warn("deleted orphaned trail external reference", "trail", trailID)
 	return nil, nil
 }
 
@@ -113,7 +113,7 @@ func FindExistingExternalReferenceIDsForUser(app core.App, userID string, provid
 		if deleteErr := app.Delete(ref); deleteErr != nil {
 			return nil, fmt.Errorf("delete orphaned trail external reference: %w", deleteErr)
 		}
-		app.Logger().Warn("deleted orphaned trail external reference", "provider", provider, "external_id", ref.GetString("external_id"), "trail", trailID)
+		app.Logger().Warn("deleted orphaned trail external reference", "trail", trailID)
 	}
 	return existingIDs, nil
 }
@@ -127,7 +127,7 @@ func EnsureTrailExternalReference(app core.App, trailID string, provider string,
 		return err
 	}
 	if userID == "" {
-		app.Logger().Warn("skipping trail external reference without local user", "provider", provider, "external_id", externalID, "trail", trailID)
+		app.Logger().Warn("skipping trail external reference without local user", "trail", trailID)
 		return nil
 	}
 

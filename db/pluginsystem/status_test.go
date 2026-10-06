@@ -69,3 +69,15 @@ func TestUnauthorizedStatusDependsOnOperation(t *testing.T) {
 		}
 	}
 }
+
+func TestLocalRepairErrorsHaveDistinctStatusAndCodes(t *testing.T) {
+	for _, test := range []struct{ code, status string }{
+		{"credentials_unreadable", "needs_reauth"},
+		{"invalid_configuration", "error"},
+	} {
+		got := InstanceStatusForError(Failure(test.code, OperationLogin), time.Now())
+		if got.Code != test.code || got.Status != test.status || got.RetryNotBefore != nil {
+			t.Fatalf("%s repair status: %#v", test.code, got)
+		}
+	}
+}

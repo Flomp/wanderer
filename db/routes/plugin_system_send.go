@@ -77,7 +77,7 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 
 	auth, err := decryptedActiveInstanceAuth(plugin, instance)
 	if err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err))
+		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationSend))
 	}
 
 	input := pluginSystemTrailSendInput{
@@ -96,11 +96,12 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	pluginConfig := pluginRuntimeConfig(config)
 	policy, err := pluginInstancePolicy(plugin, config)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_request", pluginsystem.OperationHostHTTP))
+		pluginsystem.LogPluginFailure(e.App.Logger(), "plugin configuration rejected", err, "plugin", plugin.Manifest.ID)
+		return pluginOperationAPIError(err)
 	}
 	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
 	if err != nil {
-		return apis.NewBadRequestError("invalid active auth context", nil)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationSend))
 	}
 	input.Config = pluginConfig
 	inputBytes, err := json.Marshal(input)

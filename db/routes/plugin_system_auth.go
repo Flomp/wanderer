@@ -51,7 +51,7 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	}
 	contextName, authContext, err := pluginsystem.OAuthContext(plugin, data.AuthContext)
 	if err != nil {
-		return apis.NewBadRequestError("plugin has no oauth auth context", err)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
 	}
 
 	instance, err := pluginAuthInstance(e.App, e.Auth.Id, data.PluginID, data.InstanceID)
@@ -60,7 +60,7 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	}
 	auth, err := decryptedOAuthFlowAuth(instance, authContext, false)
 	if err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err))
+		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	clientID := pluginsystem.StringFromAny(auth["clientId"])
 	if clientID == "" {
@@ -87,6 +87,8 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	for key, value := range authContext.AuthorizationParams {
 		values.Set(key, value)
 	}
+	// A fresh non-PKCE flow must discard a stale verifier without reading it.
+	auth[pluginsystem.AuthFieldOAuthCodeVerifier] = nil
 	if authContext.PKCE {
 		verifier := pluginsystem.NewOAuthCodeVerifier(64)
 		auth[pluginsystem.AuthFieldOAuthCodeVerifier] = verifier
@@ -141,24 +143,25 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	storedAuth := pluginsystem.JSONMapFromRecord(instance, "auth")
 	contextName, authContext, err := pluginsystem.EffectiveAuthContext(plugin.Manifest, storedAuth)
 	if err != nil || authContext.Type != pluginsystem.AuthTypeOAuth2 {
-		return apis.NewBadRequestError("plugin has no oauth auth context", nil)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
 	}
 	auth, err := decryptedOAuthFlowAuth(instance, authContext, true)
 	if err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err))
+		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	if data.State != pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthState]) {
 		return apis.NewBadRequestError("invalid oauth state", nil)
 	}
 
-	token, err := pluginsystem.ExchangeOAuthToken(e.Request.Context(), plugin.Manifest, authContext, auth, map[string]string{
+	values := map[string]string{
 		"grant_type":   "authorization_code",
 		"code":         data.Code,
 		"redirect_uri": pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthRedirectURI]),
-		"code_verifier": pluginsystem.StringFromAny(
-			auth[pluginsystem.AuthFieldOAuthCodeVerifier],
-		),
-	})
+	}
+	if authContext.PKCE {
+		values["code_verifier"] = pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthCodeVerifier])
+	}
+	token, err := pluginsystem.ExchangeOAuthToken(e.Request.Context(), plugin.Manifest, authContext, auth, values)
 	if err != nil {
 		return pluginOperationAPIError(err)
 	}

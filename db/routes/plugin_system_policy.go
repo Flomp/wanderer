@@ -3,17 +3,22 @@ package routes
 import (
 	"crypto/x509"
 	"encoding/base64"
-	"fmt"
 	"strings"
 
 	"pocketbase/pluginsystem"
 )
 
+// pluginConfigFailure exposes a repairable code and a host-owned diagnostic
+// identifier. User config, URLs and certificate data never become error text.
+func pluginConfigFailure(cause string) error {
+	return pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationHostHTTP), cause)
+}
+
 // pluginInstancePolicy validates effective config before returning a complete
 // policy; callers never receive a partially resolved connector map.
 func pluginInstancePolicy(plugin pluginsystem.LocalPlugin, config map[string]any) (pluginsystem.RequestPolicyContext, error) {
 	if err := validatePluginConfig(plugin.Manifest, config); err != nil {
-		return pluginsystem.RequestPolicyContext{}, err
+		return pluginsystem.RequestPolicyContext{}, pluginsystem.WithDiagnosticCause(err, "config_rejected")
 	}
 	connectors := map[string]pluginsystem.ResolvedConnectorTarget{}
 	hostConfig := pluginHostConfig(config)
@@ -22,7 +27,7 @@ func pluginInstancePolicy(plugin pluginsystem.LocalPlugin, config map[string]any
 	for _, manifestConnector := range plugin.Manifest.Permissions.Network.Connectors {
 		target, err := resolveConnectorTarget(manifestConnector, hostConnectors)
 		if err != nil {
-			return pluginsystem.RequestPolicyContext{}, fmt.Errorf("invalid connector %q config", manifestConnector.Name)
+			return pluginsystem.RequestPolicyContext{}, err
 		}
 		connectors[manifestConnector.Name] = target
 	}
@@ -47,7 +52,7 @@ func resolveConnectorTarget(manifest pluginsystem.ConnectorTargetPermission, hos
 	case pluginsystem.ConnectorTypePublicAPI:
 		baseURL, basePath, err := pluginsystem.NormalizeConnectorBase(manifest.FixedBaseURL, "")
 		if err != nil {
-			return target, err
+			return target, pluginConfigFailure("connector_resolution_failed")
 		}
 		target.BaseURL = baseURL
 		target.BasePath = basePath
@@ -55,13 +60,13 @@ func resolveConnectorTarget(manifest pluginsystem.ConnectorTargetPermission, hos
 	case pluginsystem.ConnectorTypeConfigured:
 		rawConfig := configMap(hostConnectors, manifest.ConfigKey)
 		if len(rawConfig) == 0 {
-			return target, fmt.Errorf("configured connector %q has no host config", manifest.Name)
+			return target, pluginConfigFailure("connector_resolution_failed")
 		}
 		baseURL := stringConfig(rawConfig, "baseURL")
 		basePath := stringConfig(rawConfig, "basePath")
 		normalizedBaseURL, normalizedBasePath, err := pluginsystem.NormalizeConnectorBase(baseURL, basePath)
 		if err != nil {
-			return target, err
+			return target, pluginConfigFailure("connector_resolution_failed")
 		}
 		target.BaseURL = normalizedBaseURL
 		target.BasePath = normalizedBasePath
@@ -77,7 +82,7 @@ func resolveConnectorTarget(manifest pluginsystem.ConnectorTargetPermission, hos
 			}
 		}
 	default:
-		return target, fmt.Errorf("unsupported connector type %q", manifest.Type)
+		return target, pluginConfigFailure("connector_resolution_failed")
 	}
 	return target, nil
 }
@@ -91,14 +96,14 @@ func storageOrigins(rawConfig map[string]any, customAllowed bool) (map[string]pl
 	for name, raw := range rawOrigins {
 		origin, ok := raw.(map[string]any)
 		if !ok {
-			return nil, fmt.Errorf("invalid storage origin config")
+			return nil, pluginConfigFailure("storage_origin_invalid")
 		}
 		if err := validateConnectorValues(origin); err != nil {
 			return nil, err
 		}
 		baseURL, basePath, err := pluginsystem.NormalizeConnectorBase(stringConfig(origin, "baseURL"), stringConfig(origin, "basePath"))
 		if err != nil {
-			return nil, fmt.Errorf("invalid storage origin base")
+			return nil, pluginConfigFailure("storage_origin_invalid")
 		}
 		tls, err := tlsConfig(origin, customAllowed)
 		if err != nil {
@@ -116,7 +121,7 @@ func tlsConfig(raw map[string]any, customAllowed bool) (pluginsystem.ConnectorTL
 	}
 	if value, exists := rawTLS["mode"]; exists {
 		if _, ok := value.(string); !ok {
-			return pluginsystem.ConnectorTLSConfig{}, fmt.Errorf("invalid tls mode")
+			return pluginsystem.ConnectorTLSConfig{}, pluginConfigFailure("tls_mode_unsupported")
 		}
 	}
 	mode := stringConfig(rawTLS, "mode")
@@ -124,16 +129,16 @@ func tlsConfig(raw map[string]any, customAllowed bool) (pluginsystem.ConnectorTL
 		mode = pluginsystem.TLSModeSystem
 	}
 	if mode != pluginsystem.TLSModeSystem && mode != pluginsystem.TLSModeCustomCA {
-		return pluginsystem.ConnectorTLSConfig{}, fmt.Errorf("unsupported tls mode")
+		return pluginsystem.ConnectorTLSConfig{}, pluginConfigFailure("tls_mode_unsupported")
 	}
 	if mode != pluginsystem.TLSModeSystem && !customAllowed {
-		return pluginsystem.ConnectorTLSConfig{}, fmt.Errorf("custom tls is not allowed by manifest")
+		return pluginsystem.ConnectorTLSConfig{}, pluginConfigFailure("tls_custom_not_allowed")
 	}
 	cfg := pluginsystem.ConnectorTLSConfig{Mode: mode}
 	if mode == pluginsystem.TLSModeCustomCA {
 		ca, ok := rawTLS["caBundle"].(string)
 		if !ok {
-			return cfg, fmt.Errorf("custom tls requires a ca bundle")
+			return cfg, pluginConfigFailure("tls_ca_invalid")
 		}
 		if decoded, err := base64.StdEncoding.DecodeString(ca); err == nil {
 			cfg.CABundle = decoded
@@ -141,7 +146,7 @@ func tlsConfig(raw map[string]any, customAllowed bool) (pluginsystem.ConnectorTL
 			cfg.CABundle = []byte(ca)
 		}
 		if !x509.NewCertPool().AppendCertsFromPEM(cfg.CABundle) {
-			return cfg, fmt.Errorf("invalid custom tls ca bundle")
+			return cfg, pluginConfigFailure("tls_ca_invalid")
 		}
 	}
 	return cfg, nil
@@ -154,7 +159,7 @@ func optionalConfigObject(raw map[string]any, key string) (map[string]any, error
 	}
 	result, ok := value.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("%s config must be an object", key)
+		return nil, pluginConfigFailure("config_shape_invalid")
 	}
 	return result, nil
 }
@@ -163,13 +168,13 @@ func validateConnectorValues(raw map[string]any) error {
 	for _, key := range []string{"baseURL", "basePath"} {
 		if value, exists := raw[key]; exists {
 			if _, ok := value.(string); !ok {
-				return fmt.Errorf("connector %s must be a string", key)
+				return pluginConfigFailure("config_value_type_invalid")
 			}
 		}
 	}
 	if value, exists := raw["allowPrivate"]; exists {
 		if _, ok := value.(bool); !ok {
-			return fmt.Errorf("allowPrivate must be a boolean")
+			return pluginConfigFailure("config_value_type_invalid")
 		}
 	}
 	return nil
@@ -204,22 +209,22 @@ func validatePluginConfig(manifest pluginsystem.Manifest, config map[string]any)
 		value, present := pluginConfig[field.Key]
 		if !present || value == nil || value == "" {
 			if field.Required {
-				return fmt.Errorf("required plugin config %q is missing", field.Key)
+				return pluginConfigFailure("required_config_missing")
 			}
 			continue
 		}
 		switch field.Type {
 		case "boolean":
 			if _, ok := value.(bool); !ok {
-				return fmt.Errorf("invalid plugin config %q type", field.Key)
+				return pluginConfigFailure("config_value_type_invalid")
 			}
 		case "number":
 			if _, ok := value.(float64); !ok {
-				return fmt.Errorf("invalid plugin config %q type", field.Key)
+				return pluginConfigFailure("config_value_type_invalid")
 			}
 		default:
 			if _, ok := value.(string); !ok {
-				return fmt.Errorf("invalid plugin config %q type", field.Key)
+				return pluginConfigFailure("config_value_type_invalid")
 			}
 		}
 		if len(field.Options) > 0 {
@@ -231,7 +236,7 @@ func validatePluginConfig(manifest pluginsystem.Manifest, config map[string]any)
 				}
 			}
 			if !valid {
-				return fmt.Errorf("invalid plugin config %q option", field.Key)
+				return pluginConfigFailure("config_option_invalid")
 			}
 		}
 	}

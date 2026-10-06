@@ -822,8 +822,9 @@ trail.gpx
 ## Auth
 
 Auth contexts are declared in the manifest and referenced by name from
-`HostRequestSpec.auth`. An instance's selected context is stored in
-`auth.oauthContext`. If no context is selected, the host can infer only a single
+`HostRequestSpec.auth`. The current host resolves the selected context from the
+legacy `auth.oauthContext` value, which also stores OAuth grant metadata. It is
+not an independent persistent selection. If no context is selected, the host can infer only a single
 manifest context. Unknown names and ambiguous manifests are rejected before
 provider work. Only the selected context's credentials are decrypted and passed
 to provider operations; inactive credentials and pending flow secrets are not
