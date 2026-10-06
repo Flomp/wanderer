@@ -6,14 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -192,6 +194,7 @@ type interactivePluginFixture struct {
 	owner, instance *core.Record
 	manifest        pluginsystem.Manifest
 	baseURL         string
+	providerClient  *http.Client
 }
 
 func newInteractivePluginFixture(t *testing.T, providerHandler http.HandlerFunc) *interactivePluginFixture {
@@ -202,30 +205,16 @@ func newInteractivePluginFixture(t *testing.T, providerHandler http.HandlerFunc)
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	addresses, err := net.InterfaceAddrs()
-	if err != nil {
-		t.Fatal(err)
+	// Most route-boundary tests never contact a provider. A valid configured
+	// origin is sufficient; do not bind a listener merely to create records.
+	f := &interactivePluginFixture{app: app, baseURL: "https://provider.example.test"}
+	if providerHandler != nil {
+		provider := httptest.NewServer(providerHandler)
+		t.Cleanup(provider.Close)
+		f.baseURL = provider.URL
+		f.providerClient = provider.Client()
+		f.providerClient.Timeout = 5 * time.Second
 	}
-	var listener net.Listener
-	for _, address := range addresses {
-		network, ok := address.(*net.IPNet)
-		if !ok || network.IP.To4() == nil || !network.IP.IsPrivate() || network.IP.IsLoopback() {
-			continue
-		}
-		listener, err = net.Listen("tcp", net.JoinHostPort(network.IP.String(), "0"))
-		if err == nil {
-			break
-		}
-	}
-	if listener == nil {
-		t.Fatal("a private network interface is required for interactive plugin regressions")
-	}
-	provider := httptest.NewUnstartedServer(providerHandler)
-	provider.Listener.Close()
-	provider.Listener = listener
-	provider.Start()
-	t.Cleanup(provider.Close)
-	f := &interactivePluginFixture{app: app, baseURL: provider.URL}
 	users := core.NewAuthCollection("interactive_diagnostic_users")
 	if err := app.Save(users); err != nil {
 		t.Fatal(err)
@@ -282,10 +271,7 @@ func (diagnosticValidateRuntime) OpenSession(context.Context, pluginsystem.Local
 }
 
 func TestSessionValidateLogsGuestMetadataAtAppBoundary(t *testing.T) {
-	f := newInteractivePluginFixture(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"token":"provider-session-secret"}`))
-	})
+	f := newInteractivePluginFixture(t, nil)
 	zero := 0
 	runtime := diagnosticValidateRuntime{guestError: fmt.Errorf("provider-body-secret: %w", pluginsystem.PluginFailure{PluginError: pluginsystem.PluginError{Code: "rate_limited", Message: "provider-token-secret", Operation: pluginsystem.OperationLogin, HTTPStatus: 429, RetryAfterSeconds: &zero}})}
 	var output bytes.Buffer
@@ -322,7 +308,12 @@ func (s diagnosticSendSession) Call(context.Context, string, []byte) ([]byte, er
 func (diagnosticSendSession) Close(context.Context) error { return nil }
 
 func TestSendLogsRealProviderRejectionAtAppBoundary(t *testing.T) {
+	var providerRequests atomic.Int32
 	f := newInteractivePluginFixture(t, func(w http.ResponseWriter, r *http.Request) {
+		providerRequests.Add(1)
+		if r.Method != http.MethodGet || r.URL.Path != "/reject" || r.URL.Query().Get("token") != "query-secret" || r.Header.Get("Authorization") != "Bearer provider-token-secret" {
+			t.Errorf("unexpected provider request: %s %s", r.Method, r.URL.Path)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Retry-After", "0")
 		w.WriteHeader(429)
@@ -346,8 +337,38 @@ func TestSendLogsRealProviderRejectionAtAppBoundary(t *testing.T) {
 	}
 	runtime := &diagnosticSendRuntime{request: pluginsystem.HostRequestSpec{Method: http.MethodGet, Target: pluginsystem.RequestTarget{Type: "connector", Connector: "api", Path: "/reject", Query: []pluginsystem.QueryParam{{Name: "token", Value: "query-secret"}}}, Headers: map[string]string{"Authorization": "Bearer provider-token-secret"}}}
 	var output bytes.Buffer
+	// App and global diagnostics target the same output, so any duplicate host
+	// executor log would fail the existing one-line assertion below.
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+	t.Cleanup(func() { slog.SetDefault(previousLogger) })
 	handler := interactiveDiagnosticHandler(t, f.app, &output, map[string]func(*core.RequestEvent) error{"/api/test/send": func(e *core.RequestEvent) error {
-		return pluginSystemTrailSend(e, func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error) { return runtime, nil })
+		return pluginSystemTrailSendWithHostRequest(e, func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error) { return runtime, nil }, func(ctx context.Context, manifest pluginsystem.Manifest, policy pluginsystem.RequestPolicyContext, spec pluginsystem.HostRequestSpec, _ pluginsystem.HostRequestOptions) (pluginsystem.HostResponse, error) {
+			// Exercise the real connector target resolution, HTTP response and
+			// production Send classification/API boundary. Only the transport is
+			// local to this test; production's deliberate loopback block remains.
+			resolved, err := pluginsystem.ValidateAndResolveHostRequestSpec(manifest, spec, policy)
+			if err != nil {
+				return pluginsystem.HostResponse{}, err
+			}
+			if resolved.Connector.BaseURL != f.baseURL {
+				return pluginsystem.HostResponse{}, errors.New("unexpected test provider origin")
+			}
+			request, err := http.NewRequestWithContext(ctx, spec.Method, resolved.URL.String(), nil)
+			if err != nil {
+				return pluginsystem.HostResponse{}, err
+			}
+			for key, value := range spec.Headers {
+				request.Header.Set(key, value)
+			}
+			response, err := f.providerClient.Do(request)
+			if err != nil {
+				return pluginsystem.HostResponse{}, err
+			}
+			defer response.Body.Close()
+			body, err := io.ReadAll(response.Body)
+			return pluginsystem.HostResponse{Status: response.StatusCode, HeaderValues: response.Header, Body: body}, err
+		})
 	}})
 	token, err := f.owner.NewAuthToken()
 	if err != nil {
@@ -356,6 +377,14 @@ func TestSendLogsRealProviderRejectionAtAppBoundary(t *testing.T) {
 	status, body := interactiveDiagnosticRequest(t, handler, token, "/api/test/send", map[string]any{"pluginId": f.manifest.ID, "trailId": trail.Id})
 	if status != 400 {
 		t.Fatalf("send status %d: %#v", status, body)
+	}
+	operation := body["data"].(map[string]any)["operation"].(map[string]any)
+	params := operation["params"].(map[string]any)
+	if operation["code"] != "rate_limited" || params["operation"] != pluginsystem.OperationSend || params["httpStatus"] != float64(429) || params["retryAfterSeconds"] != float64(0) {
+		t.Fatalf("send API lost provider classification/zero delay: %#v", body)
+	}
+	if providerRequests.Load() != 1 {
+		t.Fatalf("provider requests %d, want exactly one", providerRequests.Load())
 	}
 	assertInteractiveDiagnostic(t, &output, map[string]any{"action": "send", "owner": f.owner.Id, "plugin": f.manifest.ID, "instance": f.instance.Id, "code": "rate_limited", "class": "rate_limit", "operation": pluginsystem.OperationSend, "http_status": float64(429), "retry_after_seconds": float64(0)}, f.baseURL, "query-secret", "provider-token-secret", "provider-body-secret", "credential-secret", "guest-trail-name-secret", "source-file-secret.gpx")
 }

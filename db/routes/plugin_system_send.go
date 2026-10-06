@@ -39,7 +39,15 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	return pluginSystemTrailSend(e, pluginsystem.NewRuntimeRegistry().RuntimeFor)
 }
 
+type pluginHostRequestExecutor func(context.Context, pluginsystem.Manifest, pluginsystem.RequestPolicyContext, pluginsystem.HostRequestSpec, pluginsystem.HostRequestOptions) (pluginsystem.HostResponse, error)
+
 func pluginSystemTrailSend(e *core.RequestEvent, runtimeFor func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error)) error {
+	return pluginSystemTrailSendWithHostRequest(e, runtimeFor, pluginsystem.ExecuteHostRequest)
+}
+
+// Tests can supply the HTTP execution boundary; response classification, error
+// logging and API conversion continue through the production send path.
+func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error), execute pluginHostRequestExecutor) error {
 	logContext := pluginOperationLogContext{Action: pluginActionSend}
 	if e.Auth == nil {
 		return apis.NewUnauthorizedError("authentication required", nil)
@@ -83,7 +91,7 @@ func pluginSystemTrailSend(e *core.RequestEvent, runtimeFor func(pluginsystem.Lo
 		return err
 	}
 	if len(gpx) == 0 {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationSend), "file_read_failed"))
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationSend), "trail_gpx_missing"))
 		return apis.NewBadRequestError("trail has no GPX track", nil)
 	}
 
@@ -161,7 +169,7 @@ func pluginSystemTrailSend(e *core.RequestEvent, runtimeFor func(pluginsystem.Lo
 	// executor's policy-based injection becomes a no-op instead of re-injecting
 	// against an empty policy.HostAuth.
 	plan.Request.Auth = ""
-	if err := executeHostRequest(e.Request.Context(), plugin.Manifest, policy, plan.Request, gpx); err != nil {
+	if err := executeHostRequest(e.Request.Context(), plugin.Manifest, policy, plan.Request, gpx, execute); err != nil {
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 
@@ -170,8 +178,8 @@ func pluginSystemTrailSend(e *core.RequestEvent, runtimeFor func(pluginsystem.Lo
 
 // executeHostRequest runs a plugin send plan through the shared host request
 // executor and returns typed provider failures to the route logging/API boundary.
-func executeHostRequest(ctx context.Context, manifest pluginsystem.Manifest, policy pluginsystem.RequestPolicyContext, spec pluginsystem.HostRequestSpec, gpx []byte) error {
-	resp, err := pluginsystem.ExecuteHostRequest(ctx, manifest, policy, spec, pluginsystem.HostRequestOptions{
+func executeHostRequest(ctx context.Context, manifest pluginsystem.Manifest, policy pluginsystem.RequestPolicyContext, spec pluginsystem.HostRequestSpec, gpx []byte, execute pluginHostRequestExecutor) error {
+	resp, err := execute(ctx, manifest, policy, spec, pluginsystem.HostRequestOptions{
 		Trail: gpx,
 	})
 	if err != nil {

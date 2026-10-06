@@ -730,7 +730,9 @@ Unknown event names are redacted and error metadata is normalized again at the
 worker boundary. Raw messages, provider bodies, URLs, tokens and SQL never become
 log text. Local host failures add fixed cause identifiers and safe database-code
 details. Interactive OAuth, send and session-validation failures use the same
-error metadata as scheduled sync.
+error metadata as scheduled sync. Guest HTTP failures are logged at the
+`http_request` host-call boundary; handler-managed requests are logged by their
+owning route. The shared HTTP executor returns errors without logging them.
 
 Declare `log` in the capability's `requiredHostFunctions`. Logs are best-effort;
 they must not determine plugin control flow.

@@ -156,13 +156,17 @@ func normalizeHostLogLevel(level string) (string, error) {
 // two paths cannot drift on error codes or response shape.
 func executeHostHTTPRequest(ctx context.Context, manifest Manifest, policy RequestPolicyContext, requestBytes []byte) hostHTTPResponse {
 	var spec HostRequestSpec
-	if err := json.Unmarshal(requestBytes, &spec); err != nil {
-		return hostHTTPResponse{
-			Error: &PluginError{Code: "invalid_request", Message: "invalid_request", Operation: OperationHostHTTP},
-		}
+	var executed HostResponse
+	var err error
+	if decodeErr := json.Unmarshal(requestBytes, &spec); decodeErr != nil {
+		err = WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "input_encoding")
+	} else {
+		executed, err = ExecuteHostRequest(ctx, manifest, policy, spec, HostRequestOptions{})
 	}
-	executed, err := ExecuteHostRequest(ctx, manifest, policy, spec, HostRequestOptions{})
 	if err != nil {
+		// The caller owns logging: guest requests log here, while interactive
+		// sends retain their failure until the RequestEvent/App boundary.
+		LogPluginFailure(slog.Default(), "plugin host request failed", err, "plugin", manifest.ID)
 		safe := PublicPluginError(err)
 		return hostHTTPResponse{Error: &safe}
 	}
@@ -206,7 +210,6 @@ func ExecuteHostRequest(ctx context.Context, manifest Manifest, policy RequestPo
 			if !errors.As(resultErr, &failure) {
 				resultErr = WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "request_policy_rejected")
 			}
-			LogPluginFailure(slog.Default(), "plugin host request failed", resultErr, "plugin", manifest.ID)
 		}
 	}()
 	if err := InjectHostRequestAuthFromPolicy(manifest, policy.HostAuth, &spec); err != nil {

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log/slog"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -84,12 +85,18 @@ func logPluginOperationFailure(e *core.RequestEvent, context pluginOperationLogC
 		attrs = append(attrs, "instance", context.InstanceID)
 	}
 	diagnostic := pluginsystem.PluginDiagnosticAttrs(err)
+	level := slog.LevelWarn
 	// Untyped local failures have no provider operation. The closed host action
 	// identifies their boundary without changing the public error envelope.
 	for i := 0; i+1 < len(diagnostic); i += 2 {
 		if diagnostic[i] == "operation" && diagnostic[i+1] == "" {
 			diagnostic[i+1] = action
 		}
+		// An absent track is an expected send prerequisite, not a failed
+		// filesystem read or provider operation. Keep actual read errors WARN.
+		if diagnostic[i] == "cause" && diagnostic[i+1] == "trail_gpx_missing" {
+			level = slog.LevelInfo
+		}
 	}
-	e.App.Logger().Warn("plugin operation failed", append(attrs, diagnostic...)...)
+	e.App.Logger().Log(e.Request.Context(), level, "plugin operation failed", append(attrs, diagnostic...)...)
 }
