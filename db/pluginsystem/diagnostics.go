@@ -9,6 +9,7 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"strconv"
 )
 
 // diagnosticFailure labels a trusted local boundary. The underlying error is
@@ -88,12 +89,12 @@ func diagnosticDetail(err error, cause string) string {
 func safeDiagnosticCause(cause string) string {
 	switch cause {
 	case "database_lookup", "database_save", "auto_merge", "trail_import", "batch_limit",
-		"input_encoding", "actor_missing", "credentials_unreadable", "auth_context_invalid",
+		"input_encoding", "file_read_failed", "actor_missing", "credentials_unreadable", "auth_context_invalid",
 		"config_rejected", "config_shape_invalid", "required_config_missing", "config_value_type_invalid", "config_option_invalid",
 		"connector_resolution_failed", "tls_mode_unsupported", "tls_custom_not_allowed", "tls_ca_invalid", "storage_origin_invalid",
 		"request_policy_rejected", "host_auth_invalid", "request_body_invalid", "upload_policy_rejected",
 		"request_build_failed", "connector_client_invalid", "network_unavailable", "response_policy_rejected",
-		"response_body_incomplete", "response_body_oversized", "runtime_panic", "token_response_invalid", "media_fetch_failed":
+		"response_body_incomplete", "response_body_oversized", "runtime_panic", "token_response_invalid", "media_fetch_failed", "photo_source_invalid":
 		return cause
 	default:
 		return "local_failure"
@@ -162,7 +163,11 @@ func logGuestEntry(entry HostLogEntry, sessionID string) {
 	event := safeGuestLogEvent(entry.Event)
 	if entry.Error != nil {
 		e := NormalizePluginError(*entry.Error)
-		log.Printf("plugin log [%s]: session %s: event=%s code=%s class=%s operation=%s http_status=%d", entry.Level, sessionID, event, e.Code, diagnosticClass(e.Code), e.Operation, e.HTTPStatus)
+		retry := ""
+		if e.RetryAfterSeconds != nil {
+			retry = " retry_after_seconds=" + strconv.Itoa(*e.RetryAfterSeconds)
+		}
+		log.Printf("plugin log [%s]: session %s: event=%s code=%s class=%s operation=%s http_status=%d%s", entry.Level, sessionID, event, e.Code, diagnosticClass(e.Code), e.Operation, e.HTTPStatus, retry)
 		return
 	}
 	log.Printf("plugin log [%s]: session %s: event=%s", entry.Level, sessionID, event)

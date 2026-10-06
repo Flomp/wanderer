@@ -626,7 +626,7 @@ func photoFile(ctx context.Context, photo pluginsystem.Photo, opts Options, maxB
 	switch photo.Source.Type {
 	case "url":
 		if photo.Source.URL == "" {
-			return nil, 0, fmt.Errorf("photo URL is empty")
+			return nil, 0, photoSourceFailure()
 		}
 		if err := validateRemoteMediaURLSyntax(photo.Source.URL); err != nil {
 			return nil, 0, err
@@ -639,7 +639,7 @@ func photoFile(ctx context.Context, photo pluginsystem.Photo, opts Options, maxB
 			return fetchConnectorMedia(ctx, photo, opts, maxBytes)
 		}
 	default:
-		return nil, 0, fmt.Errorf("unsupported photo source type %q", photo.Source.Type)
+		return nil, 0, photoSourceFailure()
 	}
 
 	fetched, err := fetchPluginMediaWithRetry(ctx, pluginMediaRetryDelays, fetch)
@@ -843,17 +843,16 @@ func stripConnectorAuth(req *http.Request, manifest pluginsystem.Manifest, authN
 	}
 }
 
+// photoSourceFailure classifies local guest input without retaining a raw
+// url.Error, which would otherwise look like a transient network failure.
+func photoSourceFailure() error {
+	return pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationHostHTTP), "photo_source_invalid")
+}
+
 func validateRemoteMediaURLSyntax(rawURL string) error {
 	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return fmt.Errorf("invalid media URL: %w", err)
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return fmt.Errorf("unsupported media URL scheme %q", parsed.Scheme)
-	}
-	host := parsed.Hostname()
-	if host == "" {
-		return fmt.Errorf("media URL has no host")
+	if err != nil || parsed.User != nil || parsed.Hostname() == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return photoSourceFailure()
 	}
 	return nil
 }

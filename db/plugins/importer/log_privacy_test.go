@@ -105,11 +105,56 @@ func TestImportTrailAndWaypointPhotoFailuresDoNotLogGuestNames(t *testing.T) {
 	if strings.Contains(output.String(), "secret") || strings.Contains(output.String(), "https://") {
 		t.Fatalf("guest metadata leaked during import: %s", output.String())
 	}
+	for _, line := range lines {
+		var record map[string]any
+		if err := json.Unmarshal([]byte(line), &record); err != nil {
+			t.Fatal(err)
+		}
+		if record["code"] != "invalid_request" || record["class"] != "configuration" || record["cause"] != "photo_source_invalid" {
+			t.Fatalf("malformed photo source was treated as provider outage during import: %s", line)
+		}
+	}
 	var waypointLog map[string]any
 	if err := json.Unmarshal([]byte(lines[1]), &waypointLog); err != nil {
 		t.Fatal(err)
 	}
 	if waypointLog["plugin"] != "host-plugin" || waypointLog["trail"] != result.TrailID || waypointLog["operation"] != pluginsystem.OperationHostHTTP {
 		t.Fatalf("local identifiers/operation missing from waypoint diagnostics: %s", lines[1])
+	}
+}
+
+func TestPhotoFileRejectsLocalURLBeforeFetch(t *testing.T) {
+	for _, rawURL := range []string{
+		"https://[invalid?token=secret",
+		"https://user:password-secret@example.test/photo?token=secret",
+		"ftp://example.test/photo?token=secret",
+		"https://",
+		"",
+	} {
+		t.Run(rawURL, func(t *testing.T) {
+			// A canceled transport context still returns the local source error:
+			// validation must happen before network/fetch or retry machinery.
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			photo := pluginsystem.Photo{Source: pluginsystem.MediaSource{Type: "url", URL: rawURL}}
+			file, size, err := photoFile(ctx, photo, Options{}, util.DefaultPluginMediaMaxBytes, nil)
+			safe := pluginsystem.PublicPluginError(err)
+			if file != nil || size != 0 || err == nil || safe.Code != "invalid_request" || safe.Operation != pluginsystem.OperationHostHTTP || safe.HTTPStatus != 0 {
+				t.Fatalf("local malformed photo URL became provider failure: file=%v size=%d error=%#v", file, size, safe)
+			}
+			var output bytes.Buffer
+			app := mediaDiagnosticApp{logger: slog.New(slog.NewJSONHandler(&output, nil))}
+			logSkippedPluginPhoto(app, "photo skipped", pluginMediaLogContext{PluginID: "host-plugin"}, photo, err)
+			var record map[string]any
+			if err := json.Unmarshal(output.Bytes(), &record); err != nil {
+				t.Fatal(err)
+			}
+			if record["code"] != "invalid_request" || record["class"] != "configuration" || record["cause"] != "photo_source_invalid" {
+				t.Fatalf("local URL failure lost its classification: %s", output.String())
+			}
+			if strings.Contains(output.String(), "secret") || strings.Contains(output.String(), "https://") || strings.Contains(err.Error(), "secret") {
+				t.Fatalf("local source data leaked: %s / %v", output.String(), err)
+			}
+		})
 	}
 }

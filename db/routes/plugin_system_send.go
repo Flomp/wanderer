@@ -33,6 +33,11 @@ type pluginSystemTrailSendInput struct {
 // PluginSystemTrailSend asks a plugin to prepare a trail send request for an
 // existing trail and then executes that request through the host policy layer.
 func PluginSystemTrailSend(e *core.RequestEvent) error {
+	return pluginSystemTrailSend(e, pluginsystem.NewRuntimeRegistry().RuntimeFor)
+}
+
+func pluginSystemTrailSend(e *core.RequestEvent, runtimeFor func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error)) error {
+	logContext := pluginOperationLogContext{Action: pluginActionSend}
 	if e.Auth == nil {
 		return apis.NewUnauthorizedError("authentication required", nil)
 	}
@@ -54,11 +59,13 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 		return apis.NewBadRequestError("no enabled plugin instance configured for this plugin", nil)
 	}
 
+	logContext.InstanceID = instance.Id
 	plugin, capability, err := localPluginCapability(e.App, data.PluginID, "prepare_trail_send", "v1")
 	if err != nil {
 		return err
 	}
 
+	logContext.PluginID = plugin.Manifest.ID
 	trail, err := e.App.FindRecordById("trails", data.TrailID)
 	if err != nil {
 		return apis.NewNotFoundError("trail not found", nil)
@@ -69,15 +76,17 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 
 	gpx, err := readTrailGPX(e.App, trail)
 	if err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "file_read_failed"))
 		return err
 	}
 	if len(gpx) == 0 {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationSend), "file_read_failed"))
 		return apis.NewBadRequestError("trail has no GPX track", nil)
 	}
 
 	auth, err := decryptedActiveInstanceAuth(plugin, instance)
 	if err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationSend))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginAuthFailure(err, pluginsystem.OperationSend))
 	}
 
 	input := pluginSystemTrailSendInput{
@@ -96,44 +105,46 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	pluginConfig := pluginRuntimeConfig(config)
 	policy, err := pluginInstancePolicy(plugin, config)
 	if err != nil {
-		pluginsystem.LogPluginFailure(e.App.Logger(), "plugin configuration rejected", err, "plugin", plugin.Manifest.ID)
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationSend))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationSend))
 	}
 	input.Config = pluginConfig
 	inputBytes, err := json.Marshal(input)
 	if err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 		return err
 	}
 
-	runtime, err := pluginsystem.NewRuntimeRegistry().RuntimeFor(plugin)
+	runtime, err := runtimeFor(plugin)
 	if err != nil {
+		logPluginOperationFailure(e, logContext, err)
 		return err
 	}
 	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy.WithHostAuth(activeAuth))
 	if err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	defer func() {
 		_ = session.Close(context.Background())
 	}()
 	output, err := session.Call(e.Request.Context(), capability.Export, inputBytes)
 	if err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 
 	var plan pluginsystem.TrailSendPlan
 	if err := json.Unmarshal(output, &plan); err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_output", pluginsystem.OperationSend))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_output", pluginsystem.OperationSend))
 	}
 	if plan.Request.Method == "" {
+		logPluginOperationFailure(e, logContext, pluginsystem.Failure("invalid_output", pluginsystem.OperationSend))
 		return apis.NewBadRequestError("plugin returned an empty send request", nil)
 	}
 	if err := pluginsystem.ValidateHostRequestSpec(plugin.Manifest, plan.Request, policy); err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_request", pluginsystem.OperationSend))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_request", pluginsystem.OperationSend))
 	}
 
 	if err := pluginsystem.InjectHostRequestAuth(e.Request.Context(), pluginsystem.AuthInjectionInput{
@@ -147,7 +158,7 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 		Spec:     &plan.Request,
 		Policy:   policy,
 	}); err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	// Auth is fully resolved above (including OAuth refresh and plugin session
 	// refresh). Clearing the reference makes this handler the sole injector so the
@@ -155,24 +166,24 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	// against an empty policy.HostAuth.
 	plan.Request.Auth = ""
 	if err := executeHostRequest(e.Request.Context(), plugin.Manifest, policy, plan.Request, gpx); err != nil {
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true})
 }
 
 // executeHostRequest runs a plugin send plan through the shared host request
-// executor and maps provider failures to API errors.
+// executor and returns typed provider failures to the route logging/API boundary.
 func executeHostRequest(ctx context.Context, manifest pluginsystem.Manifest, policy pluginsystem.RequestPolicyContext, spec pluginsystem.HostRequestSpec, gpx []byte) error {
 	resp, err := pluginsystem.ExecuteHostRequest(ctx, manifest, policy, spec, pluginsystem.HostRequestOptions{
 		Trail: gpx,
 	})
 	if err != nil {
-		return pluginOperationAPIError(err)
+		return err
 	}
 	if resp.Status < 200 || resp.Status >= 300 {
-		return pluginOperationAPIError(pluginsystem.PluginFailure{PluginError: pluginsystem.ClassifyProviderError(pluginsystem.OperationSend, resp.Status,
-			firstProviderHeader(resp.HeaderValues, "Retry-After"), "", time.Now())})
+		return pluginsystem.PluginFailure{PluginError: pluginsystem.ClassifyProviderError(pluginsystem.OperationSend, resp.Status,
+			firstProviderHeader(resp.HeaderValues, "Retry-After"), "", time.Now())}
 	}
 	return nil
 }

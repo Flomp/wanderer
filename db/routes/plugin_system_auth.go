@@ -30,6 +30,7 @@ type pluginOAuthRevokeRequest struct {
 }
 
 func PluginSystemOAuthStart(e *core.RequestEvent) error {
+	logContext := pluginOperationLogContext{Action: pluginActionOAuthStart}
 	if e.Auth == nil {
 		return apis.NewUnauthorizedError("authentication required", nil)
 	}
@@ -49,21 +50,24 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	if err != nil {
 		return err
 	}
+	logContext.PluginID = plugin.Manifest.ID
 	contextName, authContext, err := pluginsystem.OAuthContext(plugin, data.AuthContext)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
 	}
 
 	instance, err := pluginAuthInstance(e.App, e.Auth.Id, data.PluginID, data.InstanceID)
 	if err != nil {
 		return err
 	}
-	auth, err := decryptedOAuthFlowAuth(instance, authContext, false)
+	logContext.InstanceID = instance.Id
+	auth, err := decryptedOAuthFlowAuth(instance, plugin.Manifest, authContext, false)
 	if err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	clientID := pluginsystem.StringFromAny(auth["clientId"])
 	if clientID == "" {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationOAuthExchange), "host_auth_invalid"))
 		return apis.NewBadRequestError("oauth clientId is required", nil)
 	}
 
@@ -99,11 +103,13 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")
 	if err := e.App.Save(instance); err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
 		return err
 	}
 
 	authURL, err := url.Parse(authContext.AuthorizationURL)
 	if err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange), "request_build_failed"))
 		return err
 	}
 	query := authURL.Query()
@@ -120,6 +126,7 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 }
 
 func PluginSystemOAuthCallback(e *core.RequestEvent) error {
+	logContext := pluginOperationLogContext{Action: pluginActionOAuthCallback}
 	if e.Auth == nil {
 		return apis.NewUnauthorizedError("authentication required", nil)
 	}
@@ -136,20 +143,23 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	if err != nil || instance.GetString("user") != e.Auth.Id {
 		return apis.NewNotFoundError("plugin instance not found", nil)
 	}
+	logContext.InstanceID = instance.Id
 	plugin, err := localPlugin(e.App, instance.GetString("plugin_id"))
 	if err != nil {
 		return err
 	}
+	logContext.PluginID = plugin.Manifest.ID
 	storedAuth := pluginsystem.JSONMapFromRecord(instance, "auth")
 	contextName, authContext, err := pluginsystem.EffectiveAuthContext(plugin.Manifest, storedAuth)
 	if err != nil || authContext.Type != pluginsystem.AuthTypeOAuth2 {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
 	}
-	auth, err := decryptedOAuthFlowAuth(instance, authContext, true)
+	auth, err := decryptedOAuthFlowAuth(instance, plugin.Manifest, authContext, true)
 	if err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	if data.State != pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthState]) {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationOAuthExchange), "host_auth_invalid"))
 		return apis.NewBadRequestError("invalid oauth state", nil)
 	}
 
@@ -163,7 +173,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	}
 	token, err := pluginsystem.ExchangeOAuthToken(e.Request.Context(), plugin.Manifest, authContext, auth, values)
 	if err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	pluginsystem.StoreOAuthToken(auth, contextName, token)
 	for _, field := range pluginsystem.InternalOAuthTransientFields() {
@@ -174,6 +184,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	instance.Set("status", "configured")
 	instance.Set("last_error", map[string]any{})
 	if err := e.App.Save(instance); err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
 		return err
 	}
 
@@ -181,6 +192,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 }
 
 func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
+	logContext := pluginOperationLogContext{Action: pluginActionOAuthRevoke}
 	if e.Auth == nil {
 		return apis.NewUnauthorizedError("authentication required", nil)
 	}
@@ -196,11 +208,13 @@ func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
 	if err != nil || instance.GetString("user") != e.Auth.Id {
 		return apis.NewNotFoundError("plugin instance not found", nil)
 	}
+	logContext.InstanceID = instance.Id
 	auth := pluginsystem.JSONMapFromRecord(instance, "auth")
 	pluginsystem.ClearOAuthToken(auth)
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")
 	if err := e.App.Save(instance); err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
 		return err
 	}
 	return e.JSON(http.StatusOK, map[string]any{"ok": true})

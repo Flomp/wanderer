@@ -29,6 +29,7 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 }
 
 func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error)) error {
+	logContext := pluginOperationLogContext{Action: pluginActionValidate}
 	if e.Auth == nil {
 		return apis.NewUnauthorizedError("authentication required", nil)
 	}
@@ -45,6 +46,7 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	if err != nil {
 		return err
 	}
+	logContext.PluginID = plugin.Manifest.ID
 	auth := map[string]any{}
 	config := installedPluginConfig(e.App, data.PluginID)
 	plaintext := map[string]bool{}
@@ -55,6 +57,7 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 			return err
 		}
 		instanceID = instance.Id
+		logContext.InstanceID = instance.Id
 		auth = pluginsystem.JSONMapFromRecord(instance, "auth")
 		pluginsystem.MergePluginConfig(config, pluginsystem.JSONMapFromRecord(instance, "config"))
 	}
@@ -62,16 +65,16 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	if requested == "" {
 		resolved, _, resolveErr := pluginsystem.EffectiveAuthContext(plugin.Manifest, auth)
 		if resolveErr != nil {
-			return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
+			return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 		}
 		requested = resolved
 	}
 	contextName, authContext, err := sessionAuthContext(plugin, requested)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 	if authContext.Refresh == nil || authContext.Refresh.Function == "" {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 
 	for key, value := range data.Auth {
@@ -91,22 +94,22 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	var draft map[string]any
 	if len(data.Config) > 0 {
 		if err := json.Unmarshal(data.Config, &draft); err != nil || draft == nil {
-			return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
+			return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 		}
 	}
 	pluginsystem.MergePluginConfig(config, draft)
 	policy, err := pluginInstancePolicy(plugin, config)
 	if err != nil {
-		pluginsystem.LogPluginFailure(e.App.Logger(), "plugin configuration rejected", err, "plugin", plugin.Manifest.ID)
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	auth = pluginsystem.AuthForPluginRefresh(auth, authContext)
-	if err := decryptActiveAuth(auth, authContext, plaintext); err != nil {
-		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationLogin))
+	if err := decryptActiveAuth(auth, plugin.Manifest, authContext, plaintext); err != nil {
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginAuthFailure(err, pluginsystem.OperationLogin))
 	}
 
 	for _, field := range authContext.Fields {
 		if pluginsystem.StringFromAny(auth[field]) == "" {
+			logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationLogin), "host_auth_invalid"))
 			return apis.NewBadRequestError("required session credentials are missing", nil)
 		}
 	}
@@ -119,20 +122,22 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 		Config: pluginRuntimeConfig(config),
 	})
 	if err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 		return err
 	}
 
 	runtime, err := runtimeFor(plugin)
 	if err != nil {
+		logPluginOperationFailure(e, logContext, err)
 		return err
 	}
 	policy = policy.WithHostAuth(auth)
 	output, err := runtime.Call(e.Request.Context(), plugin, authContext.Refresh.Function, inputBytes, policy)
 	if err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	if err := pluginsystem.ValidatePluginSessionRefreshOutput(output); err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 
 	return e.JSON(http.StatusOK, map[string]any{

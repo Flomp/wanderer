@@ -210,6 +210,10 @@ func ExecuteHostRequest(ctx context.Context, manifest Manifest, policy RequestPo
 		}
 	}()
 	if err := InjectHostRequestAuthFromPolicy(manifest, policy.HostAuth, &spec); err != nil {
+		var failure PluginFailure
+		if errors.As(err, &failure) {
+			return HostResponse{}, WithDiagnosticCause(err, "host_auth_invalid")
+		}
 		return HostResponse{}, WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "host_auth_invalid")
 	}
 	resolved, err := ValidateAndResolveHostRequestSpec(manifest, spec, policy)

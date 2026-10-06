@@ -20,10 +20,9 @@ func TestActiveAuthIgnoresUnreadableInactiveAndPendingSecrets(t *testing.T) {
 	}
 	instance := core.NewRecord(core.NewBaseCollection("instances"))
 	instance.Collection().Fields.Add(&core.JSONField{Name: "auth"})
-	legacyEmail, err := security.Encrypt([]byte("user@example.test"), oauthMetadataTestKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// A non-secret input can resemble encrypted data; the writer stores it
+	// unchanged, so the reader must never attempt to decrypt it.
+	legacyEmail := "0123456789abcdef0123456789abcdef01234567"
 	instance.Set("auth", map[string]any{"oauthContext": "web", "email": legacyEmail, "password": valid, "refreshToken": broken, "oauthState": broken, "apiKey": broken})
 	plugin := pluginsystem.LocalPlugin{Manifest: pluginsystem.Manifest{Auth: pluginsystem.AuthManifest{Contexts: map[string]pluginsystem.AuthContext{"web": {Type: pluginsystem.AuthTypeSession, Fields: []string{"email", "password"}, SecretFields: []string{"password"}}, "api": {Type: pluginsystem.AuthTypeAPIKey, SecretField: "apiKey"}}}}}
 	auth, err := decryptedActiveInstanceAuth(plugin, instance)
@@ -34,15 +33,15 @@ func TestActiveAuthIgnoresUnreadableInactiveAndPendingSecrets(t *testing.T) {
 		t.Fatalf("incorrect decryption/preservation: %#v", auth)
 	}
 	guest := pluginsystem.PluginInputAuth(plugin, auth)
-	if len(guest) != 2 || guest["email"] != "user@example.test" || guest["password"] != "active-password" {
+	if len(guest) != 2 || guest["email"] != legacyEmail || guest["password"] != "active-password" {
 		t.Fatalf("inactive secrets entered guest input: %#v", guest)
 	}
 	auth["password"] = broken
-	if err := decryptActiveAuth(auth, plugin.Manifest.Auth.Contexts["web"], nil); !errors.Is(err, pluginsystem.ErrActiveCredentialsUnreadable) {
+	if err := decryptActiveAuth(auth, plugin.Manifest, plugin.Manifest.Auth.Contexts["web"], nil); !errors.Is(err, pluginsystem.ErrActiveCredentialsUnreadable) {
 		t.Fatalf("active unreadable secret: %v", err)
 	}
 	auth["password"] = "new-password"
-	if err := decryptActiveAuth(auth, plugin.Manifest.Auth.Contexts["web"], map[string]bool{"password": true}); err != nil {
+	if err := decryptActiveAuth(auth, plugin.Manifest, plugin.Manifest.Auth.Contexts["web"], map[string]bool{"password": true}); err != nil {
 		t.Fatalf("replacement did not override unreadable stored value: %v", err)
 	}
 }
@@ -65,8 +64,9 @@ func TestOAuthFlowDecryptsOnlyItsOwnPrerequisites(t *testing.T) {
 	record := core.NewRecord(collection)
 	record.Set("auth", map[string]any{"clientSecret": client, "accessToken": unreadable, "refreshToken": unreadable, "password": unreadable, "oauthState": state, "oauthCodeVerifier": verifier})
 	context := pluginsystem.AuthContext{Type: pluginsystem.AuthTypeOAuth2, PKCE: true, SecretFields: []string{"clientSecret", "accessToken", "refreshToken"}}
+	manifest := pluginsystem.Manifest{ID: "test", Auth: pluginsystem.AuthManifest{Contexts: map[string]pluginsystem.AuthContext{"oauth": context}}}
 	for _, callback := range []bool{false, true} {
-		auth, err := decryptedOAuthFlowAuth(record, context, callback)
+		auth, err := decryptedOAuthFlowAuth(record, manifest, context, callback)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -103,7 +103,8 @@ func TestOAuthFlowWithoutPKCEDoesNotDecryptObsoleteVerifier(t *testing.T) {
 	record := core.NewRecord(collection)
 	record.Set("auth", map[string]any{"oauthState": state, "oauthCodeVerifier": obsoleteVerifier})
 	context := pluginsystem.AuthContext{Type: pluginsystem.AuthTypeOAuth2}
-	auth, err := decryptedOAuthFlowAuth(record, context, true)
+	manifest := pluginsystem.Manifest{ID: "test", Auth: pluginsystem.AuthManifest{Contexts: map[string]pluginsystem.AuthContext{"oauth": context}}}
+	auth, err := decryptedOAuthFlowAuth(record, manifest, context, true)
 	if err != nil {
 		t.Fatal("non-PKCE callback depended on an obsolete verifier")
 	}
@@ -111,7 +112,7 @@ func TestOAuthFlowWithoutPKCEDoesNotDecryptObsoleteVerifier(t *testing.T) {
 		t.Fatal("non-PKCE callback did not limit decryption to its current state")
 	}
 	context.PKCE = true
-	if _, err := decryptedOAuthFlowAuth(record, context, true); !errors.Is(err, pluginsystem.ErrActiveCredentialsUnreadable) {
+	if _, err := decryptedOAuthFlowAuth(record, manifest, context, true); !errors.Is(err, pluginsystem.ErrActiveCredentialsUnreadable) {
 		t.Fatal("PKCE callback ignored its unreadable required verifier")
 	}
 }

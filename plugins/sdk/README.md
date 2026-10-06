@@ -40,7 +40,7 @@ Plugins can emit host-visible logs with `LogDebug`, `LogInfo`, `LogWarn`, and
 messages must be non-empty. Arbitrary guest text is redacted because it may
 contain provider secrets. Use `LogEvent(level, event, err)` for allowlisted
 request/sync start, completion and failure events. Typed errors retain their
-code, class, operation and HTTP status in host logs; free-form messages, URLs,
+code, class, operation, HTTP status and any retry delay (including zero) in host logs; free-form messages, URLs,
 response bodies and panic values never do. The host adds bounded cause labels
 at local boundaries such as database saves, policy checks and auto-merges.
 Logs are best-effort and should not be part of plugin control flow.
