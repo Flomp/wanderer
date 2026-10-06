@@ -25,12 +25,16 @@ import (
 const oauthMetadataTestKey = "0123456789abcdef0123456789abcdef"
 
 type oauthMetadataFixture struct {
-	app           *pbtests.TestApp
-	plugin        pluginsystem.LocalPlugin
-	instanceID    string
-	authToken     string
-	handler       http.Handler
-	tokenRequests atomic.Int32
+	app                  *pbtests.TestApp
+	plugin               pluginsystem.LocalPlugin
+	instanceID           string
+	authToken            string
+	handler              http.Handler
+	tokenRequests        atomic.Int32
+	expectedClientID     string
+	expectedClientSecret string
+	expectedRefreshToken string
+	expectedPKCEVerifier string
 }
 
 // Use the shipped Strava v1 manifest and production record hooks. Only the
@@ -44,7 +48,7 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	f := &oauthMetadataFixture{app: app}
+	f := &oauthMetadataFixture{app: app, expectedClientID: "strava-test-client", expectedClientSecret: "strava-test-client-secret", expectedRefreshToken: "strava-test-refresh"}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.tokenRequests.Add(1)
 		var body map[string]string
@@ -54,12 +58,12 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 			return
 		}
 		if r.Method != http.MethodPost || r.Header.Get("Content-Type") != "application/json" ||
-			body["client_id"] != "strava-test-client" || body["client_secret"] != "strava-test-client-secret" {
+			body["client_id"] != f.expectedClientID || body["client_secret"] != f.expectedClientSecret {
 			t.Error("token request did not use the stored Strava client credentials and JSON format")
 		}
 		switch body["grant_type"] {
 		case "refresh_token":
-			if body["refresh_token"] != "strava-test-refresh" {
+			if body["refresh_token"] != f.expectedRefreshToken {
 				t.Error("refresh did not use the original stored refresh token")
 			}
 		case "authorization_code":

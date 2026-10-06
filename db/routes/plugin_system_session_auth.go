@@ -23,6 +23,11 @@ type pluginSessionAuthRefreshInput struct {
 }
 
 func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
+	return pluginSystemSessionAuthValidate(e, pluginsystem.NewRuntimeRegistry().RuntimeFor)
+}
+
+func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error)) error {
+	logContext := pluginOperationLogContext{Action: pluginActionValidate}
 	if e.Auth == nil {
 		return apis.NewUnauthorizedError("authentication required", nil)
 	}
@@ -39,12 +44,13 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 	if err != nil {
 		return err
 	}
+	logContext.PluginID = plugin.Manifest.ID
 	contextName, authContext, err := sessionAuthContext(plugin, data.AuthContext)
 	if err != nil {
-		return apis.NewBadRequestError("plugin has no session auth context", err)
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 	if authContext.Refresh == nil || authContext.Refresh.Function == "" {
-		return apis.NewBadRequestError("plugin session auth context has no refresh function", nil)
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 
 	auth := map[string]any{}
@@ -55,9 +61,10 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 			return err
 		}
 		instanceID = instance.Id
+		logContext.InstanceID = instance.Id
 		auth, err = decryptedInstanceAuth(instance)
 		if err != nil {
-			return pluginOperationAPIError(pluginsystem.Failure("auth_failed", pluginsystem.OperationLogin))
+			return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationLogin), "credentials_unreadable"))
 		}
 	}
 	for key, value := range data.Auth {
@@ -75,11 +82,13 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 		Auth: pluginsystem.AuthForPluginRefresh(auth, authContext),
 	})
 	if err != nil {
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 		return err
 	}
 
-	runtime, err := pluginsystem.NewRuntimeRegistry().RuntimeFor(plugin)
+	runtime, err := runtimeFor(plugin)
 	if err != nil {
+		logPluginOperationFailure(e, logContext, err)
 		return err
 	}
 	// TODO: accept and merge plugin instance config here before supporting
@@ -90,10 +99,10 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 	policy := pluginInstancePolicy(plugin, map[string]any{}).WithHostAuth(auth)
 	output, err := runtime.Call(e.Request.Context(), plugin, authContext.Refresh.Function, inputBytes, policy)
 	if err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	if err := pluginsystem.ValidatePluginSessionRefreshOutput(output); err != nil {
-		return pluginOperationAPIError(err)
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 
 	return e.JSON(http.StatusOK, map[string]any{

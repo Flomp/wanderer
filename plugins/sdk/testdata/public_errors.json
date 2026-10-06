@@ -1,0 +1,90 @@
+[
+  {
+    "code": "auth_failed",
+    "message": "The provider rejected the login credentials."
+  },
+  {
+    "code": "credentials_unreadable",
+    "message": "Stored credentials could not be read. Enter them again or reconnect the plugin."
+  },
+  {
+    "code": "invalid_configuration",
+    "message": "The plugin configuration is invalid. Check the plugin settings."
+  },
+  {
+    "code": "invalid_grant",
+    "message": "Plugin authorization expired. Reconnect the plugin."
+  },
+  {
+    "code": "unauthorized",
+    "message": "The provider rejected authorization for this operation."
+  },
+  {
+    "code": "invalid_client",
+    "message": "The OAuth client credentials were rejected. Check the client ID and secret."
+  },
+  {
+    "code": "unauthorized_client",
+    "message": "The OAuth client credentials were rejected. Check the client ID and secret."
+  },
+  {
+    "code": "invalid_request",
+    "message": "The plugin sent an invalid request."
+  },
+  {
+    "code": "invalid_scope",
+    "message": "The provider rejected the plugin configuration. Check the app settings and permissions."
+  },
+  {
+    "code": "unsupported_grant_type",
+    "message": "The provider rejected the plugin configuration. Check the app settings and permissions."
+  },
+  {
+    "code": "access_denied",
+    "message": "The provider denied access to this item or operation."
+  },
+  {
+    "code": "rate_limited",
+    "message": "The provider rate limit was reached. Try again later."
+  },
+  {
+    "code": "provider_unavailable",
+    "message": "The provider is currently unavailable. Try again later."
+  },
+  {
+    "code": "temporary_unavailable",
+    "message": "The provider is currently unavailable. Try again later."
+  },
+  {
+    "code": "runtime_error",
+    "message": "The plugin failed unexpectedly."
+  },
+  {
+    "code": "runtime_timeout",
+    "message": "The plugin operation timed out."
+  },
+  {
+    "code": "invalid_output",
+    "message": "The plugin returned an invalid response."
+  },
+  {
+    "code": "internal_error",
+    "message": "The plugin failed unexpectedly."
+  },
+  {
+    "code": "plugin_error",
+    "message": "The plugin failed unexpectedly."
+  },
+  {
+    "code": "not_importable",
+    "message": "This activity has no importable track."
+  },
+  {
+    "code": "unsupported_protocol",
+    "message": "The plugin protocol is not supported."
+  },
+  {
+    "code": "not_found",
+    "message": "The requested item was not found."
+  }
+]

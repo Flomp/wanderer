@@ -109,7 +109,7 @@ Plugin sync starts from `plugin_instances.user`, the local wanderer user that ow
 
 ### Host request boundary
 
-Plugins cannot open provider connections themselves. They send a request spec to the host; the host resolves the connector, enforces policy, injects allowed auth, executes the HTTP request, and returns a bounded response. Host request failures are returned as a safe, structured `HostResponse.error`: configuration failures use `invalid_request`, provider I/O failures use `provider_unavailable`, and malformed successful responses use `invalid_output`. Failed HTTP responses retain their status and headers even when the provider body is too large or incomplete. Plugins classify them for the operation they were performing; arbitrary provider diagnostics do not become public error text.
+Plugins cannot open provider connections themselves. They send a request spec to the host; the host resolves the connector, enforces policy, injects allowed auth, executes the HTTP request, and returns a bounded response. Host request failures are returned as a safe, structured `HostResponse.error`: configuration failures use `invalid_request`, missing OAuth grant material retains `invalid_grant`, provider I/O failures use `provider_unavailable`, and malformed successful responses use `invalid_output`. Failed HTTP responses retain their status and headers even when the provider body is too large or incomplete. Plugins classify them for the operation they were performing; arbitrary provider diagnostics do not become public error text.
 
 Host request bodies may be JSON, `application/x-www-form-urlencoded`, or
 multipart, subject to the manifest upload limits and content-type allow-list.
@@ -121,18 +121,31 @@ step-by-step. `HostResponse.headerValues` preserves all values for headers such
 as `Set-Cookie` and is the only response-header representation exposed to
 plugins.
 
-Plugins can emit host-visible diagnostics through the `wanderer:log` host
-function. The payload is a JSON object with a strict `level` (`debug`, `info`,
-`warn`, or `error`) and a non-empty `message`. The Go SDK exposes this as
-`sdk.LogDebug`, `sdk.LogInfo`, `sdk.LogWarn`, and `sdk.LogError`.
-The host records the log level and receipt, without writing arbitrary guest
-message text. Never include secrets, credentials, cookies, tokens, authorization
-codes, or full URLs with query parameters in a log payload.
+Plugins emit host-visible diagnostics through `wanderer:log`. Its JSON payload
+requires a strict `level` (`debug`, `info`, `warn`, `error`) and a non-empty
+`message`. Legacy `sdk.LogDebug`/`LogInfo`/`LogWarn`/`LogError` calls remain
+supported, but arbitrary guest message text is redacted. Use `sdk.LogEvent`
+for safe structured diagnostics. It adds `event` and an optional normalized
+`error` containing `code`, `message`, `operation`, `httpStatus` and
+`retryAfterSeconds`:
 
 ```go
-sdk.LogInfo("provider detail fetch took 420ms externalID=abc")
-sdk.LogWarn("provider returned an optional photo without a URL")
+sdk.LogEvent(sdk.LogLevelInfo, sdk.LogEventRequestStarted, nil)
+sdk.LogEvent(sdk.LogLevelWarn, sdk.LogEventRequestFailed, sdk.ResponseError("detail", response))
 ```
+
+Allowed events are request/sync started, completed and failed. The host logs
+the event plus error code, derived class, operation, HTTP status and any retry
+delay, including zero. Provider bodies, URLs, credentials, filenames and arbitrary
+guest messages are excluded. Local host failures carry fixed cause identifiers;
+OAuth, send, session-validation and Cron use the same structured diagnostics.
+
+Stored unreadable credentials use `credentials_unreadable`; invalid local
+configuration or context selection uses `invalid_configuration`. Other public
+codes and their operation-specific meanings are documented in the
+[error contract](../docs/src/content/docs/develop/plugin-system.md#structured-diagnostics).
+SDK messages are static English fallbacks for older consumers; the current
+host/UI classifies and translates by code.
 
 Declare host functions used by a capability in `requiredHostFunctions`, for
 example `["http_request", "log"]`.

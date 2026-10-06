@@ -11,6 +11,8 @@ type PluginErrorLike = {
 // untrusted guest message, response body or URL (including historical errors).
 const pluginErrorKeys = new Map<string, string>([
     ["auth_failed", "wrong-username-or-password"],
+    ["credentials_unreadable", "plugin-error-credentials-unreadable"],
+    ["invalid_configuration", "plugin-error-invalid-configuration"],
     ["invalid_grant", "plugin-error-reconnect-required"],
     ["unauthorized", "plugin-error-reconnect-required"],
     ["invalid_client", "plugin-error-client-credentials"],
@@ -27,6 +29,9 @@ const pluginErrorKeys = new Map<string, string>([
     ["invalid_output", "plugin-error-invalid-output"],
     ["internal_error", "plugin-error-internal"],
     ["plugin_error", "plugin-error-internal"],
+    ["not_importable", "plugin-error-not-importable"],
+    ["not_found", "plugin-error-not-found"],
+    ["unsupported_protocol", "plugin-error-unsupported-protocol"],
 ]);
 
 export function pluginErrorKey(code: unknown): string {

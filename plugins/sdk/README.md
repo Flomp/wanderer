@@ -37,8 +37,12 @@ appear more than once.
 
 Plugins can emit host-visible logs with `LogDebug`, `LogInfo`, `LogWarn`, and
 `LogError`. Log levels are strict (`debug`, `info`, `warn`, `error`) and
-messages must be non-empty. The host records receipt and level, but does not
-write arbitrary guest text to its logs because it may contain provider secrets.
+messages must be non-empty. Arbitrary guest text is redacted because it may
+contain provider secrets. Use `LogEvent(level, event, err)` for allowlisted
+request/sync start, completion and failure events. Typed errors retain their
+code, class, operation, HTTP status and any retry delay (including zero) in host logs; free-form messages, URLs,
+response bodies and panic values never do. The host adds bounded cause labels
+at local boundaries such as database saves, policy checks and auto-merges.
 Logs are best-effort and should not be part of plugin control flow.
 
 Provider failures use `PluginFailure`, which carries a safe `PluginError`.
@@ -50,7 +54,12 @@ code. Arbitrary error strings and provider bodies are discarded.
 `PluginError` retains the v1 `code` and `message` fields and adds optional
 `operation`, `httpStatus`, and `retryAfterSeconds` metadata. These additions do
 not require a new manifest version. Messages are generated from allowlisted
-codes; host and UI localize them. `Retry-After` accepts seconds or an HTTP date,
+codes and provide a safe static English fallback for older hosts/UI. Current
+hosts and UI localize by code; provider messages are never used. The v0.21.0
+worker can still turn a guest rejection into a fatal runtime error because it
+checks Extism errors before nonzero export codes. The fallback preserves the
+wire message for consumers that receive it; it does not fix that older worker.
+`Retry-After` accepts seconds or an HTTP date,
 including zero, with a maximum delay of 24 hours. A missing delay lets the host
 choose its fallback.
 

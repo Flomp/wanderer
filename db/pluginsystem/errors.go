@@ -36,7 +36,7 @@ func (e PluginFailure) Error() string { return NormalizePluginError(e.PluginErro
 // into instance diagnostics, API responses or application logs.
 func NormalizePluginError(e PluginError) PluginError {
 	switch strings.TrimSpace(e.Code) {
-	case "auth_failed", "invalid_grant", "unauthorized", "invalid_client", "unauthorized_client",
+	case "auth_failed", "credentials_unreadable", "invalid_configuration", "invalid_grant", "unauthorized", "invalid_client", "unauthorized_client",
 		"invalid_request", "invalid_scope", "unsupported_grant_type", "access_denied",
 		"rate_limited", "provider_unavailable", "temporary_unavailable", "internal_error",
 		"plugin_error", "runtime_error", "runtime_timeout", "invalid_output", "not_importable", "not_found", "unsupported_protocol":

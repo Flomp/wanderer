@@ -577,7 +577,7 @@
             window.location.href = result.url;
         } catch (e) {
             show_toast({
-                text: e instanceof Error ? e.message : $_("error-starting-oauth"),
+                text: translatePluginAPIError(e, $_("error-starting-oauth")),
                 icon: "close",
                 type: "error",
             });

@@ -22,7 +22,7 @@ func (e PluginFailure) Error() string {
 func NormalizePluginError(e PluginError) PluginError {
 	e.Code = strings.TrimSpace(e.Code)
 	switch e.Code {
-	case "auth_failed", "invalid_grant", "unauthorized", "invalid_client", "unauthorized_client",
+	case "auth_failed", "credentials_unreadable", "invalid_configuration", "invalid_grant", "unauthorized", "invalid_client", "unauthorized_client",
 		"invalid_request", "invalid_scope", "unsupported_grant_type", "access_denied",
 		"rate_limited", "provider_unavailable", "temporary_unavailable", "runtime_error",
 		"runtime_timeout", "invalid_output", "internal_error", "plugin_error", "not_importable",
@@ -30,7 +30,7 @@ func NormalizePluginError(e PluginError) PluginError {
 	default:
 		e.Code = "plugin_error"
 	}
-	e.Message = e.Code
+	e.Message = publicErrorMessage(e.Code)
 	switch e.Operation {
 	case "login", "oauth_exchange", "oauth_refresh", "list", "detail", "send", "host_http", "runtime":
 	default:
@@ -157,4 +157,57 @@ func ParseRetryAfter(value string, now time.Time) *int {
 		return &result
 	}
 	return nil
+}
+
+// publicErrorMessage provides a bounded English fallback for v1 hosts whose UI
+// displays unknown-code messages. Provider diagnostics never enter this table.
+func publicErrorMessage(code string) string {
+	switch code {
+	case "auth_failed":
+		return "The provider rejected the login credentials."
+	case "credentials_unreadable":
+		return "Stored credentials could not be read. Enter them again or reconnect the plugin."
+	case "invalid_configuration":
+		return "The plugin configuration is invalid. Check the plugin settings."
+	case "invalid_grant":
+		return "Plugin authorization expired. Reconnect the plugin."
+	case "unauthorized":
+		return "The provider rejected authorization for this operation."
+	case "invalid_client":
+		return "The OAuth client credentials were rejected. Check the client ID and secret."
+	case "unauthorized_client":
+		return "The OAuth client credentials were rejected. Check the client ID and secret."
+	case "invalid_request":
+		return "The plugin sent an invalid request."
+	case "invalid_scope":
+		return "The provider rejected the plugin configuration. Check the app settings and permissions."
+	case "unsupported_grant_type":
+		return "The provider rejected the plugin configuration. Check the app settings and permissions."
+	case "access_denied":
+		return "The provider denied access to this item or operation."
+	case "rate_limited":
+		return "The provider rate limit was reached. Try again later."
+	case "provider_unavailable":
+		return "The provider is currently unavailable. Try again later."
+	case "temporary_unavailable":
+		return "The provider is currently unavailable. Try again later."
+	case "runtime_error":
+		return "The plugin failed unexpectedly."
+	case "runtime_timeout":
+		return "The plugin operation timed out."
+	case "invalid_output":
+		return "The plugin returned an invalid response."
+	case "internal_error":
+		return "The plugin failed unexpectedly."
+	case "plugin_error":
+		return "The plugin failed unexpectedly."
+	case "not_importable":
+		return "This activity has no importable track."
+	case "unsupported_protocol":
+		return "The plugin protocol is not supported."
+	case "not_found":
+		return "The requested item was not found."
+	default:
+		return "The plugin failed unexpectedly."
+	}
 }

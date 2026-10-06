@@ -662,7 +662,7 @@ error object for host-side request failures.
 ```json
 {
   "code": "rate_limited",
-  "message": "rate_limited",
+  "message": "The provider rate limit was reached. Try again later.",
   "operation": "list",
   "httpStatus": 429,
   "retryAfterSeconds": 37
@@ -681,16 +681,59 @@ network errors and provider 5xx responses are transient. An OAuth `invalid_scope
 or unknown nonempty RFC error is a configuration error. A rejected detail or
 send request does not by itself prove that the whole connection needs repair.
 
-Supported codes include `auth_failed`, `invalid_grant`, `invalid_client`,
+Supported codes include `auth_failed`, `credentials_unreadable`,
+`invalid_configuration`, `invalid_grant`, `invalid_client`,
 `unauthorized_client`, `invalid_request`, `invalid_scope`,
 `unsupported_grant_type`, `unauthorized`, `access_denied`, `rate_limited`,
 `provider_unavailable`, `temporary_unavailable`, `runtime_error`,
-`runtime_timeout`, `invalid_output`, and `plugin_error`.
+`runtime_timeout`, `invalid_output`, `internal_error`, `plugin_error`,
+`not_importable`, `not_found`, and `unsupported_protocol`.
+
+`credentials_unreadable` means the host cannot read stored encrypted credentials;
+it calls for re-entering credentials or reconnecting. `invalid_configuration`
+means a locally invalid configuration or auth-context selection. Neither code
+claims the provider rejected a username or password. SDK messages are static
+English fallbacks; host normalization and the current UI use the code.
 
 `Retry-After` supports seconds and HTTP dates. Zero is an immediate retry;
 malformed or missing values use the existing host fallback (one hour for rate
 limits). Valid delays are capped at 24 hours. This metadata does not trigger an
 automatic retry of an upload.
+
+### Structured diagnostics
+
+The `wanderer:log` host function accepts strict `level` values (`debug`, `info`,
+`warn`, `error`) and a non-empty `message`. Legacy SDK `LogDebug`/`LogInfo`/
+`LogWarn`/`LogError` payloads remain supported, but their arbitrary message text
+is redacted. `sdk.LogEvent(level, event, err)` adds an optional `event` and a
+normalized `error` object:
+
+```json
+{
+  "level": "warn",
+  "message": "request_failed",
+  "event": "request_failed",
+  "error": {
+    "code": "rate_limited",
+    "message": "The provider rate limit was reached. Try again later.",
+    "operation": "detail",
+    "httpStatus": 429,
+    "retryAfterSeconds": 0
+  }
+}
+```
+
+Allowed events are `request_started`, `request_completed`, `request_failed`,
+`sync_started`, `sync_completed`, and `sync_failed`. The host derives the error
+class and records operation, HTTP status, and any retry delay, including zero.
+Unknown event names are redacted and error metadata is normalized again at the
+worker boundary. Raw messages, provider bodies, URLs, tokens and SQL never become
+log text. Local host failures add fixed cause identifiers and safe database-code
+details. Interactive OAuth, send and session-validation failures use the same
+error metadata as scheduled sync.
+
+Declare `log` in the capability's `requiredHostFunctions`. Logs are best-effort;
+they must not determine plugin control flow.
 
 ## Host requests
 

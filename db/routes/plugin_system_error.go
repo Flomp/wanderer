@@ -5,6 +5,7 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/core"
 
 	"pocketbase/pluginsystem"
 )
@@ -36,4 +37,59 @@ func firstProviderHeader(headers map[string][]string, name string) string {
 		}
 	}
 	return ""
+}
+
+// References are populated only after host lookup/ownership checks. Request
+// payload IDs, provider names, URLs, bodies and credentials are not log attrs.
+type pluginOperationLogContext struct {
+	Action     pluginOperationAction
+	PluginID   string
+	InstanceID string
+}
+
+type pluginOperationAction string
+
+const (
+	pluginActionOAuthStart    pluginOperationAction = "oauth_start"
+	pluginActionOAuthCallback pluginOperationAction = "oauth_callback"
+	pluginActionOAuthRevoke   pluginOperationAction = "oauth_revoke"
+	pluginActionSend          pluginOperationAction = "send"
+	pluginActionValidate      pluginOperationAction = "session_validate"
+)
+
+// Keep the existing API envelope, and log the typed failure before conversion
+// discards its cause chain. Interactive paths use the same safe diagnostics as
+// cron, without treating the provider error text as an operational diagnostic.
+func pluginOperationAPIErrorForEvent(e *core.RequestEvent, context pluginOperationLogContext, err error) error {
+	logPluginOperationFailure(e, context, err)
+	return pluginOperationAPIError(err)
+}
+
+// Raw local errors keep their existing HTTP/API response; call this before
+// returning them to record a safe diagnostic without changing that contract.
+func logPluginOperationFailure(e *core.RequestEvent, context pluginOperationLogContext, err error) {
+	action := "plugin_operation"
+	switch context.Action {
+	case pluginActionOAuthStart, pluginActionOAuthCallback, pluginActionOAuthRevoke, pluginActionSend, pluginActionValidate:
+		action = string(context.Action)
+	}
+	attrs := []any{"action", action}
+	if e.Auth != nil {
+		attrs = append(attrs, "owner", e.Auth.Id)
+	}
+	if context.PluginID != "" {
+		attrs = append(attrs, "plugin", context.PluginID)
+	}
+	if context.InstanceID != "" {
+		attrs = append(attrs, "instance", context.InstanceID)
+	}
+	diagnostic := pluginsystem.PluginDiagnosticAttrs(err)
+	// Untyped local failures have no provider operation. The closed host action
+	// identifies their boundary without changing the public error envelope.
+	for i := 0; i+1 < len(diagnostic); i += 2 {
+		if diagnostic[i] == "operation" && diagnostic[i+1] == "" {
+			diagnostic[i+1] = action
+		}
+	}
+	e.App.Logger().Warn("plugin operation failed", append(attrs, diagnostic...)...)
 }
