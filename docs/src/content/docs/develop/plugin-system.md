@@ -822,7 +822,13 @@ trail.gpx
 ## Auth
 
 Auth contexts are declared in the manifest and referenced by name from
-`HostRequestSpec.auth`.
+`HostRequestSpec.auth`. The current host resolves the selected context from the
+legacy `auth.oauthContext` value, which also stores OAuth grant metadata. It is
+not an independent persistent selection. If no context is selected, the host can infer only a single
+manifest context. Unknown names and ambiguous manifests are rejected before
+provider work. Only the selected context's credentials are decrypted and passed
+to provider operations; inactive credentials and pending flow secrets are not
+part of ordinary capability input.
 
 ### OAuth2
 
@@ -880,11 +886,25 @@ Session auth is for providers that require plugin-mediated login:
 }
 ```
 
-The host passes only the declared secret fields to the refresh export. The
+The host passes only the selected context's declared credential fields to the refresh export. The
 returned session token is stored encrypted and injected by the host into future
 handler-managed host-executed requests that reference the auth context, such as
 `prepare_trail_send.v1` send plans. Plugin-initiated `wanderer.http_request`
 calls cannot refresh session auth themselves.
+
+`POST /api/v1/plugin-system/auth/validate` accepts `pluginId`, an optional
+`instanceId` and `authContext`, draft `auth`, and an optional draft `config`.
+The host merges installed defaults, freshly loaded instance overrides, then
+the draft. Supplied credentials replace old values before active credentials
+are decrypted; a blank string reuses a stored value. Validation performs no
+instance write, including when the provider rejects the credentials.
+
+Effective configuration is validated before provider I/O. A connector that
+cannot resolve, an invalid storage origin, or a custom TLS mode without
+`supportsCustomTLS` is rejected instead of silently skipped or downgraded.
+Configured connectors retain the user's `allowPrivate` setting and the existing
+network restrictions. The refresh export receives only `config.plugin` as its
+runtime `config`; host connector settings stay in the host policy.
 
 ### API key and bearer
 

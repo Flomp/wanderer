@@ -214,6 +214,13 @@ func encryptPluginInstanceAuth(app core.App, r *core.Record) error {
 			auth[key] = secret
 			continue
 		}
+		// Existing secrets can be encrypted with a previous key. Preserve their
+		// stored bytes before attempting decryption; otherwise an unrelated
+		// settings/OAuth write would encrypt the old ciphertext as plaintext.
+		if originalSecret, ok := originalAuth[key].(string); ok && secret == originalSecret {
+			auth[key] = secret
+			continue
+		}
 		if util.CanDecryptSecret(secret) {
 			auth[key] = secret
 			continue

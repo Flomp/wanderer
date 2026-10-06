@@ -4,16 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/security"
 
 	"pocketbase/pluginsystem"
 	"pocketbase/util"
@@ -78,9 +75,9 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 		return apis.NewBadRequestError("trail has no GPX track", nil)
 	}
 
-	auth, err := decryptedInstanceAuth(instance)
+	auth, err := decryptedActiveInstanceAuth(plugin, instance)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationSend), "credentials_unreadable"))
+		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationSend))
 	}
 
 	input := pluginSystemTrailSendInput{
@@ -97,7 +94,15 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	}
 	config := effectivePluginConfig(e.App, plugin.Manifest.ID, instance)
 	pluginConfig := pluginRuntimeConfig(config)
-	policy := pluginInstancePolicy(plugin, config)
+	policy, err := pluginInstancePolicy(plugin, config)
+	if err != nil {
+		pluginsystem.LogPluginFailure(e.App.Logger(), "plugin configuration rejected", err, "plugin", plugin.Manifest.ID)
+		return pluginOperationAPIError(err)
+	}
+	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
+	if err != nil {
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationSend))
+	}
 	input.Config = pluginConfig
 	inputBytes, err := json.Marshal(input)
 	if err != nil {
@@ -108,7 +113,7 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 	if err != nil {
 		return err
 	}
-	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy.WithHostAuth(auth))
+	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy.WithHostAuth(activeAuth))
 	if err != nil {
 		return pluginOperationAPIError(err)
 	}
@@ -193,29 +198,4 @@ func readTrailGPX(app core.App, trail *core.Record) ([]byte, error) {
 	defer reader.Close()
 
 	return io.ReadAll(reader)
-}
-
-// decryptedInstanceAuth returns auth fields in the shape expected by host-side
-// auth injection and plugin input preparation.
-func decryptedInstanceAuth(instance *core.Record) (map[string]any, error) {
-	auth := pluginsystem.JSONMapFromRecord(instance, "auth")
-	if len(auth) == 0 {
-		return map[string]any{}, nil
-	}
-	encryptionKey := os.Getenv("POCKETBASE_ENCRYPTION_KEY")
-	if encryptionKey == "" {
-		return nil, apis.NewBadRequestError("POCKETBASE_ENCRYPTION_KEY not set", nil)
-	}
-	for key, value := range auth {
-		secret, ok := value.(string)
-		if !ok || secret == "" || !util.CanDecryptSecret(secret) {
-			continue
-		}
-		decrypted, err := security.Decrypt(secret, encryptionKey)
-		if err != nil {
-			return nil, fmt.Errorf("decrypt %s: %w", key, err)
-		}
-		auth[key] = string(decrypted)
-	}
-	return auth, nil
 }

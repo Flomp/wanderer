@@ -58,9 +58,9 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	if err != nil {
 		return err
 	}
-	auth, err := decryptedInstanceAuth(instance)
+	auth, err := decryptedOAuthFlowAuth(instance, authContext, false)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationOAuthExchange), "credentials_unreadable"))
+		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	clientID := pluginsystem.StringFromAny(auth["clientId"])
 	if clientID == "" {
@@ -140,17 +140,17 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	if err != nil {
 		return err
 	}
-	auth, err := decryptedInstanceAuth(instance)
+	storedAuth := pluginsystem.JSONMapFromRecord(instance, "auth")
+	contextName, authContext, err := pluginsystem.EffectiveAuthContext(plugin.Manifest, storedAuth)
+	if err != nil || authContext.Type != pluginsystem.AuthTypeOAuth2 {
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
+	}
+	auth, err := decryptedOAuthFlowAuth(instance, authContext, true)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationOAuthExchange), "credentials_unreadable"))
+		return pluginOperationAPIError(pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	if data.State != pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthState]) {
 		return apis.NewBadRequestError("invalid oauth state", nil)
-	}
-	contextName := pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthContext])
-	_, authContext, err := pluginsystem.OAuthContext(plugin, contextName)
-	if err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
 	}
 
 	values := map[string]string{
@@ -196,10 +196,7 @@ func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
 	if err != nil || instance.GetString("user") != e.Auth.Id {
 		return apis.NewNotFoundError("plugin instance not found", nil)
 	}
-	auth, err := decryptedInstanceAuth(instance)
-	if err != nil {
-		return pluginOperationAPIError(pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationOAuthExchange), "credentials_unreadable"))
-	}
+	auth := pluginsystem.JSONMapFromRecord(instance, "auth")
 	pluginsystem.ClearOAuthToken(auth)
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")
