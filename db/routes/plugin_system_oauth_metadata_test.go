@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	pbtests "github.com/pocketbase/pocketbase/tests"
@@ -67,6 +68,12 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 				t.Error("refresh did not use the original stored refresh token")
 			}
 		case "authorization_code":
+			if f.plugin.Manifest.Auth.Contexts["oauth_access_token"].PKCE && (f.expectedPKCEVerifier == "" || body["code_verifier"] != f.expectedPKCEVerifier) {
+				t.Error("PKCE callback did not send its decrypted verifier")
+			}
+			if _, sent := body["code_verifier"]; !f.plugin.Manifest.Auth.Contexts["oauth_access_token"].PKCE && sent {
+				t.Error("non-PKCE callback sent a code verifier")
+			}
 			if body["code"] != "test-authorization-code" {
 				t.Error("callback did not send the authorization code")
 			}
@@ -469,4 +476,72 @@ func TestOAuthMetadataExplicitNullFieldsAreConsumed(t *testing.T) {
 		f.saveModal(t, map[string]any{"auth": map[string]any{"clientId": "strava-test-client"}})
 		f.assertAuthFieldsAbsent(t, "later omitted fields", fields...)
 	})
+}
+
+func TestOAuthMetadataRevokeDoesNotDecryptUnreadableGrant(t *testing.T) {
+	f := newOAuthMetadataFixture(t)
+	clientSecret := rawOAuthMetadataAuth(t, f)["clientSecret"].(string)
+	// Simulate a grant encrypted with a key no longer available. The existing
+	// writer hooks stay in this fixture; Revoke needs neither token plaintext nor
+	// a remote request in order to clear these host fields.
+	t.Setenv("POCKETBASE_ENCRYPTION_KEY", "ffffffffffffffffffffffffffffffff")
+	f.request(t, http.MethodPost, "/api/plugin-system/oauth/revoke", map[string]any{"instanceId": f.instanceID})
+	f.assertAuthFieldsAbsent(t, "unreadable grant revoke", "accessToken", "refreshToken", "expiresAt", "tokenType", "oauthContext", "scope", "oauthState", "oauthCodeVerifier", "oauthRedirectURI")
+	assertUnreadableOAuthSecretUnchanged(t, f, "clientSecret", clientSecret)
+	if f.tokenRequests.Load() != 0 {
+		t.Fatal("revoke called provider")
+	}
+}
+
+func TestOAuthMetadataReconnectIgnoresUnreadableGrantAndInactiveSecrets(t *testing.T) {
+	f := newOAuthMetadataFixture(t)
+	installed, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", "strava")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := f.plugin.Manifest
+	manifest.Auth.Contexts["inactive_dashboard"] = pluginsystem.AuthContext{Type: pluginsystem.AuthTypeSession, Fields: []string{"email", "password"}, SecretFields: []string{"password"}, Refresh: &pluginsystem.AuthRefresh{Mode: pluginsystem.AuthRefreshModePlugin, Function: "refresh_auth_v1"}}
+	manifest.Permissions.Auth = append(manifest.Permissions.Auth, "inactive_dashboard")
+	installed.Set("manifest", manifest)
+	if err := f.app.Save(installed); err != nil {
+		t.Fatal(err)
+	}
+	instance, err := f.app.FindRecordById("plugin_instances", f.instanceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth := pluginsystem.JSONMapFromRecord(instance, "auth")
+	unreadable, err := security.Encrypt([]byte("unreadable"), "ffffffffffffffffffffffffffffffff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"accessToken", "refreshToken", "password", "oauthState", "oauthCodeVerifier"} {
+		auth[field] = unreadable
+	}
+	encoded, err := json.Marshal(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Raw fixture write models existing data from before a key change; submitting
+	// ciphertext through the write hooks would encrypt it with the current key.
+	if _, err := f.app.DB().NewQuery("UPDATE plugin_instances SET auth={:auth} WHERE id={:id}").Bind(dbx.Params{"auth": string(encoded), "id": instance.Id}).Execute(); err != nil {
+		t.Fatal(err)
+	}
+	start := f.request(t, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "authContext": "oauth_access_token", "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
+	if f.tokenRequests.Load() != 0 {
+		t.Fatal("OAuth start contacted the token provider")
+	}
+	for _, field := range []string{"accessToken", "refreshToken", "password"} {
+		assertUnreadableOAuthSecretUnchanged(t, f, field, unreadable)
+	}
+	f.assertAuthFieldsAbsent(t, "non-PKCE OAuth start", "oauthCodeVerifier")
+	f.request(t, http.MethodPost, "/api/plugin-system/oauth/callback", map[string]any{"instanceId": f.instanceID, "state": start["state"], "code": "test-authorization-code"})
+	if f.tokenRequests.Load() != 1 {
+		t.Fatal("callback did not exchange exactly one authorization code")
+	}
+	assertUnreadableOAuthSecretUnchanged(t, f, "password", unreadable)
+	_, saved := f.storedAuth(t)
+	if saved["accessToken"] != "strava-test-access-rotated" {
+		t.Fatal("new grant was not saved")
+	}
 }

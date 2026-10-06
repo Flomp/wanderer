@@ -214,6 +214,15 @@ func encryptPluginInstanceAuth(app core.App, r *core.Record) error {
 			auth[key] = secret
 			continue
 		}
+		// Preserve unchanged ciphertext even after a key change. Raw legacy
+		// plaintext must still enter encryption on its next normal save. The
+		// narrow Strava legacy format overlaps ciphertext, so a successful
+		// current-key decryption takes precedence over that exception.
+		if originalSecret, ok := originalAuth[key].(string); ok && secret == originalSecret && util.LooksLikeEncrypted(secret) &&
+			(!pluginsystem.IsLegacyPlaintextAuthSecret(r.GetString("plugin_id"), key, secret) || util.CanDecryptSecret(secret)) {
+			auth[key] = secret
+			continue
+		}
 		if util.CanDecryptSecret(secret) {
 			auth[key] = secret
 			continue
@@ -240,19 +249,7 @@ func pluginInstanceSecretFields(app core.App, pluginID string) map[string]bool {
 		return nil
 	}
 
-	fields := map[string]bool{}
-	for _, field := range pluginsystem.InternalAuthSecretFields() {
-		fields[field] = true
-	}
-	for _, context := range manifest.Auth.Contexts {
-		if context.SecretField != "" {
-			fields[context.SecretField] = true
-		}
-		for _, field := range context.SecretFields {
-			fields[field] = true
-		}
-	}
-	return fields
+	return pluginsystem.ManifestAuthSecretFields(manifest)
 }
 
 func pluginInstancePluginManifest(app core.App, pluginID string) (pluginsystem.Manifest, bool) {

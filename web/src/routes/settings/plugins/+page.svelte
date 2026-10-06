@@ -23,6 +23,7 @@
         pluginSetupErrorKey,
         translatePluginError,
     } from "$lib/util/plugin_error_i18n";
+    import { resolveProviderAuth } from "$lib/util/plugin_auth_context";
     import { onMount, tick, untrack } from "svelte";
     import { _, locale } from "svelte-i18n";
     import { theme } from "$lib/stores/theme_store";
@@ -150,7 +151,7 @@
             const saved = await plugin_instances_update({
                 ...instance,
                 enabled: value,
-                status: plugin.auth.type === "oauth2" || value ? "configured" : "disabled",
+                status: providerAuthType(plugin, instance) === "oauth2" || value ? "configured" : "disabled",
             });
             instances = [
                 ...instances.filter((existing) => existing.id != saved.id),
@@ -479,11 +480,20 @@
         return instanceError(instance);
     }
 
+    function providerAuthType(plugin: PluginProvider, instance?: PluginInstance): string {
+        try {
+            return resolveProviderAuth(plugin, instance).auth.type;
+        } catch {
+            return "unresolved";
+        }
+    }
+
     function pluginRequiresConnection(
         plugin: PluginProvider,
         instance: PluginInstance | undefined,
     ) {
-        return plugin.auth.type === "oauth2" && instance?.status !== "configured";
+        const type = providerAuthType(plugin, instance);
+        return type === "unresolved" || (type === "oauth2" && instance?.status !== "configured");
     }
 
     function pluginSettingsModalKey(plugin: PluginProvider) {

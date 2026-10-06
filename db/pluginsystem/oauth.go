@@ -35,24 +35,16 @@ type OAuthTokenResponse struct {
 	Raw          json.RawMessage `json:"-"`
 }
 
-// OAuthContext selects the OAuth auth context declared by a plugin. When the UI
-// does not request a specific context, the first context by name is used.
+// OAuthContext uses the same unambiguous selection as other provider operations.
 func OAuthContext(plugin LocalPlugin, requested string) (string, AuthContext, error) {
-	names := make([]string, 0, len(plugin.Manifest.Auth.Contexts))
-	for name := range plugin.Manifest.Auth.Contexts {
-		names = append(names, name)
+	name, auth, err := ResolveAuthContext(plugin.Manifest, requested)
+	if err != nil {
+		return "", AuthContext{}, err
 	}
-	slices.Sort(names)
-	for _, name := range names {
-		context := plugin.Manifest.Auth.Contexts[name]
-		if requested != "" && requested != name {
-			continue
-		}
-		if context.Type == AuthTypeOAuth2 {
-			return name, context, nil
-		}
+	if auth.Type != AuthTypeOAuth2 {
+		return "", AuthContext{}, fmt.Errorf("plugin has no selected oauth auth context")
 	}
-	return "", AuthContext{}, fmt.Errorf("plugin has no oauth auth context")
+	return name, auth, nil
 }
 
 // ValidateOAuthRedirectURI accepts only the frontend plugin OAuth callback and,
@@ -291,34 +283,32 @@ func ClearOAuthToken(auth map[string]any) {
 	}
 }
 
-// PluginInputAuth returns the auth payload visible to plugin exports. OAuth
-// token material is intentionally removed because provider requests should go
-// through host auth injection instead.
+// PluginInputAuth exposes only the active context's guest credentials. The
+// accessToken remains available for shipped plugins such as Strava; refresh and
+// client secrets plus transient OAuth flow fields stay host-only.
 func PluginInputAuth(plugin LocalPlugin, auth map[string]any) map[string]any {
-	out := map[string]any{}
-	for key, value := range auth {
-		out[key] = value
+	out, err := ActiveAuth(plugin.Manifest, auth)
+	if err != nil {
+		return map[string]any{}
 	}
-	for _, context := range plugin.Manifest.Auth.Contexts {
-		if context.Type == AuthTypeOAuth2 {
-			for _, key := range PluginInputAuthBlockedFields() {
-				delete(out, key)
-			}
+	_, context, _ := EffectiveAuthContext(plugin.Manifest, auth)
+	if context.Type == AuthTypeOAuth2 {
+		for _, key := range PluginInputAuthBlockedFields() {
+			delete(out, key)
 		}
 	}
 	return out
 }
 
-// RefreshOAuthAuthIfNeeded refreshes host-managed OAuth before a sync run if no
-// access token exists or the current token is close to expiry.
+// RefreshOAuthAuthIfNeeded resolves the active context before considering a
+// refresh, so unused OAuth credentials never trigger a provider call.
 func RefreshOAuthAuthIfNeeded(ctx context.Context, app core.App, plugin LocalPlugin, instance *core.Record, auth map[string]any) (map[string]any, error) {
-	for name, authContext := range plugin.Manifest.Auth.Contexts {
-		if authContext.Type != AuthTypeOAuth2 {
-			continue
-		}
-		if StringFromAny(auth[AuthFieldAccessToken]) == "" || OAuthNeedsRefresh(auth) {
-			return RefreshOAuthToken(ctx, app, plugin, instance, auth, name)
-		}
+	name, context, err := EffectiveAuthContext(plugin.Manifest, auth)
+	if err != nil {
+		return auth, err
+	}
+	if context.Type == AuthTypeOAuth2 && (StringFromAny(auth[AuthFieldAccessToken]) == "" || OAuthNeedsRefresh(auth)) {
+		return RefreshOAuthToken(ctx, app, plugin, instance, auth, name)
 	}
 	return auth, nil
 }
