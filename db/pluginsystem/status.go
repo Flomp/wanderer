@@ -44,7 +44,7 @@ func InstanceStatusForPluginError(pluginErr PluginError, now time.Time) Instance
 
 	status := "error"
 	switch code {
-	case "auth_failed", "invalid_grant", "invalid_client", "unauthorized_client":
+	case "auth_failed", "credentials_unreadable", "invalid_grant", "invalid_client", "unauthorized_client":
 		status = "needs_reauth"
 	case "unauthorized":
 		// A rejected item/upload alone does not invalidate the stored grant.

@@ -102,6 +102,15 @@ func TestBundledPluginErrors(t *testing.T) {
 			if strings.Contains(raw, "sentinel") || strings.Contains(raw, "secret") || strings.Contains(raw, "private.example") {
 				t.Fatalf("guest returned sensitive diagnostics: %q", raw)
 			}
+			// The v0.21.x UI shows message for codes it does not know. Inspect
+			// the actual compiled guest wire before modern-host normalization.
+			var guest PluginError
+			if err := json.Unmarshal([]byte(raw), &guest); err != nil {
+				t.Fatal(err)
+			}
+			if guest.Code != tt.code || guest.Message == guest.Code || len(guest.Message) > 200 || !strings.Contains(guest.Message, " ") {
+				t.Fatalf("unreadable legacy-host fallback: %s", raw)
+			}
 			failure := pluginErrorForCode(tt.export, code, raw)
 			if failure.Code != tt.code || failure.Operation != tt.operation || failure.HTTPStatus != tt.status || failure.Message != tt.code {
 				t.Fatalf("unexpected public error: %+v", failure)

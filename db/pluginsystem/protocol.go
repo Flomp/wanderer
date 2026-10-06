@@ -209,6 +209,8 @@ type PluginError struct {
 }
 
 type HostLogEntry struct {
-	Level   string `json:"level"`
-	Message string `json:"message"`
+	Level   string       `json:"level"`
+	Message string       `json:"message"`
+	Event   string       `json:"event,omitempty"`
+	Error   *PluginError `json:"error,omitempty"`
 }

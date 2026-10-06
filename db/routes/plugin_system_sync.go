@@ -119,7 +119,7 @@ func PluginSystemSyncConfigured(ctx context.Context, app core.App, client meilis
 			app.Logger().Info("plugin instance sync started", "plugin", plugin.Manifest.ID, "instance", instance.Id)
 			result, err := syncPluginInstance(ctx, app, client, plugin, instance)
 			if err != nil {
-				app.Logger().Warn("plugin instance sync failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "error", pluginsystem.PublicPluginError(err).Code)
+				pluginsystem.LogPluginFailure(app.Logger(), "plugin instance sync failed", err, "plugin", plugin.Manifest.ID, "instance", instance.Id)
 				syncErr = err
 				continue
 			}
@@ -147,13 +147,13 @@ func pluginInstances(app core.App, pluginID string) ([]*core.Record, error) {
 func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.ServiceManager, plugin pluginsystem.LocalPlugin, instance *core.Record) (*pluginSystemSyncResult, error) {
 	actor, err := app.FindFirstRecordByData("activitypub_actors", "user", instance.GetString("user"))
 	if err != nil {
-		setPluginInstanceStatus(app, instance, "error", "invalid_request", "activitypub actor not found")
-		return nil, err
+		setPluginInstanceStatusForError(app, instance, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("internal_error", ""), "actor_missing"))
+		return nil, pluginsystem.WithDiagnosticCause(err, "actor_missing")
 	}
 
 	auth, err := decryptedInstanceAuth(instance)
 	if err != nil {
-		safe := pluginsystem.Failure("auth_failed", pluginsystem.OperationLogin)
+		safe := pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationLogin), "credentials_unreadable")
 		setPluginInstanceStatusForError(app, instance, safe)
 		return nil, safe
 	}
@@ -187,7 +187,7 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 
 	instance.Set("status", "syncing")
 	if err := app.Save(instance); err != nil {
-		return nil, err
+		return nil, pluginsystem.WithDiagnosticCause(err, "database_save")
 	}
 
 	result := &pluginSystemSyncResult{PluginID: plugin.Manifest.ID}
@@ -229,7 +229,7 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 	instance.Set("retry_not_before", "")
 	instance.Set("status", "configured")
 	if err := app.Save(instance); err != nil {
-		return nil, err
+		return nil, pluginsystem.WithDiagnosticCause(err, "database_save")
 	}
 	return result, nil
 }
@@ -331,7 +331,7 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 		for provider, externalIDs := range externalIDsByProvider {
 			existingIDs, err := util.FindExistingExternalReferenceIDsForUser(app, instance.GetString("user"), provider, externalIDs)
 			if err != nil {
-				return nil, err
+				return nil, pluginsystem.WithDiagnosticCause(err, "database_lookup")
 			}
 			existingIDsByProvider[provider] = existingIDs
 			if providerCategoryBackfillsRemaining > 0 && len(existingIDs) > 0 {
@@ -364,7 +364,7 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 			item, err := pluginDetail(ctx, sessions.session, plugin, detailCapability, instance, auth, pluginConfig, summary)
 			if err != nil {
 				result.Skipped++
-				app.Logger().Warn("skipping plugin item after detail fetch failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "provider", summary.Source.Provider, "external_id", summary.Source.ExternalID, "error", pluginsystem.PublicPluginError(err).Code)
+				pluginsystem.LogPluginFailure(app.Logger(), "skipping plugin item after detail fetch failed", err, "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "source_id", pluginsystem.SourceDiagnosticID(summary.Source.Provider, summary.Source.ExternalID))
 				if pluginsystem.IsRuntimeSessionFatalError(err) {
 					if reopenErr := sessions.reopen(ctx); reopenErr != nil {
 						return nil, reopenErr
@@ -384,16 +384,16 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 				Auth:                        auth,
 			})
 			if err != nil {
-				return nil, err
+				return nil, pluginsystem.WithDiagnosticCause(err, "trail_import")
 			}
 			if imported.Created {
 				result.Imported++
-				app.Logger().Info("imported plugin trail", "provider", item.Source.Provider, "external_id", item.Source.ExternalID, "trail", imported.TrailID)
+				app.Logger().Info("imported plugin trail", "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "source_id", pluginsystem.SourceDiagnosticID(item.Source.Provider, item.Source.ExternalID), "trail", imported.TrailID)
 				if autoMergeEnabled(hostConfig) {
 					settings := trailmerge.DefaultPluginAutoMergeSettings()
 					settings.Enabled = true
 					if err := trailmerge.TryAutoMergeImportedTrail(app, client, ctx, actor, imported.TrailID, settings); err != nil {
-						app.Logger().Warn("unable to auto-merge imported plugin trail", "provider", item.Source.Provider, "external_id", item.Source.ExternalID, "trail", imported.TrailID, "error", pluginsystem.PublicPluginError(err).Code)
+						pluginsystem.LogPluginFailure(app.Logger(), "unable to auto-merge imported plugin trail", pluginsystem.WithDiagnosticCause(err, "auto_merge"), "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "source_id", pluginsystem.SourceDiagnosticID(item.Source.Provider, item.Source.ExternalID), "trail", imported.TrailID)
 					}
 				}
 			}
@@ -409,7 +409,7 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 		hasMore = output.HasMore
 	}
 	if hasMore {
-		return nil, fmt.Errorf("sync stopped after %d batches", defaultPluginSyncMaxBatches)
+		return nil, pluginsystem.WithDiagnosticCause(fmt.Errorf("sync stopped after %d batches", defaultPluginSyncMaxBatches), "batch_limit")
 	}
 	return result, nil
 }
@@ -464,7 +464,7 @@ func backfillProviderCategoryDuringSync(ctx context.Context, app core.App, sessi
 
 	item, err := pluginDetail(ctx, sessions.session, plugin, detailCapability, instance, auth, pluginConfig, summary)
 	if err != nil {
-		app.Logger().Warn("skipping provider category backfill after detail fetch failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "provider", summary.Source.Provider, "external_id", summary.Source.ExternalID, "error", pluginsystem.PublicPluginError(err).Code)
+		pluginsystem.LogPluginFailure(app.Logger(), "skipping provider category backfill after detail fetch failed", err, "plugin", plugin.Manifest.ID, "instance", instance.Id, "source_id", pluginsystem.SourceDiagnosticID(summary.Source.Provider, summary.Source.ExternalID))
 		if pluginsystem.IsRuntimeSessionFatalError(err) {
 			if reopenErr := sessions.reopen(ctx); reopenErr != nil {
 				return true, reopenErr
@@ -476,7 +476,7 @@ func backfillProviderCategoryDuringSync(ctx context.Context, app core.App, sessi
 	ref.Set("provider_category", importer.ProviderCategoryFromImport(item))
 	ref.Set("provider_category_checked_at", time.Now())
 	if err := app.Save(ref); err != nil {
-		return false, err
+		return false, pluginsystem.WithDiagnosticCause(err, "database_save")
 	}
 	return true, nil
 }
@@ -534,7 +534,7 @@ func setPluginInstanceStatus(app core.App, instance *core.Record, status string,
 		"message": message,
 	})
 	if err := app.Save(instance); err != nil {
-		app.Logger().Warn("failed to update plugin instance status", "instance", instance.Id, "error", pluginsystem.PublicPluginError(err).Code)
+		pluginsystem.LogPluginFailure(app.Logger(), "failed to update plugin instance status", pluginsystem.WithDiagnosticCause(err, "database_save"), "instance", instance.Id)
 	}
 }
 
@@ -554,7 +554,7 @@ func setPluginInstanceStatusForError(app core.App, instance *core.Record, err er
 		instance.Set("retry_not_before", "")
 	}
 	if saveErr := app.Save(instance); saveErr != nil {
-		app.Logger().Warn("failed to update plugin instance status", "instance", instance.Id, "error", pluginsystem.PublicPluginError(saveErr).Code)
+		pluginsystem.LogPluginFailure(app.Logger(), "failed to update plugin instance status", pluginsystem.WithDiagnosticCause(saveErr, "database_save"), "instance", instance.Id)
 	}
 }
 

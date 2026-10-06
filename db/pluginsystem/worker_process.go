@@ -249,6 +249,8 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 				Level:     entry.Level,
 				Message:   entry.Message,
 				SessionID: w.sessionID,
+				Event:     entry.Event,
+				Error:     entry.Error,
 			})
 			if err != nil {
 				_, _ = fmt.Fprintf(w.stderr, "plugin log encode failed: session %s\n", w.sessionID)

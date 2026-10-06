@@ -41,10 +41,10 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 	}
 	contextName, authContext, err := sessionAuthContext(plugin, data.AuthContext)
 	if err != nil {
-		return apis.NewBadRequestError("plugin has no session auth context", err)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 	if authContext.Refresh == nil || authContext.Refresh.Function == "" {
-		return apis.NewBadRequestError("plugin session auth context has no refresh function", nil)
+		return pluginOperationAPIError(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 
 	auth := map[string]any{}
@@ -57,7 +57,7 @@ func PluginSystemSessionAuthValidate(e *core.RequestEvent) error {
 		instanceID = instance.Id
 		auth, err = decryptedInstanceAuth(instance)
 		if err != nil {
-			return pluginOperationAPIError(pluginsystem.Failure("auth_failed", pluginsystem.OperationLogin))
+			return pluginOperationAPIError(pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationLogin), "credentials_unreadable"))
 		}
 	}
 	for key, value := range data.Auth {

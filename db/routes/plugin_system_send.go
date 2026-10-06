@@ -80,7 +80,7 @@ func PluginSystemTrailSend(e *core.RequestEvent) error {
 
 	auth, err := decryptedInstanceAuth(instance)
 	if err != nil {
-		return pluginOperationAPIError(pluginsystem.Failure("auth_failed", pluginsystem.OperationLogin))
+		return pluginOperationAPIError(pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationSend), "credentials_unreadable"))
 	}
 
 	input := pluginSystemTrailSendInput{

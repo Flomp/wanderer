@@ -105,13 +105,13 @@ func ExchangeOAuthToken(ctx context.Context, manifest Manifest, authContext Auth
 	}
 	tokenURL, err := url.Parse(authContext.TokenURL)
 	if err != nil {
-		return nil, Failure("invalid_request", operation)
+		return nil, WithDiagnosticCause(Failure("invalid_configuration", operation), "request_policy_rejected")
 	}
 	if tokenURL.Scheme != "http" && tokenURL.Scheme != "https" {
-		return nil, Failure("invalid_request", operation)
+		return nil, WithDiagnosticCause(Failure("invalid_configuration", operation), "request_policy_rejected")
 	}
 	if !OAuthTokenURLAllowed(manifest, tokenURL) {
-		return nil, Failure("invalid_request", operation)
+		return nil, WithDiagnosticCause(Failure("invalid_configuration", operation), "request_policy_rejected")
 	}
 
 	clientID := StringFromAny(auth["clientId"])
@@ -170,12 +170,12 @@ func ExchangeOAuthToken(ctx context.Context, manifest Manifest, authContext Auth
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, Failure("provider_unavailable", operation)
+		return nil, WithDiagnosticCause(Failure("provider_unavailable", operation), "network_unavailable")
 	}
 	defer resp.Body.Close()
 	respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
 	if readErr != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return nil, Failure("provider_unavailable", operation)
+		return nil, WithDiagnosticCause(Failure("provider_unavailable", operation), "network_unavailable")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var rejection struct {
@@ -188,15 +188,15 @@ func ExchangeOAuthToken(ctx context.Context, manifest Manifest, authContext Auth
 			resp.Header.Get("Retry-After"), rejection.Error, time.Now())}
 	}
 	if len(respBody) > 1<<20 {
-		return nil, Failure("invalid_output", operation)
+		return nil, WithDiagnosticCause(PluginFailure{PluginError: PluginError{Code: "invalid_output", Operation: operation, HTTPStatus: resp.StatusCode}}, "token_response_invalid")
 	}
 	var token OAuthTokenResponse
 	token.Raw = append([]byte{}, respBody...)
 	if err := json.Unmarshal(respBody, &token); err != nil {
-		return nil, Failure("invalid_output", operation)
+		return nil, WithDiagnosticCause(PluginFailure{PluginError: PluginError{Code: "invalid_output", Operation: operation, HTTPStatus: resp.StatusCode}}, "token_response_invalid")
 	}
 	if token.AccessToken == "" {
-		return nil, Failure("invalid_output", operation)
+		return nil, WithDiagnosticCause(PluginFailure{PluginError: PluginError{Code: "invalid_output", Operation: operation, HTTPStatus: resp.StatusCode}}, "token_response_invalid")
 	}
 	return &token, nil
 }
@@ -253,7 +253,7 @@ func RefreshOAuthToken(ctx context.Context, app core.App, plugin LocalPlugin, in
 	instance.Set("auth", auth)
 	instance.Set("status", "configured")
 	if err := app.Save(instance); err != nil {
-		return auth, err
+		return auth, WithDiagnosticCause(err, "database_save")
 	}
 	return auth, nil
 }

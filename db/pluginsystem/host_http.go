@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -76,7 +76,7 @@ func extismHostFunctions(manifest Manifest, policy RequestPolicyContext) []extis
 				plugin.Log(extism.LogLevelError, "invalid host log message")
 				return
 			}
-			log.Printf("plugin log [%s]: guest log received", entry.Level)
+			logGuestEntry(entry, "")
 			_ = ctx
 		},
 		[]extism.ValueType{extism.ValueTypePTR},
@@ -114,6 +114,13 @@ func parseHostLogEntry(message []byte) (HostLogEntry, error) {
 	entry.Message = sanitizeHostLogMessage(entry.Message)
 	if entry.Message == "" {
 		return HostLogEntry{}, fmt.Errorf("log message is required")
+	}
+	if entry.Event != "" {
+		entry.Event = safeGuestLogEvent(entry.Event)
+	}
+	if entry.Error != nil {
+		e := NormalizePluginError(*entry.Error)
+		entry.Error = &e
 	}
 	return entry, nil
 }
@@ -192,33 +199,34 @@ func ExecuteHostRequest(ctx context.Context, manifest Manifest, policy RequestPo
 	// below return explicit transient failures instead of their URL-bearing cause.
 	defer func() {
 		if recover() != nil {
-			resultErr = Failure("runtime_error", OperationRuntime)
+			resultErr = WithDiagnosticCause(Failure("runtime_error", OperationRuntime), "runtime_panic")
 		}
 		if resultErr != nil {
 			var failure PluginFailure
 			if !errors.As(resultErr, &failure) {
-				resultErr = Failure("invalid_request", OperationHostHTTP)
+				resultErr = WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "request_policy_rejected")
 			}
+			LogPluginFailure(slog.Default(), "plugin host request failed", resultErr, "plugin", manifest.ID)
 		}
 	}()
 	if err := InjectHostRequestAuthFromPolicy(manifest, policy.HostAuth, &spec); err != nil {
-		return HostResponse{}, err
+		return HostResponse{}, WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "host_auth_invalid")
 	}
 	resolved, err := ValidateAndResolveHostRequestSpec(manifest, spec, policy)
 	if err != nil {
-		return HostResponse{}, err
+		return HostResponse{}, WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "request_policy_rejected")
 	}
 
 	body, contentType, bodySize, err := hostRequestBody(spec, options)
 	if err != nil {
-		return HostResponse{}, err
+		return HostResponse{}, WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "request_body_invalid")
 	}
 	if err := validateHostRequestUpload(manifest, spec, contentType, bodySize); err != nil {
-		return HostResponse{}, err
+		return HostResponse{}, WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "upload_policy_rejected")
 	}
 	req, err := http.NewRequestWithContext(ctx, spec.Method, resolved.URL.String(), body)
 	if err != nil {
-		return HostResponse{}, err
+		return HostResponse{}, WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "request_build_failed")
 	}
 	for key, value := range spec.Headers {
 		req.Header.Set(key, value)
@@ -249,11 +257,11 @@ func ExecuteHostRequest(ctx context.Context, manifest Manifest, policy RequestPo
 		return ValidateConnectorRedirect(resolved.Connector, previous, req.URL)
 	})
 	if err != nil {
-		return HostResponse{}, err
+		return HostResponse{}, WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "connector_client_invalid")
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return HostResponse{}, Failure("provider_unavailable", OperationHostHTTP)
+		return HostResponse{}, WithDiagnosticCause(Failure("provider_unavailable", OperationHostHTTP), "network_unavailable")
 	}
 	defer resp.Body.Close()
 
@@ -261,7 +269,7 @@ func ExecuteHostRequest(ctx context.Context, manifest Manifest, policy RequestPo
 	// HTML 503). Preserve the HTTP status for operation-specific classification.
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		if err := validateHostHTTPResponse(manifest, spec, resp); err != nil {
-			return HostResponse{}, Failure("invalid_output", OperationHostHTTP)
+			return HostResponse{}, WithDiagnosticCause(PluginFailure{PluginError: PluginError{Code: "invalid_output", Operation: OperationHostHTTP, HTTPStatus: resp.StatusCode}}, "response_policy_rejected")
 		}
 	}
 	maxBytes := effectiveResponseMaxBytes(manifest, spec)
@@ -272,10 +280,10 @@ func ExecuteHostRequest(ctx context.Context, manifest Manifest, policy RequestPo
 	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		if err != nil {
-			return HostResponse{}, Failure("provider_unavailable", OperationHostHTTP)
+			return HostResponse{}, WithDiagnosticCause(PluginFailure{PluginError: PluginError{Code: "provider_unavailable", Operation: OperationHostHTTP, HTTPStatus: resp.StatusCode}}, "response_body_incomplete")
 		}
 		if int64(len(bodyBytes)) > limit {
-			return HostResponse{}, Failure("invalid_output", OperationHostHTTP)
+			return HostResponse{}, WithDiagnosticCause(PluginFailure{PluginError: PluginError{Code: "invalid_output", Operation: OperationHostHTTP, HTTPStatus: resp.StatusCode}}, "response_body_oversized")
 		}
 	} else {
 		// The error body is optional. A large or interrupted response must not
