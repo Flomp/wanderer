@@ -33,8 +33,25 @@ func TestHostAuthInjectionPreservesGrantClassification(t *testing.T) {
 			if safe.Code != tc.code || safe.Operation != tc.operation {
 				t.Fatalf("grant classification lost: %#v", safe)
 			}
+			if output.Len() != 0 {
+				t.Fatalf("executor logged before its caller boundary: %s", output.String())
+			}
+			// The low-level call retains metadata; a guest call logs it exactly
+			// once at conversion to the wire response.
+			data, marshalErr := json.Marshal(HostRequestSpec{Method: "GET", Auth: tc.auth, Target: RequestTarget{Type: "connector", Connector: "api", Path: "/v1", Query: []QueryParam{{Name: "token", Value: "query-secret"}}}})
+			if marshalErr != nil {
+				t.Fatal(marshalErr)
+			}
+			response := executeHostHTTPRequest(context.Background(), manifest, policy, data)
+			if response.Error == nil || response.Error.Code != tc.code || response.Error.Operation != tc.operation {
+				t.Fatalf("guest response lost grant classification: %#v", response.Error)
+			}
+			lines := bytes.Split(bytes.TrimSpace(output.Bytes()), []byte("\n"))
+			if len(lines) != 1 {
+				t.Fatalf("guest call logged %d times: %s", len(lines), output.String())
+			}
 			var record map[string]any
-			if err := json.Unmarshal(output.Bytes(), &record); err != nil {
+			if err := json.Unmarshal(lines[0], &record); err != nil {
 				t.Fatal(err)
 			}
 			if record["code"] != tc.code || record["operation"] != tc.operation || record["cause"] != tc.cause {

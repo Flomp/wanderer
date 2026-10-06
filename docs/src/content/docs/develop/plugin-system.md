@@ -730,7 +730,9 @@ Unknown event names are redacted and error metadata is normalized again at the
 worker boundary. Raw messages, provider bodies, URLs, tokens and SQL never become
 log text. Local host failures add fixed cause identifiers and safe database-code
 details. Interactive OAuth, send and session-validation failures use the same
-error metadata as scheduled sync.
+error metadata as scheduled sync. Guest HTTP failures are logged at the
+`http_request` host-call boundary; handler-managed requests are logged by their
+owning route. The shared HTTP executor returns errors without logging them.
 
 Declare `log` in the capability's `requiredHostFunctions`. Logs are best-effort;
 they must not determine plugin control flow.
@@ -876,8 +878,13 @@ when they also belong to the writer's secret field set; a hexadecimal `clientId`
 or other non-secret input is kept as text.
 
 An unchanged stored secret that resembles PocketBase ciphertext is preserved,
-including after a key change. Plaintext secrets are encrypted on their next
-save. The host additionally recognizes the historical 40-hex plaintext Strava
+including after a key change. Values that do not resemble ciphertext are
+encrypted on their next save. Arbitrary ciphertext-like plaintext introduced by
+a raw database insert or a changed manifest secret declaration cannot be
+identified reliably. The current writer also preserves an explicitly re-entered
+value when it is byte-identical to such stored data; this case requires a writer
+that distinguishes explicit plaintext input from unchanged stored material.
+The host additionally recognizes the historical 40-hex plaintext Strava
 `accessToken`, `refreshToken`, and `clientSecret` values imported from older
 wanderer versions. Successful decryption takes precedence over this narrow
 compatibility rule. PocketBase's unmarked ciphertext format overlaps this legacy
