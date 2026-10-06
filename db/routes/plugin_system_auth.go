@@ -37,13 +37,13 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 
 	var data pluginOAuthStartRequest
 	if err := e.BindBody(&data); err != nil {
-		return apis.NewBadRequestError("failed to read request data", err)
+		return apis.NewBadRequestError("failed to read request data", nil)
 	}
 	if data.PluginID == "" || data.RedirectURI == "" {
 		return apis.NewBadRequestError("pluginId and redirectUri are required", nil)
 	}
 	if err := pluginsystem.ValidateOAuthRedirectURI(data.RedirectURI); err != nil {
-		return apis.NewBadRequestError("redirectUri is not allowed", err)
+		return apis.NewBadRequestError("redirectUri is not allowed", nil)
 	}
 
 	plugin, err := localPlugin(e.App, data.PluginID)
@@ -101,14 +101,12 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")
 	if err := e.App.Save(instance); err != nil {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 
 	authURL, err := url.Parse(authContext.AuthorizationURL)
 	if err != nil {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange), "request_build_failed"))
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange), "request_build_failed"))
 	}
 	query := authURL.Query()
 	for key, value := range values {
@@ -131,7 +129,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 
 	var data pluginOAuthCallbackRequest
 	if err := e.BindBody(&data); err != nil {
-		return apis.NewBadRequestError("failed to read request data", err)
+		return apis.NewBadRequestError("failed to read request data", nil)
 	}
 	if data.InstanceID == "" || data.Code == "" || data.State == "" {
 		return apis.NewBadRequestError("instanceId, code and state are required", nil)
@@ -180,8 +178,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	instance.Set("status", "configured")
 	instance.Set("last_error", map[string]any{})
 	if err := e.App.Save(instance); err != nil {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true})
@@ -195,7 +192,7 @@ func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
 
 	var data pluginOAuthRevokeRequest
 	if err := e.BindBody(&data); err != nil {
-		return apis.NewBadRequestError("failed to read request data", err)
+		return apis.NewBadRequestError("failed to read request data", nil)
 	}
 	if data.InstanceID == "" {
 		return apis.NewBadRequestError("instanceId is required", nil)
@@ -213,8 +210,7 @@ func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")
 	if err := e.App.Save(instance); err != nil {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 	return e.JSON(http.StatusOK, map[string]any{"ok": true})
 }
@@ -227,9 +223,13 @@ func pluginAuthInstance(app core.App, userID string, pluginID string, instanceID
 		}
 		return instance, nil
 	}
-	return app.FindFirstRecordByFilter(
+	instance, err := app.FindFirstRecordByFilter(
 		"plugin_instances",
 		"user={:user} && plugin_id={:plugin_id}",
 		dbx.Params{"user": userID, "plugin_id": pluginID},
 	)
+	if err != nil {
+		return nil, apis.NewNotFoundError("plugin instance not found", nil)
+	}
+	return instance, nil
 }

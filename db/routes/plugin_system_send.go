@@ -55,7 +55,7 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 
 	var data pluginSystemTrailSendRequest
 	if err := e.BindBody(&data); err != nil {
-		return apis.NewBadRequestError("Failed to read request data", err)
+		return apis.NewBadRequestError("Failed to read request data", nil)
 	}
 	if data.PluginID == "" || data.TrailID == "" {
 		return apis.NewBadRequestError("pluginId and trailId are required", nil)
@@ -87,11 +87,14 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 
 	gpx, err := readTrailGPX(e.App, trail)
 	if err != nil {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "file_read_failed"))
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "file_read_failed"))
 	}
 	if len(gpx) == 0 {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationSend), "trail_gpx_missing"))
+		cause := "trail_gpx_missing"
+		if trail.GetString("gpx") != "" {
+			cause = "trail_gpx_empty"
+		}
+		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationSend), cause))
 		return apis.NewBadRequestError("trail has no GPX track", nil)
 	}
 
@@ -118,14 +121,12 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 	input.Config = pluginConfig
 	inputBytes, err := json.Marshal(input)
 	if err != nil {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 	}
 
 	runtime, err := runtimeFor(plugin)
 	if err != nil {
-		logPluginOperationFailure(e, logContext, err)
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy.WithHostAuth(auth))
 	if err != nil {

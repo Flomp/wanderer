@@ -733,6 +733,10 @@ details. Interactive OAuth, send and session-validation failures use the same
 error metadata as scheduled sync. Guest HTTP failures are logged at the
 `http_request` host-call boundary; handler-managed requests are logged by their
 owning route. The shared HTTP executor returns errors without logging them.
+Route failures return a safe `ApiError` without raw underlying errors or raw
+error data, because PocketBase also records returned errors in its request log.
+An absent GPX field is an INFO prerequisite diagnostic; unreadable or empty
+referenced files remain WARN diagnostics.
 
 Declare `log` in the capability's `requiredHostFunctions`. Logs are best-effort;
 they must not determine plugin control flow.

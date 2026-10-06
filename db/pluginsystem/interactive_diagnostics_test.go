@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
 	"log/slog"
 	"strings"
 	"testing"
@@ -22,9 +21,7 @@ func TestHostAuthInjectionPreservesGrantClassification(t *testing.T) {
 			manifest.Permissions.Network.Connectors[0].Auth = []string{"account"}
 			policy := testHostPolicy(t, "https://provider-secret.test")
 			var output bytes.Buffer
-			previous := slog.Default()
-			slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
-			t.Cleanup(func() { slog.SetDefault(previous) })
+			setPluginTestDefaultLogger(t, slog.New(slog.NewJSONHandler(&output, nil)))
 			_, err := ExecuteHostRequest(context.Background(), manifest, policy, HostRequestSpec{Method: "GET", Auth: tc.auth, Target: RequestTarget{Type: "connector", Connector: "api", Path: "/v1", Query: []QueryParam{{Name: "token", Value: "query-secret"}}}}, HostRequestOptions{})
 			if err == nil {
 				t.Fatal("request reached the network without permitted credentials")
@@ -79,9 +76,7 @@ func TestGuestDiagnosticRetryAfterSurvivesWorkerRPC(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var output bytes.Buffer
-			previous := log.Writer()
-			log.SetOutput(&output)
-			t.Cleanup(func() { log.SetOutput(previous) })
+			setPluginTestStandardLogWriter(t, &output)
 			retry := tc.retry
 			msg, err := workerMessageWithData(workerMessageHostLog, workerHostLog{Level: "warn", Message: "provider-body-secret", Event: "request_failed", SessionID: "guest-session-secret", Error: &PluginError{Code: "rate_limited", Message: "provider-token-secret", Operation: OperationDetail, HTTPStatus: 429, RetryAfterSeconds: &retry}})
 			if err != nil {

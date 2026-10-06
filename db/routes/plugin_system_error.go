@@ -66,8 +66,8 @@ func pluginOperationAPIErrorForEvent(e *core.RequestEvent, context pluginOperati
 	return pluginOperationAPIError(err)
 }
 
-// Raw local errors keep their existing HTTP/API response; call this before
-// returning them to record a safe diagnostic without changing that contract.
+// Log only closed diagnostic metadata. Return a safe ApiError separately: the
+// PocketBase request logger also records returned errors and ApiError raw data.
 func logPluginOperationFailure(e *core.RequestEvent, context pluginOperationLogContext, err error) {
 	action := "plugin_operation"
 	switch context.Action {

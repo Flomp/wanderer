@@ -182,9 +182,22 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 		func(ctx context.Context, plugin *extism.CurrentPlugin, stack []uint64) {
 			requestBytes, err := plugin.ReadBytes(stack[0])
 			if err != nil {
-				writeHostHTTPResponse(ctx, plugin, stack, hostHTTPResponse{
-					Error: &PluginError{Code: "invalid_request", Message: "invalid_request"},
+				// This failure happens before the parent HTTP executor. Forward
+				// only typed metadata, never the guest memory error, for logging
+				// through the same child/parent boundary as structured events.
+				failure := NormalizePluginError(PluginError{Code: "invalid_request", Operation: OperationHostHTTP})
+				msg, encodeErr := workerMessageWithData(workerMessageHostLog, workerHostLog{
+					Level: "warn", Message: "invalid_request", Event: "request_failed", Error: &failure,
 				})
+				if encodeErr != nil {
+					w.failHostRPC(stack, Failure("internal_error", OperationHostHTTP))
+					return
+				}
+				if writeErr := writeWorkerMessage(w.stdout, w.responseMaxBytes, msg); writeErr != nil {
+					w.failHostRPC(stack, Failure("internal_error", OperationHostHTTP))
+					return
+				}
+				writeHostHTTPResponse(ctx, plugin, stack, hostHTTPResponse{Error: &failure})
 				return
 			}
 			msg, err := workerMessageWithData(workerMessageHostHTTPRequest, workerHostHTTPRequest{

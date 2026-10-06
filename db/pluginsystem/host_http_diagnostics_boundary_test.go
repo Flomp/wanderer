@@ -44,9 +44,7 @@ func TestHostHTTPDiagnosticLogsOnceAtGuestBoundary(t *testing.T) {
 				}
 			}
 			var output bytes.Buffer
-			original := slog.Default()
-			slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
-			t.Cleanup(func() { slog.SetDefault(original) })
+			setPluginTestDefaultLogger(t, slog.New(slog.NewJSONHandler(&output, nil)))
 			var spec HostRequestSpec
 			if json.Unmarshal(data, &spec) == nil {
 				_, err := ExecuteHostRequest(context.Background(), manifest, policy, spec, HostRequestOptions{})
@@ -65,14 +63,7 @@ func TestHostHTTPDiagnosticLogsOnceAtGuestBoundary(t *testing.T) {
 			if response.Error == nil || response.Error.Code != tc.code || response.Error.Operation != OperationHostHTTP || response.Error.HTTPStatus != tc.status {
 				t.Fatalf("wire classification changed: %#v", response.Error)
 			}
-			lines := bytes.Split(bytes.TrimSpace(output.Bytes()), []byte("\n"))
-			if len(lines) != 1 {
-				t.Fatalf("guest boundary logged %d times: %s", len(lines), output.String())
-			}
-			var record map[string]any
-			if err := json.Unmarshal(lines[0], &record); err != nil {
-				t.Fatal(err)
-			}
+			record := singlePluginDiagnosticRecord(t, &output)
 			for key, want := range map[string]any{"plugin": manifest.ID, "code": tc.code, "cause": tc.cause, "class": tc.class, "operation": OperationHostHTTP, "http_status": float64(tc.status)} {
 				if record[key] != want {
 					t.Errorf("diagnostic %s=%#v, want %#v: %s", key, record[key], want, output.String())
@@ -92,9 +83,7 @@ func TestHostHTTPExecutorNormalizesNetworkFailureWithoutLogging(t *testing.T) {
 	provider := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	provider.Close()
 	var output bytes.Buffer
-	original := slog.Default()
-	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
-	t.Cleanup(func() { slog.SetDefault(original) })
+	setPluginTestDefaultLogger(t, slog.New(slog.NewJSONHandler(&output, nil)))
 	manifest := testHostManifest(t, provider.URL)
 	policy := testHostPolicy(t, provider.URL)
 	spec := HostRequestSpec{Method: "GET", Target: RequestTarget{Type: "connector", Connector: "api", Path: "/v1", Query: []QueryParam{{Name: "token", Value: "query-secret"}}}}
@@ -113,9 +102,11 @@ func TestHostHTTPExecutorNormalizesNetworkFailureWithoutLogging(t *testing.T) {
 	if response.Error == nil || response.Error.Code != "provider_unavailable" {
 		t.Fatalf("lost guest network failure: %#v", response.Error)
 	}
-	lines := bytes.Split(bytes.TrimSpace(output.Bytes()), []byte("\n"))
-	if len(lines) != 1 {
-		t.Fatalf("guest boundary logged %d times: %s", len(lines), output.String())
+	record := singlePluginDiagnosticRecord(t, &output)
+	for key, want := range map[string]any{"plugin": manifest.ID, "code": "provider_unavailable", "class": "transient", "cause": "network_unavailable", "operation": OperationHostHTTP, "http_status": float64(0)} {
+		if record[key] != want {
+			t.Errorf("network diagnostic %s=%#v, want %#v: %s", key, record[key], want, output.String())
+		}
 	}
 	if strings.Contains(output.String(), "query-secret") || strings.Contains(output.String(), provider.URL) {
 		t.Fatalf("network diagnostic leaked source: %s", output.String())

@@ -52,7 +52,7 @@ func redactPluginDiagnostics(plugins []pluginsystem.PluginInfo) {
 func localPlugin(app core.App, pluginID string) (pluginsystem.LocalPlugin, error) {
 	plugin, err := pluginsystem.LoadInstalledPlugin(app, "", pluginID)
 	if err != nil {
-		return pluginsystem.LocalPlugin{}, apis.NewBadRequestError("unknown plugin", err)
+		return pluginsystem.LocalPlugin{}, apis.NewBadRequestError("unknown plugin", nil)
 	}
 	return plugin, nil
 }
