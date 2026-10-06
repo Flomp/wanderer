@@ -34,6 +34,14 @@ const OptionalAuthSchema = z.preprocess(
     z.record(z.string(), z.string()).optional(),
 );
 
+const PluginSessionAuthValidateSchema = z.object({
+    pluginId: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9_-]*$/),
+    instanceId: z.string().length(15).optional(),
+    authContext: z.string().min(1).optional(),
+    auth: z.record(z.string(), z.string()),
+    config: z.record(z.string(), z.unknown()).optional(),
+});
+
 const PluginInstanceCreateSchema = z.object({
     user: z.string().length(15),
     plugin_id: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9_-]*$/),
@@ -53,6 +61,7 @@ const PluginInstanceUpdateSchema = z.object({
 });
 
 export {
+    PluginSessionAuthValidateSchema,
     PluginInstanceCreateSchema,
     PluginInstanceUpdateSchema,
     PluginInstanceStatusSchema,

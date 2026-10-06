@@ -19,6 +19,21 @@ export interface ConfigField {
     hidden?: boolean;
 }
 
+export interface PluginAuthContext {
+    type: string;
+    fields?: string[];
+    secretFields?: string[];
+    secretField?: string;
+    authorizationUrl?: string;
+    tokenUrl?: string;
+    tokenRequestFormat?: "json" | "form";
+    scopes?: string[];
+    scopeSeparator?: string;
+    authorizationParams?: Record<string, string>;
+    pkce?: boolean;
+    tokenAuth?: string;
+}
+
 export interface PluginProvider {
     id: string;
     type: "trails";
@@ -35,19 +50,10 @@ export interface PluginProvider {
     version?: string;
     protocolVersion?: string;
     risk?: string;
-    auth: {
-        type: string;
-        fields?: string[];
-        secretFields?: string[];
-        authorizationUrl?: string;
-        tokenUrl?: string;
-        tokenRequestFormat?: "json" | "form";
-        scopes?: string[];
-        scopeSeparator?: string;
-        authorizationParams?: Record<string, string>;
-        pkce?: boolean;
-        tokenAuth?: string;
-    };
+    auth: PluginAuthContext;
+    authContext?: string;
+    authContextError?: string;
+    authContexts?: Record<string, PluginAuthContext>;
     configSchema?: ConfigField[];
     hostConfig?: Record<string, unknown>;
     metadata?: Record<string, unknown>;

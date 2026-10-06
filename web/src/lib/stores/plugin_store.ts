@@ -1,6 +1,7 @@
-import type { LocalizedTextMap, PluginProvider } from "$lib/models/plugin_provider";
+import type { LocalizedTextMap, PluginAuthContext, PluginProvider } from "$lib/models/plugin_provider";
 import type { PluginSystemPlugin } from "$lib/models/plugin_system";
 import { APIError } from "$lib/util/api_util";
+import { resolvePluginAuthContext } from "$lib/util/plugin_auth_context";
 import { derived, writable, type Readable, type Writable } from "svelte/store";
 import {
     pluginInstances,
@@ -67,10 +68,19 @@ export async function plugins_index(
 }
 
 function pluginSystemToPluginProvider(plugin: PluginSystemPlugin): PluginProvider {
-    const contexts = Object.entries(
-        (plugin.manifest.auth?.contexts ?? {}) as Record<string, any>,
-    );
-    const primaryAuth = contexts[0]?.[1] ?? {};
+    const contexts = (plugin.manifest.auth?.contexts ?? {}) as Record<string, PluginAuthContext>;
+    let primaryAuth: PluginAuthContext = { type: "unresolved" };
+    let authContext: string | undefined;
+    let authContextError: string | undefined;
+    try {
+        const resolved = resolvePluginAuthContext(contexts);
+        primaryAuth = resolved.auth;
+        authContext = resolved.name;
+    } catch {
+        authContextError = "auth_context_ambiguous";
+        // An existing instance may have an explicit context. Defer resolution
+        // until it is available; never pick a context from manifest map order.
+    }
     const fields =
         primaryAuth.fields ??
         primaryAuth.secretFields ??
@@ -108,6 +118,9 @@ function pluginSystemToPluginProvider(plugin: PluginSystemPlugin): PluginProvide
             pkce: primaryAuth.pkce,
             tokenAuth: primaryAuth.tokenAuth,
         },
+        authContext,
+        authContextError,
+        authContexts: contexts,
         configSchema: plugin.manifest.configSchema as PluginProvider["configSchema"],
         hostConfig: plugin.manifest.hostConfig,
         metadata,

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"errors"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -37,6 +38,20 @@ func firstProviderHeader(headers map[string][]string, name string) string {
 		}
 	}
 	return ""
+}
+
+// Active ciphertext failure requires credential repair. An unknown or ambiguous
+// context is a configuration error and must not masquerade as a rejected grant.
+func pluginAuthFailure(err error, operation string) error {
+	code := "invalid_configuration"
+	if errors.Is(err, pluginsystem.ErrActiveCredentialsUnreadable) {
+		code = "credentials_unreadable"
+	}
+	cause := "auth_context_invalid"
+	if code == "credentials_unreadable" {
+		cause = "credentials_unreadable"
+	}
+	return pluginsystem.WithDiagnosticCause(pluginsystem.Failure(code, operation), cause)
 }
 
 // References are populated only after host lookup/ownership checks. Request
