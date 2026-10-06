@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"strings"
 	"testing"
@@ -100,9 +99,7 @@ func TestDatabaseDiagnosticUsesRealDriverCodeAndHidesSQL(t *testing.T) {
 
 func TestHostPolicyDiagnosticRecordsBoundaryWithoutGuestURL(t *testing.T) {
 	var output bytes.Buffer
-	previous := slog.Default()
-	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
-	t.Cleanup(func() { slog.SetDefault(previous) })
+	setPluginTestDefaultLogger(t, slog.New(slog.NewJSONHandler(&output, nil)))
 	manifest := testHostManifest(t, "https://provider.test")
 	policy := testHostPolicy(t, "https://provider.test")
 	data := []byte(`{"method":"GET","target":{"type":"connector","connector":"secret-invalid","path":"/?token=secret"}}`)
@@ -124,9 +121,7 @@ func TestHostPolicyDiagnosticRecordsBoundaryWithoutGuestURL(t *testing.T) {
 
 func TestStructuredGuestEventSurvivesRPCAndNormalizesAgain(t *testing.T) {
 	var output bytes.Buffer
-	previous := log.Writer()
-	log.SetOutput(&output)
-	t.Cleanup(func() { log.SetOutput(previous) })
+	setPluginTestStandardLogWriter(t, &output)
 	entry, err := parseHostLogEntry([]byte(`{"level":"warn","message":"provider-body-secret","event":"request_failed","error":{"code":"rate_limited","message":"https://secret.invalid","operation":"detail","httpStatus":429}}`))
 	if err != nil {
 		t.Fatal(err)

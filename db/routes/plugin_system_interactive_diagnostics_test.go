@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -35,6 +36,8 @@ func (a interactiveDiagnosticApp) Logger() *slog.Logger { return a.logger }
 
 func interactiveDiagnosticHandler(t *testing.T, app core.App, output *bytes.Buffer, paths map[string]func(*core.RequestEvent) error) http.Handler {
 	t.Helper()
+	// pbtests keeps MaxDays=0 to disable asynchronous request logs. This helper
+	// captures synchronous route diagnostics; persisted _logs has separate tests.
 	router, err := apis.NewRouter(app)
 	if err != nil {
 		t.Fatal(err)
@@ -51,6 +54,21 @@ func interactiveDiagnosticHandler(t *testing.T, app core.App, output *bytes.Buff
 		t.Fatal(err)
 	}
 	return handler
+}
+
+// SetDefault also redirects the standard logger and resets its flags.
+// Restore all global state, including caller-defined prefixes, after each test.
+func setInteractiveDefaultLogger(t *testing.T, output *bytes.Buffer) {
+	t.Helper()
+	previousLogger := slog.Default()
+	previousWriter, previousFlags, previousPrefix := log.Writer(), log.Flags(), log.Prefix()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(output, nil)))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+		log.SetOutput(previousWriter)
+		log.SetFlags(previousFlags)
+		log.SetPrefix(previousPrefix)
+	})
 }
 
 func interactiveDiagnosticRequest(t *testing.T, handler http.Handler, token, path string, body map[string]any) (int, map[string]any) {
@@ -289,8 +307,8 @@ func TestSessionValidateLogsGuestMetadataAtAppBoundary(t *testing.T) {
 	assertInteractiveDiagnostic(t, &output, map[string]any{"action": "session_validate", "owner": f.owner.Id, "plugin": f.manifest.ID, "instance": f.instance.Id, "code": "rate_limited", "class": "rate_limit", "operation": pluginsystem.OperationLogin, "http_status": float64(429), "retry_after_seconds": float64(0)}, "provider-body-secret", "provider-token-secret", f.baseURL, "credential-secret")
 }
 
-// The guest only supplies a send plan. The production handler, injector,
-// executor and real HTTP provider are used to test the final failure boundary.
+// The guest supplies a send plan. Tests below cover the actual Send route and
+// classifier, with either a local test transport or the productive executor.
 type diagnosticSendRuntime struct{ request pluginsystem.HostRequestSpec }
 
 func (*diagnosticSendRuntime) Call(context.Context, pluginsystem.LocalPlugin, string, []byte, pluginsystem.RequestPolicyContext) ([]byte, error) {
@@ -319,29 +337,12 @@ func TestSendLogsRealProviderRejectionAtAppBoundary(t *testing.T) {
 		w.WriteHeader(429)
 		_, _ = w.Write([]byte(`{"error":"provider-body-secret"}`))
 	})
-	trails := core.NewBaseCollection("trails")
-	trails.Fields.Add(&core.BoolField{Name: "public"}, &core.TextField{Name: "name"}, &core.FileField{Name: "gpx", MaxSelect: 1})
-	if err := f.app.Save(trails); err != nil {
-		t.Fatal(err)
-	}
-	trail := core.NewRecord(trails)
-	trail.Set("public", true)
-	trail.Set("name", "guest-trail-name-secret")
-	file, err := filesystem.NewFileFromBytes([]byte(`<gpx version="1.1"></gpx>`), "source-file-secret.gpx")
-	if err != nil {
-		t.Fatal(err)
-	}
-	trail.Set("gpx", file)
-	if err := f.app.Save(trail); err != nil {
-		t.Fatal(err)
-	}
+	trail := newInteractiveDiagnosticTrail(t, f)
 	runtime := &diagnosticSendRuntime{request: pluginsystem.HostRequestSpec{Method: http.MethodGet, Target: pluginsystem.RequestTarget{Type: "connector", Connector: "api", Path: "/reject", Query: []pluginsystem.QueryParam{{Name: "token", Value: "query-secret"}}}, Headers: map[string]string{"Authorization": "Bearer provider-token-secret"}}}
 	var output bytes.Buffer
-	// App and global diagnostics target the same output, so any duplicate host
-	// executor log would fail the existing one-line assertion below.
-	previousLogger := slog.Default()
-	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
-	t.Cleanup(func() { slog.SetDefault(previousLogger) })
+	// This seam test checks real provider HTTP, production classification and
+	// the route log/API. Productive executor duplicate logging is tested below.
+	setInteractiveDefaultLogger(t, &output)
 	handler := interactiveDiagnosticHandler(t, f.app, &output, map[string]func(*core.RequestEvent) error{"/api/test/send": func(e *core.RequestEvent) error {
 		return pluginSystemTrailSendWithHostRequest(e, func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error) { return runtime, nil }, func(ctx context.Context, manifest pluginsystem.Manifest, policy pluginsystem.RequestPolicyContext, spec pluginsystem.HostRequestSpec, _ pluginsystem.HostRequestOptions) (pluginsystem.HostResponse, error) {
 			// Exercise the real connector target resolution, HTTP response and
@@ -387,4 +388,63 @@ func TestSendLogsRealProviderRejectionAtAppBoundary(t *testing.T) {
 		t.Fatalf("provider requests %d, want exactly one", providerRequests.Load())
 	}
 	assertInteractiveDiagnostic(t, &output, map[string]any{"action": "send", "owner": f.owner.Id, "plugin": f.manifest.ID, "instance": f.instance.Id, "code": "rate_limited", "class": "rate_limit", "operation": pluginsystem.OperationSend, "http_status": float64(429), "retry_after_seconds": float64(0)}, f.baseURL, "query-secret", "provider-token-secret", "provider-body-secret", "credential-secret", "guest-trail-name-secret", "source-file-secret.gpx")
+}
+
+func newInteractiveDiagnosticTrail(t *testing.T, f *interactivePluginFixture) *core.Record {
+	t.Helper()
+	trails := core.NewBaseCollection("trails")
+	trails.Fields.Add(&core.BoolField{Name: "public"}, &core.TextField{Name: "name"}, &core.FileField{Name: "gpx", MaxSelect: 1})
+	if err := f.app.Save(trails); err != nil {
+		t.Fatal(err)
+	}
+	trail := core.NewRecord(trails)
+	trail.Set("public", true)
+	trail.Set("name", "guest-trail-name-secret")
+	file, err := filesystem.NewFileFromBytes([]byte(`<gpx version="1.1"></gpx>`), "source-file-secret.gpx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	trail.Set("gpx", file)
+	if err := f.app.Save(trail); err != nil {
+		t.Fatal(err)
+	}
+	return trail
+}
+
+func TestSendProductiveExecutorLogsOnceAtRouteBoundary(t *testing.T) {
+	f := newInteractivePluginFixture(t, nil)
+	// The configured origin is syntactically valid. Production's connector
+	// client rejects literal loopback before dial, including allowPrivate=true.
+	// No listener, private interface, external DNS or injected executor is used.
+	f.baseURL = "http://127.0.0.1:1"
+	installed, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", f.manifest.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installed.Set("config", map[string]any{"host": map[string]any{"connectors": map[string]any{"server": map[string]any{"baseURL": f.baseURL, "allowPrivate": true}}}})
+	if err := f.app.Save(installed); err != nil {
+		t.Fatal(err)
+	}
+	trail := newInteractiveDiagnosticTrail(t, f)
+	runtime := &diagnosticSendRuntime{request: pluginsystem.HostRequestSpec{Method: http.MethodGet, Target: pluginsystem.RequestTarget{Type: "connector", Connector: "api", Path: "/reject", Query: []pluginsystem.QueryParam{{Name: "token", Value: "query-secret"}}}, Headers: map[string]string{"Authorization": "Bearer provider-token-secret"}}}
+	var output bytes.Buffer
+	// Capture both App and global diagnostics. The actual executor used to log
+	// once itself and once at this route, so the one-line assertion is decisive.
+	setInteractiveDefaultLogger(t, &output)
+	handler := interactiveDiagnosticHandler(t, f.app, &output, map[string]func(*core.RequestEvent) error{"/api/test/send": func(e *core.RequestEvent) error {
+		return pluginSystemTrailSend(e, func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error) { return runtime, nil })
+	}})
+	token, err := f.owner.NewAuthToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, body := interactiveDiagnosticRequest(t, handler, token, "/api/test/send", map[string]any{"pluginId": f.manifest.ID, "trailId": trail.Id})
+	if status != http.StatusBadRequest {
+		t.Fatalf("send status %d: %#v", status, body)
+	}
+	operation := body["data"].(map[string]any)["operation"].(map[string]any)
+	if operation["code"] != "provider_unavailable" || operation["params"].(map[string]any)["operation"] != pluginsystem.OperationHostHTTP {
+		t.Fatalf("send did not reach productive connector transport: %#v", body)
+	}
+	assertInteractiveDiagnostic(t, &output, map[string]any{"action": "send", "owner": f.owner.Id, "plugin": f.manifest.ID, "instance": f.instance.Id, "code": "provider_unavailable", "operation": pluginsystem.OperationHostHTTP, "cause": "network_unavailable"}, f.baseURL, "query-secret", "provider-token-secret", "credential-secret", "guest-trail-name-secret", "source-file-secret.gpx")
 }

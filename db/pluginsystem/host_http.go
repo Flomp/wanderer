@@ -50,9 +50,10 @@ func extismHostFunctions(manifest Manifest, policy RequestPolicyContext) []extis
 		func(ctx context.Context, plugin *extism.CurrentPlugin, stack []uint64) {
 			requestBytes, err := plugin.ReadBytes(stack[0])
 			if err != nil {
-				writeHostHTTPResponse(ctx, plugin, stack, hostHTTPResponse{
-					Error: &PluginError{Code: "invalid_request", Message: "invalid_request"},
-				})
+				// The memory error may include guest-controlled details. Classify
+				// at this boundary before the response crosses back into WASM.
+				failure := WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "input_encoding")
+				writeHostHTTPResponse(ctx, plugin, stack, hostHTTPFailureResponse(manifest, failure))
 				return
 			}
 			response := executeHostHTTPRequest(ctx, manifest, policy, requestBytes)
@@ -164,17 +165,21 @@ func executeHostHTTPRequest(ctx context.Context, manifest Manifest, policy Reque
 		executed, err = ExecuteHostRequest(ctx, manifest, policy, spec, HostRequestOptions{})
 	}
 	if err != nil {
-		// The caller owns logging: guest requests log here, while interactive
-		// sends retain their failure until the RequestEvent/App boundary.
-		LogPluginFailure(slog.Default(), "plugin host request failed", err, "plugin", manifest.ID)
-		safe := PublicPluginError(err)
-		return hostHTTPResponse{Error: &safe}
+		return hostHTTPFailureResponse(manifest, err)
 	}
 	return hostHTTPResponse{
 		Status:       executed.Status,
 		HeaderValues: executed.HeaderValues,
 		BodyBase64:   base64.StdEncoding.EncodeToString(executed.Body),
 	}
+}
+
+// Only guest call boundaries log here. Interactive send errors remain typed
+// until the RequestEvent/App boundary, which has the verified instance context.
+func hostHTTPFailureResponse(manifest Manifest, err error) hostHTTPResponse {
+	LogPluginFailure(slog.Default(), "plugin host request failed", err, "plugin", manifest.ID)
+	safe := PublicPluginError(err)
+	return hostHTTPResponse{Error: &safe}
 }
 
 func writeHostHTTPResponse(ctx context.Context, plugin *extism.CurrentPlugin, stack []uint64, response hostHTTPResponse) {

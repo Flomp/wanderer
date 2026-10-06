@@ -36,7 +36,7 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 
 	var data pluginSessionAuthValidateRequest
 	if err := e.BindBody(&data); err != nil {
-		return apis.NewBadRequestError("failed to read request data", err)
+		return apis.NewBadRequestError("failed to read request data", nil)
 	}
 	if data.PluginID == "" {
 		return apis.NewBadRequestError("pluginId is required", nil)
@@ -122,14 +122,12 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 		Config: pluginRuntimeConfig(config),
 	})
 	if err != nil {
-		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 	}
 
 	runtime, err := runtimeFor(plugin)
 	if err != nil {
-		logPluginOperationFailure(e, logContext, err)
-		return err
+		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	policy = policy.WithHostAuth(auth)
 	output, err := runtime.Call(e.Request.Context(), plugin, authContext.Refresh.Function, inputBytes, policy)
