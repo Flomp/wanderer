@@ -61,9 +61,9 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 		return err
 	}
 	logContext.InstanceID = instance.Id
-	auth, err := decryptedInstanceAuth(instance)
+	auth, err := decryptedOAuthFlowAuth(instance, plugin.Manifest, authContext, false)
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationOAuthExchange), "credentials_unreadable"))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	clientID := pluginsystem.StringFromAny(auth["clientId"])
 	if clientID == "" {
@@ -91,6 +91,8 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	for key, value := range authContext.AuthorizationParams {
 		values.Set(key, value)
 	}
+	// A fresh non-PKCE flow must discard a stale verifier without reading it.
+	auth[pluginsystem.AuthFieldOAuthCodeVerifier] = nil
 	if authContext.PKCE {
 		verifier := pluginsystem.NewOAuthCodeVerifier(64)
 		auth[pluginsystem.AuthFieldOAuthCodeVerifier] = verifier
@@ -139,31 +141,33 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	if err != nil || instance.GetString("user") != e.Auth.Id {
 		return apis.NewNotFoundError("plugin instance not found", nil)
 	}
+	logContext.InstanceID = instance.Id
 	plugin, err := localPlugin(e.App, instance.GetString("plugin_id"))
 	if err != nil {
 		return err
 	}
 	logContext.PluginID = plugin.Manifest.ID
-	logContext.InstanceID = instance.Id
-	auth, err := decryptedInstanceAuth(instance)
+	storedAuth := pluginsystem.JSONMapFromRecord(instance, "auth")
+	contextName, authContext, err := pluginsystem.EffectiveAuthContext(plugin.Manifest, storedAuth)
+	if err != nil || authContext.Type != pluginsystem.AuthTypeOAuth2 {
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
+	}
+	auth, err := decryptedOAuthFlowAuth(instance, plugin.Manifest, authContext, true)
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationOAuthExchange), "credentials_unreadable"))
+		return pluginOperationAPIErrorForEvent(e, logContext, pluginAuthFailure(err, pluginsystem.OperationOAuthExchange))
 	}
 	if data.State != pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthState]) {
 		logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationOAuthExchange), "host_auth_invalid"))
 		return apis.NewBadRequestError("invalid oauth state", nil)
 	}
-	contextName := pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthContext])
-	_, authContext, err := pluginsystem.OAuthContext(plugin, contextName)
-	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationOAuthExchange))
-	}
 
 	values := map[string]string{
-		"grant_type":    "authorization_code",
-		"code":          data.Code,
-		"redirect_uri":  pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthRedirectURI]),
-		"code_verifier": pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthCodeVerifier]),
+		"grant_type":   "authorization_code",
+		"code":         data.Code,
+		"redirect_uri": pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthRedirectURI]),
+	}
+	if authContext.PKCE {
+		values["code_verifier"] = pluginsystem.StringFromAny(auth[pluginsystem.AuthFieldOAuthCodeVerifier])
 	}
 	token, err := pluginsystem.ExchangeOAuthToken(e.Request.Context(), plugin.Manifest, authContext, auth, values)
 	if err != nil {
@@ -202,10 +206,7 @@ func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
 		return apis.NewNotFoundError("plugin instance not found", nil)
 	}
 	logContext.InstanceID = instance.Id
-	auth, err := decryptedInstanceAuth(instance)
-	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationOAuthExchange), "credentials_unreadable"))
-	}
+	auth := pluginsystem.JSONMapFromRecord(instance, "auth")
 	pluginsystem.ClearOAuthToken(auth)
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")

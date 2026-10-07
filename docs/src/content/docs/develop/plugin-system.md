@@ -891,7 +891,29 @@ trail.gpx
 ## Auth
 
 Auth contexts are declared in the manifest and referenced by name from
-`HostRequestSpec.auth`.
+`HostRequestSpec.auth`. The current host resolves the selected context from the
+legacy `auth.oauthContext` value, which also stores OAuth grant metadata. It is
+not an independent persistent selection. If no context is selected, the host can infer only a single
+manifest context. Unknown names and ambiguous manifests are rejected before
+provider work. Only the selected context's credentials are decrypted and passed
+to provider operations; inactive credentials and pending flow secrets are not
+part of ordinary capability input. Declared input fields are decrypted only
+when they also belong to the writer's secret field set; a hexadecimal `clientId`
+or other non-secret input is kept as text.
+
+An unchanged stored secret that resembles PocketBase ciphertext is preserved,
+including after a key change. Values that do not resemble ciphertext are
+encrypted on their next save. Arbitrary ciphertext-like plaintext introduced by
+a raw database insert or a changed manifest secret declaration cannot be
+identified reliably. The current writer also preserves an explicitly re-entered
+value when it is byte-identical to such stored data; this case requires a writer
+that distinguishes explicit plaintext input from unchanged stored material.
+The host additionally recognizes the historical 40-hex plaintext Strava
+`accessToken`, `refreshToken`, and `clientSecret` values imported from older
+wanderer versions. Successful decryption takes precedence over this narrow
+compatibility rule. PocketBase's unmarked ciphertext format overlaps this legacy
+representation, so the rule assumes the known Strava credential format; it is
+not a general fallback for failed decryption or for other providers.
 
 ### OAuth2
 
@@ -949,11 +971,25 @@ Session auth is for providers that require plugin-mediated login:
 }
 ```
 
-The host passes only the declared secret fields to the refresh export. The
+The host passes only the selected context's declared credential fields to the refresh export. The
 returned session token is stored encrypted and injected by the host into future
 handler-managed host-executed requests that reference the auth context, such as
 `prepare_trail_send.v1` send plans. Plugin-initiated `wanderer.http_request`
 calls cannot refresh session auth themselves.
+
+`POST /api/v1/plugin-system/auth/validate` accepts `pluginId`, an optional
+`instanceId` and `authContext`, draft `auth`, and an optional draft `config`.
+The host merges installed defaults, freshly loaded instance overrides, then
+the draft. Supplied credentials replace old values before active credentials
+are decrypted; a blank string reuses a stored value. Validation performs no
+instance write, including when the provider rejects the credentials.
+
+Effective configuration is validated before provider I/O. A connector that
+cannot resolve, an invalid storage origin, or a custom TLS mode without
+`supportsCustomTLS` is rejected instead of silently skipped or downgraded.
+Configured connectors retain the user's `allowPrivate` setting and the existing
+network restrictions. The refresh export receives only `config.plugin` as its
+runtime `config`; host connector settings stay in the host policy.
 
 ### API key and bearer
 

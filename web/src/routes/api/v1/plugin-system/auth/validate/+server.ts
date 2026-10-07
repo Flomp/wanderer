@@ -1,3 +1,4 @@
+import { PluginSessionAuthValidateSchema } from "$lib/models/api/plugin_instance_schema";
 import { handleError } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
@@ -6,7 +7,7 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  * /api/v1/plugin-system/auth/validate:
  *   post:
  *     summary: Validate plugin session auth
- *     description: Validates session-style plugin credentials before saving them.
+ *     description: Validates draft session credentials and effective configuration without saving either.
  *     tags:
  *       - Plugins
  *     requestBody:
@@ -29,6 +30,10 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *                 type: object
  *                 additionalProperties:
  *                   type: string
+ *               config:
+ *                 type: object
+ *                 description: Unsaved instance config draft, merged with installed defaults and stored overrides.
+ *                 additionalProperties: true
  *     responses:
  *       200:
  *         description: Auth validation result
@@ -50,7 +55,7 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  */
 export async function POST(event: RequestEvent) {
     try {
-        const body = await event.request.json();
+        const body = PluginSessionAuthValidateSchema.parse(await event.request.json());
         const r = await event.locals.pb.send("/plugins/auth/validate", {
             method: "POST",
             body,
