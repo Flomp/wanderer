@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -150,13 +151,21 @@ func pluginInstances(app core.App, pluginID string) ([]*core.Record, error) {
 // actor, creates the runtime, decrypts/refreshes auth, and dispatches every
 // enabled sync capability.
 func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.ServiceManager, plugin pluginsystem.LocalPlugin, instance *core.Record) (*pluginSystemSyncResult, error) {
-	snapshot := pluginsystem.CaptureConnection(instance)
 	release, acquired := pluginsystem.TryLockInstance(instance.Id)
 	if !acquired {
 		return nil, pluginsystem.ErrInstanceBusy
 	}
 	defer release()
-	var err error
+	// Cron discovery can predate another completed connection change. The lock
+	// starts this operation; capture its identity from a fresh record afterwards.
+	instance, err := app.FindRecordById("plugin_instances", instance.Id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, pluginsystem.ErrConnectionConflict
+	}
+	if err != nil {
+		return nil, err
+	}
+	snapshot := pluginsystem.CaptureConnection(instance)
 	instance, err = pluginsystem.CheckConnection(app, snapshot, true)
 	if err != nil {
 		return nil, err

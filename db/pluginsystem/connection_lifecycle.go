@@ -83,6 +83,9 @@ func LocalConnectionStatus(manifest Manifest, selected string, auth map[string]a
 		if !access && !refresh {
 			return "needs_auth"
 		}
+		if CheckOAuthGrantProvenance(manifest, auth, selected) != nil {
+			return "needs_auth"
+		}
 		expires, known := localOAuthExpiry(auth["expiresAt"])
 		if access && (!known || expires.After(now)) {
 			return "configured"

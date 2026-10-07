@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +16,194 @@ import (
 	"github.com/pocketbase/pocketbase/tools/types"
 	"pocketbase/pluginsystem"
 )
+
+func TestPluginConnectionColdUpgradeUsesBundleJSONAndPreservesLiveReapply(t *testing.T) {
+	t.Setenv("ORIGIN", "https://cold-upgrade.example.test")
+	t.Setenv("POCKETBASE_ENCRYPTION_KEY", "")
+	app := core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir()})
+	if err := app.Bootstrap(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = app.ResetBootstrapState() })
+	seeded := false
+	for _, migration := range slices.Clone(core.AppMigrations.Items()) {
+		if migration.File >= "1791330000_plugin_connection_fields.go" {
+			continue
+		}
+		switch migration.File {
+		case "1742167033_init_meilisearch.go", "1744651602_add_polyline.go", "1749831369_update_sortable_attributes.go":
+			continue
+		}
+		if migration.File == "1780000002_plugin_instances.go" {
+			users, err := app.FindCollectionByNameOrId("users")
+			if err != nil {
+				t.Fatal(err)
+			}
+			user := core.NewRecord(users)
+			user.Load(map[string]any{"username": "cold-upgrade", "email": "cold-upgrade@example.test", "password": "cold-upgrade-password"})
+			if err := app.Save(user); err != nil {
+				t.Fatal(err)
+			}
+			integrations, err := app.FindCollectionByNameOrId("integrations")
+			if err != nil {
+				t.Fatal(err)
+			}
+			legacy := core.NewRecord(integrations)
+			legacy.Set("user", user.Id)
+			legacy.Set("strava", map[string]any{"active": true, "clientId": "legacy-client", "clientSecret": "legacy-secret", "accessToken": strings.Repeat("a", 40), "refreshToken": strings.Repeat("b", 40), "expiresAt": "2099-01-01T00:00:00Z", "activities": true, "routes": true})
+			for _, id := range []string{"komoot", "hammerhead"} {
+				legacy.Set(id, map[string]any{"active": true, "email": "legacy@example.test", "password": "legacy-password", "completed": true, "planned": true})
+			}
+			if err := app.Save(legacy); err != nil {
+				t.Fatal(err)
+			}
+			seeded = true
+		}
+		if err := app.RunInTransaction(migration.Up); err != nil {
+			t.Fatalf("released migration %s: %v", migration.File, err)
+		}
+	}
+	if !seeded {
+		t.Fatal("fixture never exercised legacy integration migration")
+	}
+	if count, err := app.CountRecords("installed_plugins"); err != nil || count != 0 {
+		t.Fatalf("cold cache not empty: %d/%v", count, err)
+	}
+	rows, err := app.FindAllRecords("plugin_instances")
+	if err != nil || len(rows) != 3 {
+		t.Fatalf("legacy instances=%v/%v", rows, err)
+	}
+	before := map[string]map[string]any{}
+	for _, row := range rows {
+		if row.GetString("plugin_id") == "strava" {
+			row.Set("status", "syncing")
+		}
+		row.Set("state", map[string]any{"cursor": "preserved-cursor"})
+		row.Set("last_error", map[string]any{"code": "rate_limited", "historical": true})
+		row.Set("retry_not_before", "2099-02-03 04:05:06.000Z")
+		row.Set("last_sync_at", "2020-02-03 04:05:06.000Z")
+		if err := app.Save(row); err != nil {
+			t.Fatal(err)
+		}
+		row, err = app.FindRecordById("plugin_instances", row.Id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[row.Id] = row.FieldsData()
+	}
+	dir := t.TempDir()
+	selected := map[string]string{}
+	for _, id := range []string{"strava", "komoot", "hammerhead"} {
+		data, err := os.ReadFile(filepath.Join("..", "..", "plugins", id, "plugin.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var manifest pluginsystem.Manifest
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			t.Fatal(err)
+		}
+		if len(manifest.Auth.Contexts) != 1 {
+			t.Fatalf("released %s fixture requires exactly one context", id)
+		}
+		for name := range manifest.Auth.Contexts {
+			selected[id] = name
+		}
+		bundle := filepath.Join(dir, "directory-"+id)
+		if err := os.MkdirAll(bundle, 0700); err != nil {
+			t.Fatal(err)
+		}
+		// Deliberately omit the WASM entrypoint: this fallback reads only JSON.
+		if err := os.WriteFile(filepath.Join(bundle, "plugin.json"), data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := addPluginConnectionFields1791330000(app); err != nil {
+		t.Fatal(err)
+	}
+	if err := activatePluginConnectionsWithManifestDir(app, dir); err != nil {
+		t.Fatal(err)
+	}
+	for _, old := range rows {
+		row, err := app.FindRecordById("plugin_instances", old.Id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if row.GetString("auth_context") != selected[row.GetString("plugin_id")] || row.GetString("connection_generation") == "" || row.GetString("oauth_token_revision") == "" {
+			t.Fatalf("cold upgrade %s selection=%q, expected %q; G/T present=%t/%t", row.GetString("plugin_id"), row.GetString("auth_context"), selected[row.GetString("plugin_id")], row.GetString("connection_generation") != "", row.GetString("oauth_token_revision") != "")
+		}
+		for field, value := range before[row.Id] {
+			if field == "status" && value == "syncing" {
+				value = "configured"
+			}
+			if !reflect.DeepEqual(value, row.Get(field)) {
+				t.Errorf("cold upgrade changed %s.%s", row.GetString("plugin_id"), field)
+			}
+		}
+		// A later migration run must not clear a newly started encrypted flow or
+		// reconstruct status/state/diagnoses on an already initialized instance.
+		auth := pluginsystem.JSONMapFromRecord(row, "auth")
+		auth["oauthState"] = "current-encrypted-state"
+		auth["oauthCodeVerifier"] = "current-encrypted-verifier"
+		auth["oauthRedirectURI"] = "https://current.example/callback"
+		auth["oauthFlowContext"] = row.GetString("auth_context")
+		auth["oauthActivateOnCallback"] = true
+		row.Set("auth", auth)
+		row.Set("status", "syncing")
+		if err := app.Save(row); err != nil {
+			t.Fatal(err)
+		}
+		row, err = app.FindRecordById("plugin_instances", row.Id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[row.Id] = row.FieldsData()
+	}
+	if err := activatePluginConnectionsWithManifestDir(app, dir); err != nil {
+		t.Fatal(err)
+	}
+	for id, fields := range before {
+		row, err := app.FindRecordById("plugin_instances", id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(fields, row.FieldsData()) {
+			t.Fatalf("reapplied migration changed live instance %s", id)
+		}
+	}
+	// Reapply does not even read bundles when every record already has G.
+	noDirectory := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(noDirectory, []byte("not a plugin directory"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := activatePluginConnectionsWithManifestDir(app, noDirectory); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := app.CountRecords("installed_plugins"); err != nil || count != 0 {
+		t.Fatalf("migration ran discovery: %d/%v", count, err)
+	}
+}
+
+func TestConnectionMigrationManifestFallbackRejectsAmbiguousOrInvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	valid := migrationConnectionManifest("duplicate", map[string]pluginsystem.AuthContext{"api": {Type: pluginsystem.AuthTypeAPIKey, SecretField: "apiKey"}})
+	for name, value := range map[string]any{"first": valid, "second": valid, "invalid": map[string]any{"id": "invalid"}, "single": migrationConnectionManifest("single", nil)} {
+		bundle := filepath.Join(dir, name)
+		if err := os.MkdirAll(bundle, 0700); err != nil {
+			t.Fatal(err)
+		}
+		data, err := json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(bundle, "plugin.json"), data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	manifests, err := connectionMigrationManifests(dir)
+	if err != nil || len(manifests) != 1 || manifests["single"].ID != "single" {
+		t.Fatalf("unsafe fallback: %#v/%v", manifests, err)
+	}
+}
 
 func migrationConnectionManifest(id string, contexts map[string]pluginsystem.AuthContext) pluginsystem.Manifest {
 	return pluginsystem.Manifest{ManifestVersion: "1.0", ID: id, Type: pluginsystem.PluginTypeTrails, Name: id, Version: "1.0", Runtime: pluginsystem.RuntimeManifest{Type: pluginsystem.RuntimeWASM, Entrypoint: "plugin.wasm"}, Capabilities: []pluginsystem.CapabilityManifest{{Name: "list", Version: "1.0", Export: "list"}}, Auth: pluginsystem.AuthManifest{Contexts: contexts}}

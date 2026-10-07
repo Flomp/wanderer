@@ -2,6 +2,8 @@ package migrations
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -13,8 +15,48 @@ import (
 func init() { m.Register(activatePluginConnections1791330001, nil) }
 
 func activatePluginConnections1791330001(app core.App) error {
+	return activatePluginConnectionsWithManifestDir(app, pluginsystem.PluginDir())
+}
+
+// Older upgrades can populate plugin instances before the first discovery has
+// cached their manifests. Read JSON only; migration must not load/execute WASM.
+func connectionMigrationManifests(dir string) (map[string]pluginsystem.Manifest, error) {
+	manifests := map[string]pluginsystem.Manifest{}
+	ambiguous := map[string]bool{}
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return manifests, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, entry.Name(), "plugin.json"))
+		if err != nil {
+			continue
+		}
+		var manifest pluginsystem.Manifest
+		if json.Unmarshal(data, &manifest) != nil || pluginsystem.ValidateManifest(manifest) != nil {
+			continue
+		}
+		if _, exists := manifests[manifest.ID]; exists || ambiguous[manifest.ID] {
+			delete(manifests, manifest.ID)
+			ambiguous[manifest.ID] = true
+			continue
+		}
+		manifests[manifest.ID] = manifest
+	}
+	return manifests, nil
+}
+
+func activatePluginConnectionsWithManifestDir(app core.App, dir string) error {
 	now := time.Now()
 	return app.RunInTransaction(func(tx core.App) error {
+		var fallback map[string]pluginsystem.Manifest
+		fallbackLoaded := false
 		collection, err := tx.FindCollectionByNameOrId("plugin_instances")
 		if err != nil {
 			return err
@@ -24,11 +66,24 @@ func activatePluginConnections1791330001(app core.App) error {
 			return err
 		}
 		for _, record := range records {
+			if record.GetString("connection_generation") != "" {
+				continue
+			}
 			before := map[string]string{}
 			for _, field := range []string{"auth_context", "connection_generation", "oauth_token_revision", "status", "auth"} {
 				before[field] = record.GetString(field)
 			}
 			manifest, manifestErr := pluginsystem.InstalledPluginManifest(tx, record.GetString("plugin_id"))
+			if manifestErr != nil && !fallbackLoaded {
+				fallback, err = connectionMigrationManifests(dir)
+				if err != nil {
+					return err
+				}
+				fallbackLoaded = true
+			}
+			if local, exists := fallback[record.GetString("plugin_id")]; manifestErr != nil && exists {
+				manifest, manifestErr = local, nil
+			}
 			var auth map[string]any
 			authErr := json.Unmarshal([]byte(record.GetString("auth")), &auth)
 			selected := record.GetString("auth_context")

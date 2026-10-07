@@ -8,7 +8,7 @@ import (
 )
 
 // InstalledPluginManifest reads the database cache only. Read projection and
-// upgrade migrations never discover bundles or execute WASM.
+// callers can read it without discovering bundles or executing WASM.
 func InstalledPluginManifest(app core.App, id string) (Manifest, error) {
 	record, err := app.FindFirstRecordByFilter("installed_plugins", "plugin_id={:id}", dbx.Params{"id": id})
 	if err != nil {

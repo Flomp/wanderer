@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -23,8 +24,22 @@ import (
 var pluginInstanceSettingsBeforeCommit func()
 
 func bindPluginInstanceSettings(e *core.RequestEvent, create bool) (map[string]any, error) {
+	// PocketBase rewinds its request-body wrapper on EOF. A decoder may receive
+	// the last bytes and EOF together on a real HTTP request, so decoding the
+	// body a second time would read the same object again. Read once through the
+	// router's body-limit middleware, then enforce one object in memory.
+	body, err := io.ReadAll(io.LimitReader(e.Request.Body, apis.DefaultMaxBodySize+1))
+	if err != nil {
+		if errors.Is(err, apis.ErrRequestEntityTooLarge) {
+			return nil, apis.ErrRequestEntityTooLarge
+		}
+		return nil, apis.NewBadRequestError("The request body could not be read.", nil)
+	}
+	if int64(len(body)) > apis.DefaultMaxBodySize {
+		return nil, apis.ErrRequestEntityTooLarge
+	}
 	var dto map[string]any
-	decoder := json.NewDecoder(e.Request.Body)
+	decoder := json.NewDecoder(bytes.NewReader(body))
 	if err := decoder.Decode(&dto); err != nil || dto == nil {
 		return nil, apis.NewBadRequestError("A JSON object is required.", nil)
 	}
@@ -189,8 +204,10 @@ func PluginSystemInstanceSettings(e *core.RequestEvent) error {
 		if err != nil {
 			return err
 		}
-		activeChanged = activeChanged || selected != record.GetString("auth_context")
-		if activeChanged || clientActiveCredentialIntent(record, manifest, dto["auth"]) {
+		selectionChanged := selected != record.GetString("auth_context")
+		selectionResolved := !activeChanged && !grantChanged && soleContextSelectionResolution(record, manifest, selected, auth)
+		activeChanged = activeChanged || selectionChanged && !selectionResolved
+		if selectionChanged || activeChanged || clientActiveCredentialIntent(record, manifest, dto["auth"]) {
 			expected, _ := dto["expected_connection_generation"].(string)
 			if expected == "" {
 				return pluginsystem.ConnectionGenerationRequiredError()
@@ -239,8 +256,12 @@ func PluginSystemInstanceSettings(e *core.RequestEvent) error {
 			var freshAuth map[string]any
 			_ = record.UnmarshalJSONField("auth", &freshAuth)
 			status := pluginsystem.LocalConnectionStatus(manifest, selected, freshAuth, record.GetBool("enabled"), time.Now())
-			if activation && status != "configured" {
+			if (activation || activeChanged && dto["enabled"] == true) && status != "configured" {
 				return apis.NewBadRequestError("The plugin connection is not ready to enable.", nil)
+			}
+			if activeChanged && manifest.Auth.Contexts[selected].Type == pluginsystem.AuthTypeOAuth2 && !oauthConnectionHasGrant(manifest, selected, freshAuth) {
+				record.Set("enabled", false)
+				status = "disabled"
 			}
 			record.Set("status", status)
 		} else if dto["enabled"] == false {
@@ -260,6 +281,12 @@ func PluginSystemInstanceSettings(e *core.RequestEvent) error {
 		return pluginInstanceWriteError(e, err)
 	}
 	return e.JSON(http.StatusOK, public)
+}
+
+func oauthConnectionHasGrant(manifest pluginsystem.Manifest, selected string, auth map[string]any) bool {
+	access, _ := auth[pluginsystem.AuthFieldAccessToken].(string)
+	refresh, _ := auth[pluginsystem.AuthFieldRefreshToken].(string)
+	return (access != "" || refresh != "") && pluginsystem.CheckOAuthGrantProvenance(manifest, auth, selected) == nil
 }
 
 func configValidationValue(config map[string]any) map[string]any {
@@ -282,6 +309,9 @@ func applyClientCredentialPatch(record *core.Record, manifest pluginsystem.Manif
 	editable := pluginsystem.EditableAuthCredentialFields(manifest, selected)
 	activeFields := map[string]bool{}
 	oldContext := manifest.Auth.Contexts[record.GetString("auth_context")]
+	if record.GetString("auth_context") == "" && len(manifest.Auth.Contexts) == 1 {
+		_, oldContext, _ = pluginsystem.ResolveAuthContext(manifest, "")
+	}
 	for _, field := range append(append([]string{}, oldContext.Fields...), oldContext.SecretFields...) {
 		activeFields[field] = true
 	}
@@ -294,6 +324,15 @@ func applyClientCredentialPatch(record *core.Record, manifest pluginsystem.Manif
 	secrets := pluginsystem.ManifestAuthSecretFields(manifest)
 	activeChanged, grantChanged := false, false
 	var explicitAccessToken any
+	// Selection alone must not reinterpret an OAuth access token as an API key
+	// or borrow a grant from another OAuth context. Preserve a grant only when
+	// its provenance belongs to the newly selected OAuth context.
+	if selected != record.GetString("auth_context") && storedOAuthGrant(manifest, record.GetString("auth_context"), originalAuth) {
+		if manifest.Auth.Contexts[selected].Type != pluginsystem.AuthTypeOAuth2 || pluginsystem.CheckOAuthGrantProvenance(manifest, originalAuth, selected) != nil {
+			pluginsystem.ClearOAuthGrant(auth)
+			grantChanged = true
+		}
+	}
 	// API-key/Bearer contexts may declare accessToken as an input. Reusing
 	// that storage key consumes the old OAuth grant before the explicit input
 	// is applied; selecting OAuth never makes its grant directly editable.
@@ -380,6 +419,37 @@ func applyClientCredentialPatch(record *core.Record, manifest pluginsystem.Manif
 	return auth, activeChanged, grantChanged, nil
 }
 
+func storedOAuthGrant(manifest pluginsystem.Manifest, selected string, auth map[string]any) bool {
+	access, _ := auth[pluginsystem.AuthFieldAccessToken].(string)
+	refresh, _ := auth[pluginsystem.AuthFieldRefreshToken].(string)
+	if access == "" && refresh == "" {
+		return false
+	}
+	if manifest.Auth.Contexts[selected].Type == pluginsystem.AuthTypeOAuth2 || refresh != "" {
+		return true
+	}
+	for _, field := range pluginsystem.InternalOAuthMetadataFields() {
+		if _, exists := auth[field]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+// Resolving a previously unknown selection to the only possible context does
+// not change the provider identity. In particular it must not reset a legacy
+// cursor/backoff simply because discovery made the manifest available later.
+func soleContextSelectionResolution(record *core.Record, manifest pluginsystem.Manifest, selected string, auth map[string]any) bool {
+	if record.GetString("auth_context") != "" || selected == "" || len(manifest.Auth.Contexts) != 1 {
+		return false
+	}
+	context, exists := manifest.Auth.Contexts[selected]
+	if !exists || pluginsystem.ValidateAuthContext(selected, context) != nil {
+		return false
+	}
+	return context.Type != pluginsystem.AuthTypeOAuth2 || pluginsystem.CheckOAuthGrantProvenance(manifest, auth, selected) == nil
+}
+
 func pluginInstanceWriteError(e *core.RequestEvent, err error) error {
 	if errors.Is(err, pluginsystem.ErrConnectionObsolete) || errors.Is(err, pluginsystem.ErrInstanceExists) {
 		return pluginsystem.ConnectionAPIError(err)
@@ -401,6 +471,9 @@ func pluginInstanceWriteError(e *core.RequestEvent, err error) error {
 func clientActiveCredentialIntent(record *core.Record, manifest pluginsystem.Manifest, raw any) bool {
 	patch, _ := raw.(map[string]any)
 	context := manifest.Auth.Contexts[record.GetString("auth_context")]
+	if record.GetString("auth_context") == "" && len(manifest.Auth.Contexts) == 1 {
+		_, context, _ = pluginsystem.ResolveAuthContext(manifest, "")
+	}
 	fields := append(append([]string{}, context.Fields...), context.SecretFields...)
 	if context.SecretField != "" {
 		fields = append(fields, context.SecretField)

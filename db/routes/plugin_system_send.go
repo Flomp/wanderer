@@ -203,7 +203,6 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 		return pluginConnectionAPIErrorForEvent(e, logContext, err)
 	}
 	if err := executeHostRequest(e.Request.Context(), plugin.Manifest, policy, plan.Request, gpx, execute); err != nil {
-		setPluginInstanceStatusForError(e.App, instance, err)
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 

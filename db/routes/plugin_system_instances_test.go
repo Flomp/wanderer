@@ -3,6 +3,7 @@ package routes
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -131,6 +132,153 @@ func connectionResponseCode(result map[string]any) string {
 	operation, _ := data["operation"].(map[string]any)
 	code, _ := operation["code"].(string)
 	return code
+}
+
+// Exercise the router with net/http's real server body, which may return the
+// final bytes and EOF in one read. bytes.Reader-only handler tests do not cover
+// PocketBase's rewind at that boundary.
+func connectionHTTPJSON(t *testing.T, f *connectionHostFixture, server *httptest.Server, method, path, body string) (int, map[string]any, string) {
+	t.Helper()
+	req, err := http.NewRequest(method, server.URL+path, strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", f.token)
+	req.Header.Set("Content-Type", "application/json")
+	response, err := server.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result map[string]any
+	_ = json.Unmarshal(data, &result)
+	return response.StatusCode, result, string(data)
+}
+
+func TestHostInstanceWritesThroughRealHTTPRouter(t *testing.T) {
+	f := newConnectionHostFixture(t)
+	server := httptest.NewServer(f.handler)
+	t.Cleanup(server.Close)
+	status, result, body := connectionHTTPJSON(t, f, server, http.MethodPost, "/plugins/instances", `{"plugin_id":"connection-test","auth":{"apiKey":"initial"},"enabled":true}`)
+	if status != http.StatusOK {
+		t.Fatalf("HTTP create %d: %s", status, body)
+	}
+	id := result["id"].(string)
+	path := "/plugins/instances/" + id + "/settings"
+	for _, input := range []string{`{"config":{"plugin":{"option":"saved"}}}`, `{"enabled":false}`} {
+		status, _, body = connectionHTTPJSON(t, f, server, http.MethodPatch, path, input)
+		if status != http.StatusOK {
+			t.Fatalf("HTTP settings %d: %s", status, body)
+		}
+	}
+	before, err := f.app.FindRecordById("plugin_instances", id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.GetBool("enabled") || before.GetString("status") != "disabled" || pluginsystem.JSONMapFromRecord(before, "config")["plugin"].(map[string]any)["option"] != "saved" {
+		t.Fatal("HTTP save/disable did not persist their fields")
+	}
+	before.Set("auth", map[string]any{"apiKey": "unreadable-legacy-ciphertext"})
+	if err := f.app.Save(before); err != nil {
+		t.Fatal(err)
+	}
+	input, _ := json.Marshal(map[string]any{"auth": map[string]any{"apiKey": "repaired"}, "expected_connection_generation": before.GetString("connection_generation")})
+	status, _, body = connectionHTTPJSON(t, f, server, http.MethodPatch, path, string(input))
+	if status != http.StatusOK {
+		t.Fatalf("HTTP repair %d: %s", status, body)
+	}
+	status, _, body = connectionHTTPJSON(t, f, server, http.MethodPatch, path, `{"enabled":true}`)
+	if status != http.StatusOK {
+		t.Fatalf("HTTP enable %d: %s", status, body)
+	}
+	fresh, _ := f.app.FindRecordById("plugin_instances", id)
+	decoded, err := security.Decrypt(pluginsystem.JSONMapFromRecord(fresh, "auth")["apiKey"].(string), oauthMetadataTestKey)
+	if err != nil || string(decoded) != "repaired" || !fresh.GetBool("enabled") || fresh.GetString("status") != "configured" || fresh.GetString("connection_generation") == before.GetString("connection_generation") {
+		t.Fatal("real HTTP repair/enable did not establish the new connection")
+	}
+}
+
+func TestHostInstanceHTTPBodyRejectsTrailingObjectsAndInvalidJSON(t *testing.T) {
+	f := newConnectionHostFixture(t)
+	r := f.create(t, map[string]any{"apiKey": "initial"})
+	server := httptest.NewServer(f.handler)
+	t.Cleanup(server.Close)
+	path := "/plugins/instances/" + r.Id + "/settings"
+	for _, input := range []string{`{"enabled":false}{}`, `{"enabled":false}null`, `[]`, `null`, `{`, `{"auth":null}`} {
+		status, _, body := connectionHTTPJSON(t, f, server, http.MethodPatch, path, input)
+		if status != http.StatusBadRequest {
+			t.Fatalf("invalid JSON %q returned %d: %s", input, status, body)
+		}
+		fresh, _ := f.app.FindRecordById("plugin_instances", r.Id)
+		if !fresh.GetBool("enabled") || fresh.GetString("connection_generation") != r.GetString("connection_generation") {
+			t.Fatal("rejected body changed the connection")
+		}
+	}
+	status, _, body := connectionHTTPJSON(t, f, server, http.MethodPatch, path, "  {\"enabled\":false} \n\t")
+	if status != http.StatusOK {
+		t.Fatalf("one object with whitespace rejected %d: %s", status, body)
+	}
+}
+
+func TestHostInstanceHTTPBodyHonorsRouterBodyLimit(t *testing.T) {
+	f := newConnectionHostFixture(t)
+	router, err := apis.NewRouter(f.app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	router.POST("/plugins/instances", PluginSystemInstanceCreate).Bind(apis.BodyLimit(128))
+	handler, err := router.BuildMux()
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+	input, _ := json.Marshal(map[string]any{"plugin_id": f.manifest.ID, "auth": map[string]any{"apiKey": strings.Repeat("a", 256)}})
+	status, _, body := connectionHTTPJSON(t, f, server, http.MethodPost, "/plugins/instances", string(input))
+	if status != http.StatusRequestEntityTooLarge {
+		t.Fatalf("HTTP body limit returned %d: %s", status, body)
+	}
+	count, err := f.app.CountRecords("plugin_instances")
+	if err != nil || count != 0 {
+		t.Fatalf("body-limit rejection wrote an instance: count=%d, error=%v", count, err)
+	}
+}
+
+func TestHostCreateRejectsUnreadyActivationAndHostOwnedFields(t *testing.T) {
+	f := newConnectionHostFixture(t)
+	status, _, body := f.request(t, http.MethodPost, "/plugins/instances", map[string]any{"plugin_id": f.manifest.ID, "enabled": true})
+	if status != http.StatusBadRequest {
+		t.Fatalf("create without required input returned %d: %s", status, body)
+	}
+	for _, field := range []string{"user", "status", "state", "last_error", "connection_generation", "oauth_token_revision", "auth_context", "last_sync_at", "retry_not_before", "busy", "expected_connection_generation"} {
+		status, _, body = f.request(t, http.MethodPost, "/plugins/instances", map[string]any{"plugin_id": f.manifest.ID, field: "client-write"})
+		if status != http.StatusBadRequest {
+			t.Errorf("create accepted host-owned %s: %d %s", field, status, body)
+		}
+	}
+	count, err := f.app.CountRecords("plugin_instances")
+	if err != nil || count != 0 {
+		t.Fatalf("rejected create wrote an instance: count=%d, error=%v", count, err)
+	}
+	status, result, body := f.request(t, http.MethodPost, "/plugins/instances", map[string]any{"plugin_id": f.manifest.ID, "auth": map[string]any{"apiKey": "saved-credential"}, "enabled": false})
+	if status != http.StatusOK {
+		t.Fatalf("disabled create returned %d: %s", status, body)
+	}
+	fresh, _ := f.app.FindRecordById("plugin_instances", result["id"].(string))
+	if fresh.GetString("user") != f.owner.Id || fresh.GetString("plugin_id") != f.manifest.ID || fresh.GetBool("enabled") || fresh.GetString("status") != "disabled" || fresh.GetString("auth_context") != "api" {
+		t.Fatal("create did not derive owner/selection/disabled readiness")
+	}
+	if fresh.GetString("connection_generation") == "" || fresh.GetString("oauth_token_revision") == "" || len(pluginsystem.JSONMapFromRecord(fresh, "state")) != 0 || len(pluginsystem.JSONMapFromRecord(fresh, "last_error")) != 0 || fresh.GetString("last_sync_at") != "" || fresh.GetString("retry_not_before") != "" {
+		t.Fatal("create omitted revisions or invented sync state")
+	}
+	decoded, err := security.Decrypt(pluginsystem.JSONMapFromRecord(fresh, "auth")["apiKey"].(string), oauthMetadataTestKey)
+	if err != nil || string(decoded) != "saved-credential" {
+		t.Fatal("disabled create did not encrypt the explicit input")
+	}
 }
 
 func TestHostConnectionCreateOwnerUniqueAndDirectWriteDenial(t *testing.T) {
@@ -399,7 +547,12 @@ func TestConnectionReadAndWriteBoundariesIncludeSuperuserBatchAndExpand(t *testi
 		t.Fatal(err)
 	}
 	f.app.Settings().Batch.Enabled = true
-	for _, token := range []string{f.token, adminToken} {
+	release, acquired := pluginsystem.TryLockInstance(r.Id)
+	if !acquired {
+		t.Fatal("lock not acquired")
+	}
+	defer release()
+	for index, token := range []string{f.token, adminToken} {
 		f.token = token
 		for _, path := range []string{"/api/collections/plugin_instances/records/" + r.Id, "/api/collections/plugin_instances/records", "/api/collections/connection_wrappers/records/" + wrapper.Id + "?expand=instance"} {
 			status, _, body := f.request(t, "GET", path, nil)
@@ -413,6 +566,9 @@ func TestConnectionReadAndWriteBoundariesIncludeSuperuserBatchAndExpand(t *testi
 			}
 			if !strings.Contains(body, r.GetString("connection_generation")) {
 				t.Fatal("read lost public generation")
+			}
+			if index == 0 && !strings.Contains(body, `"busy":true`) || index == 1 && strings.Contains(body, `"busy"`) {
+				t.Fatalf("incorrect owner-only busy projection: %s", body)
 			}
 		}
 		for _, method := range []string{"POST", "PATCH"} {
@@ -634,5 +790,331 @@ func TestLegacyOAuthGrantWithoutProvenanceIsClearedWhenClientInputsChange(t *tes
 				t.Fatal("repair lost explicit input or contacted provider")
 			}
 		})
+	}
+}
+
+func fixtureWithOAuthGrantAndAlternativeContexts(t *testing.T) (*connectionHostFixture, *core.Record) {
+	t.Helper()
+	f := newConnectionHostFixture(t)
+	r := f.create(t, map[string]any{"apiKey": "separate-api-input"})
+	oauth := pluginsystem.AuthContext{Type: pluginsystem.AuthTypeOAuth2, Fields: []string{"clientId", "clientSecret"}, AuthorizationURL: "https://example.test/auth", TokenURL: "https://example.test/token", Refresh: &pluginsystem.AuthRefresh{Mode: pluginsystem.AuthRefreshModeHost}}
+	f.manifest.Auth.Contexts["oauth"] = oauth
+	f.manifest.Auth.Contexts["other-oauth"] = oauth
+	f.manifest.Auth.Contexts["bearer"] = pluginsystem.AuthContext{Type: pluginsystem.AuthTypeBearer, SecretField: "accessToken"}
+	f.manifest.Auth.Contexts["shared-api"] = pluginsystem.AuthContext{Type: pluginsystem.AuthTypeAPIKey, SecretField: "accessToken"}
+	f.installed.Set("manifest", f.manifest)
+	if err := f.app.Save(f.installed); err != nil {
+		t.Fatal(err)
+	}
+	auth := pluginsystem.JSONMapFromRecord(r, "auth")
+	for key, value := range map[string]any{"clientId": "client", "clientSecret": "stored-client", "accessToken": "oauth-grant", "refreshToken": "oauth-refresh", "oauthContext": "oauth", "scope": "read", "expiresAt": time.Now().Add(time.Hour).Unix(), "providerUserId": "old-account", "oauthState": "pending-state", "oauthFlowContext": "oauth"} {
+		auth[key] = value
+	}
+	r.Set("auth_context", "oauth")
+	r.Set("auth", auth)
+	r.Set("state", map[string]any{"cursor": "old-account-cursor"})
+	r.Set("last_error", map[string]any{"code": "historical"})
+	r.Set("retry_not_before", "2030-01-01 00:00:00.000Z")
+	if err := f.app.Save(r); err != nil {
+		t.Fatal(err)
+	}
+	return f, r
+}
+
+func TestHostContextOnlySwitchCannotReuseOAuthGrant(t *testing.T) {
+	for _, target := range []string{"bearer", "shared-api", "api", "other-oauth"} {
+		t.Run(target, func(t *testing.T) {
+			f, before := fixtureWithOAuthGrantAndAlternativeContexts(t)
+			status, _, body := f.patch(t, before, map[string]any{"authContext": target, "expected_connection_generation": before.GetString("connection_generation")})
+			if status != http.StatusOK {
+				t.Fatalf("context switch %d: %s", status, body)
+			}
+			fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+			auth := pluginsystem.JSONMapFromRecord(fresh, "auth")
+			for _, field := range append(append([]string{"accessToken", "refreshToken"}, pluginsystem.InternalOAuthMetadataFields()...), pluginsystem.InternalOAuthTransientFields()...) {
+				if _, exists := auth[field]; exists {
+					t.Errorf("foreign OAuth grant field %q survived selection change", field)
+				}
+			}
+			if fresh.GetString("auth_context") != target || fresh.GetString("connection_generation") == before.GetString("connection_generation") || fresh.GetString("oauth_token_revision") == before.GetString("oauth_token_revision") {
+				t.Fatal("selection switch failed to renew G/T")
+			}
+			if len(pluginsystem.JSONMapFromRecord(fresh, "state")) != 0 || len(pluginsystem.JSONMapFromRecord(fresh, "last_error")) != 0 || fresh.GetString("retry_not_before") != "" {
+				t.Fatal("new selection retained connection state or backoff")
+			}
+			if auth["clientId"] != "client" || auth["clientSecret"] != "stored-client" || auth["apiKey"] != pluginsystem.JSONMapFromRecord(before, "auth")["apiKey"] {
+				t.Fatal("grant clear damaged separate credential inputs")
+			}
+			wantStatus := "needs_auth"
+			if target == "api" {
+				wantStatus = "configured" // This context has its own stored API key.
+			} else if target == "other-oauth" {
+				wantStatus = "disabled"
+				if fresh.GetBool("enabled") {
+					t.Fatal("OAuth selection without its own grant remained enabled")
+				}
+			}
+			if fresh.GetString("status") != wantStatus {
+				t.Fatalf("status = %q, want %q", fresh.GetString("status"), wantStatus)
+			}
+		})
+	}
+}
+
+func TestHostOAuthGrantClearDisablesConnectionOrRejectsExplicitActivation(t *testing.T) {
+	for _, input := range []string{"clientId", "clientSecret", "context"} {
+		t.Run(input, func(t *testing.T) {
+			f, before := fixtureWithOAuthGrantAndAlternativeContexts(t)
+			patch := map[string]any{"expected_connection_generation": before.GetString("connection_generation"), "enabled": true}
+			if input == "context" {
+				patch["authContext"] = "other-oauth"
+			} else {
+				patch["auth"] = map[string]any{input: "replacement"}
+			}
+			status, _, body := f.patch(t, before, patch)
+			if status != http.StatusBadRequest {
+				t.Fatalf("grant clear + explicit activation %d: %s", status, body)
+			}
+			fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+			assertConnectionRecordFieldSet(t, before, fresh, nil)
+			delete(patch, "enabled")
+			status, _, body = f.patch(t, before, patch)
+			if status != http.StatusOK {
+				t.Fatalf("grant clear %d: %s", status, body)
+			}
+			fresh, _ = f.app.FindRecordById("plugin_instances", before.Id)
+			if fresh.GetBool("enabled") || fresh.GetString("status") != "disabled" || fresh.GetString("connection_generation") == before.GetString("connection_generation") || fresh.GetString("oauth_token_revision") == before.GetString("oauth_token_revision") {
+				t.Fatal("grant-clearing active edit did not disable and renew G/T")
+			}
+			for _, field := range []string{"accessToken", "refreshToken", "oauthContext"} {
+				if _, exists := pluginsystem.JSONMapFromRecord(fresh, "auth")[field]; exists {
+					t.Fatalf("grant clear retained %s", field)
+				}
+			}
+			if input != "context" {
+				value := pluginsystem.JSONMapFromRecord(fresh, "auth")[input].(string)
+				if input == "clientSecret" {
+					decoded, err := security.Decrypt(value, oauthMetadataTestKey)
+					if err != nil {
+						t.Fatal(err)
+					}
+					value = string(decoded)
+				}
+				if value != "replacement" {
+					t.Fatal("grant clear lost the replacement client credential")
+				}
+			}
+		})
+	}
+}
+
+func TestHostOAuthActivationRejectsForeignGrantWithoutChangingAnyFields(t *testing.T) {
+	f, before := fixtureWithOAuthGrantAndAlternativeContexts(t)
+	before.Set("auth_context", "other-oauth")
+	before.Set("enabled", false)
+	before.Set("status", "disabled")
+	if err := f.app.Save(before); err != nil {
+		t.Fatal(err)
+	}
+	status, _, body := f.patch(t, before, map[string]any{"enabled": true})
+	if status != http.StatusBadRequest {
+		t.Fatalf("foreign grant activation %d: %s", status, body)
+	}
+	fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+	assertConnectionRecordFieldSet(t, before, fresh, nil)
+}
+
+func assertConnectionRecordFieldSet(t *testing.T, before, fresh *core.Record, changed map[string]bool) {
+	t.Helper()
+	for _, field := range before.Collection().Fields {
+		name := field.GetName()
+		if name == "updated" || changed[name] {
+			continue
+		}
+		if !reflect.DeepEqual(before.Get(name), fresh.Get(name)) {
+			t.Errorf("unexpected write to %s: before=%v, after=%v", name, before.Get(name), fresh.Get(name))
+		}
+	}
+}
+
+func TestHostResolvesMissingSoleSelectionWithoutResettingConnection(t *testing.T) {
+	for _, oauth := range []bool{false, true} {
+		t.Run(map[bool]string{false: "api", true: "oauth"}[oauth], func(t *testing.T) {
+			f := newConnectionHostFixture(t)
+			before := f.create(t, map[string]any{"apiKey": "stored-input"})
+			selection := "api"
+			if oauth {
+				selection = "oauth"
+				f.manifest.Auth.Contexts = map[string]pluginsystem.AuthContext{"oauth": {Type: pluginsystem.AuthTypeOAuth2, Fields: []string{"clientId", "clientSecret"}, AuthorizationURL: "https://example.test/auth", TokenURL: "https://example.test/token", Refresh: &pluginsystem.AuthRefresh{Mode: pluginsystem.AuthRefreshModeHost}}}
+				f.installed.Set("manifest", f.manifest)
+				if err := f.app.Save(f.installed); err != nil {
+					t.Fatal(err)
+				}
+				before.Set("auth", map[string]any{"clientId": "legacy-client", "clientSecret": "legacy-secret", "accessToken": "legacy-grant", "refreshToken": "legacy-refresh", "expiresAt": time.Now().Add(time.Hour).Unix()})
+			}
+			before.Set("auth_context", "")
+			before.Set("state", map[string]any{"cursor": "preserve"})
+			before.Set("status", "rate_limited")
+			before.Set("last_error", map[string]any{"code": "rate_limited", "connectionGeneration": before.GetString("connection_generation")})
+			before.Set("retry_not_before", "2030-01-01 00:00:00.000Z")
+			if err := f.app.Save(before); err != nil {
+				t.Fatal(err)
+			}
+			status, result, body := f.patch(t, before, map[string]any{"authContext": selection})
+			if status != http.StatusBadRequest || connectionResponseCode(result) != "connection_generation_required" {
+				t.Fatalf("explicit selection without guard %d: %s", status, body)
+			}
+			status, _, body = f.patch(t, before, map[string]any{"authContext": selection, "expected_connection_generation": before.GetString("connection_generation")})
+			if status != http.StatusOK {
+				t.Fatalf("sole selection resolution %d: %s", status, body)
+			}
+			fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+			assertConnectionRecordFieldSet(t, before, fresh, map[string]bool{"auth_context": true})
+			if fresh.GetString("auth_context") != selection || fresh.GetString("status") != "rate_limited" {
+				t.Fatal("sole context selection not resolved")
+			}
+		})
+	}
+}
+
+func TestHostSoleSelectionWithChangedCredentialsStartsNewConnection(t *testing.T) {
+	f := newConnectionHostFixture(t)
+	before := f.create(t, map[string]any{"apiKey": "original"})
+	before.Set("auth_context", "")
+	before.Set("state", map[string]any{"cursor": "old"})
+	if err := f.app.Save(before); err != nil {
+		t.Fatal(err)
+	}
+	status, _, body := f.patch(t, before, map[string]any{"authContext": "api", "auth": map[string]any{"apiKey": "replacement"}, "expected_connection_generation": before.GetString("connection_generation")})
+	if status != http.StatusOK {
+		t.Fatalf("credential replacement %d: %s", status, body)
+	}
+	fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+	if fresh.GetString("connection_generation") == before.GetString("connection_generation") || len(pluginsystem.JSONMapFromRecord(fresh, "state")) != 0 {
+		t.Fatal("changed active credential treated as mere selection resolution")
+	}
+}
+
+func TestHostSoleSelectionResolutionConsumesForeignGrantAndResetsConnection(t *testing.T) {
+	for _, oauth := range []bool{false, true} {
+		t.Run(map[bool]string{false: "api", true: "oauth"}[oauth], func(t *testing.T) {
+			f := newConnectionHostFixture(t)
+			before := f.create(t, map[string]any{"apiKey": "own-input"})
+			selection := "api"
+			if oauth {
+				selection = "oauth"
+				f.manifest.Auth.Contexts = map[string]pluginsystem.AuthContext{"oauth": {Type: pluginsystem.AuthTypeOAuth2, Fields: []string{"clientId", "clientSecret"}, AuthorizationURL: "https://example.test/auth", TokenURL: "https://example.test/token", Refresh: &pluginsystem.AuthRefresh{Mode: pluginsystem.AuthRefreshModeHost}}}
+				f.installed.Set("manifest", f.manifest)
+				if err := f.app.Save(f.installed); err != nil {
+					t.Fatal(err)
+				}
+			}
+			auth := pluginsystem.JSONMapFromRecord(before, "auth")
+			auth["accessToken"], auth["oauthContext"] = "foreign-grant", "foreign-context"
+			before.Set("auth_context", "")
+			before.Set("auth", auth)
+			before.Set("state", map[string]any{"cursor": "foreign-account"})
+			before.Set("last_error", map[string]any{"code": "historical"})
+			before.Set("retry_not_before", "2030-01-01 00:00:00.000Z")
+			if err := f.app.Save(before); err != nil {
+				t.Fatal(err)
+			}
+			status, _, body := f.patch(t, before, map[string]any{"authContext": selection, "expected_connection_generation": before.GetString("connection_generation")})
+			if status != http.StatusOK {
+				t.Fatalf("foreign grant repair %d: %s", status, body)
+			}
+			fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+			if fresh.GetString("connection_generation") == before.GetString("connection_generation") || fresh.GetString("oauth_token_revision") == before.GetString("oauth_token_revision") {
+				t.Fatal("foreign grant clear treated as compatible selection resolution")
+			}
+			for _, field := range []string{"accessToken", "oauthContext"} {
+				if _, exists := pluginsystem.JSONMapFromRecord(fresh, "auth")[field]; exists {
+					t.Fatalf("foreign grant field %q preserved", field)
+				}
+			}
+			if len(pluginsystem.JSONMapFromRecord(fresh, "state")) != 0 || len(pluginsystem.JSONMapFromRecord(fresh, "last_error")) != 0 || fresh.GetString("retry_not_before") != "" {
+				t.Fatal("foreign grant clear retained cursor/diagnosis/backoff")
+			}
+		})
+	}
+}
+
+func TestHostSettingsRejectsEveryOAuthInternalCredentialKey(t *testing.T) {
+	f, before := fixtureWithOAuthGrantAndAlternativeContexts(t)
+	fields := append(append(append([]string{"accessToken", "refreshToken"}, pluginsystem.InternalOAuthMetadataFields()...), pluginsystem.InternalOAuthTransientFields()...), "unexpected")
+	for _, field := range fields {
+		status, _, body := f.patch(t, before, map[string]any{"auth": map[string]any{field: "client-input"}, "expected_connection_generation": before.GetString("connection_generation")})
+		if status != http.StatusBadRequest {
+			t.Errorf("OAuth internal field %q accepted: %d %s", field, status, body)
+		}
+		fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+		assertConnectionRecordFieldSet(t, before, fresh, nil)
+	}
+}
+
+func TestHostEnableReadinessAndControlWriterFieldSets(t *testing.T) {
+	f := newConnectionHostFixture(t)
+	before := f.create(t, map[string]any{"apiKey": "working"})
+	auth := pluginsystem.JSONMapFromRecord(before, "auth")
+	auth["oauthState"] = "pending"
+	auth["oauthFlowContext"] = "future"
+	auth["oauthActivateOnCallback"] = true
+	before.Set("auth", auth)
+	before.Set("state", map[string]any{"cursor": "preserve"})
+	before.Set("last_error", map[string]any{"code": "rate_limited"})
+	before.Set("retry_not_before", "2030-01-01 00:00:00.000Z")
+	before.Set("last_sync_at", "2026-01-01 00:00:00.000Z")
+	if err := f.app.Save(before); err != nil {
+		t.Fatal(err)
+	}
+	status, _, body := f.patch(t, before, map[string]any{"enabled": false})
+	if status != http.StatusOK {
+		t.Fatalf("disable %d %s", status, body)
+	}
+	disabled, _ := f.app.FindRecordById("plugin_instances", before.Id)
+	assertConnectionRecordFieldSet(t, before, disabled, map[string]bool{"enabled": true, "status": true, "auth": true})
+	expectedAuth := pluginsystem.CloneJSONMap(auth)
+	expectedAuth["oauthActivateOnCallback"] = false
+	if !reflect.DeepEqual(expectedAuth, pluginsystem.JSONMapFromRecord(disabled, "auth")) {
+		t.Fatal("disable changed credentials or flow fields beyond activation intent")
+	}
+	status, _, body = f.patch(t, disabled, map[string]any{"enabled": true})
+	if status != http.StatusOK {
+		t.Fatalf("ready activation %d %s", status, body)
+	}
+	enabled, _ := f.app.FindRecordById("plugin_instances", before.Id)
+	assertConnectionRecordFieldSet(t, disabled, enabled, map[string]bool{"enabled": true, "status": true})
+	if !enabled.GetBool("enabled") || enabled.GetString("status") != "configured" {
+		t.Fatal("ready activation failed")
+	}
+	status, _, body = f.patch(t, enabled, map[string]any{"enabled": false, "auth": map[string]any{"apiKey": nil}, "expected_connection_generation": enabled.GetString("connection_generation")})
+	if status != http.StatusOK {
+		t.Fatalf("remove credential %d %s", status, body)
+	}
+	unready, _ := f.app.FindRecordById("plugin_instances", before.Id)
+	status, _, body = f.patch(t, unready, map[string]any{"enabled": true})
+	if status != http.StatusBadRequest {
+		t.Fatalf("unready activation %d %s", status, body)
+	}
+	fresh, _ := f.app.FindRecordById("plugin_instances", before.Id)
+	assertConnectionRecordFieldSet(t, unready, fresh, nil)
+}
+
+func TestBusyIsAbsentFromNonOwnerProjection(t *testing.T) {
+	f := newConnectionHostFixture(t)
+	r := f.create(t, map[string]any{"apiKey": "working"})
+	release, acquired := pluginsystem.TryLockInstance(r.Id)
+	if !acquired {
+		t.Fatal("lock not acquired")
+	}
+	defer release()
+	projected := r.Fresh()
+	pluginsystem.ProjectConnectionRecord(f.app, projected, false)
+	if _, exists := projected.PublicExport()["busy"]; exists {
+		t.Fatal("non-owner projection exposed process busy state")
+	}
+	owner, _ := pluginsystem.PublicConnectionRecord(f.app, r)
+	if owner.PublicExport()["busy"] != true {
+		t.Fatal("owner projection omitted held lock")
 	}
 }
