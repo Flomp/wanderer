@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"runtime"
@@ -241,6 +242,12 @@ func (s *workerRuntimeSession) call(ctx context.Context, export string, input []
 				s.kill()
 				return workerCallOutcome{err: RuntimeSessionFatalError{Err: s.withStderr(err)}}
 			}
+		case workerMessageHostDiagnostic:
+			if err := s.handleHostDiagnostic(msg); err != nil {
+				s.markFatal("invalid host diagnostic")
+				s.kill()
+				return workerCallOutcome{err: RuntimeSessionFatalError{Err: err}}
+			}
 		case workerMessageHostLog:
 			s.handleHostLog(msg)
 		case workerMessageCallResult:
@@ -278,6 +285,20 @@ func (s *workerRuntimeSession) call(ctx context.Context, export string, input []
 			return workerCallOutcome{err: RuntimeSessionFatalError{Err: fmt.Errorf("unexpected worker message %q", msg.Type)}}
 		}
 	}
+}
+
+// Trusted host diagnostics have a separate IPC frame from guest logs. The
+// parent owns all classification and identifying fields; the child may select
+// only a known host boundary. parseHostLogEntry never creates these messages.
+func (s *workerRuntimeSession) handleHostDiagnostic(msg workerMessage) error {
+	diagnostic, err := workerData[workerHostDiagnostic](msg)
+	if msg.Type != workerMessageHostDiagnostic || err != nil || diagnostic.Kind != workerHostDiagnosticHTTPInputInvalid {
+		return fmt.Errorf("invalid host diagnostic")
+	}
+	failure := WithDiagnosticCause(Failure("invalid_request", OperationHostHTTP), "input_encoding")
+	LogPluginFailure(slog.Default(), "plugin host request failed", failure,
+		"plugin", s.plugin.Manifest.ID, "session", s.sessionID)
+	return nil
 }
 
 func (s *workerRuntimeSession) handleHostLog(msg workerMessage) {

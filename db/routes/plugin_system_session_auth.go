@@ -82,12 +82,12 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 		Auth: pluginsystem.AuthForPluginRefresh(auth, authContext),
 	})
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to prepare plugin request.", pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 	}
 
 	runtime, err := runtimeFor(plugin)
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, err)
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to initialize plugin runtime.", err)
 	}
 	// TODO: accept and merge plugin instance config here before supporting
 	// session-auth plugins with configured connectors. The current validation

@@ -14,6 +14,7 @@ const (
 	workerMessageHostHTTPResponse = "host_http_response"
 	workerMessageHostHTTPRequest  = "host_http_request"
 	workerMessageHostLog          = "host_log"
+	workerMessageHostDiagnostic   = "host_diagnostic"
 	workerMessageCallResult       = "call_result"
 	workerMessageError            = "error"
 
@@ -55,6 +56,15 @@ type workerHostLog struct {
 	SessionID string       `json:"sessionId,omitempty"`
 	Event     string       `json:"event,omitempty"`
 	Error     *PluginError `json:"error,omitempty"`
+}
+
+// This frame is emitted only by trusted child host callbacks. Guest log
+// parsing always produces workerMessageHostLog and cannot set this kind or
+// provide diagnostic codes, causes, plugin IDs or session IDs for this frame.
+const workerHostDiagnosticHTTPInputInvalid = "http_request_input_invalid"
+
+type workerHostDiagnostic struct {
+	Kind string `json:"kind"`
 }
 
 type workerError struct {

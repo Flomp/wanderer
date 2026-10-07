@@ -60,9 +60,9 @@ func TestInteractiveRuntimeFailureDoesNotReachPocketBaseRequestLogs(t *testing.T
 			if status != 400 {
 				t.Fatalf("status %d: %#v", status, body)
 			}
-			operation := body["data"].(map[string]any)["operation"].(map[string]any)
-			if operation["code"] != "internal_error" {
-				t.Fatalf("lost safe classification: %#v", body)
+			data, _ := body["data"].(map[string]any)
+			if len(data) != 0 || body["message"] != "Failed to initialize plugin runtime." {
+				t.Errorf("host runtime initialization was exposed as a plugin failure: %#v", body)
 			}
 			logs := waitForPluginRequestLogs(t, f.app, path, 1)
 			for _, value := range []any{body, logs} {

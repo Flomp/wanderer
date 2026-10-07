@@ -44,6 +44,11 @@ func enablePluginRequestLogs(t *testing.T, app core.App) {
 // Return every persisted log, including the synchronous plugin diagnostic.
 func waitForPluginRequestLogs(t *testing.T, app core.App, path string, count int) []*core.Log {
 	t.Helper()
+	return waitForPluginRequestLogsForMethod(t, app, http.MethodPost, path, count)
+}
+
+func waitForPluginRequestLogsForMethod(t *testing.T, app core.App, method, path string, count int) []*core.Log {
+	t.Helper()
 	handler, ok := app.Logger().Handler().(*logger.BatchHandler)
 	if !ok {
 		t.Fatalf("persisted request logs require the original PocketBase BatchHandler, got %T", app.Logger().Handler())
@@ -59,7 +64,7 @@ func waitForPluginRequestLogs(t *testing.T, app core.App, path string, count int
 		}
 		requests := 0
 		for _, entry := range logs {
-			if entry.Data["type"] == "request" && entry.Data["method"] == http.MethodPost && entry.Data["url"] == path {
+			if entry.Data["type"] == "request" && entry.Data["method"] == method && entry.Data["url"] == path {
 				requests++
 			}
 		}
@@ -67,7 +72,7 @@ func waitForPluginRequestLogs(t *testing.T, app core.App, path string, count int
 			return logs
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("persisted request log for POST %s missing: got %d, want %d", path, requests, count)
+			t.Fatalf("persisted request log for %s %s missing: got %d, want %d", method, path, requests, count)
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -114,9 +119,8 @@ func TestOAuthSaveFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.T) {
 				t.Errorf("API response leaked the save cause: %s", response)
 			}
 			data, _ := result["data"].(map[string]any)
-			operation, _ := data["operation"].(map[string]any)
-			if operation["code"] != "internal_error" {
-				t.Errorf("unsafe or unclassified save failure response: %s", response)
+			if len(data) != 0 || result["message"] != "Failed to save plugin connection." {
+				t.Errorf("host save failure was exposed as a plugin failure: %s", response)
 			}
 
 			logs := waitForPluginRequestLogs(t, f.app, path, 1)
@@ -142,7 +146,7 @@ func TestOAuthSaveFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.T) {
 				}
 				if entry.Data["type"] == "request" && entry.Data["url"] == path {
 					requests++
-					if entry.Data["error"] != "Plugin operation failed." {
+					if entry.Data["error"] != "Failed to save plugin connection." {
 						t.Errorf("request logger did not receive the safe API error: %#v", entry.Data)
 					}
 				}

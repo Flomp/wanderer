@@ -87,7 +87,7 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 
 	gpx, err := readTrailGPX(e.App, trail)
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "file_read_failed"))
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to read trail GPX.", pluginsystem.WithDiagnosticCause(err, "file_read_failed"))
 	}
 	if len(gpx) == 0 {
 		cause := "trail_gpx_missing"
@@ -121,12 +121,12 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 	input.Config = pluginConfig
 	inputBytes, err := json.Marshal(input)
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to prepare plugin request.", pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 	}
 
 	runtime, err := runtimeFor(plugin)
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, err)
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to initialize plugin runtime.", err)
 	}
 	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy.WithHostAuth(auth))
 	if err != nil {

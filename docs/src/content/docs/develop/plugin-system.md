@@ -727,16 +727,24 @@ Allowed events are `request_started`, `request_completed`, `request_failed`,
 `sync_started`, `sync_completed`, and `sync_failed`. The host derives the error
 class and records operation, HTTP status, and any retry delay, including zero.
 Unknown event names are redacted and error metadata is normalized again at the
-worker boundary. Raw messages, provider bodies, URLs, tokens and SQL never become
-log text. Local host failures add fixed cause identifiers and safe database-code
-details. Interactive OAuth, send and session-validation failures use the same
-error metadata as scheduled sync. Guest HTTP failures are logged at the
-`http_request` host-call boundary; handler-managed requests are logged by their
-owning route. The shared HTTP executor returns errors without logging them.
-Route failures return a safe `ApiError` without raw underlying errors or raw
-error data, because PocketBase also records returned errors in its request log.
-An absent GPX field is an INFO prerequisite diagnostic; unreadable or empty
-referenced files remain WARN diagnostics.
+worker boundary. These diagnostic records omit raw messages, provider bodies,
+URLs, tokens and SQL. Local host failures add fixed cause identifiers and safe
+database-code details. Interactive OAuth, send and session-validation failures
+use the same error metadata as scheduled sync. Guest HTTP failures are logged
+at the `http_request` host-call boundary; handler-managed requests are logged by
+their owning route. The shared HTTP executor returns errors without logging.
+A child-worker request-pointer failure uses a private host-diagnostic frame.
+The parent constructs `invalid_request`, `host_http` and `input_encoding` from
+its closed kind and its own plugin/session context. Guest `log` payloads cannot
+create this frame or claim its trusted diagnosis; they remain guest events.
+
+OAuth, trail-send, session-validation, plugin-list and category-remap routes
+return safe `ApiError` values without raw underlying errors or raw error data,
+because PocketBase also records returned errors in its request log. Local
+database/filesystem operations and runtime selection return plain API errors
+without a plugin error code, so the UI retains its action-specific fallback.
+Typed worker, provider and guest failures retain their normalized error codes. An absent GPX field is an INFO prerequisite
+diagnostic; unreadable or empty referenced files remain WARN diagnostics.
 
 Declare `log` in the capability's `requiredHostFunctions`. Logs are best-effort;
 they must not determine plugin control flow.
