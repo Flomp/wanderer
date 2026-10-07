@@ -4,11 +4,12 @@
     import type { PluginProvider } from "$lib/models/plugin_provider";
     import type { Trail } from "$lib/models/trail";
     import { plugin_instances_index } from "$lib/stores/plugin_instance_store";
+    import { canUsePluginConnection } from "$lib/util/plugin_auth_context";
     import { plugins_index } from "$lib/stores/plugin_store";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
     import { APIError } from "$lib/util/api_util";
-    import { translatePluginAPIError } from "$lib/util/plugin_error_i18n";
+    import { translatePluginAPIError, pluginOperationNeedsReload, pluginOperationCode } from "$lib/util/plugin_error_i18n";
     import { pluginTitle as localizedPluginTitle } from "$lib/util/plugin_i18n";
     import { onMount } from "svelte";
     import { _, locale } from "svelte-i18n";
@@ -26,17 +27,22 @@
     let modal: Modal;
     let loading = $state(false);
     let sending = $state("");
+    let modalOpen = $state(false);
+    let instances: PluginInstance[] = $state([]);
     let eligible: PluginProvider[] = $state([]);
     let currentTheme: "dark" | "light" = $state("light");
 
     onMount(() => {
         currentTheme = document.documentElement.classList.contains("dark") ? "dark" : "light";
-        return theme.subscribe((value) => {
-            currentTheme = value;
-        });
+        const unsubscribe = theme.subscribe(value => { currentTheme = value; });
+        const busyRefresh = window.setInterval(() => {
+            if (modalOpen && !document.hidden && instances.some(instance => instance.busy)) void loadEligible();
+        }, 3000);
+        return () => { unsubscribe(); window.clearInterval(busyRefresh); };
     });
 
     export async function openModal() {
+        modalOpen = true;
         modal.openModal();
         await loadEligible();
     }
@@ -45,21 +51,15 @@
         loading = true;
         eligible = [];
         try {
-            const [plugins, instances] = await Promise.all([
+            const [plugins, currentInstances] = await Promise.all([
                 plugins_index(),
                 plugin_instances_index(),
             ]);
-            const enabledProviders = new Set(
-                instances
-                    .filter((a: PluginInstance) => a.enabled)
-                    .map((a) => a.plugin_id),
-            );
-            eligible = plugins.filter(
-                (p) =>
-                    p.status === "available" &&
-                    (p.capabilities ?? []).includes("prepare_trail_send.v1") &&
-                    enabledProviders.has(p.id),
-            );
+            instances = currentInstances;
+            eligible = plugins.filter(plugin => plugin.status === "available" &&
+                (plugin.capabilities ?? []).includes("prepare_trail_send.v1") &&
+                instances.some(instance => instance.plugin_id === plugin.id && canUsePluginConnection(plugin, instance)));
+
         } catch (e) {
             console.error(e);
         } finally {
@@ -98,8 +98,10 @@
                 icon: "check",
                 text: $_("trail-sent"),
             });
+            modalOpen = false;
             modal.closeModal();
         } catch (e) {
+            if (pluginOperationNeedsReload(e) || pluginOperationCode(e) === "plugin_instance_busy") await loadEligible();
             show_toast({
                 type: "error",
                 icon: "close",
@@ -107,6 +109,7 @@
             });
         } finally {
             sending = "";
+            await plugin_instances_index().catch(() => {});
         }
     }
 </script>
@@ -125,9 +128,11 @@
         {:else}
             <div class="flex flex-wrap items-center gap-4">
                 {#each eligible as plugin (plugin.id)}
+                    {@const busy = instances.find(instance => instance.plugin_id === plugin.id)?.busy}
                     <button
                         class="btn-secondary"
-                        disabled={sending !== ""}
+                        aria-label={pluginTitle(plugin)}
+                        disabled={sending !== "" || busy}
                         onclick={() => send(plugin)}
                     >
                         {#if sending === plugin.id}
@@ -141,6 +146,7 @@
                         {:else}
                             <span>{pluginTitle(plugin)}</span>
                         {/if}
+                        {#if busy}<span class="block text-xs mt-2">{$_("plugin-operation-running")}</span>{/if}
                     </button>
                 {/each}
             </div>
@@ -148,7 +154,7 @@
     {/snippet}
     {#snippet footer()}
         <div class="flex items-center gap-4">
-            <button class="btn-secondary" onclick={() => modal.closeModal()}
+            <button class="btn-secondary" onclick={() => { modalOpen = false; modal.closeModal(); }}
                 >{$_("cancel")}</button
             >
         </div>

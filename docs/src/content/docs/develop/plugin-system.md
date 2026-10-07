@@ -891,23 +891,28 @@ trail.gpx
 ## Auth
 
 Auth contexts are declared in the manifest and referenced by name from
-`HostRequestSpec.auth`. The current host resolves the selected context from the
-legacy `auth.oauthContext` value, which also stores OAuth grant metadata. It is
-not an independent persistent selection. If no context is selected, the host can infer only a single
-manifest context. Unknown names and ambiguous manifests are rejected before
-provider work. Only the selected context's credentials are decrypted and passed
-to provider operations; inactive credentials and pending flow secrets are not
-part of ordinary capability input. Declared input fields are decrypted only
-when they also belong to the writer's secret field set; a hexadecimal `clientId`
-or other non-secret input is kept as text.
+`HostRequestSpec.auth`. The active selection is `plugin_instances.auth_context`;
+settings use the write key `authContext`. An existing auth-required instance
+without a valid selection is unresolved. The host does not fall back to
+`auth.oauthContext`, which records only OAuth grant provenance, or to a pending
+flow proposal. Create can infer a sole manifest context. Unknown selections stay
+visible for diagnosis and repair without deleting stored tokens.
 
-An unchanged stored secret that resembles PocketBase ciphertext is preserved,
-including after a key change. Values that do not resemble ciphertext are
-encrypted on their next save. Arbitrary ciphertext-like plaintext introduced by
-a raw database insert or a changed manifest secret declaration cannot be
-identified reliably. The current writer also preserves an explicitly re-entered
-value when it is byte-identical to such stored data; this case requires a writer
-that distinguishes explicit plaintext input from unchanged stored material.
+OAuth start proposes a context in a separate pending flow. Successful callback
+atomically adopts that selection and its grant; failed exchanges preserve the
+current connection. A grant from another context is rejected before provider
+work. Missing historical provenance is compatible only with a sole OAuth
+context and matching active selection. Only selected operation inputs are
+decrypted and passed to the provider. Pending flow secrets and inactive
+credentials are excluded from ordinary capability input. Declared non-secret
+inputs such as `clientId` remain text.
+
+The host settings writer preserves omitted secrets and empty placeholders;
+explicit `null` clears an editable secret input. Every nonempty explicit secret input
+is plaintext and encrypted exactly once with the current key. Re-entering the
+same raw value can therefore repair an unreadable credential. Secret declarations
+control encryption; editable fields are constrained by the context's input
+allowlist. OAuth token and flow metadata are never client-editable.
 The host additionally recognizes the historical 40-hex plaintext Strava
 `accessToken`, `refreshToken`, and `clientSecret` values imported from older
 wanderer versions. Successful decryption takes precedence over this narrow
@@ -979,6 +984,7 @@ calls cannot refresh session auth themselves.
 
 `POST /api/v1/plugin-system/auth/validate` accepts `pluginId`, an optional
 `instanceId` and `authContext`, draft `auth`, and an optional draft `config`.
+Existing-instance validation also requires `expected_connection_generation`.
 The host merges installed defaults, freshly loaded instance overrides, then
 the draft. Supplied credentials replace old values before active credentials
 are decrypted; a blank string reuses a stored value. Validation performs no
@@ -1033,6 +1039,9 @@ plugin_instances
   user
   plugin_id
   enabled
+  auth_context
+  connection_generation
+  oauth_token_revision (hidden)
   auth
   config
   state
@@ -1042,13 +1051,26 @@ plugin_instances
   retry_not_before
 ```
 
-`auth` is encrypted by PocketBase hooks. `config.plugin` stores settings passed
+`auth` is encrypted by the responsible host writer. Direct PocketBase REST
+create/update writes are forbidden; use the [host/Web settings API](/develop/api#plugin-connections). `config.plugin` stores settings passed
 to the plugin, such as an `after` date. `config.host` stores host-owned settings
 such as enabled capabilities, privacy handling, merge settings, and category
 mapping. `state` stores per-capability provider cursors. It should only contain
 values that remain valid across separate sync runs, such as provider sync tokens
 or delta cursors. Batch-local cursors such as `page` are discarded before the
 instance is saved.
+
+`connection_generation` is an opaque host revision changed by active credential
+or context replacement, successful authorization and revoke. Config changes,
+ordinary refresh and enable toggles preserve it. Settings and provider results
+use fresh transactional guards rather than rewriting a loaded record snapshot.
+
+`busy` is a temporary owner-read property derived from the held instance lock,
+separate from stored status. Cron skips a busy instance until its next scheduled
+run; send and existing-instance validation return `plugin_instance_busy`
+immediately. OAuth callback uses a flow/generation guard and can complete while
+Cron holds the provider lock. Lock release has no record event, so visible busy
+indicators are refreshed by controlled reads.
 
 The host also caches discovered plugin manifests in `installed_plugins`.
 Installed plugins and user plugin instances are intentionally separate:

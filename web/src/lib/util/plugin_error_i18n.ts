@@ -32,6 +32,12 @@ const pluginErrorKeys = new Map<string, string>([
     ["not_importable", "plugin-error-not-importable"],
     ["not_found", "plugin-error-not-found"],
     ["unsupported_protocol", "plugin-error-unsupported-protocol"],
+    ["plugin_instance_busy", "plugin-error-busy"],
+    ["plugin_connection_conflict", "plugin-error-connection-conflict"],
+    ["plugin_oauth_flow_conflict", "plugin-error-oauth-flow-conflict"],
+    ["plugin_instance_exists", "plugin-error-instance-exists"],
+    ["plugin_instance_disabled", "plugin-error-instance-disabled"],
+    ["connection_generation_required", "plugin-error-connection-conflict"],
 ]);
 
 export function pluginErrorKey(code: unknown): string {
@@ -56,6 +62,9 @@ const authErrorHints = [
     "email and password are required",
 ];
 
+const connectionOperationCodes = new Set(["plugin_instance_busy", "plugin_connection_conflict",
+    "plugin_oauth_flow_conflict", "plugin_instance_exists", "plugin_instance_disabled", "connection_generation_required"]);
+
 export function translatePluginError(code?: string, _message?: string): string {
     return get(_)(pluginErrorKey(code));
 }
@@ -71,8 +80,11 @@ export function pluginSetupErrorKey(code: unknown): string {
 
 export function translatePluginAPIError(error: unknown, fallback: string): string {
     if (error instanceof APIError) {
+        const operationCode = pluginOperationCode(error);
+        if (operationCode) return translatePluginError(operationCode);
         const pluginError = extractPluginError(error.detail);
         if (pluginError?.code) {
+            if (connectionOperationCodes.has(String(pluginError.code))) return fallback;
             return translatePluginError(String(pluginError.code), stringValue(pluginError.message));
         }
 
@@ -83,6 +95,19 @@ export function translatePluginAPIError(error: unknown, fallback: string): strin
     }
 
     return fallback;
+}
+
+// Only the operation item in the PocketBase envelope controls conflict UX.
+// Other nested field-validation codes never become connection conflicts.
+export function pluginOperationCode(error: unknown): string | undefined {
+    if (!(error instanceof APIError)) return undefined;
+    const code = error.detail?.data?.operation?.code;
+    return typeof code === "string" ? code : undefined;
+}
+
+export function pluginOperationNeedsReload(error: unknown): boolean {
+    return ["plugin_connection_conflict", "plugin_oauth_flow_conflict", "plugin_instance_disabled",
+        "plugin_instance_exists", "connection_generation_required"].includes(pluginOperationCode(error) ?? "");
 }
 
 function extractPluginError(value: unknown): PluginErrorLike | undefined {

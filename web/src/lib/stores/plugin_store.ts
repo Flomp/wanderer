@@ -1,7 +1,7 @@
 import type { LocalizedTextMap, PluginAuthContext, PluginProvider } from "$lib/models/plugin_provider";
 import type { PluginSystemPlugin } from "$lib/models/plugin_system";
 import { APIError } from "$lib/util/api_util";
-import { resolvePluginAuthContext } from "$lib/util/plugin_auth_context";
+import { resolvePluginAuthContext, canUsePluginConnection } from "$lib/util/plugin_auth_context";
 import { derived, writable, type Readable, type Writable } from "svelte/store";
 import {
     pluginInstances,
@@ -15,15 +15,10 @@ export const pluginProviders: Writable<PluginProvider[]> = writable([]);
 export const hasSendCapablePlugin: Readable<boolean> = derived(
     [pluginProviders, pluginInstances],
     ([$plugins, $instances]) => {
-        const enabledProviders = new Set(
-            $instances.filter((a) => a.enabled).map((a) => a.plugin_id),
-        );
-        return $plugins.some(
-            (p) =>
-                p.status === "available" &&
-                (p.capabilities ?? []).includes("prepare_trail_send.v1") &&
-                enabledProviders.has(p.id),
-        );
+        return $plugins.some(plugin => plugin.status === "available" &&
+            (plugin.capabilities ?? []).includes("prepare_trail_send.v1") &&
+            $instances.some(instance => instance.plugin_id === plugin.id && canUsePluginConnection(plugin, instance)));
+
     },
 );
 

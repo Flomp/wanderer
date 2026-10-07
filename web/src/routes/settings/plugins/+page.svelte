@@ -4,10 +4,12 @@
     import PluginInfoModal from "$lib/components/settings/plugins/plugin_info_modal.svelte";
     import PluginInstanceSettingsModal from "$lib/components/settings/plugins/plugin_instance_settings_modal.svelte";
     import type { Category } from "$lib/models/category.js";
-    import type { PluginInstance } from "$lib/models/plugin_instance.js";
+    import type { PluginInstance, PluginInstanceDraft } from "$lib/models/plugin_instance.js";
     import type { PluginProvider } from "$lib/models/plugin_provider.js";
     import type { Subcategory } from "$lib/models/subcategory.js";
     import {
+        pluginInstances,
+        plugin_instances_index,
         plugin_category_remap_apply,
         plugin_category_remap_preview,
         plugin_instances_create,
@@ -22,8 +24,10 @@
     import {
         pluginSetupErrorKey,
         translatePluginError,
+        translatePluginAPIError,
+        pluginOperationNeedsReload,
     } from "$lib/util/plugin_error_i18n";
-    import { resolveProviderAuth } from "$lib/util/plugin_auth_context";
+    import { resolveProviderAuth, hasPluginConnectionMaterial } from "$lib/util/plugin_auth_context";
     import { onMount, tick, untrack } from "svelte";
     import { _, locale } from "svelte-i18n";
     import { theme } from "$lib/stores/theme_store";
@@ -76,17 +80,23 @@
         queueMicrotask(() => {
             void maybePromptBackfilledCategoryRemap();
         });
-        return theme.subscribe((value) => {
-            currentTheme = value;
-        });
+        pluginInstances.set(instances);
+        const unsubscribeInstances = pluginInstances.subscribe(value => { instances = value; });
+        const unsubscribeTheme = theme.subscribe(value => { currentTheme = value; });
+        const busyRefresh = window.setInterval(() => {
+            if (!document.hidden && instances.some(instance => instance.busy)) {
+                void plugin_instances_index().catch(() => {});
+            }
+        }, 3000);
+        return () => { unsubscribeInstances(); unsubscribeTheme(); window.clearInterval(busyRefresh); };
     });
 
-    async function savePluginInstance(instance: Partial<PluginInstance>) {
+    async function savePluginInstance(instance: PluginInstanceDraft) {
         let saved: PluginInstance;
         try {
             if (instance.id) {
                 saved = await plugin_instances_update(
-                    instance as PluginInstance,
+                    { ...instance, id: instance.id },
                 );
             } else {
                 saved = await plugin_instances_create(instance);
@@ -103,10 +113,11 @@
                 type: "success",
             });
         } catch (e) {
+            if (pluginOperationNeedsReload(e)) await plugin_instances_index().catch(() => {});
             show_toast({
-                text: $_("error-setting-up-plugin", {
+                text: translatePluginAPIError(e, $_("error-setting-up-plugin", {
                     values: { provider: instance.plugin_id },
-                }),
+                })),
                 icon: "close",
                 type: "error",
             });
@@ -136,7 +147,7 @@
         value: boolean,
     ) {
         if (!instance) {
-            return;
+            return false;
         }
         if (value && pluginRequiresConnection(plugin, instance)) {
             show_toast({
@@ -144,14 +155,13 @@
                 icon: "close",
                 type: "error",
             });
-            return;
+            return false;
         }
 
         try {
             const saved = await plugin_instances_update({
-                ...instance,
+                id: instance.id!,
                 enabled: value,
-                status: providerAuthType(plugin, instance) === "oauth2" || value ? "configured" : "disabled",
             });
             instances = [
                 ...instances.filter((existing) => existing.id != saved.id),
@@ -161,12 +171,13 @@
                 await maybePromptCategoryRemap(saved, plugin);
             }
         } catch (e) {
+            if (pluginOperationNeedsReload(e)) await plugin_instances_index().catch(() => {});
             show_toast({
-                text: $_("error-setting-up-plugin", { values: { provider: pluginTitle(plugin) } }),
+                text: translatePluginAPIError(e, $_("error-setting-up-plugin", { values: { provider: pluginTitle(plugin) } })),
                 icon: "close",
                 type: "error",
             });
-            return;
+            return false;
         }
 
         show_toast({
@@ -174,6 +185,7 @@
             icon: "check",
             type: "success",
         });
+        return true;
     }
 
     async function maybePromptCategoryRemap(
@@ -274,11 +286,9 @@
 
         try {
             const saved = await plugin_instances_update({
-                ...instance,
+                id: instance.id!,
                 config: {
-                    ...(instance.config ?? {}),
                     host: {
-                        ...((instance.config?.host as Record<string, unknown> | undefined) ?? {}),
                         categoryRemapDismissedAt: new Date().toISOString(),
                     },
                 },
@@ -341,7 +351,7 @@
         }
     }
 
-    async function confirmCategoryMappingSave(candidate: Partial<PluginInstance>) {
+    async function confirmCategoryMappingSave(candidate: PluginInstanceDraft) {
         if (!candidate.id) {
             return true;
         }
@@ -493,7 +503,7 @@
         instance: PluginInstance | undefined,
     ) {
         const type = providerAuthType(plugin, instance);
-        return type === "unresolved" || (type === "oauth2" && instance?.status !== "configured");
+        return type === "unresolved" || (type !== "none" && !hasPluginConnectionMaterial(plugin, instance));
     }
 
     function pluginSettingsModalKey(plugin: PluginProvider) {
@@ -553,9 +563,12 @@
                         title={pluginTitle(plugin)}
                         description={pluginDescription(plugin)}
                         {settingsDisabled}
-                        toggleDisabled={!instance || settingsDisabled || pluginRequiresConnection(plugin, instance)}
+                        toggleDisabled={!instance || (!instance.enabled && (settingsDisabled || pluginRequiresConnection(plugin, instance)))}
                         active={instance?.enabled ?? false}
                         lastSyncAt={instance?.last_sync_at}
+                        busy={instance?.busy}
+                        connection={instance && providerAuthType(plugin, instance) !== "none"
+                            ? hasPluginConnectionMaterial(plugin, instance) ? "present" : "missing" : undefined}
                         error={pluginCardError(plugin, instance)}
                         oninfo={() => openPluginInfo(plugin)}
                         onclick={() => openPluginSettings(plugin)}

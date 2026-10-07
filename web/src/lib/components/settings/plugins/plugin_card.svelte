@@ -5,7 +5,7 @@
     interface Props {
         onclick: () => void;
         oninfo: () => void;
-        ontoggle: (value: boolean) => void;
+        ontoggle: (value: boolean) => void | boolean | Promise<boolean>;
         active: boolean;
         toggleDisabled?: boolean;
         settingsDisabled?: boolean;
@@ -13,6 +13,8 @@
         title: string;
         description?: string;
         lastSyncAt?: string;
+        busy?: boolean;
+        connection?: "present" | "missing";
         error?: string;
     }
 
@@ -27,6 +29,8 @@
         title,
         description = "",
         lastSyncAt = "",
+        busy = false,
+        connection,
         error = "",
     }: Props = $props();
 
@@ -84,9 +88,17 @@
                 ><i class="fa fa-cogs mr-2"></i>{$_("settings")}</button
             >
             <div class="plugin-card-toggle">
-                <Toggle bind:value={active} onchange={ontoggle} disabled={toggleDisabled}></Toggle>
+                <Toggle bind:value={active} onchange={async value => {
+                    if (await ontoggle(value) === false) active = !value;
+                }} disabled={toggleDisabled}></Toggle>
             </div>
         </div>
+        {#if connection}
+            <p class="text-xs text-gray-500">{$_(connection === "present" ? "plugin-connection-material-present" : "plugin-connection-material-missing")}</p>
+        {/if}
+        {#if busy}
+            <p class="text-xs text-gray-500" role="status">{$_("plugin-operation-running")}</p>
+        {/if}
         <div class="min-h-5 max-w-56 text-xs text-gray-500">
             {#if lastSyncAt}
                 <span

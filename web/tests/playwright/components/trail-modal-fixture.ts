@@ -24,7 +24,7 @@ export async function buildTrailModalFixture(dev: boolean, pairSource?: string, 
                 if (id === '$app/state') return '\0fixture:state';
                 if (id === '$app/navigation') return '\0fixture:navigation';
                 if (id === 'svelte-i18n') return '\0fixture:i18n';
-                if (id === '$lib/stores/toast_store.svelte') return '\0fixture:toast';
+                if (id === '$lib/stores/toast_store.svelte' || id === '$lib/stores/toast_store.svelte.js') return '\0fixture:toast';
                 if (id.startsWith('$lib/')) {
                     const path = resolve(root, 'src/lib', id.slice(5));
                     if (extname(id)) return path.endsWith('.js') && !existsSync(path) ? path.slice(0, -3) + '.ts' : path;
@@ -58,7 +58,7 @@ export async function buildTrailModalFixture(dev: boolean, pairSource?: string, 
                     export async function trails_show(id) { return { id, name: id }; }
                 `;
                 if (id === resolve(root, 'src/lib/stores/search_store.ts')) return 'export async function searchActors() { return []; }';
-                if (id === '\0fixture:toast') return 'export function show_toast() {}';
+                if (id === '\0fixture:toast') return sourceStubs[id] ?? 'export function show_toast() {}';
 
                 let source: string;
                 if (id in sourceStubs) source = sourceStubs[id];

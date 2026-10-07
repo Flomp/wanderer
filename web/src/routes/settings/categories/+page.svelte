@@ -3,6 +3,7 @@
     import Toggle from "$lib/components/base/toggle.svelte";
     import type { Category } from "$lib/models/category";
     import type { UserCategoryPreference } from "$lib/models/category_preference";
+    import { hasPluginConnectionMaterial } from "$lib/util/plugin_auth_context";
     import type { PluginInstance } from "$lib/models/plugin_instance";
     import type { PluginProvider } from "$lib/models/plugin_provider";
     import type { Subcategory } from "$lib/models/subcategory";
@@ -153,14 +154,9 @@
         return plugin ? pluginTitle(plugin, $locale) : instance.plugin_id;
     }
 
-    function hasAuthInfo(instance: PluginInstance): boolean {
-        return Object.values(instance.auth ?? {}).some(
-            (value) => typeof value === "string" && value.trim().length > 0,
-        );
-    }
-
     function shouldConsiderPluginInstance(instance: PluginInstance): boolean {
-        return !!pluginProvider(instance) && (instance.enabled || hasAuthInfo(instance));
+        const plugin = pluginProvider(instance);
+        return !!plugin && (instance.enabled || hasPluginConnectionMaterial(plugin, instance));
     }
 
     function resolvePluginMappingTargets(): PluginMappingReference[] {

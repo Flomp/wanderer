@@ -1,5 +1,5 @@
 import { PluginSessionAuthValidateSchema } from "$lib/models/api/plugin_instance_schema";
-import { handleError } from "$lib/util/api_util";
+import { handlePluginError as handleError } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**
@@ -24,6 +24,9 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *                 type: string
  *               instanceId:
  *                 type: string
+ *               expected_connection_generation:
+ *                 type: string
+ *                 description: Required for an existing instance; use the latest owner-read connection_generation.
  *               authContext:
  *                 type: string
  *               auth:
@@ -50,6 +53,8 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *         description: Bad Request
  *       401:
  *         description: Unauthorized
+ *       409:
+ *         description: Busy or connection conflict; inspect data.operation.code and retry only deliberately.
  *       500:
  *         description: Internal Server Error
  */

@@ -17,6 +17,12 @@ for (const dev of [true, false]) {
             { name: 'typed provider failure', status: 400,
                 response: { message: 'Plugin operation failed.', detail: { data: { operation: { code: 'rate_limited', message: 'private-provider-sentinel' } } } },
                 text: 'plugin-error-rate-limited' },
+            { name: 'connection changed', status: 409,
+                response: { status: 409, message: 'safe', data: { operation: { code: 'plugin_connection_conflict', message: 'safe' } } },
+                text: 'plugin-error-connection-conflict' },
+            { name: 'flow replaced', status: 409,
+                response: { status: 409, message: 'safe', data: { operation: { code: 'plugin_oauth_flow_conflict', message: 'safe' } } },
+                text: 'plugin-error-oauth-flow-conflict' },
             { name: 'successful connection', status: 200, response: { ok: true }, text: '' },
         ]) {
             test(scenario.name, async ({ page }) => {
@@ -27,6 +33,10 @@ for (const dev of [true, false]) {
                     if (new URL(route.request().url()).pathname === '/api/v1/plugin-system/oauth/callback') {
                         requests.push(route.request().postDataJSON());
                         await route.fulfill({ status: scenario.status, json: scenario.response });
+                        return;
+                    }
+                    if (new URL(route.request().url()).pathname === '/api/v1/plugin-instance') {
+                        await route.fulfill({ json: { items: [] } });
                         return;
                     }
                     await route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body></body></html>' });

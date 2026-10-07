@@ -702,5 +702,19 @@
   "width": "Width",
   "wrong-username-or-password": "Wrong username or password",
   "yes": "Yes",
-  "you-can": "You can"
+  "you-can": "You can",
+  "plugin-error-busy": "Another operation is running for this plugin. Try again after it finishes.",
+  "plugin-error-connection-conflict": "The plugin connection changed. Reload its settings and review them before trying again.",
+  "plugin-error-oauth-flow-conflict": "This authorization was replaced or already completed. Open plugin settings and reconnect.",
+  "plugin-error-instance-exists": "This plugin is already configured. Its existing settings have been loaded.",
+  "plugin-error-instance-disabled": "This plugin was disabled. Review its settings before sending again.",
+  "plugin-auth-context": "Authentication method",
+  "plugin-clear-credential": "Clear saved {field}",
+  "plugin-oauth-material-present-hint": "Authorization is saved. Reconnect to replace it and enable this plugin after authorization succeeds.",
+  "plugin-connection-material-present": "Credentials saved",
+  "plugin-connection-material-missing": "Connection required",
+  "plugin-operation-running": "Operation running",
+  "plugin-disconnect": "Disconnect",
+  "plugin-reconnect": "Open settings to reconnect",
+  "plugin-reload-settings": "Reload current settings"
 }

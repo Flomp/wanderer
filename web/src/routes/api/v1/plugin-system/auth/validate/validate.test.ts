@@ -4,7 +4,7 @@ import { POST } from "./+server";
 
 describe("session validate proxy", () => {
     it("passes the checked draft to the host without dropping configured connector policy", async () => {
-        const draft = { pluginId: "session", instanceId: "abcdefghijklmn1", authContext: "account",
+        const draft = { pluginId: "session", instanceId: "abcdefghijklmn1", authContext: "account", expected_connection_generation: "revision",
             auth: { email: "replacement@example.org", password: "new-secret" },
             config: { host: { connectors: { service: { baseURL: "http://private.example", allowPrivate: true,
                 tls: { mode: "customCA", caBundle: "draft-ca" } } } }, plugin: { selector: "unsaved" } } };

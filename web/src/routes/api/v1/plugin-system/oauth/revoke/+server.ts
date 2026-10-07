@@ -1,4 +1,4 @@
-import { handleError } from "$lib/util/api_util";
+import { handlePluginError as handleError } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**
@@ -20,6 +20,9 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *             properties:
  *               instanceId:
  *                 type: string
+ *               expected_connection_generation:
+ *                 type: string
+ *                 description: Required for an existing instance; use the latest owner-read connection_generation.
  *               authContext:
  *                 type: string
  *     responses:
@@ -32,10 +35,15 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *               properties:
  *                 ok:
  *                   type: boolean
+ *                 connection_generation:
+ *                   type: string
+ *                   description: The revision committed by this revoke; use it to guard a following authorization start.
  *       400:
  *         description: Bad Request
  *       401:
  *         description: Unauthorized
+ *       409:
+ *         description: Connection conflict; reload and review before disconnecting.
  *       500:
  *         description: Internal Server Error
  */

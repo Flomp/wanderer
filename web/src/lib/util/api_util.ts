@@ -260,3 +260,13 @@ export function handleError(e: any) {
         return json({ message, detail: e }, { status: 500 })
     }
 }
+
+// Host plugin errors already contain a safe PocketBase envelope. Preserve the
+// operation item verbatim without forwarding SDK transport/original errors.
+export function handlePluginError(e: unknown) {
+    if (e instanceof ClientResponseError && e.status > 0) {
+        return json({ status: e.status, message: e.response.message,
+            data: e.response.data ?? {} }, { status: e.status });
+    }
+    return handleError(e);
+}

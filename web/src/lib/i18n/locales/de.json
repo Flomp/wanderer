@@ -702,5 +702,19 @@
   "width": "Breite",
   "wrong-username-or-password": "Falscher Nutzername oder falsches Passwort",
   "yes": "Ja",
-  "you-can": "Du kannst"
+  "you-can": "Du kannst",
+  "plugin-error-busy": "Für dieses Plugin läuft bereits ein Vorgang. Versuche es nach dessen Abschluss erneut.",
+  "plugin-error-connection-conflict": "Die Plugin-Verbindung hat sich geändert. Lade die Einstellungen neu und prüfe sie vor einem neuen Versuch.",
+  "plugin-error-oauth-flow-conflict": "Diese Autorisierung wurde ersetzt oder bereits abgeschlossen. Öffne die Plugin-Einstellungen und verbinde dich erneut.",
+  "plugin-error-instance-exists": "Dieses Plugin ist bereits eingerichtet. Die vorhandenen Einstellungen wurden geladen.",
+  "plugin-error-instance-disabled": "Dieses Plugin wurde deaktiviert. Prüfe seine Einstellungen vor dem nächsten Senden.",
+  "plugin-auth-context": "Authentifizierungsmethode",
+  "plugin-clear-credential": "Gespeicherten Wert für {field} löschen",
+  "plugin-oauth-material-present-hint": "Eine Autorisierung ist gespeichert. Eine erneute Verbindung ersetzt sie und aktiviert das Plugin nach erfolgreicher Autorisierung.",
+  "plugin-connection-material-present": "Zugangsdaten gespeichert",
+  "plugin-connection-material-missing": "Verbindung erforderlich",
+  "plugin-operation-running": "Vorgang läuft",
+  "plugin-disconnect": "Verbindung trennen",
+  "plugin-reconnect": "Einstellungen zur erneuten Verbindung öffnen",
+  "plugin-reload-settings": "Aktuelle Einstellungen neu laden"
 }

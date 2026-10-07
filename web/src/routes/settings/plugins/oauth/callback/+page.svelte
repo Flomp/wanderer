@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { plugin_oauth_callback } from "$lib/stores/plugin_instance_store";
-    import { translatePluginAPIError, translatePluginError } from "$lib/util/plugin_error_i18n";
+    import { plugin_oauth_callback, plugin_instances_index } from "$lib/stores/plugin_instance_store";
+    import { translatePluginAPIError, translatePluginError, pluginOperationNeedsReload } from "$lib/util/plugin_error_i18n";
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
     import { onMount } from "svelte";
@@ -26,8 +26,10 @@
 
         try {
             await plugin_oauth_callback({ instanceId, code, state });
+            await plugin_instances_index().catch(() => {});
             await goto("/settings/plugins");
         } catch (e) {
+            if (pluginOperationNeedsReload(e)) await plugin_instances_index().catch(() => {});
             error = translatePluginAPIError(e, $_("error-completing-oauth"));
         }
     });
@@ -41,7 +43,7 @@
     {#if error}
         <h3 class="text-xl font-semibold">{$_("error")}</h3>
         <p class="mt-3 text-sm text-gray-500">{error}</p>
-        <a class="btn-secondary mt-6 inline-block" href="/settings/plugins">{$_("plugins")}</a>
+        <a class="btn-secondary mt-6 inline-block" href="/settings/plugins">{$_("plugin-reconnect")}</a>
     {:else}
         <h3 class="text-xl font-semibold">{$_("plugins")}</h3>
     {/if}

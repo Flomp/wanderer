@@ -1,4 +1,4 @@
-import { handleError } from "$lib/util/api_util";
+import { handlePluginError as handleError } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**

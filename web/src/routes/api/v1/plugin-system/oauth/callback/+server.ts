@@ -1,4 +1,4 @@
-import { handleError } from "$lib/util/api_util";
+import { handlePluginError as handleError } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**
@@ -40,6 +40,8 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *         description: Bad Request
  *       401:
  *         description: Unauthorized
+ *       409:
+ *         description: Connection or OAuth flow conflict; begin a new authorization without repeating the code exchange.
  *       500:
  *         description: Internal Server Error
  */

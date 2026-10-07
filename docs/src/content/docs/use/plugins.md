@@ -52,7 +52,7 @@ Before integrating Strava with <span class="-tracking-[0.075em]">wanderer</span>
 6. Click **Save & connect**.
 7. You will be redirected to Strava's authorization page. Keep all checkboxes selected and click **Authorize**.
 8. You will then be redirected back to <span class="-tracking-[0.075em]">wanderer</span>.
-9. Toggle the plugin on. It is now active.
+9. Successful authorization activates the plugin. A later explicit disable action keeps it disabled.
 
 If you later change the Client ID or Client Secret, reconnect the plugin. Other
 settings can be saved without repeating the OAuth flow.
@@ -63,7 +63,7 @@ The komoot plugin requires only your komoot username and password:
 
 1. Open the komoot settings from the plugins menu.
 2. Enter your komoot credentials.
-3. Save the settings.
+3. Click **Save and validate** to check the credentials, or **Save** to store them for repair without a login attempt.
 4. Toggle the plugin on. It will become active immediately.
 
 Your planned and completed trails will now sync with <span class="-tracking-[0.075em]">wanderer</span>.
@@ -76,8 +76,30 @@ The Hammerhead plugin requires your Hammerhead account details:
 2. Enter your Hammerhead email and password.
 3. Choose whether you want to sync planned tours, completed tours, or both.
 4. (Optional) Set an "ignore trails before" date to avoid syncing duplicates if your Hammerhead account is already connected to other services.
-5. Save the settings and toggle the plugin on. It will become active immediately after a successful login.
+5. Click **Save and validate** to check the credentials, then toggle the plugin on. **Save** stores a repair without making a login attempt.
 
 :::note
 This page still describes provider setup at a high level. Provider-specific details depend on the installed plugin's manifest and capabilities.
 :::
+
+
+## Connection repair
+
+The plugin card distinguishes saved credentials, activation, and an operation
+currently running. Saved authorization does not guarantee that the provider
+still accepts it. Temporary provider errors and disabling the plugin preserve
+that saved material.
+
+For OAuth plugins, **Save and reconnect** starts a new authorization and requests
+activation after it succeeds. **Save** changes settings or client credentials
+without starting authorization. **Disconnect** clears the saved grant and
+disables the plugin while retaining its authentication method and client inputs.
+If saved credentials cannot be read after an encryption-key change, re-enter
+required inputs; reconnect explicitly clears the unreadable grant before opening
+a fresh flow. Blank secret inputs preserve saved values; use the clear checkbox
+to remove a credential deliberately.
+
+If another operation is running, wait for it to finish and try again. If a
+connection or authorization changed during an action, review the newly loaded
+settings or begin a new authorization. Sending and authorization completion are
+never repeated automatically after a conflict.

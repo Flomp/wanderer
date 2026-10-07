@@ -1,8 +1,9 @@
+import { RecordIdSchema } from "$lib/models/api/base_schema";
 import {
     PluginInstanceUpdateSchema,
 } from "$lib/models/api/plugin_instance_schema";
 import type { PluginInstance } from "$lib/models/plugin_instance";
-import { Collection, handleError, remove, show, update } from "$lib/util/api_util";
+import { Collection, handlePluginError as handleError, remove, show } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**
@@ -46,7 +47,7 @@ export async function GET(event: RequestEvent) {
  * /api/v1/plugin-instance/{id}:
  *   post:
  *     summary: Update plugin instance
- *     description: Updates plugin instance settings, auth, state, or status.
+ *     description: Patches editable plugin settings through the host. Omitted values are preserved. Direct PocketBase updates return 403.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -72,12 +73,11 @@ export async function GET(event: RequestEvent) {
  *               config:
  *                 type: object
  *                 additionalProperties: true
- *               state:
- *                 type: object
- *                 additionalProperties: true
- *               status:
+ *               authContext:
  *                 type: string
- *                 enum: [configured, needs_auth, needs_reauth, syncing, rate_limited, unavailable, unsupported_protocol, error, disabled]
+ *               expected_connection_generation:
+ *                 type: string
+ *                 description: Required for active credential or authentication context changes.
  *     responses:
  *       200:
  *         description: Plugin instance updated
@@ -92,11 +92,11 @@ export async function GET(event: RequestEvent) {
  */
 export async function POST(event: RequestEvent) {
     try {
-        const r = await update<PluginInstance>(
-            event,
-            PluginInstanceUpdateSchema,
-            Collection.plugin_instances,
-        );
+        const { id } = RecordIdSchema.parse(event.params);
+        const body = PluginInstanceUpdateSchema.parse(await event.request.json());
+        const r = await event.locals.pb.send(`/plugins/instances/${id}/settings`, {
+            method: "PATCH", body, fetch: event.fetch,
+        });
         return json(r);
     } catch (e: any) {
         return handleError(e);

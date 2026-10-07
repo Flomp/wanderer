@@ -3,7 +3,7 @@ import { addMessages, init } from "svelte-i18n";
 import en from "$lib/i18n/locales/en.json";
 import de from "$lib/i18n/locales/de.json";
 import { APIError } from "$lib/util/api_util";
-import { pluginErrorKey, translatePluginAPIError, translatePluginError } from "./plugin_error_i18n";
+import { pluginErrorKey, translatePluginAPIError, translatePluginError, pluginOperationCode, pluginOperationNeedsReload } from "./plugin_error_i18n";
 
 addMessages("en", en);
 init({ fallbackLocale: "en", initialLocale: "en" });
@@ -45,7 +45,7 @@ describe("safe plugin error display", () => {
         ["Failed to read trail GPX.", "error-sending-trail"],
         ["Failed to save plugin connection.", "error-starting-oauth"],
         ["Failed to save plugin connection.", "error-completing-oauth"],
-    ])("keeps the action fallback for local host failure: %s", (message, key) => {
+    ])("keeps local failure %s with action fallback %s", (message, key) => {
         expect(typeof en[key as keyof typeof en]).toBe("string");
         expect(typeof de[key as keyof typeof de]).toBe("string");
         const fallback = en[key as keyof typeof en] as string;
@@ -59,5 +59,29 @@ describe("safe plugin error display", () => {
         expect(translatePluginError("future-provider-secret", "provider-body-secret")).toBe(en["plugin-error-internal"]);
         expect(translatePluginAPIError(new Error("https://user:secret@provider.test/?token=secret"), "safe fallback")).toBe("safe fallback");
         expect(translatePluginError("toString", "provider-body-secret")).toBe(en["plugin-error-internal"]);
+    });
+});
+
+describe("plugin operation conflict decisions", () => {
+    it.each([
+        ["plugin_instance_busy", "plugin-error-busy", false],
+        ["plugin_connection_conflict", "plugin-error-connection-conflict", true],
+        ["plugin_oauth_flow_conflict", "plugin-error-oauth-flow-conflict", true],
+        ["plugin_instance_disabled", "plugin-error-instance-disabled", true],
+        ["plugin_instance_exists", "plugin-error-instance-exists", true],
+    ])("handles %s through %s (reload=%s)", (code, key, reload) => {
+        const error = new APIError(409, "safe", { status: 409, data: { operation: { code, message: "safe" } } });
+        expect(pluginOperationCode(error)).toBe(code);
+        expect(pluginOperationNeedsReload(error)).toBe(reload);
+        expect(translatePluginAPIError(error, "fallback")).toBe(en[key as keyof typeof en]);
+        expect(typeof de[key as keyof typeof de]).toBe("string");
+    });
+    it("does not classify arbitrary nested codes or HTTP409 alone as a connection conflict", () => {
+        for (const detail of [{ data: { field: { code: "plugin_connection_conflict" } } }, { code: "plugin_connection_conflict" }, {}]) {
+            const error = new APIError(409, "plugin_connection_conflict", detail);
+            expect(pluginOperationCode(error)).toBeUndefined();
+            expect(pluginOperationNeedsReload(error)).toBe(false);
+            expect(translatePluginAPIError(error, "fallback")).toBe("fallback");
+        }
     });
 });

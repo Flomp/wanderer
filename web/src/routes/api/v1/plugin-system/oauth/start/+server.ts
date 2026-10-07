@@ -1,4 +1,4 @@
-import { handleError } from "$lib/util/api_util";
+import { handlePluginError as handleError } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**
@@ -24,8 +24,15 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *                 type: string
  *               instanceId:
  *                 type: string
+ *               expected_connection_generation:
+ *                 type: string
+ *                 description: Required for an existing instance; use the latest owner-read connection_generation.
  *               authContext:
  *                 type: string
+ *               activate_on_success:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Request activation after successful authorization; later explicit enable/disable overrides it.
  *               redirectUri:
  *                 type: string
  *                 format: uri
@@ -48,6 +55,8 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *         description: Bad Request
  *       401:
  *         description: Unauthorized
+ *       409:
+ *         description: Connection conflict; reload and review before beginning a new flow.
  *       500:
  *         description: Internal Server Error
  */

@@ -1,4 +1,4 @@
-import { handleError } from "$lib/util/api_util";
+import { handlePluginError as handleError } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**
@@ -44,6 +44,8 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *         description: Forbidden
  *       404:
  *         description: Not Found
+ *       409:
+ *         description: Busy, connection or disabled conflict; inspect data.operation.code and never resend automatically.
  *       500:
  *         description: Internal Server Error
  */

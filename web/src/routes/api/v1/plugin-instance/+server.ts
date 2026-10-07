@@ -2,7 +2,7 @@ import {
     PluginInstanceCreateSchema,
 } from "$lib/models/api/plugin_instance_schema";
 import type { PluginInstance } from "$lib/models/plugin_instance";
-import { Collection, create, handleError, list } from "$lib/util/api_util";
+import { Collection, handlePluginError as handleError, list } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
 
 /**
@@ -54,7 +54,7 @@ export async function GET(event: RequestEvent) {
  * /api/v1/plugin-instance:
  *   put:
  *     summary: Create plugin instance
- *     description: Creates a plugin instance for the authenticated user.
+ *     description: Creates an owner-bound plugin instance through the host. Direct PocketBase collection creates return 403.
  *     tags:
  *       - Plugins
  *     requestBody:
@@ -64,12 +64,8 @@ export async function GET(event: RequestEvent) {
  *           schema:
  *             type: object
  *             required:
- *               - user
  *               - plugin_id
  *             properties:
- *               user:
- *                 type: string
- *                 description: User record ID
  *               plugin_id:
  *                 type: string
  *               enabled:
@@ -81,12 +77,8 @@ export async function GET(event: RequestEvent) {
  *               config:
  *                 type: object
  *                 additionalProperties: true
- *               state:
- *                 type: object
- *                 additionalProperties: true
- *               status:
+ *               authContext:
  *                 type: string
- *                 enum: [configured, needs_auth, needs_reauth, syncing, rate_limited, unavailable, unsupported_protocol, error, disabled]
  *     responses:
  *       200:
  *         description: Plugin instance created
@@ -99,11 +91,10 @@ export async function GET(event: RequestEvent) {
  */
 export async function PUT(event: RequestEvent) {
     try {
-        const r = await create<PluginInstance>(
-            event,
-            PluginInstanceCreateSchema,
-            Collection.plugin_instances,
-        );
+        const body = PluginInstanceCreateSchema.parse(await event.request.json());
+        const r = await event.locals.pb.send("/plugins/instances", {
+            method: "POST", body, fetch: event.fetch,
+        });
         return json(r);
     } catch (e) {
         return handleError(e);

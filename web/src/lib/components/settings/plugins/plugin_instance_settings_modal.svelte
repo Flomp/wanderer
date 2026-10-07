@@ -8,19 +8,20 @@
     import PluginMergeSettings from "$lib/components/settings/plugins/plugin_merge_settings.svelte";
     import CategoryPicker from "$lib/components/trail/category_picker.svelte";
     import type { Category } from "$lib/models/category";
-    import type { PluginInstance } from "$lib/models/plugin_instance";
+    import type { PluginInstance, PluginInstanceDraft } from "$lib/models/plugin_instance";
     import type { ConfigField, PluginAuthContext, PluginProvider } from "$lib/models/plugin_provider";
     import type { Subcategory } from "$lib/models/subcategory";
-    import { plugin_auth_validate, plugin_oauth_start } from "$lib/stores/plugin_instance_store";
+    import { plugin_auth_validate, plugin_oauth_start, plugin_oauth_revoke, plugin_instances_show } from "$lib/stores/plugin_instance_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
     import {
         categoryMappingTargetFromUnknown,
         categoryMappingTargetToPickerValue,
         type CategoryMappingTarget,
     } from "$lib/util/category_util";
-    import { resolveProviderAuth } from "$lib/util/plugin_auth_context";
+    import { resolveProviderAuth, resolvePluginAuthContext, editableAuthFields, hasPluginConnectionMaterial, pluginSecretFields } from "$lib/util/plugin_auth_context";
+    import { pluginSettingsConfigPatch, hasProviderConfigChanges } from "$lib/util/plugin_settings_patch";
     import { mergePluginConfig } from "$lib/util/plugin_config";
-    import { translatePluginAPIError } from "$lib/util/plugin_error_i18n";
+    import { translatePluginAPIError, pluginOperationNeedsReload } from "$lib/util/plugin_error_i18n";
     import {
         configFieldDescription,
         configFieldLabel,
@@ -36,7 +37,7 @@
         category: string;
     }
 
-    type PluginInstanceForm = Partial<PluginInstance> & {
+    type PluginInstanceForm = PluginInstanceDraft & {
         mappingChanged?: boolean;
     };
 
@@ -46,12 +47,20 @@
         subcategories?: Subcategory[];
         instance?: PluginInstance;
         onbeforecategorymappingsave?: (instance: PluginInstanceForm) => Promise<boolean> | boolean;
-        onsave?: (instance: Partial<PluginInstance>) => Promise<PluginInstance | void> | PluginInstance | void;
+        onsave?: (instance: PluginInstanceDraft) => Promise<PluginInstance | void> | PluginInstance | void;
     }
 
     let { plugin, categories = [], subcategories = [], instance, onbeforecategorymappingsave, onsave }: Props = $props();
 
     let modal: Modal;
+    let openingInstance: PluginInstance | undefined = $state();
+    let snapshotTaken = $state(false);
+    let draftInstance = $derived(snapshotTaken ? openingInstance : instance);
+    let draftStale = $derived(snapshotTaken && (openingInstance?.id !== instance?.id ||
+        openingInstance?.connection_generation !== instance?.connection_generation));
+    let authContext = $state(initialAuthContext());
+    let clearedAuth: Record<string, boolean> = $state({});
+    let openingConfig: Record<string, unknown> = {};
     let auth: Record<string, string> = $state(initialAuth());
     let planned = $state(true);
     let completed = $state(true);
@@ -60,14 +69,13 @@
     let categoryMappingRows: CategoryMappingRow[] = $state(initialCategoryMappingRows());
     let categoryMappingList: HTMLDivElement | undefined = $state();
     let resolvedAuth = $derived(resolveAuth());
-    let authFields = $derived(resolvedAuth.auth.fields ?? resolvedAuth.auth.secretFields ??
-        (resolvedAuth.auth.secretField ? [resolvedAuth.auth.secretField] : []));
-    let secretFields = $derived(new Set(resolvedAuth.auth.secretFields ?? authFields));
+    let authFields = $derived(editableAuthFields(resolvedAuth.auth));
+    let secretFields = $derived(pluginSecretFields(plugin));
     let isOAuthPlugin = $derived(resolvedAuth.auth.type === "oauth2");
     let isSessionPlugin = $derived(resolvedAuth.auth.type === "session");
-    let isConnected = $derived(instance?.status === "configured");
+    let isConnected = $derived(hasPluginConnectionMaterial(plugin, draftInstance
+        ? { ...draftInstance, auth_context: authContext } : undefined));
     let isSaving = $state(false);
-    let needsOAuthConnect = $derived(isOAuthPlugin && (!isConnected || authChanged()));
     let plugin_id = $derived(plugin.id);
     let configSchema = $derived(plugin.configSchema ?? []);
     let visibleConfigSchema = $derived(configSchema.filter((field) => !field.hidden));
@@ -110,21 +118,31 @@
         clientSecret: "Client Secret",
     };
 
+    function initialAuthContext() {
+        return draftInstance?.auth_context ?? (!draftInstance ? plugin.authContext : "") ?? "";
+    }
+
     function resolveAuth(): { name?: string; auth: PluginAuthContext; error?: Error } {
         try {
-            return resolveProviderAuth(plugin, instance);
+            if (plugin.authContexts) {
+                if (!authContext && draftInstance && Object.keys(plugin.authContexts).length) {
+                    throw new Error("Plugin authentication context is missing");
+                }
+                return resolvePluginAuthContext(plugin.authContexts, authContext || undefined);
+            }
+            return resolveProviderAuth(plugin, draftInstance);
         } catch (error) {
             return { auth: { type: "unresolved" }, error: error as Error };
         }
     }
 
     function initialAuth() {
-        const context = resolveAuth().auth;
-        const fields = context.fields ?? context.secretFields ?? (context.secretField ? [context.secretField] : []);
+        const fields = [...new Set(Object.values(plugin.authContexts ?? { active: plugin.auth })
+            .flatMap(editableAuthFields))];
         return Object.fromEntries(
             fields.map((field) => [
                 field,
-                instance?.auth?.[field] == null ? "" : String(instance.auth[field]),
+                draftInstance?.auth?.[field] == null ? "" : String(draftInstance.auth[field]),
             ]),
         );
     }
@@ -180,22 +198,6 @@
         return categoryTargetMapping(raw as Record<string, unknown>);
     }
 
-    function categoryMappingsEqual(
-        left: Record<string, CategoryMappingTarget>,
-        right: Record<string, CategoryMappingTarget>,
-    ) {
-        const leftKeys = Object.keys(left).sort();
-        const rightKeys = Object.keys(right).sort();
-        if (leftKeys.length !== rightKeys.length) {
-            return false;
-        }
-        return leftKeys.every(
-            (key, index) =>
-                key === rightKeys[index] &&
-                normalizedCategoryMappingTarget(left[key]) === normalizedCategoryMappingTarget(right[key]),
-        );
-    }
-
     function categoryTargetMapping(raw: Record<string, unknown>): Record<string, CategoryMappingTarget> {
         return Object.fromEntries(
             Object.entries(raw)
@@ -212,16 +214,6 @@
             return target.trim() === "";
         }
         return !target.category?.trim() && !target.subcategory?.trim();
-    }
-
-    function normalizedCategoryMappingTarget(target: CategoryMappingTarget): string {
-        if (typeof target === "string") {
-            return target.trim();
-        }
-        return JSON.stringify({
-            category: target.category?.trim() ?? "",
-            subcategory: target.subcategory?.trim() ?? "",
-        });
     }
 
     function categoryPickerValue(target: CategoryMappingTarget): string {
@@ -376,7 +368,7 @@
     }
 
     function configSection(key: string): Record<string, any> {
-        const section = instance?.config?.[key];
+        const section = draftInstance?.config?.[key];
         if (section && typeof section === "object" && !Array.isArray(section)) {
             return section as Record<string, any>;
         }
@@ -392,6 +384,8 @@
     }
 
     function authChanged() {
+        if (authContext !== (draftInstance?.auth_context ?? (!draftInstance ? plugin.authContext : "") ?? "")) return true;
+        if (Object.values(clearedAuth).some(Boolean)) return true;
         for (const field of authFields) {
             const value = auth[field] ?? "";
             if (secretFields.has(field)) {
@@ -400,7 +394,7 @@
                 }
                 continue;
             }
-            if (value !== ((instance?.auth?.[field] as string | undefined) ?? "")) {
+            if (value !== ((draftInstance?.auth?.[field] as string | undefined) ?? "")) {
                 return true;
             }
         }
@@ -408,6 +402,10 @@
     }
 
     export function openModal() {
+        openingInstance = instance ? JSON.parse(JSON.stringify(instance)) : undefined;
+        snapshotTaken = true;
+        authContext = draftInstance?.auth_context ?? (!draftInstance ? plugin.authContext : "") ?? "";
+        clearedAuth = {};
         auth = initialAuth();
         const config = hostConfig();
         planned = supportsPlanned && (!hasTourKindChoice || ((config.planned as boolean | undefined) ?? true));
@@ -418,15 +416,11 @@
         extraConfig = initialExtraConfig();
         categoryMappingRows = initialCategoryMappingRows();
         configErrors = {};
+        openingConfig = formConfig();
         modal.openModal();
     }
 
-    function pluginInstanceFromForm(): PluginInstanceForm {
-        const submittedAuth: Record<string, string> = {};
-        for (const field of authFields) {
-            submittedAuth[field] = auth[field] ?? "";
-        }
-
+    function formConfig(): Record<string, unknown> {
         const pluginRuntimeConfig: Record<string, unknown> = { ...pluginConfig() };
         const pluginHostConfig: Record<string, unknown> = { ...hostConfig() };
         if (supportsPlanned) {
@@ -468,10 +462,6 @@
                 categoryMappingConfig[providerCategory] = "";
             }
         }
-        const mappingChanged = !categoryMappingsEqual(categoryMapping(), categoryMappingConfig);
-        if (mappingChanged) {
-            pluginHostConfig.categoryMappingUpdatedAt = new Date().toISOString();
-        }
         pluginHostConfig.categoryMapping = categoryMappingConfig;
         for (const field of configSchema) {
             const val = extraConfig[field.key];
@@ -486,77 +476,72 @@
             host: pluginHostConfig,
         };
 
-        const status = isOAuthPlugin
-            ? !instance?.id
-                ? "needs_auth"
-                : authChanged()
-                  ? isConnected
-                      ? "needs_reauth"
-                      : "needs_auth"
-                  : instance.status
-            : instance?.enabled
-              ? "configured"
-              : "disabled";
-
-        return {
-            ...instance,
-            plugin_id,
-            enabled: isOAuthPlugin && status !== "configured" ? false : (instance?.enabled ?? false),
-            auth: submittedAuth,
-            config,
-            status,
-            mappingChanged,
-        };
+        return config;
     }
 
-    async function validateAuthIfNeeded(candidate: PluginInstanceForm) {
-        if (!isSessionPlugin || !authChanged()) {
-            return;
+    function pluginInstanceFromForm(): PluginInstanceForm {
+        const candidate: PluginInstanceForm = { id: draftInstance?.id, plugin_id };
+        const submittedAuth: Record<string, string | null> = {};
+        for (const field of authFields) {
+            const value = auth[field] ?? "";
+            if (clearedAuth[field]) submittedAuth[field] = null;
+            else if (secretFields.has(field)) {
+                if (value) submittedAuth[field] = value;
+            } else if (!draftInstance || value !== (draftInstance.auth?.[field] ?? "")) {
+                submittedAuth[field] = value;
+            }
         }
-        await plugin_auth_validate({
-            pluginId: plugin.id,
-            instanceId: candidate.id,
-            authContext: resolvedAuth.name,
-            auth: candidate.auth ?? {},
-            config: candidate.config,
-        });
+        if (Object.keys(submittedAuth).length) candidate.auth = submittedAuth;
+        if (authContext && authContext !== draftInstance?.auth_context) candidate.authContext = authContext;
+        if (draftInstance?.id && authChanged()) candidate.expected_connection_generation = draftInstance.connection_generation;
+        const fullConfig = formConfig();
+        const patch = draftInstance ? pluginSettingsConfigPatch(openingConfig, fullConfig) : fullConfig;
+        if (Object.keys(patch).length) candidate.config = patch;
+        const hostPatch = patch.host as Record<string, unknown> | undefined;
+        candidate.mappingChanged = !!hostPatch && Object.hasOwn(hostPatch, "categoryMapping");
+        if (candidate.mappingChanged && hostPatch) hostPatch.categoryMappingUpdatedAt = new Date().toISOString();
+        return candidate;
     }
 
-    async function submit() {
-        if (!validateConfig()) {
-            return;
+    async function reloadAfterConflict(error: unknown) {
+        if (draftInstance?.id && pluginOperationNeedsReload(error)) {
+            try { await plugin_instances_show(draftInstance.id); } catch { /* Keep the action error. */ }
         }
-        // Snapshot once before provider validation. The saved draft must be
-        // exactly the one validated even if an input changes while it is pending.
+    }
+
+    async function submit(validate = false) {
         const candidate = pluginInstanceFromForm();
+        let persistenceStarted = false;
+        if ((!draftInstance || hasProviderConfigChanges(candidate.config) || validate) && !validateConfig()) return;
         try {
             isSaving = true;
-            await validateAuthIfNeeded(candidate);
-        } catch (e) {
-            show_toast({
-                text: translatePluginAPIError(e, $_("error-setting-up-plugin", { values: { provider: pluginTitle() } })),
-                icon: "close",
-                type: "error",
-            });
-            isSaving = false;
-            return;
-        }
-
-        try {
+            if (validate && isSessionPlugin) {
+                await plugin_auth_validate({
+                    pluginId: plugin.id, instanceId: draftInstance?.id, authContext: resolvedAuth.name,
+                    auth: candidate.auth ?? {},
+                    config: candidate.config,
+                    expected_connection_generation: draftInstance?.connection_generation,
+                });
+            }
             if (candidate.mappingChanged) {
                 const shouldSave = await onbeforecategorymappingsave?.(candidate);
-                if (shouldSave === false) {
-                    return;
-                }
-                delete candidate.mappingChanged;
+                if (shouldSave === false) return;
             }
-            await onsave?.(candidate as Partial<PluginInstance>);
+            delete candidate.mappingChanged;
+            persistenceStarted = true;
+            await onsave?.(candidate);
             modal.closeModal();
-        } catch {
-            // onsave owns persistence error reporting so the modal does not
-            // duplicate toasts.
+        } catch (e) {
+            await reloadAfterConflict(e);
+            // Persistence errors are reported by onsave; validation errors are
+            // reported here before persistence has been attempted.
+            if (validate && !persistenceStarted) show_toast({
+                text: translatePluginAPIError(e, $_("error-setting-up-plugin", { values: { provider: pluginTitle() } })),
+                icon: "close", type: "error",
+            });
         } finally {
             isSaving = false;
+            if (draftInstance?.id) await plugin_instances_show(draftInstance.id).catch(() => {});
         }
     }
 
@@ -564,35 +549,50 @@
         return localizedPluginTitle(plugin, $locale);
     }
 
-    async function startOAuth() {
-        if (!validateConfig()) {
-            return;
-        }
+    async function disconnect() {
+        if (!draftInstance?.id || !draftInstance.connection_generation) return;
+        isSaving = true;
         try {
-            const candidate = pluginInstanceFromForm();
+            await plugin_oauth_revoke(draftInstance.id, draftInstance.connection_generation);
+            modal.closeModal();
+        } catch (e) {
+            await reloadAfterConflict(e);
+            show_toast({ text: translatePluginAPIError(e, $_("error-completing-oauth")), icon: "close", type: "error" });
+        } finally { isSaving = false; }
+    }
+
+    async function startOAuth() {
+        const candidate = pluginInstanceFromForm();
+        const connectionChanges = authChanged();
+        const repairUnreadableGrant = draftInstance?.last_error?.code === "credentials_unreadable" &&
+            authContext === draftInstance.auth_context && isConnected;
+        if ((!draftInstance || hasProviderConfigChanges(candidate.config)) && !validateConfig()) return;
+        isSaving = true;
+        try {
             delete candidate.mappingChanged;
             const saved = await onsave?.(candidate);
-            const instanceId = saved?.id ?? instance?.id;
-            if (!instanceId) {
-                return;
+            const instanceId = saved?.id ?? draftInstance?.id;
+            let expectedGeneration = !draftInstance || connectionChanges
+                ? saved?.connection_generation : draftInstance.connection_generation;
+            if (!instanceId || !expectedGeneration) throw new Error("Missing saved connection revision");
+            if (repairUnreadableGrant) {
+                const revoked = await plugin_oauth_revoke(instanceId, expectedGeneration);
+                expectedGeneration = revoked.connection_generation;
+                if (!expectedGeneration) throw new Error("Missing revoked connection revision");
             }
             const redirectUri = `${window.location.origin}/settings/plugins/oauth/callback`;
             const result = await plugin_oauth_start({
-                pluginId: plugin.id,
-                instanceId,
-                authContext: resolvedAuth.name,
-                redirectUri,
+                pluginId: plugin.id, instanceId, authContext: resolvedAuth.name, redirectUri,
+                expected_connection_generation: expectedGeneration, activate_on_success: true,
             });
             sessionStorage.setItem(`wanderer_plugin_oauth_${result.state}`, result.instanceId);
             window.location.href = result.url;
         } catch (e) {
-            show_toast({
-                text: translatePluginAPIError(e, $_("error-starting-oauth")),
-                icon: "close",
-                type: "error",
-            });
-        }
+            await reloadAfterConflict(e);
+            show_toast({ text: translatePluginAPIError(e, $_("error-starting-oauth")), icon: "close", type: "error" });
+        } finally { isSaving = false; }
     }
+
 </script>
 
 <Modal
@@ -605,16 +605,31 @@
         <form
             id="{plugin_id}-plugin-settings-form"
             class="space-y-3"
+            novalidate
             onsubmit={(event) => {
                 event.preventDefault();
                 submit();
             }}
         >
+            {#if draftStale}
+                <p class="text-sm text-red-400">{$_("plugin-error-connection-conflict")}</p>
+                <button class="btn-secondary" type="button" onclick={openModal} disabled={isSaving}
+                    >{$_("plugin-reload-settings")}</button>
+            {/if}
+            {#if Object.keys(plugin.authContexts ?? {}).length > 1 || resolvedAuth.error}
+                <Select name="pluginAuthContext" label={$_("plugin-auth-context")} items={[
+                    { text: $_("select"), value: "" },
+                    ...Object.keys(plugin.authContexts ?? {}).map(name => ({ text: name, value: name })),
+                ]} bind:value={authContext} />
+            {/if}
+            {#if draftInstance?.last_error?.code === "credentials_unreadable"}
+                <p class="text-sm text-red-400">{$_("plugin-error-credentials-unreadable")}</p>
+            {/if}
             {#each authFields as field}
                 <TextField
                     label={authLabel(field)}
                     placeholder={secretFields.has(field)
-                        ? instance?.id
+                        ? draftInstance?.id
                             ? `(${$_("unchanged")})`
                             : ""
                         : field == "email"
@@ -624,12 +639,18 @@
                     name={field}
                     type={authFieldType(field)}
                 ></TextField>
+                {#if draftInstance && secretFields.has(field) && Object.hasOwn(draftInstance.auth ?? {}, field)}
+                    <label class="flex items-center gap-2 text-xs text-gray-500">
+                        <input name="clear-{field}" type="checkbox" bind:checked={clearedAuth[field]} />
+                        {$_("plugin-clear-credential", { values: { field: authLabel(field) } })}
+                    </label>
+                {/if}
             {/each}
 
             {#if isOAuthPlugin}
                 <p class="text-xs text-gray-500 max-w-lg">
                     {#if isConnected}
-                        {$_("plugin-oauth-connected-hint")}
+                        {$_("plugin-oauth-material-present-hint")}
                     {:else}
                         {$_("plugin-oauth-needs-connect-hint")}
                     {/if}
@@ -796,29 +817,23 @@
                 >{$_("cancel")}</button
             >
             {#if isOAuthPlugin}
-                {#if needsOAuthConnect}
-                    <button class="btn-primary" type="button" onclick={startOAuth} disabled={isSaving}
-                        >{isConnected ? $_("save-and-reconnect") : $_("save-and-connect")}</button
-                    >
-                {:else}
-                    <button
-                        class="btn-primary"
-                        form="{plugin_id}-plugin-settings-form"
-                        type="submit"
-                        name="save"
-                        disabled={isSaving}>{$_("save")}</button
-                    >
+                <button class="btn-secondary" type="button" onclick={startOAuth} disabled={isSaving}
+                    >{isConnected ? $_("save-and-reconnect") : $_("save-and-connect")}</button>
+                {#if isConnected && authContext === draftInstance?.auth_context}
+                    <button class="btn-secondary" type="button" onclick={disconnect} disabled={isSaving}
+                        >{$_("plugin-disconnect")}</button>
                 {/if}
+                <button class="btn-primary" form="{plugin_id}-plugin-settings-form" type="submit"
+                    name="save" disabled={isSaving}>{$_("save")}</button>
             {:else}
-                <button
-                    class="btn-primary"
-                    form="{plugin_id}-plugin-settings-form"
-                    type="submit"
-                    name="save"
-                    disabled={isSaving}
-                    >{isSessionPlugin && authChanged() ? $_("save-and-validate") : $_("save")}</button
-                >
+                {#if isSessionPlugin}
+                    <button class="btn-secondary" type="button" name="save-validate" onclick={() => submit(true)} disabled={isSaving}
+                        >{$_("save-and-validate")}</button>
+                {/if}
+                <button class="btn-primary" form="{plugin_id}-plugin-settings-form" type="submit"
+                    name="save" disabled={isSaving}>{$_("save")}</button>
             {/if}
+
         </div>
     {/snippet}
 </Modal>

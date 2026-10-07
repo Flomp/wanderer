@@ -1,68 +1,25 @@
 import { z } from "zod";
 
-const PluginInstanceStatusSchema = z.enum([
-    "configured",
-    "needs_auth",
-    "needs_reauth",
-    "syncing",
-    "rate_limited",
-    "unavailable",
-    "unsupported_protocol",
-    "error",
-    "disabled",
-]);
+const pluginId = z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9_-]*$/);
+const generation = z.string().min(1);
+const settings = {
+    enabled: z.boolean().optional(),
+    auth: z.record(z.string(), z.string().nullable()).optional(),
+    authContext: z.string().min(1).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
+    expected_connection_generation: generation.optional(),
+};
 
-const OptionalJsonRecordSchema = z.preprocess(
-    (value) => (value === null ? undefined : value),
-    z.record(z.string(), z.unknown()).optional(),
-);
-const OptionalAuthSchema = z.preprocess(
-    (value) => {
-        if (value === null) {
-            return undefined;
-        }
-        if (!value || typeof value !== "object" || Array.isArray(value)) {
-            return value;
-        }
-        return Object.fromEntries(
-            Object.entries(value).map(([key, fieldValue]) => [
-                key,
-                fieldValue == null ? "" : String(fieldValue),
-            ]),
-        );
-    },
-    z.record(z.string(), z.string()).optional(),
-);
-
-const PluginSessionAuthValidateSchema = z.object({
-    pluginId: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9_-]*$/),
+export const PluginSessionAuthValidateSchema = z.object({
+    pluginId,
     instanceId: z.string().length(15).optional(),
     authContext: z.string().min(1).optional(),
-    auth: z.record(z.string(), z.string()),
+    auth: z.record(z.string(), z.string().nullable()),
     config: z.record(z.string(), z.unknown()).optional(),
-});
+    expected_connection_generation: generation.optional(),
+}).strict();
 
-const PluginInstanceCreateSchema = z.object({
-    user: z.string().length(15),
-    plugin_id: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9_-]*$/),
-    enabled: z.boolean().default(false),
-    auth: OptionalAuthSchema,
-    config: OptionalJsonRecordSchema,
-    state: OptionalJsonRecordSchema,
-    status: PluginInstanceStatusSchema.optional(),
-});
+export const PluginInstanceUpdateSchema = z.object(settings).strict();
 
-const PluginInstanceUpdateSchema = z.object({
-    enabled: z.boolean().optional(),
-    auth: OptionalAuthSchema,
-    config: OptionalJsonRecordSchema,
-    state: OptionalJsonRecordSchema,
-    status: PluginInstanceStatusSchema.optional(),
-});
-
-export {
-    PluginSessionAuthValidateSchema,
-    PluginInstanceCreateSchema,
-    PluginInstanceUpdateSchema,
-    PluginInstanceStatusSchema,
-};
+export const PluginInstanceCreateSchema = PluginInstanceUpdateSchema
+    .omit({ expected_connection_generation: true }).extend({ plugin_id: pluginId });
