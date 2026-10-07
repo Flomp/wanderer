@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/pocketbase/dbx"
@@ -22,8 +23,8 @@ const pluginHostRoutePrivateError = "token=route-token-secret path=/private/rout
 type pluginHostRouteFailureApp struct {
 	core.App
 	filterCollection string
-	filterFailureAt  int
-	filterCalls      int
+	filterFailureAt  int32
+	filterCalls      *atomic.Int32
 	recordCollection string
 }
 
@@ -34,8 +35,7 @@ func (a *pluginHostRouteFailureApp) databaseFailure() error {
 
 func (a *pluginHostRouteFailureApp) FindRecordsByFilter(collection any, filter, sort string, limit, offset int, params ...dbx.Params) ([]*core.Record, error) {
 	if collection == a.filterCollection {
-		a.filterCalls++
-		if a.filterCalls == a.filterFailureAt {
+		if a.filterCalls.Add(1) == a.filterFailureAt {
 			return nil, a.databaseFailure()
 		}
 	}
@@ -86,14 +86,16 @@ func pluginHostRouteRequest(t *testing.T, app core.App, owner *core.Record, meth
 	return response.Code, result
 }
 
-func assertPluginHostRouteLogs(t *testing.T, app core.App, method, path string, status int, body map[string]any, action, cause string, private ...string) {
+func assertPluginHostRouteLogs(t *testing.T, app core.App, method, path string, status int, body map[string]any, action, cause string, private ...string) []*core.Log {
 	t.Helper()
-	if body["status"] != float64(status) {
-		t.Errorf("API status: got %#v, want %d", body, status)
-	}
-	data, ok := body["data"].(map[string]any)
-	if !ok || len(data) != 0 {
-		t.Errorf("host error must have empty API data, without a plugin/provider code: %#v", body)
+	if status >= 400 {
+		if body["status"] != float64(status) {
+			t.Errorf("API status: got %#v, want %d", body, status)
+		}
+		data, ok := body["data"].(map[string]any)
+		if !ok || len(data) != 0 {
+			t.Errorf("host error must have empty API data, without a plugin/provider code: %#v", body)
+		}
 	}
 	logs := waitForPluginRequestLogsForMethod(t, app, method, path, 1)
 	diagnostics := 0
@@ -124,6 +126,29 @@ func assertPluginHostRouteLogs(t *testing.T, app core.App, method, path string, 
 			}
 		}
 	}
+	return logs
+}
+
+func assertPluginCategoryRemapDiagnosticRefs(t *testing.T, logs []*core.Log, ownerID, instanceID string) {
+	t.Helper()
+	for _, entry := range logs {
+		if entry.Message != "plugin operation failed" {
+			continue
+		}
+		if entry.Data["owner"] != ownerID {
+			t.Errorf("diagnostic owner=%#v, want %q", entry.Data["owner"], ownerID)
+		}
+		if instanceID == "" {
+			if _, ok := entry.Data["instance"]; ok {
+				t.Errorf("diagnostic carries an unverified instance: %#v", entry.Data)
+			}
+		} else if entry.Data["instance"] != instanceID {
+			t.Errorf("diagnostic instance=%#v, want owned instance %q", entry.Data["instance"], instanceID)
+		}
+		if _, ok := entry.Data["plugin"]; ok {
+			t.Errorf("diagnostic carries an unvalidated stored plugin ID: %#v", entry.Data)
+		}
+	}
 }
 
 func TestPluginsListHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.T) {
@@ -140,9 +165,9 @@ func TestPluginsListHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.T)
 					t.Fatal(err)
 				}
 			case "cache database":
-				app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "installed_plugins", filterFailureAt: 1}
+				app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "installed_plugins", filterFailureAt: 1, filterCalls: new(atomic.Int32)}
 			case "list database":
-				app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "installed_plugins", filterFailureAt: 2}
+				app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "installed_plugins", filterFailureAt: 2, filterCalls: new(atomic.Int32)}
 				cause = "plugin_list"
 			case "cache deletion hook":
 				f.app.OnRecordDelete("installed_plugins").BindFunc(func(e *core.RecordEvent) error {
@@ -221,14 +246,18 @@ func TestCategoryRemapHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.
 				switch failure {
 				case "decoder":
 					bodyText = `{"instanceId":"request-instance-secret","config":{"secret":"body-secret",`
-					cause = "request_body_invalid"
+					cause = ""
 				case "instance database":
-					app = &pluginHostRouteFailureApp{App: f.app, recordCollection: "plugin_instances"}
+					app = &pluginHostRouteFailureApp{App: f.app, recordCollection: "plugin_instances", filterCalls: new(atomic.Int32)}
 					wantStatus = 404
 				case "references database":
-					app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "trail_external_reference", filterFailureAt: 1}
+					f.instance.Set("plugin_id", "stored-pluginid-secret")
+					if err := f.app.Save(f.instance); err != nil {
+						t.Fatal(err)
+					}
+					app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "trail_external_reference", filterFailureAt: 1, filterCalls: new(atomic.Int32)}
 				case "transaction database":
-					app = &pluginHostRouteFailureApp{App: f.app, recordCollection: "trails"}
+					app = &pluginHostRouteFailureApp{App: f.app, recordCollection: "trails", filterCalls: new(atomic.Int32)}
 				case "save hook":
 					cause = "database_save"
 					f.app.OnRecordUpdate("trails").BindFunc(func(e *core.RecordEvent) error {
@@ -236,7 +265,8 @@ func TestCategoryRemapHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.
 						return errors.New(pluginHostRoutePrivateError)
 					})
 				case "after commit hook":
-					cause = "database_save"
+					cause = "post_commit_hook"
+					wantStatus = 200
 					f.app.OnRecordAfterUpdateSuccess("trails").BindFunc(func(e *core.RecordEvent) error {
 						hookCalls++
 						return errors.New(pluginHostRoutePrivateError)
@@ -252,7 +282,15 @@ func TestCategoryRemapHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.
 				if status != wantStatus {
 					t.Fatalf("status=%d want=%d body=%#v", status, wantStatus, body)
 				}
-				assertPluginHostRouteLogs(t, f.app, http.MethodPost, path, status, body, "category_remap_"+action, cause, "request-instance-secret", "body-secret", "provider-external-secret")
+				logs := assertPluginHostRouteLogs(t, f.app, http.MethodPost, path, status, body, "category_remap_"+action, cause, "request-instance-secret", "body-secret", "provider-external-secret", "stored-pluginid-secret")
+				ownedInstance := f.instance.Id
+				if failure == "decoder" || failure == "instance database" {
+					ownedInstance = ""
+				}
+				assertPluginCategoryRemapDiagnosticRefs(t, logs, f.owner.Id, ownedInstance)
+				if failure == "after commit hook" && (body["count"] != float64(1) || body["remapped"] != float64(1)) {
+					t.Errorf("committed remap must return its actual result: %#v", body)
+				}
 				if failure == "save hook" || failure == "after commit hook" {
 					if hookCalls != 1 {
 						t.Fatalf("did not reach actual save hook: calls=%d", hookCalls)
@@ -261,8 +299,8 @@ func TestCategoryRemapHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.
 					if err != nil {
 						t.Fatal(err)
 					}
-					// This patch only sanitizes failures. PocketBase's existing
-					// commit/after-hook semantics are intentionally unchanged.
+					// The response reflects the real SQL outcome, even when a
+					// later record hook fails after a successful commit.
 					wantCategory := ""
 					if failure == "after commit hook" {
 						wantCategory = category.Id
@@ -278,13 +316,13 @@ func TestCategoryRemapHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.
 
 func TestCategoryRemapLocalStatusErrorsStayPlainAndPrivate(t *testing.T) {
 	for _, action := range []string{"preview", "apply"} {
-		for _, failure := range []string{"unauthenticated", "missing instanceId", "absent instance", "foreign owner"} {
+		for _, failure := range []string{"unauthenticated", "missing instanceId", "invalid instanceId type", "invalid config type", "absent instance", "foreign owner"} {
 			t.Run(action+"/"+failure, func(t *testing.T) {
 				f := newInteractivePluginFixture(t, nil)
 				owner := f.owner
 				wantStatus := 404
 				bodyText := `{"instanceId":"request-instance-secret"}`
-				cause := "database_lookup"
+				cause := ""
 				switch failure {
 				case "unauthenticated":
 					owner = nil
@@ -294,8 +332,20 @@ func TestCategoryRemapLocalStatusErrorsStayPlainAndPrivate(t *testing.T) {
 					bodyText = `{}`
 					wantStatus = 400
 					cause = ""
+				case "invalid instanceId type":
+					bodyText = `{"instanceId":["request-instance-secret"]}`
+					wantStatus = 400
+				case "invalid config type":
+					bodyText = `{"instanceId":"` + f.instance.Id + `","config":"body-secret"}`
+					wantStatus = 400
 				case "foreign owner":
-					f.instance.Set("user", "")
+					foreign := core.NewRecord(f.owner.Collection())
+					foreign.SetEmail("foreign-remap@example.test")
+					foreign.SetPassword("foreign-owner-password")
+					if err := f.app.Save(foreign); err != nil {
+						t.Fatal(err)
+					}
+					f.instance.Set("user", foreign.Id)
 					if err := f.app.Save(f.instance); err != nil {
 						t.Fatal(err)
 					}
@@ -312,7 +362,7 @@ func TestCategoryRemapLocalStatusErrorsStayPlainAndPrivate(t *testing.T) {
 				if status != wantStatus {
 					t.Fatalf("status=%d want=%d body=%#v", status, wantStatus, body)
 				}
-				assertPluginHostRouteLogs(t, f.app, http.MethodPost, path, status, body, "category_remap_"+action, cause, "request-instance-secret", f.instance.Id)
+				assertPluginHostRouteLogs(t, f.app, http.MethodPost, path, status, body, "category_remap_"+action, cause, "request-instance-secret", "body-secret", f.instance.Id)
 			})
 		}
 	}

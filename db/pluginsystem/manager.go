@@ -187,6 +187,15 @@ func (m *Manager) SyncInstalledPlugins(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Keep discovery outside the write transaction. Fresh cache reads and all
+	// mutations share its serialized connection, including concurrent managers.
+	return m.App.RunInTransaction(func(txApp core.App) error {
+		manager := Manager{App: txApp, Dir: m.Dir}
+		return manager.syncInstalledPluginCache(ctx, plugins, issues)
+	})
+}
+
+func (m *Manager) syncInstalledPluginCache(ctx context.Context, plugins []LocalPlugin, issues []LocalPluginIssue) error {
 	collection, err := m.App.FindCollectionByNameOrId("installed_plugins")
 	if err != nil {
 		return err
@@ -199,7 +208,6 @@ func (m *Manager) SyncInstalledPlugins(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		m.App.Logger().Warn("plugin setup error", "plugin", issue.ID, "path", issue.Dir, "error", issue.Error)
 		if err := m.savePluginIssue(collection, issue); err != nil {
 			return err
 		}
@@ -314,6 +322,8 @@ func (m *Manager) savePluginIssue(collection *core.Collection, issue LocalPlugin
 		record = core.NewRecord(collection)
 		record.Set("plugin_id", recordID)
 	}
+	changed := record.GetString("status") != "error" || record.GetString("error") != issue.Error
+	diagnosticID := pluginSetupDiagnosticID(record, issue)
 	record.Set("name", issue.Name)
 	record.Set("type", PluginTypeTrails)
 	record.Set("version", "unknown")
@@ -329,7 +339,34 @@ func (m *Manager) savePluginIssue(collection *core.Collection, issue LocalPlugin
 	if err := m.App.Save(record); err != nil {
 		return fmt.Errorf("save plugin setup error %s: %w", issue.ID, err)
 	}
+	if changed {
+		// A nested caller may still roll this cache write back. After-success
+		// hook errors do not mean the SQL commit failed; use the actual txErr.
+		m.App.TxInfo().OnComplete(func(txErr error) error {
+			if txErr == nil {
+				m.App.Logger().Warn("plugin setup error", "plugin", diagnosticID,
+					"setup_code", PublicPluginSetupErrorCode(issue.SetupErrorCode))
+			}
+			return nil
+		})
+	}
 	return nil
+}
+
+// Prefer an already validated manifest identity; a discovery directory name
+// is otherwise accepted only as a bounded plugin identifier. Invalid names
+// become a deterministic bounded label instead of a transliterated path/URL.
+// This uses the existing non-cryptographic issue hash solely as an identifier.
+func pluginSetupDiagnosticID(record *core.Record, issue LocalPluginIssue) string {
+	var manifest Manifest
+	if record.UnmarshalJSONField("manifest", &manifest) == nil && ValidateManifest(manifest) == nil &&
+		len(manifest.ID) <= 128 && pluginIDPattern.MatchString(manifest.ID) {
+		return manifest.ID
+	}
+	if len(issue.ID) <= 128 && pluginIDPattern.MatchString(issue.ID) {
+		return issue.ID
+	}
+	return "plugin-setup-error-" + pluginIssueHash(issue)
 }
 
 func pluginIssueRecordID(issue LocalPluginIssue) string {

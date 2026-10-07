@@ -42,7 +42,7 @@ export async function buildTrailModalFixture(dev: boolean, pairSource?: string, 
                 `;
                 if (id === '\0fixture:environment') return 'export const browser = true;';
                 if (id === '\0fixture:state') return 'export const page = { url: new URL(location.href), params: {}, data: {} };';
-                if (id === '\0fixture:navigation') return 'export function pushState() {}';
+                if (id === '\0fixture:navigation') return 'export function pushState() {} export async function goto(url) { window.fixtureNavigation = url; }';
                 if (id === '\0fixture:i18n') return `
                     import { writable } from 'svelte/store';
                     export const _ = writable(key => key);

@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -69,7 +71,17 @@ func PluginSystemCategoryRemapApply(e *core.RequestEvent) error {
 		return pluginHostAPIErrorForEvent(e, context, "Failed to apply category remapping.", pluginsystem.WithDiagnosticCause(err, "database_lookup"))
 	}
 	remapped := 0
+	committed := false
 	if err := e.App.RunInTransaction(func(txApp core.App) error {
+		// PocketBase passes the SQL transaction outcome to OnComplete before
+		// joining any post-commit hook errors into RunInTransaction's result.
+		// A failed hook must not undo a successfully committed remap response.
+		if info := txApp.TxInfo(); info != nil {
+			info.OnComplete(func(txErr error) error {
+				committed = txErr == nil
+				return nil
+			})
+		}
 		for _, candidate := range candidates {
 			trail, err := txApp.FindRecordById("trails", candidate.Trail.Id)
 			if err != nil {
@@ -84,7 +96,10 @@ func PluginSystemCategoryRemapApply(e *core.RequestEvent) error {
 		}
 		return nil
 	}); err != nil {
-		return pluginHostAPIErrorForEvent(e, context, "Failed to apply category remapping.", pluginsystem.WithDiagnosticCause(err, "database_save"))
+		if !committed {
+			return pluginHostAPIErrorForEvent(e, context, "Failed to apply category remapping.", pluginsystem.WithDiagnosticCause(err, "database_save"))
+		}
+		logPluginOperationFailure(e, context, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("internal_error", ""), "post_commit_hook"))
 	}
 	return e.JSON(http.StatusOK, pluginCategoryRemapResponse{Count: len(candidates), Remapped: remapped})
 }
@@ -96,7 +111,7 @@ func pluginCategoryRemapInput(e *core.RequestEvent, context *pluginOperationLogC
 
 	var data pluginCategoryRemapRequest
 	if err := e.BindBody(&data); err != nil {
-		return nil, nil, pluginHostAPIErrorForEvent(e, *context, "Failed to read request data", pluginsystem.WithDiagnosticCause(err, "request_body_invalid"))
+		return nil, nil, apis.NewBadRequestError("Failed to read request data", nil)
 	}
 	if data.InstanceID == "" {
 		return nil, nil, apis.NewBadRequestError("instanceId is required", nil)
@@ -104,7 +119,9 @@ func pluginCategoryRemapInput(e *core.RequestEvent, context *pluginOperationLogC
 
 	instance, err := e.App.FindRecordById("plugin_instances", data.InstanceID)
 	if err != nil {
-		logPluginOperationFailure(e, *context, pluginsystem.WithDiagnosticCause(err, "database_lookup"))
+		if !errors.Is(err, sql.ErrNoRows) {
+			logPluginOperationFailure(e, *context, pluginsystem.WithDiagnosticCause(err, "database_lookup"))
+		}
 		return nil, nil, apis.NewNotFoundError("plugin instance not found", nil)
 	}
 	if instance.GetString("user") != e.Auth.Id {

@@ -745,6 +745,18 @@ database/filesystem operations and runtime selection return plain API errors
 without a plugin error code, so the UI retains its action-specific fallback.
 Typed worker, provider and guest failures retain their normalized error codes. An absent GPX field is an INFO prerequisite
 diagnostic; unreadable or empty referenced files remain WARN diagnostics.
+The OAuth callback uses a connection-specific fallback asking the user to
+connect again when no typed plugin error is returned. Invalid remap bodies and
+missing/foreign instances return safe client errors without operation warnings.
+A remap transaction confirmed as committed returns success even if a later
+record hook fails; the host logs a fixed `post_commit_hook` cause. Rollbacks and
+SQL commit failures still return a safe error.
+
+Discovery setup warnings contain only a bounded plugin identity and an
+allowlisted setup code. They are emitted after the cache transaction commits
+when an error changes or reappears after recovery, rather than on every list
+request. Raw discovery messages, bundle paths and manifest URLs are excluded
+from these warnings.
 
 Declare `log` in the capability's `requiredHostFunctions`. Logs are best-effort;
 they must not determine plugin control flow.

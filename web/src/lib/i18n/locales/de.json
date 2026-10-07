@@ -216,6 +216,7 @@
   "error-saving-trail": "Fehler beim Speichern der Route",
   "error-setting-up-plugin": "Fehler beim Einrichten des {provider}-Plugins",
   "error-starting-oauth": "Fehler beim Starten der OAuth-Verbindung",
+  "error-completing-oauth": "Die Verbindung konnte nicht abgeschlossen werden. Bitte erneut verbinden.",
   "error-updating-avatar": "Der Avatar konnte nicht aktualisiert werden. Bitte versuche es erneut.",
   "error-updating-avatar-forbidden": "Du hast keine Berechtigung, diesen Avatar zu aktualisieren.",
   "error-updating-avatar-network": "Das Hochladen konnte nicht abgeschlossen werden. Prüfe deine Verbindung und versuche es erneut.",
