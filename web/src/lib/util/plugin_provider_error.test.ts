@@ -41,6 +41,17 @@ describe("safe plugin error display", () => {
         }
     });
 
+    it.each([
+        ["Failed to read trail GPX.", "error-sending-trail"],
+        ["Failed to save plugin connection.", "error-starting-oauth"],
+    ])("keeps the action fallback for local host failure: %s", (message, key) => {
+        const fallback = en[key as keyof typeof en];
+        const body = { status: 400, message, data: {} };
+        for (const detail of [body, { detail: body }, JSON.stringify(body)]) {
+            expect(translatePluginAPIError(new APIError(400, message, detail), fallback)).toBe(fallback);
+        }
+    });
+
     it("never displays raw unknown or historical diagnostics", () => {
         expect(translatePluginError("future-provider-secret", "provider-body-secret")).toBe(en["plugin-error-internal"]);
         expect(translatePluginAPIError(new Error("https://user:secret@provider.test/?token=secret"), "safe fallback")).toBe("safe fallback");

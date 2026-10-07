@@ -10,6 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"pocketbase/plugins/importer"
+	"pocketbase/pluginsystem"
 )
 
 type pluginCategoryRemapRequest struct {
@@ -38,13 +39,14 @@ type pluginCategoryTrailReference struct {
 // PluginSystemCategoryRemapPreview counts imported trails whose stored provider
 // category can be mapped with the current plugin instance configuration.
 func PluginSystemCategoryRemapPreview(e *core.RequestEvent) error {
-	instance, mapping, err := pluginCategoryRemapInput(e)
+	context := pluginOperationLogContext{Action: pluginActionRemapPreview}
+	instance, mapping, err := pluginCategoryRemapInput(e, &context)
 	if err != nil {
 		return err
 	}
 	refs, err := pluginCategoryTrailReferences(e.App, e.Auth.Id, instance.GetString("plugin_id"))
 	if err != nil {
-		return err
+		return pluginHostAPIErrorForEvent(e, context, "Failed to preview category remapping.", pluginsystem.WithDiagnosticCause(err, "database_lookup"))
 	}
 	candidates := pluginCategoryRemapCandidatesFromRefs(e.App, refs, mapping)
 	backfilledSinceMapping := pluginCategoryBackfilledSinceMappingCountFromRefs(e.App, instance, refs, mapping)
@@ -57,52 +59,58 @@ func PluginSystemCategoryRemapPreview(e *core.RequestEvent) error {
 // PluginSystemCategoryRemapApply updates the local category of imported trails
 // whose stored provider category matches the current plugin instance mapping.
 func PluginSystemCategoryRemapApply(e *core.RequestEvent) error {
-	instance, mapping, err := pluginCategoryRemapInput(e)
+	context := pluginOperationLogContext{Action: pluginActionRemapApply}
+	instance, mapping, err := pluginCategoryRemapInput(e, &context)
 	if err != nil {
 		return err
 	}
 	candidates, err := pluginCategoryRemapCandidates(e.App, e.Auth.Id, instance.GetString("plugin_id"), mapping)
 	if err != nil {
-		return err
+		return pluginHostAPIErrorForEvent(e, context, "Failed to apply category remapping.", pluginsystem.WithDiagnosticCause(err, "database_lookup"))
 	}
 	remapped := 0
 	if err := e.App.RunInTransaction(func(txApp core.App) error {
 		for _, candidate := range candidates {
 			trail, err := txApp.FindRecordById("trails", candidate.Trail.Id)
 			if err != nil {
-				return err
+				return pluginsystem.WithDiagnosticCause(err, "database_lookup")
 			}
 			trail.Set("category", candidate.CategoryID)
 			trail.Set("subcategory", candidate.SubcategoryID)
 			if err := txApp.Save(trail); err != nil {
-				return err
+				return pluginsystem.WithDiagnosticCause(err, "database_save")
 			}
 			remapped++
 		}
 		return nil
 	}); err != nil {
-		return err
+		return pluginHostAPIErrorForEvent(e, context, "Failed to apply category remapping.", pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 	return e.JSON(http.StatusOK, pluginCategoryRemapResponse{Count: len(candidates), Remapped: remapped})
 }
 
-func pluginCategoryRemapInput(e *core.RequestEvent) (*core.Record, map[string]importer.CategoryMappingValue, error) {
+func pluginCategoryRemapInput(e *core.RequestEvent, context *pluginOperationLogContext) (*core.Record, map[string]importer.CategoryMappingValue, error) {
 	if e.Auth == nil {
 		return nil, nil, apis.NewUnauthorizedError("authentication required", nil)
 	}
 
 	var data pluginCategoryRemapRequest
 	if err := e.BindBody(&data); err != nil {
-		return nil, nil, apis.NewBadRequestError("Failed to read request data", err)
+		return nil, nil, pluginHostAPIErrorForEvent(e, *context, "Failed to read request data", pluginsystem.WithDiagnosticCause(err, "request_body_invalid"))
 	}
 	if data.InstanceID == "" {
 		return nil, nil, apis.NewBadRequestError("instanceId is required", nil)
 	}
 
 	instance, err := e.App.FindRecordById("plugin_instances", data.InstanceID)
-	if err != nil || instance.GetString("user") != e.Auth.Id {
-		return nil, nil, apis.NewNotFoundError("plugin instance not found", err)
+	if err != nil {
+		logPluginOperationFailure(e, *context, pluginsystem.WithDiagnosticCause(err, "database_lookup"))
+		return nil, nil, apis.NewNotFoundError("plugin instance not found", nil)
 	}
+	if instance.GetString("user") != e.Auth.Id {
+		return nil, nil, apis.NewNotFoundError("plugin instance not found", nil)
+	}
+	context.InstanceID = instance.Id
 
 	config := effectivePluginConfig(e.App, instance.GetString("plugin_id"), instance)
 	if data.Config != nil {

@@ -103,7 +103,7 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")
 	if err := e.App.Save(instance); err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to save plugin connection.", pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 
 	authURL, err := url.Parse(authContext.AuthorizationURL)
@@ -182,7 +182,7 @@ func PluginSystemOAuthCallback(e *core.RequestEvent) error {
 	instance.Set("status", "configured")
 	instance.Set("last_error", map[string]any{})
 	if err := e.App.Save(instance); err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to save plugin connection.", pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true})
@@ -211,7 +211,7 @@ func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
 	instance.Set("auth", auth)
 	instance.Set("status", "needs_auth")
 	if err := e.App.Save(instance); err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "database_save"))
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to save plugin connection.", pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 	return e.JSON(http.StatusOK, map[string]any{"ok": true})
 }

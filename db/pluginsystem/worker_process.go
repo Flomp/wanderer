@@ -182,12 +182,12 @@ func (w *pluginWorkerProcess) hostFunctions() []extism.HostFunction {
 		func(ctx context.Context, plugin *extism.CurrentPlugin, stack []uint64) {
 			requestBytes, err := plugin.ReadBytes(stack[0])
 			if err != nil {
-				// This failure happens before the parent HTTP executor. Forward
-				// only typed metadata, never the guest memory error, for logging
-				// through the same child/parent boundary as structured events.
+				// This failure happens before the parent HTTP executor. A
+				// host-only frame lets the parent classify this boundary, while
+				// guest-authored log events retain their separate provenance.
 				failure := NormalizePluginError(PluginError{Code: "invalid_request", Operation: OperationHostHTTP})
-				msg, encodeErr := workerMessageWithData(workerMessageHostLog, workerHostLog{
-					Level: "warn", Message: "invalid_request", Event: "request_failed", Error: &failure,
+				msg, encodeErr := workerMessageWithData(workerMessageHostDiagnostic, workerHostDiagnostic{
+					Kind: workerHostDiagnosticHTTPInputInvalid,
 				})
 				if encodeErr != nil {
 					w.failHostRPC(stack, Failure("internal_error", OperationHostHTTP))

@@ -71,6 +71,9 @@ const (
 	pluginActionOAuthRevoke   pluginOperationAction = "oauth_revoke"
 	pluginActionSend          pluginOperationAction = "send"
 	pluginActionValidate      pluginOperationAction = "session_validate"
+	pluginActionList          pluginOperationAction = "plugins_list"
+	pluginActionRemapPreview  pluginOperationAction = "category_remap_preview"
+	pluginActionRemapApply    pluginOperationAction = "category_remap_apply"
 )
 
 // Keep the existing API envelope, and log the typed failure before conversion
@@ -81,12 +84,20 @@ func pluginOperationAPIErrorForEvent(e *core.RequestEvent, context pluginOperati
 	return pluginOperationAPIError(err)
 }
 
+// A local host failure is logged with the same safe diagnostic metadata, but
+// does not carry a guest/provider code into the UI. Its caller's action-specific
+// fallback remains authoritative; no raw error reaches PocketBase's logger.
+func pluginHostAPIErrorForEvent(e *core.RequestEvent, context pluginOperationLogContext, message string, err error) error {
+	logPluginOperationFailure(e, context, err)
+	return apis.NewBadRequestError(message, nil)
+}
+
 // Log only closed diagnostic metadata. Return a safe ApiError separately: the
 // PocketBase request logger also records returned errors and ApiError raw data.
 func logPluginOperationFailure(e *core.RequestEvent, context pluginOperationLogContext, err error) {
 	action := "plugin_operation"
 	switch context.Action {
-	case pluginActionOAuthStart, pluginActionOAuthCallback, pluginActionOAuthRevoke, pluginActionSend, pluginActionValidate:
+	case pluginActionOAuthStart, pluginActionOAuthCallback, pluginActionOAuthRevoke, pluginActionSend, pluginActionValidate, pluginActionList, pluginActionRemapPreview, pluginActionRemapApply:
 		action = string(context.Action)
 	}
 	attrs := []any{"action", action}

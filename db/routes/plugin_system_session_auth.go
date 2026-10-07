@@ -122,12 +122,12 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 		Config: pluginRuntimeConfig(config),
 	})
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.WithDiagnosticCause(err, "input_encoding"))
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to prepare plugin request.", pluginsystem.WithDiagnosticCause(err, "input_encoding"))
 	}
 
 	runtime, err := runtimeFor(plugin)
 	if err != nil {
-		return pluginOperationAPIErrorForEvent(e, logContext, err)
+		return pluginHostAPIErrorForEvent(e, logContext, "Failed to initialize plugin runtime.", err)
 	}
 	policy = policy.WithHostAuth(auth)
 	output, err := runtime.Call(e.Request.Context(), plugin, authContext.Refresh.Function, inputBytes, policy)

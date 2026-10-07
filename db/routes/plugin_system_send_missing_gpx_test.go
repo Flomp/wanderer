@@ -81,8 +81,13 @@ func TestSendMissingGPXIsExpectedPrerequisite(t *testing.T) {
 			if status != 400 {
 				t.Errorf("API status %d: %#v", status, body)
 			}
-			if !tc.removeFile && body["message"] != "Trail has no GPX track." {
-				t.Fatalf("API response changed: %#v", body)
+			wantMessage := "Trail has no GPX track."
+			if tc.removeFile {
+				wantMessage = "Failed to read trail GPX."
+			}
+			data, _ := body["data"].(map[string]any)
+			if body["message"] != wantMessage || len(data) != 0 {
+				t.Errorf("host GPX failure was exposed as a plugin failure: %#v", body)
 			}
 			if runtimeCalls != 0 {
 				t.Fatal("missing GPX reached the guest or provider")

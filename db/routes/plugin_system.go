@@ -12,17 +12,22 @@ import (
 // PluginSystemPluginsList refreshes the installed plugin cache and returns the
 // plugins that are available from the local runtime directory.
 func PluginSystemPluginsList(e *core.RequestEvent) error {
+	return pluginSystemPluginsList(e, "")
+}
+
+func pluginSystemPluginsList(e *core.RequestEvent, dir string) error {
 	if e.Auth == nil && !e.HasSuperuserAuth() {
 		return apis.NewUnauthorizedError("authentication required", nil)
 	}
 
-	manager := pluginsystem.NewManager(e.App, "")
+	context := pluginOperationLogContext{Action: pluginActionList}
+	manager := pluginsystem.NewManager(e.App, dir)
 	if err := manager.SyncInstalledPlugins(e.Request.Context()); err != nil {
-		return err
+		return pluginHostAPIErrorForEvent(e, context, "Failed to load plugins.", pluginsystem.WithDiagnosticCause(err, "plugin_cache_sync"))
 	}
 	plugins, err := manager.ListLocalPlugins(e.Request.Context())
 	if err != nil {
-		return err
+		return pluginHostAPIErrorForEvent(e, context, "Failed to load plugins.", pluginsystem.WithDiagnosticCause(err, "plugin_list"))
 	}
 	preparePluginInfoResponse(plugins, e.HasSuperuserAuth())
 

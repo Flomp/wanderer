@@ -35,7 +35,7 @@ func TestHostHTTPRequestInvalidPointerLogsClassifiedFailure(t *testing.T) {
 	}
 	assertInvalidHTTPPointerResponse(t, data)
 	record := singlePluginDiagnosticRecord(t, &output)
-	for key, want := range map[string]any{"plugin": manifest.ID, "code": "invalid_request", "class": "configuration", "cause": "input_encoding", "operation": OperationHostHTTP, "http_status": float64(0)} {
+	for key, want := range map[string]any{"msg": "plugin host request failed", "level": "WARN", "plugin": manifest.ID, "code": "invalid_request", "class": "configuration", "cause": "input_encoding", "operation": OperationHostHTTP, "http_status": float64(0)} {
 		if record[key] != want {
 			t.Errorf("pointer diagnostic %s=%#v, want %#v: %s", key, record[key], want, output.String())
 		}
@@ -54,7 +54,7 @@ func TestHostHTTPRequestInvalidPointerSurvivesActualWorkerProcess(t *testing.T) 
 	}
 	session := newGuestLogWorkerProcess(t, path)
 	var output bytes.Buffer
-	setPluginTestStandardLogWriter(t, &output)
+	setPluginTestDefaultLogger(t, slog.New(slog.NewJSONHandler(&output, nil)))
 	// The invalid request is recoverable: each call returns its wire failure and
 	// the same worker remains reusable, logging exactly once for each rejection.
 	for i := 0; i < 2; i++ {
@@ -67,13 +67,15 @@ func TestHostHTTPRequestInvalidPointerSurvivesActualWorkerProcess(t *testing.T) 
 		}
 		assertInvalidHTTPPointerResponse(t, data)
 		got := output.String()
-		if strings.Count(got, "plugin log [") != 1 {
-			t.Fatalf("pointer failure produced no/duplicate parent diagnostic: %q", got)
-		}
-		for _, want := range []string{"session host-log-test:", "event=request_failed", "code=invalid_request", "class=configuration", "operation=host_http", "http_status=0"} {
-			if !strings.Contains(got, want) {
-				t.Fatalf("pointer forwarding lost %s: %q", want, got)
+		record := singlePluginDiagnosticRecord(t, &output)
+		for key, want := range map[string]any{"msg": "plugin host request failed", "level": "WARN", "plugin": session.plugin.Manifest.ID, "session": session.sessionID,
+			"code": "invalid_request", "class": "configuration", "cause": "input_encoding", "operation": OperationHostHTTP, "http_status": float64(0)} {
+			if record[key] != want {
+				t.Errorf("worker host diagnostic %s=%#v, want %#v: %s", key, record[key], want, got)
 			}
+		}
+		if strings.Contains(got, "plugin log [") {
+			t.Errorf("trusted host failure was labeled as a guest event: %s", got)
 		}
 		for _, text := range []string{got, session.stderr.String()} {
 			if strings.Contains(text, "sentinel") || strings.Contains(text, "invalid memory block") {
