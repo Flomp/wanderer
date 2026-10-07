@@ -16,13 +16,29 @@ const (
 )
 
 type RequestPolicyContext struct {
-	Connectors map[string]ResolvedConnectorTarget
-	HostAuth   map[string]any
+	Connectors           map[string]ResolvedConnectorTarget
+	HostAuth             map[string]any
+	HostAuthContext      string
+	HostAuthContextBound bool
 }
 
-func (p RequestPolicyContext) WithHostAuth(auth map[string]any) RequestPolicyContext {
+func (p RequestPolicyContext) WithHostAuth(auth map[string]any, selected ...string) RequestPolicyContext {
 	p.HostAuth = auth
+	if len(selected) > 0 {
+		p.HostAuthContext = selected[0]
+		p.HostAuthContextBound = true
+	}
 	return p
+}
+
+// ValidatePolicyAuthContext enforces the trusted operation selection independently
+// of field names shared by multiple manifest contexts. Unbound low-level policy
+// callers remain usable; every instance operation binds its selection explicitly.
+func ValidatePolicyAuthContext(policy RequestPolicyContext, requested string) error {
+	if requested != "" && policy.HostAuthContextBound && requested != policy.HostAuthContext {
+		return Failure("invalid_configuration", OperationHostHTTP)
+	}
+	return nil
 }
 
 type ResolvedConnectorTarget struct {
@@ -75,6 +91,9 @@ func ValidateAndResolveHostRequestSpec(manifest Manifest, spec HostRequestSpec, 
 		return nil, err
 	}
 	if spec.Auth != "" {
+		if err := ValidatePolicyAuthContext(policy, spec.Auth); err != nil {
+			return nil, err
+		}
 		if err := ValidateAuthReference(manifest, spec.Auth); err != nil {
 			return nil, err
 		}

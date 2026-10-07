@@ -1,23 +1,24 @@
 package routes
 
 import (
-	"os"
 	"slices"
 
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/security"
 	"pocketbase/pluginsystem"
-	"pocketbase/util"
 )
 
-// Preserve inactive stored fields for the legacy refresh writer, but decrypt
-// only active fields encrypted by the manifest writer. Runtime/guest
-// projections filter inactive fields out.
+// Decrypt the active operation's inputs and keep inactive material opaque.
+// Runtime and guest projections filter inactive fields out.
 func decryptedActiveInstanceAuth(plugin pluginsystem.LocalPlugin, instance *core.Record) (map[string]any, error) {
 	auth := pluginsystem.JSONMapFromRecord(instance, "auth")
-	_, context, err := pluginsystem.EffectiveAuthContext(plugin.Manifest, auth)
+	_, context, err := pluginsystem.EffectiveAuthContext(plugin.Manifest, instance.GetString("auth_context"))
 	if err != nil {
 		return nil, err
+	}
+	if context.Type == pluginsystem.AuthTypeOAuth2 {
+		if err := pluginsystem.CheckOAuthGrantProvenance(plugin.Manifest, auth, instance.GetString("auth_context")); err != nil {
+			return nil, err
+		}
 	}
 	if err := decryptActiveAuth(auth, plugin.Manifest, context, nil); err != nil {
 		return nil, err
@@ -37,30 +38,7 @@ func decryptActiveAuth(auth map[string]any, manifest pluginsystem.Manifest, cont
 }
 
 func decryptOperationAuthFields(auth map[string]any, manifest pluginsystem.Manifest, fields []string, plaintext map[string]bool) error {
-	secretFields := pluginsystem.ManifestAuthSecretFields(manifest)
-	seen := map[string]bool{}
-	for _, key := range fields {
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		if plaintext[key] || !secretFields[key] {
-			continue
-		}
-		value, ok := auth[key].(string)
-		if !ok || value == "" || !util.LooksLikeEncrypted(value) {
-			continue
-		}
-		secret, err := security.Decrypt(value, os.Getenv("POCKETBASE_ENCRYPTION_KEY"))
-		if err != nil {
-			if pluginsystem.IsLegacyPlaintextAuthSecret(manifest.ID, key, value) {
-				continue
-			}
-			return pluginsystem.ErrActiveCredentialsUnreadable
-		}
-		auth[key] = string(secret)
-	}
-	return nil
+	return pluginsystem.DecryptAuthFields(auth, manifest, fields, plaintext)
 }
 
 // OAuth start needs only client credentials; the callback additionally needs

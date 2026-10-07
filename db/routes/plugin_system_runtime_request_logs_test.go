@@ -18,7 +18,7 @@ func TestInteractiveRuntimeFailureDoesNotReachPocketBaseRequestLogs(t *testing.T
 			f := newInteractivePluginFixture(t, nil)
 			const privateError = "worker /private/credential-secret/guest.wasm failed with token=runtime-token-secret"
 			resolve := func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error) { return nil, errors.New(privateError) }
-			payload := map[string]any{"pluginId": f.manifest.ID, "instanceId": f.instance.Id}
+			payload := map[string]any{"pluginId": f.manifest.ID, "instanceId": f.instance.Id, "expected_connection_generation": f.instance.GetString("connection_generation")}
 			var handlerFunc func(*core.RequestEvent) error
 			if action == "validate" {
 				handlerFunc = func(e *core.RequestEvent) error { return pluginSystemSessionAuthValidate(e, resolve) }

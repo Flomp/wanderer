@@ -91,7 +91,7 @@ func TestOAuthMetadataRefreshPreservesUnreadableInactiveSecret(t *testing.T) {
 }
 
 func TestOAuthMetadataSettingsPreservesUnreadableSecretUntilExplicitReplacement(t *testing.T) {
-	for _, submission := range []string{"omitted", "empty", "unchanged ciphertext", "replacement", "explicit null"} {
+	for _, submission := range []string{"omitted", "empty", "explicit ciphertext-shaped input", "replacement", "explicit null"} {
 		t.Run(submission, func(t *testing.T) {
 			f := newOAuthMetadataFixture(t)
 			unreadable, err := security.Encrypt([]byte("previous-client-secret"), "ffffffffffffffffffffffffffffffff")
@@ -105,7 +105,7 @@ func TestOAuthMetadataSettingsPreservesUnreadableSecretUntilExplicitReplacement(
 			switch submission {
 			case "empty":
 				auth["clientSecret"] = ""
-			case "unchanged ciphertext":
+			case "explicit ciphertext-shaped input":
 				auth["clientSecret"] = unreadable
 			case "replacement":
 				auth["clientSecret"] = "replacement-client-secret"
@@ -114,13 +114,17 @@ func TestOAuthMetadataSettingsPreservesUnreadableSecretUntilExplicitReplacement(
 			}
 			f.saveModal(t, map[string]any{"auth": auth})
 			switch submission {
-			case "replacement":
+			case "replacement", "explicit ciphertext-shaped input":
+				expected := "replacement-client-secret"
+				if submission == "explicit ciphertext-shaped input" {
+					expected = unreadable
+				}
 				ciphertext, ok := rawOAuthMetadataAuth(t, f)["clientSecret"].(string)
-				if !ok || ciphertext == "replacement-client-secret" || ciphertext == unreadable {
+				if !ok || ciphertext == expected || ciphertext == unreadable {
 					t.Fatal("explicit replacement was not newly encrypted")
 				}
 				plaintext, err := security.Decrypt(ciphertext, oauthMetadataTestKey)
-				if err != nil || string(plaintext) != "replacement-client-secret" {
+				if err != nil || string(plaintext) != expected {
 					t.Fatal("replacement secret was not encrypted with the current key")
 				}
 			case "explicit null":

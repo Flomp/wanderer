@@ -19,7 +19,7 @@ func TestHostAuthInjectionPreservesGrantClassification(t *testing.T) {
 			manifest.Auth.Contexts = map[string]AuthContext{"account": {Type: AuthTypeOAuth2}}
 			manifest.Permissions.Auth = []string{"account"}
 			manifest.Permissions.Network.Connectors[0].Auth = []string{"account"}
-			policy := testHostPolicy(t, "https://provider-secret.test")
+			policy := testHostPolicy(t, "https://provider-secret.test").WithHostAuth(nil, tc.auth)
 			var output bytes.Buffer
 			setPluginTestDefaultLogger(t, slog.New(slog.NewJSONHandler(&output, nil)))
 			_, err := ExecuteHostRequest(context.Background(), manifest, policy, HostRequestSpec{Method: "GET", Auth: tc.auth, Target: RequestTarget{Type: "connector", Connector: "api", Path: "/v1", Query: []QueryParam{{Name: "token", Value: "query-secret"}}}}, HostRequestOptions{})

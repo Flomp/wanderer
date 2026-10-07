@@ -19,10 +19,11 @@ func TestActiveAuthIgnoresUnreadableInactiveAndPendingSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 	instance := core.NewRecord(core.NewBaseCollection("instances"))
-	instance.Collection().Fields.Add(&core.JSONField{Name: "auth"})
+	instance.Collection().Fields.Add(&core.JSONField{Name: "auth"}, &core.TextField{Name: "auth_context"})
 	// A non-secret input can resemble encrypted data; the writer stores it
 	// unchanged, so the reader must never attempt to decrypt it.
 	legacyEmail := "0123456789abcdef0123456789abcdef01234567"
+	instance.Set("auth_context", "web")
 	instance.Set("auth", map[string]any{"oauthContext": "web", "email": legacyEmail, "password": valid, "refreshToken": broken, "oauthState": broken, "apiKey": broken})
 	plugin := pluginsystem.LocalPlugin{Manifest: pluginsystem.Manifest{Auth: pluginsystem.AuthManifest{Contexts: map[string]pluginsystem.AuthContext{"web": {Type: pluginsystem.AuthTypeSession, Fields: []string{"email", "password"}, SecretFields: []string{"password"}}, "api": {Type: pluginsystem.AuthTypeAPIKey, SecretField: "apiKey"}}}}}
 	auth, err := decryptedActiveInstanceAuth(plugin, instance)
@@ -32,7 +33,7 @@ func TestActiveAuthIgnoresUnreadableInactiveAndPendingSecrets(t *testing.T) {
 	if auth["password"] != "active-password" || auth["refreshToken"] != broken || auth["oauthState"] != broken {
 		t.Fatalf("incorrect decryption/preservation: %#v", auth)
 	}
-	guest := pluginsystem.PluginInputAuth(plugin, auth)
+	guest := pluginsystem.PluginInputAuth(plugin, auth, instance.GetString("auth_context"))
 	if len(guest) != 2 || guest["email"] != legacyEmail || guest["password"] != "active-password" {
 		t.Fatalf("inactive secrets entered guest input: %#v", guest)
 	}

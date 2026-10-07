@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"time"
@@ -60,14 +61,24 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 
 	instance, err := e.App.FindFirstRecordByFilter(
 		"plugin_instances",
-		"user={:user} && plugin_id={:plugin_id} && enabled=true",
+		"user={:user} && plugin_id={:plugin_id}",
 		dbx.Params{"user": e.Auth.Id, "plugin_id": data.PluginID},
 	)
 	if err != nil {
-		return apis.NewBadRequestError("no enabled plugin instance configured for this plugin", nil)
+		return apis.NewBadRequestError("no plugin instance configured for this plugin", nil)
 	}
 
 	logContext.InstanceID = instance.Id
+	snapshot := pluginsystem.CaptureConnection(instance)
+	release, acquired := pluginsystem.TryLockInstance(instance.Id)
+	if !acquired {
+		return pluginsystem.ConnectionAPIError(pluginsystem.ErrInstanceBusy)
+	}
+	defer release()
+	instance, err = pluginsystem.CheckConnection(e.App, snapshot, true)
+	if err != nil {
+		return pluginConnectionAPIErrorForEvent(e, logContext, err)
+	}
 	plugin, capability, err := localPluginCapability(e.App, data.PluginID, "prepare_trail_send", "v1")
 	if err != nil {
 		return err
@@ -105,7 +116,7 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 			ID:       instance.Id,
 			PluginID: instance.GetString("plugin_id"),
 		},
-		Auth: pluginsystem.PluginInputAuth(plugin, auth),
+		Auth: pluginsystem.PluginInputAuth(plugin, auth, snapshot.AuthContext),
 		Name: trail.GetString("name"),
 		Trail: pluginsystem.Track{
 			Format:        "gpx",
@@ -118,10 +129,11 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 	if err != nil {
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
-	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
+	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth, snapshot.AuthContext)
 	if err != nil {
 		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationSend))
 	}
+	policy = policy.WithHostAuth(activeAuth, snapshot.AuthContext)
 	input.Config = pluginConfig
 	inputBytes, err := json.Marshal(input)
 	if err != nil {
@@ -132,14 +144,23 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 	if err != nil {
 		return pluginHostAPIErrorForEvent(e, logContext, "Failed to initialize plugin runtime.", err)
 	}
-	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy.WithHostAuth(activeAuth))
+	if _, err := pluginsystem.CheckConnection(e.App, snapshot, true); err != nil {
+		return pluginConnectionAPIErrorForEvent(e, logContext, err)
+	}
+	session, err := runtime.OpenSession(e.Request.Context(), plugin, policy)
 	if err != nil {
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	defer func() {
 		_ = session.Close(context.Background())
 	}()
+	if _, err := pluginsystem.CheckConnection(e.App, snapshot, true); err != nil {
+		return pluginConnectionAPIErrorForEvent(e, logContext, err)
+	}
 	output, err := session.Call(e.Request.Context(), capability.Export, inputBytes)
+	if _, guardErr := pluginsystem.CheckConnection(e.App, snapshot, true); guardErr != nil {
+		return pluginConnectionAPIErrorForEvent(e, logContext, guardErr)
+	}
 	if err != nil {
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
@@ -167,6 +188,10 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 		Spec:     &plan.Request,
 		Policy:   policy,
 	}); err != nil {
+		if errors.Is(err, pluginsystem.ErrConnectionObsolete) {
+			return pluginConnectionAPIErrorForEvent(e, logContext, err)
+		}
+		setPluginInstanceStatusForError(e.App, instance, err)
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 	// Auth is fully resolved above (including OAuth refresh and plugin session
@@ -174,7 +199,11 @@ func pluginSystemTrailSendWithHostRequest(e *core.RequestEvent, runtimeFor func(
 	// executor's policy-based injection becomes a no-op instead of re-injecting
 	// against an empty policy.HostAuth.
 	plan.Request.Auth = ""
+	if _, err := pluginsystem.CheckConnection(e.App, snapshot, true); err != nil {
+		return pluginConnectionAPIErrorForEvent(e, logContext, err)
+	}
 	if err := executeHostRequest(e.Request.Context(), plugin.Manifest, policy, plan.Request, gpx, execute); err != nil {
+		setPluginInstanceStatusForError(e.App, instance, err)
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}
 

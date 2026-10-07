@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -118,6 +119,10 @@ func PluginSystemSyncConfigured(ctx context.Context, app core.App, client meilis
 			}
 			app.Logger().Info("plugin instance sync started", "plugin", plugin.Manifest.ID, "instance", instance.Id)
 			result, err := syncPluginInstance(ctx, app, client, plugin, instance)
+			if errors.Is(err, pluginsystem.ErrInstanceBusy) || errors.Is(err, pluginsystem.ErrConnectionObsolete) {
+				app.Logger().Info("plugin sync skipped", "plugin", plugin.Manifest.ID, "instance", instance.Id, "operation", "sync", "reason", pluginSyncSkipReason(err))
+				continue
+			}
 			if err != nil {
 				pluginsystem.LogPluginFailure(app.Logger(), "plugin instance sync failed", err, "plugin", plugin.Manifest.ID, "instance", instance.Id)
 				syncErr = err
@@ -145,6 +150,20 @@ func pluginInstances(app core.App, pluginID string) ([]*core.Record, error) {
 // actor, creates the runtime, decrypts/refreshes auth, and dispatches every
 // enabled sync capability.
 func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.ServiceManager, plugin pluginsystem.LocalPlugin, instance *core.Record) (*pluginSystemSyncResult, error) {
+	snapshot := pluginsystem.CaptureConnection(instance)
+	release, acquired := pluginsystem.TryLockInstance(instance.Id)
+	if !acquired {
+		return nil, pluginsystem.ErrInstanceBusy
+	}
+	defer release()
+	var err error
+	instance, err = pluginsystem.CheckConnection(app, snapshot, true)
+	if err != nil {
+		return nil, err
+	}
+	if shouldSkipPluginInstance(instance) {
+		return nil, pluginsystem.ErrConnectionObsolete
+	}
 	actor, err := app.FindFirstRecordByData("activitypub_actors", "user", instance.GetString("user"))
 	if err != nil {
 		setPluginInstanceStatusForError(app, instance, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("internal_error", ""), "actor_missing"))
@@ -169,10 +188,13 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 	}
 	auth, err = pluginsystem.RefreshOAuthAuthIfNeeded(ctx, app, plugin, instance, auth)
 	if err != nil {
+		if _, guardErr := pluginsystem.CheckConnection(app, snapshot, true); guardErr != nil {
+			return nil, guardErr
+		}
 		setPluginInstanceStatusForError(app, instance, err)
 		return nil, err
 	}
-	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
+	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth, snapshot.AuthContext)
 	if err != nil {
 		return nil, err
 	}
@@ -188,20 +210,20 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 	sessions := &pluginSyncRuntimeSession{
 		runtime: runtime,
 		plugin:  plugin,
-		policy:  policy.WithHostAuth(activeAuth),
+		policy:  policy.WithHostAuth(activeAuth, snapshot.AuthContext),
 	}
-	if err := sessions.open(ctx); err != nil {
-		setPluginInstanceStatusForError(app, instance, err)
-		return nil, err
+	openErr := sessions.open(ctx)
+	if _, guardErr := pluginsystem.CheckConnection(app, snapshot, true); guardErr != nil {
+		_ = sessions.close(context.Background())
+		return nil, guardErr
+	}
+	if openErr != nil {
+		setPluginInstanceStatusForError(app, instance, openErr)
+		return nil, openErr
 	}
 	defer func() {
 		_ = sessions.close(context.Background())
 	}()
-
-	instance.Set("status", "syncing")
-	if err := app.Save(instance); err != nil {
-		return nil, pluginsystem.WithDiagnosticCause(err, "database_save")
-	}
 
 	result := &pluginSystemSyncResult{PluginID: plugin.Manifest.ID}
 	for _, descriptor := range syncCapabilityDescriptors {
@@ -236,14 +258,10 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 		result.Skipped += capResult.Skipped
 	}
 
-	instance.Set("state", map[string]any{})
-	instance.Set("last_sync_at", time.Now())
-	instance.Set("last_error", map[string]any{})
-	instance.Set("retry_not_before", "")
-	instance.Set("status", "configured")
-	if err := app.Save(instance); err != nil {
-		return nil, pluginsystem.WithDiagnosticCause(err, "database_save")
+	if err := completePluginSync(app, instance, time.Now()); err != nil {
+		return nil, err
 	}
+
 	return result, nil
 }
 
@@ -300,13 +318,17 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 	if hasUsableCategoryMapping(categoryMapping(hostConfig)) {
 		providerCategoryBackfillsRemaining = defaultPluginProviderCategoryBackfillLimit
 	}
+	snapshot := pluginsystem.CaptureConnection(instance)
 	for batch := 0; hasMore && batch < defaultPluginSyncMaxBatches; batch++ {
+		if _, err := pluginsystem.CheckConnection(app, snapshot, true); err != nil {
+			return nil, err
+		}
 		input := pluginSystemListInput{
 			Instance: pluginsystem.InstanceRef{
 				ID:       instance.Id,
 				PluginID: instance.GetString("plugin_id"),
 			},
-			Auth:    pluginsystem.PluginInputAuth(plugin, auth),
+			Auth:    pluginsystem.PluginInputAuth(plugin, auth, instance.GetString("auth_context")),
 			State:   state,
 			Options: pluginConfig,
 			Limits:  pluginSystemSyncLimits{MaxItems: defaultPluginSyncBatchLimit},
@@ -316,6 +338,9 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 			return nil, err
 		}
 		outputBytes, err := sessions.session.Call(ctx, capability.Export, inputBytes)
+		if _, guardErr := pluginsystem.CheckConnection(app, snapshot, true); guardErr != nil {
+			return nil, guardErr
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -357,6 +382,9 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 		}
 
 		for _, summary := range summaries {
+			if _, err := pluginsystem.CheckConnection(app, snapshot, true); err != nil {
+				return nil, err
+			}
 			if summary.Source.ExternalID == "" {
 				continue
 			}
@@ -375,6 +403,9 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 				continue
 			}
 			item, err := pluginDetail(ctx, sessions.session, plugin, detailCapability, instance, auth, pluginConfig, summary)
+			if _, guardErr := pluginsystem.CheckConnection(app, snapshot, true); guardErr != nil {
+				return nil, guardErr
+			}
 			if err != nil {
 				result.Skipped++
 				pluginsystem.LogPluginFailure(app.Logger(), "skipping plugin item after detail fetch failed", err, "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "source_id", pluginsystem.SourceDiagnosticID(summary.Source.Provider, summary.Source.ExternalID))
@@ -386,6 +417,9 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 				continue
 			}
 			applyHostPolicy(&item, hostConfig)
+			if _, err := pluginsystem.CheckConnection(app, snapshot, true); err != nil {
+				return nil, err
+			}
 			imported, err := importer.ImportTrail(ctx, app, item, importer.Options{
 				UserID:                      instance.GetString("user"),
 				ActorID:                     actor.Id,
@@ -475,7 +509,14 @@ func backfillProviderCategoryDuringSync(ctx context.Context, app core.App, sessi
 		return false, nil
 	}
 
+	snapshot := pluginsystem.CaptureConnection(instance)
+	if _, err := pluginsystem.CheckConnection(app, snapshot, true); err != nil {
+		return false, err
+	}
 	item, err := pluginDetail(ctx, sessions.session, plugin, detailCapability, instance, auth, pluginConfig, summary)
+	if _, guardErr := pluginsystem.CheckConnection(app, snapshot, true); guardErr != nil {
+		return false, guardErr
+	}
 	if err != nil {
 		pluginsystem.LogPluginFailure(app.Logger(), "skipping provider category backfill after detail fetch failed", err, "plugin", plugin.Manifest.ID, "instance", instance.Id, "source_id", pluginsystem.SourceDiagnosticID(summary.Source.Provider, summary.Source.ExternalID))
 		if pluginsystem.IsRuntimeSessionFatalError(err) {
@@ -486,6 +527,9 @@ func backfillProviderCategoryDuringSync(ctx context.Context, app core.App, sessi
 		return true, nil
 	}
 
+	if _, err := pluginsystem.CheckConnection(app, snapshot, true); err != nil {
+		return false, err
+	}
 	ref.Set("provider_category", importer.ProviderCategoryFromImport(item))
 	ref.Set("provider_category_checked_at", time.Now())
 	if err := app.Save(ref); err != nil {
@@ -500,7 +544,7 @@ func pluginDetail(ctx context.Context, session pluginsystem.RuntimeSession, plug
 			ID:       instance.Id,
 			PluginID: instance.GetString("plugin_id"),
 		},
-		Auth:    pluginsystem.PluginInputAuth(plugin, auth),
+		Auth:    pluginsystem.PluginInputAuth(plugin, auth, instance.GetString("auth_context")),
 		Options: pluginConfig,
 		Summary: summary,
 	}
@@ -538,37 +582,6 @@ func pluginHasAnySyncCapability(plugin pluginsystem.LocalPlugin) bool {
 		}
 	}
 	return false
-}
-
-func setPluginInstanceStatus(app core.App, instance *core.Record, status string, code string, message string) {
-	instance.Set("status", status)
-	instance.Set("last_error", map[string]any{
-		"code":    code,
-		"message": message,
-	})
-	if err := app.Save(instance); err != nil {
-		pluginsystem.LogPluginFailure(app.Logger(), "failed to update plugin instance status", pluginsystem.WithDiagnosticCause(err, "database_save"), "instance", instance.Id)
-	}
-}
-
-func setPluginInstanceStatusForError(app core.App, instance *core.Record, err error) {
-	update := pluginsystem.InstanceStatusForError(err, time.Now())
-
-	instance.Set("status", update.Status)
-	instance.Set("last_error", map[string]any{
-		"code":       update.Code,
-		"message":    update.Message,
-		"operation":  update.Operation,
-		"httpStatus": update.HTTPStatus,
-	})
-	if update.RetryNotBefore != nil {
-		instance.Set("retry_not_before", *update.RetryNotBefore)
-	} else {
-		instance.Set("retry_not_before", "")
-	}
-	if saveErr := app.Save(instance); saveErr != nil {
-		pluginsystem.LogPluginFailure(app.Logger(), "failed to update plugin instance status", pluginsystem.WithDiagnosticCause(saveErr, "database_save"), "instance", instance.Id)
-	}
 }
 
 func applyHostPolicy(item *pluginsystem.TrailImport, config map[string]any) {

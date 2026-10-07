@@ -160,7 +160,7 @@ func TestExecuteHostRequestInjectsAPIKeyQueryBeforeBuildingURL(t *testing.T) {
 	}}
 	manifest.Permissions.Auth = []string{"account"}
 	manifest.Permissions.Network.Connectors[0].Auth = []string{"account"}
-	policy := testHostPolicy(t, server.URL).WithHostAuth(map[string]any{"apiKey": "host-secret"})
+	policy := testHostPolicy(t, server.URL).WithHostAuth(map[string]any{"apiKey": "host-secret"}, "account")
 	policy.Connectors["api"] = ResolvedConnectorTarget{
 		Name:                "api",
 		Type:                ConnectorTypePublicAPI,

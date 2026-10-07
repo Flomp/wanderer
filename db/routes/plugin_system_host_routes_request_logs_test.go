@@ -167,7 +167,7 @@ func TestPluginsListHostFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.T)
 			case "cache database":
 				app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "installed_plugins", filterFailureAt: 1, filterCalls: new(atomic.Int32)}
 			case "list database":
-				app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "installed_plugins", filterFailureAt: 2, filterCalls: new(atomic.Int32)}
+				app = &pluginHostRouteFailureApp{App: f.app, filterCollection: "installed_plugins", filterFailureAt: 3, filterCalls: new(atomic.Int32)}
 				cause = "plugin_list"
 			case "cache deletion hook":
 				f.app.OnRecordDelete("installed_plugins").BindFunc(func(e *core.RecordEvent) error {

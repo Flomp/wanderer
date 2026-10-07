@@ -36,6 +36,9 @@ func InjectRequestAuthForContext(manifest Manifest, auth map[string]any, context
 	}
 	switch authContext.Type {
 	case AuthTypeOAuth2:
+		if err := CheckOAuthGrantProvenance(manifest, auth, contextName); err != nil {
+			return err
+		}
 		token := StringFromAny(auth[AuthFieldAccessToken])
 		if token == "" {
 			return Failure("invalid_grant", OperationOAuthRefresh)
@@ -84,6 +87,9 @@ func InjectHostRequestAuthFromPolicy(manifest Manifest, auth map[string]any, spe
 	}
 	switch authContext.Type {
 	case AuthTypeOAuth2:
+		if err := CheckOAuthGrantProvenance(manifest, auth, spec.Auth); err != nil {
+			return err
+		}
 		token := StringFromAny(auth[AuthFieldAccessToken])
 		if token == "" {
 			return Failure("invalid_grant", OperationOAuthRefresh)
@@ -154,6 +160,17 @@ func InjectHostRequestAuth(ctx context.Context, input AuthInjectionInput) error 
 	if input.Spec.Auth == "" {
 		return nil
 	}
+	if input.Instance != nil {
+		if input.Spec.Auth != input.Instance.GetString("auth_context") {
+			return Failure("invalid_configuration", OperationHostHTTP)
+		}
+		if _, err := CheckConnection(input.App, CaptureConnection(input.Instance), true); err != nil {
+			return err
+		}
+	}
+	if err := ValidatePolicyAuthContext(input.Policy, input.Spec.Auth); err != nil {
+		return err
+	}
 	if err := ValidateAuthReference(input.Plugin.Manifest, input.Spec.Auth); err != nil {
 		return err
 	}
@@ -180,7 +197,19 @@ func injectOAuthAuth(ctx context.Context, input AuthInjectionInput, contextName 
 	if input.Instance == nil {
 		return fmt.Errorf("plugin instance is required")
 	}
+	if contextName != input.Instance.GetString("auth_context") {
+		return Failure("invalid_configuration", OperationOAuthRefresh)
+	}
+	if _, err := CheckConnection(input.App, CaptureConnection(input.Instance), true); err != nil {
+		return err
+	}
+	if input.Instance.GetString("oauth_token_revision") == "" {
+		return ErrConnectionConflict
+	}
 	auth := input.Auth
+	if err := CheckOAuthGrantProvenance(input.Plugin.Manifest, auth, contextName); err != nil {
+		return err
+	}
 	if OAuthNeedsRefresh(auth) {
 		refreshed, err := RefreshOAuthToken(ctx, input.App, input.Plugin, input.Instance, auth, contextName)
 		if err != nil {
@@ -247,6 +276,10 @@ func injectSessionAuth(ctx context.Context, input AuthInjectionInput, authContex
 	if input.Instance == nil {
 		return fmt.Errorf("plugin instance is required")
 	}
+	snapshot := CaptureConnection(input.Instance)
+	if _, err := CheckConnection(input.App, snapshot, true); err != nil {
+		return err
+	}
 
 	pluginInput := map[string]any{
 		"instance": InstanceRef{
@@ -265,6 +298,9 @@ func injectSessionAuth(ctx context.Context, input AuthInjectionInput, authContex
 		output, err = input.Session.Call(ctx, authContext.Refresh.Function, inputBytes)
 	} else {
 		output, err = input.Runtime.Call(ctx, input.Plugin, authContext.Refresh.Function, inputBytes, input.Policy)
+	}
+	if _, guardErr := CheckConnection(input.App, snapshot, true); guardErr != nil {
+		return guardErr
 	}
 	if err != nil {
 		return err

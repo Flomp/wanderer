@@ -47,7 +47,7 @@ func assertStoredSecretEncryptedAs(t *testing.T, f *oauthMetadataFixture, field,
 	}
 }
 
-func TestRawLegacyOAuthSettingsEncryptsUnchangedPlaintext(t *testing.T) {
+func TestRawLegacyOAuthSettingsDistinguishesInputFromPreservedCredentials(t *testing.T) {
 	for _, secret := range []string{"short-legacy-secret", legacyStravaTestSecret} {
 		for _, submission := range []string{"omitted", "empty", "unchanged"} {
 			t.Run(secret+"/"+submission, func(t *testing.T) {
@@ -63,13 +63,17 @@ func TestRawLegacyOAuthSettingsEncryptsUnchangedPlaintext(t *testing.T) {
 					patch["clientSecret"] = secret
 				}
 				f.saveModal(t, map[string]any{"auth": patch})
-				assertStoredSecretEncryptedAs(t, f, "clientSecret", secret)
+				if submission == "unchanged" {
+					assertStoredSecretEncryptedAs(t, f, "clientSecret", secret)
+				} else if rawOAuthMetadataAuth(t, f)["clientSecret"] != secret {
+					t.Fatal("omitted/placeholder input modified retained credential bytes")
+				}
 			})
 		}
 	}
 }
 
-func TestRawLegacyStravaRefreshUsesPlaintextAndEncryptsNextSave(t *testing.T) {
+func TestRawLegacyStravaRefreshEncryptsOnlyItsNewTokens(t *testing.T) {
 	f := newOAuthMetadataFixture(t)
 	rawLegacyStravaCredentials(t, f)
 	instance, err := f.app.FindRecordById("plugin_instances", f.instanceID)
@@ -91,7 +95,9 @@ func TestRawLegacyStravaRefreshUsesPlaintextAndEncryptsNextSave(t *testing.T) {
 	if f.tokenRequests.Load() != 1 {
 		t.Fatal("refresh did not make exactly one provider request")
 	}
-	assertStoredSecretEncryptedAs(t, f, "clientSecret", legacyStravaTestSecret)
+	if rawOAuthMetadataAuth(t, f)["clientSecret"] != legacyStravaTestSecret {
+		t.Fatal("token/flow writer changed retained client credential bytes")
+	}
 	assertStoredSecretEncryptedAs(t, f, "accessToken", "strava-test-access-rotated")
 	assertStoredSecretEncryptedAs(t, f, "refreshToken", "strava-test-refresh-rotated")
 	if rawOAuthMetadataAuth(t, f)["clientId"] != legacyStravaTestAccess {
@@ -99,31 +105,35 @@ func TestRawLegacyStravaRefreshUsesPlaintextAndEncryptsNextSave(t *testing.T) {
 	}
 }
 
-func TestRawLegacyStravaReconnectAndRevokeEncryptClientSecret(t *testing.T) {
+func TestRawLegacyStravaReconnectAndRevokePreserveClientCredentials(t *testing.T) {
 	for _, operation := range []string{"reconnect", "revoke"} {
 		t.Run(operation, func(t *testing.T) {
 			f := newOAuthMetadataFixture(t)
 			rawLegacyStravaCredentials(t, f)
 			if operation == "revoke" {
-				f.request(t, http.MethodPost, "/api/plugin-system/oauth/revoke", map[string]any{"instanceId": f.instanceID})
+				f.request(t, http.MethodPost, "/api/plugin-system/oauth/revoke", map[string]any{"instanceId": f.instanceID, "expected_connection_generation": oauthFixtureGeneration(t, f)})
 				if f.tokenRequests.Load() != 0 {
 					t.Fatal("revoke called provider")
 				}
 				f.assertAuthFieldsAbsent(t, "raw legacy revoke", "accessToken", "refreshToken")
 			} else {
-				start := f.request(t, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
+				start := f.request(t, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "expected_connection_generation": oauthFixtureGeneration(t, f), "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
 				if f.tokenRequests.Load() != 0 {
 					t.Fatal("start called token provider")
 				}
-				assertStoredSecretEncryptedAs(t, f, "accessToken", legacyStravaTestAccess)
-				assertStoredSecretEncryptedAs(t, f, "refreshToken", legacyStravaTestRefresh)
+				stored := rawOAuthMetadataAuth(t, f)
+				if stored["accessToken"] != legacyStravaTestAccess || stored["refreshToken"] != legacyStravaTestRefresh {
+					t.Fatal("OAuth start modified the existing grant")
+				}
 				f.request(t, http.MethodPost, "/api/plugin-system/oauth/callback", map[string]any{"instanceId": f.instanceID, "state": start["state"], "code": "test-authorization-code"})
 				if f.tokenRequests.Load() != 1 {
 					t.Fatal("callback did not exchange one code")
 				}
 				assertStoredSecretEncryptedAs(t, f, "accessToken", "strava-test-access-rotated")
 			}
-			assertStoredSecretEncryptedAs(t, f, "clientSecret", legacyStravaTestSecret)
+			if rawOAuthMetadataAuth(t, f)["clientSecret"] != legacyStravaTestSecret {
+				t.Fatal("token/flow writer changed retained client credential bytes")
+			}
 			if rawOAuthMetadataAuth(t, f)["clientId"] != legacyStravaTestAccess {
 				t.Fatal("non-secret clientId was modified")
 			}
@@ -151,9 +161,10 @@ func TestActiveAuthUsesWriterUnionForSharedInputFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.plugin.Manifest = manifest
-	instance, auth := f.storedAuth(t)
-	auth["shared"] = "shared-input-secret"
-	instance.Set("auth", auth)
+	instance, _ := f.storedAuth(t)
+	if err := pluginsystem.ApplyAuthPatch(instance, manifest, map[string]any{"shared": "shared-input-secret"}); err != nil {
+		t.Fatal(err)
+	}
 	if err := f.app.Save(instance); err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +177,7 @@ func TestActiveAuthUsesWriterUnionForSharedInputFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	guest := pluginsystem.PluginInputAuth(f.plugin, decrypted)
+	guest := pluginsystem.PluginInputAuth(f.plugin, decrypted, instance.GetString("auth_context"))
 	if guest["shared"] != "shared-input-secret" {
 		t.Fatal("active guest received the ciphertext of a shared secret field")
 	}

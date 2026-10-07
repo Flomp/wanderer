@@ -205,12 +205,9 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordCreateRequest("follows").BindFunc(hooks.CreateFollowHandler())
 	app.OnRecordDeleteRequest("follows").BindFunc(hooks.DeleteFollowHandler())
 
-	app.OnRecordsListRequest("plugin_instances").BindFunc(hooks.ListPluginInstanceHandler())
-	app.OnRecordViewRequest("plugin_instances").BindFunc(hooks.ViewPluginInstanceHandler())
-	app.OnRecordCreate("plugin_instances").BindFunc(hooks.CreatePluginInstanceHandler())
-	app.OnRecordAfterCreateSuccess("plugin_instances").BindFunc(hooks.CreateUpdatePluginInstanceSuccessHandler())
-	app.OnRecordUpdate("plugin_instances").BindFunc(hooks.UpdatePluginInstanceHandler())
-	app.OnRecordAfterUpdateSuccess("plugin_instances").BindFunc(hooks.CreateUpdatePluginInstanceSuccessHandler())
+	app.OnRecordCreateRequest("plugin_instances").BindFunc(hooks.DenyPluginInstanceWriteHandler())
+	app.OnRecordUpdateRequest("plugin_instances").BindFunc(hooks.DenyPluginInstanceWriteHandler())
+	app.OnRecordEnrich("plugin_instances").BindFunc(hooks.EnrichPluginInstanceHandler())
 
 	app.OnRecordsListRequest("feed", "profile_feed").BindFunc(hooks.ListFeedHandler())
 
@@ -254,6 +251,8 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.GET("/search/token", routes.SearchToken(client))
 
 	se.Router.GET("/plugins", routes.PluginSystemPluginsList)
+	se.Router.POST("/plugins/instances", routes.PluginSystemInstanceCreate)
+	se.Router.PATCH("/plugins/instances/{id}/settings", routes.PluginSystemInstanceSettings)
 	se.Router.POST("/plugins/trail-send", routes.PluginSystemTrailSend)
 	se.Router.POST("/plugins/auth/validate", routes.PluginSystemSessionAuthValidate)
 	se.Router.POST("/plugins/category-remap/preview", routes.PluginSystemCategoryRemapPreview)

@@ -217,6 +217,12 @@ func ExecuteHostRequest(ctx context.Context, manifest Manifest, policy RequestPo
 			}
 		}
 	}()
+	if spec.Auth != "" && !policy.HostAuthContextBound {
+		return HostResponse{}, WithDiagnosticCause(Failure("invalid_configuration", OperationHostHTTP), "host_auth_invalid")
+	}
+	if err := ValidatePolicyAuthContext(policy, spec.Auth); err != nil {
+		return HostResponse{}, WithDiagnosticCause(err, "host_auth_invalid")
+	}
 	if err := InjectHostRequestAuthFromPolicy(manifest, policy.HostAuth, &spec); err != nil {
 		var failure PluginFailure
 		if errors.As(err, &failure) {

@@ -13,6 +13,7 @@ import (
 
 	extism "github.com/extism/go-sdk"
 	"github.com/pocketbase/pocketbase/core"
+	pbtests "github.com/pocketbase/pocketbase/tests"
 )
 
 func TestWorkerRPCFrameRoundTrip(t *testing.T) {
@@ -272,11 +273,13 @@ func TestChildEnvWithoutStripsKeys(t *testing.T) {
 }
 
 func TestInjectHostRequestAuthUsesExistingSessionForRefresh(t *testing.T) {
+	app, instance := savedSessionPluginInstance(t)
 	spec := HostRequestSpec{Auth: "session"}
 	session := &fakeRuntimeSession{
 		output: []byte(`{"token":"session-token"}`),
 	}
 	err := InjectHostRequestAuth(context.Background(), AuthInjectionInput{
+		App:     app,
 		Session: session,
 		Plugin: LocalPlugin{Manifest: Manifest{
 			Auth: AuthManifest{Contexts: map[string]AuthContext{
@@ -288,7 +291,7 @@ func TestInjectHostRequestAuthUsesExistingSessionForRefresh(t *testing.T) {
 			}},
 			Permissions: PermissionManifest{Auth: []string{"session"}},
 		}},
-		Instance: testPluginInstance("inst1", "plugin.test"),
+		Instance: instance,
 		Auth:     map[string]any{"email": "user@example.com", "password": "secret"},
 		Spec:     &spec,
 	})
@@ -336,9 +339,11 @@ func (s *fakeRuntimeSession) Close(context.Context) error {
 }
 
 func TestInjectHostRequestAuthDoesNotRequireRuntimeWhenSessionProvided(t *testing.T) {
+	app, instance := savedSessionPluginInstance(t)
 	spec := HostRequestSpec{Auth: "session"}
 	session := &fakeRuntimeSession{err: errors.New("session failed")}
 	err := InjectHostRequestAuth(context.Background(), AuthInjectionInput{
+		App:     app,
 		Session: session,
 		Plugin: LocalPlugin{Manifest: Manifest{
 			Auth: AuthManifest{Contexts: map[string]AuthContext{
@@ -350,7 +355,7 @@ func TestInjectHostRequestAuthDoesNotRequireRuntimeWhenSessionProvided(t *testin
 			}},
 			Permissions: PermissionManifest{Auth: []string{"session"}},
 		}},
-		Instance: testPluginInstance("inst1", "plugin.test"),
+		Instance: instance,
 		Auth:     map[string]any{"email": "user@example.com"},
 		Spec:     &spec,
 	})
@@ -359,11 +364,29 @@ func TestInjectHostRequestAuthDoesNotRequireRuntimeWhenSessionProvided(t *testin
 	}
 }
 
-func testPluginInstance(id string, pluginID string) *core.Record {
+// Session injection uses the same persisted C+ prerequisites as live Send.
+func savedSessionPluginInstance(t *testing.T) (core.App, *core.Record) {
+	t.Helper()
+	app, err := pbtests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(app.Cleanup)
 	collection := core.NewBaseCollection("plugin_instances")
-	collection.Fields.Add(&core.TextField{Name: "plugin_id"})
+	collection.Fields.Add(&core.TextField{Name: "plugin_id"}, &core.TextField{Name: "user"}, &core.BoolField{Name: "enabled"},
+		&core.TextField{Name: "auth_context"}, &core.TextField{Name: "connection_generation"}, &core.TextField{Name: "oauth_token_revision"})
+	if err := app.Save(collection); err != nil {
+		t.Fatal(err)
+	}
 	record := core.NewRecord(collection)
-	record.Id = id
-	record.Set("plugin_id", pluginID)
-	return record
+	record.Set("plugin_id", "session-test")
+	record.Set("user", "test-owner")
+	record.Set("enabled", true)
+	record.Set("auth_context", "session")
+	record.Set("connection_generation", NewConnectionRevision())
+	record.Set("oauth_token_revision", NewConnectionRevision())
+	if err := app.Save(record); err != nil {
+		t.Fatal(err)
+	}
+	return app, record
 }

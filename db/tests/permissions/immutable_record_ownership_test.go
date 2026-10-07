@@ -99,6 +99,8 @@ func newOwnershipFixture(t *testing.T) ownershipFixture {
 	// Share request hooks stay unregistered to prove that the migrated rules
 	// protect targets independently. Preference validators preserve the real
 	// API contract for permitted updates.
+	app.OnRecordCreateRequest("plugin_instances").BindFunc(hooks.DenyPluginInstanceWriteHandler())
+	app.OnRecordUpdateRequest("plugin_instances").BindFunc(hooks.DenyPluginInstanceWriteHandler())
 	app.OnRecordUpdateRequest("user_category_preferences").BindFunc(hooks.ValidateUserCategoryPreferenceHandler())
 	app.OnRecordUpdateRequest("user_subcategory_preferences").BindFunc(hooks.ValidateUserSubcategoryPreferenceHandler())
 	router, err := apis.NewRouter(app)
@@ -228,8 +230,12 @@ func TestImmutableOwnershipAPI(t *testing.T) {
 			for _, mutation := range mutations {
 				t.Run(target.record.Collection().Name+"/"+target.field+"/"+format+"/"+mutation.name, func(t *testing.T) {
 					response := ownershipRequest(t, f.handler, target.record, f.owner, http.MethodPatch, format, mutation.body)
-					if strings.HasPrefix(mutation.name, "replace") && response.Code != http.StatusNotFound {
-						t.Errorf("status = %d; want 404: %s", response.Code, response.Body.String())
+					wantStatus := http.StatusNotFound
+					if target.record.Collection().Name == "plugin_instances" {
+						wantStatus = http.StatusForbidden
+					}
+					if strings.HasPrefix(mutation.name, "replace") && response.Code != wantStatus {
+						t.Errorf("status = %d; want %d: %s", response.Code, wantStatus, response.Body.String())
 					}
 					fresh, err := f.app.FindRecordById(target.record.Collection().Name, target.record.Id)
 					if err != nil {
@@ -346,6 +352,21 @@ func TestImmutableOwnershipKeepsAuthorizedUpdates(t *testing.T) {
 						}
 					}
 					response := ownershipRequest(t, f.handler, target.record, f.owner, http.MethodPatch, format, body)
+					if target.record.Collection().Name == "plugin_instances" {
+						// B1 replaces every direct update with the host settings route;
+						// even a correctly owned/unchanged binding is now forbidden.
+						if response.Code != http.StatusForbidden {
+							t.Fatalf("direct plugin update status=%d, want403", response.Code)
+						}
+						fresh, err := f.app.FindRecordById("plugin_instances", target.record.Id)
+						if err != nil {
+							t.Fatal(err)
+						}
+						if fresh.GetString("status") != target.record.GetString("status") || fresh.GetString("user") != f.owner.Id || fresh.GetString("plugin_id") != "hammerhead" {
+							t.Fatal("rejected direct plugin settings changed stored instance")
+						}
+						return
+					}
 					if response.Code != http.StatusOK {
 						t.Fatalf("status = %d; want 200: %s", response.Code, response.Body.String())
 					}
@@ -401,6 +422,16 @@ func TestImmutableOwnershipRulesKeepTrustedSavesAndSuperusers(t *testing.T) {
 		{f.subcategoryPreference, map[string]any{"user": f.editor.Id}},
 	} {
 		response := ownershipRequest(t, f.handler, target.record, superuser, http.MethodPatch, "json", target.body)
+		if target.record.Collection().Name == "plugin_instances" {
+			if response.Code != http.StatusForbidden {
+				t.Fatalf("superuser direct plugin update status=%d, want403", response.Code)
+			}
+			fresh, err := f.app.FindRecordById("plugin_instances", target.record.Id)
+			if err != nil || fresh.GetString("user") != f.owner.Id || fresh.GetString("plugin_id") != "hammerhead" {
+				t.Fatal("superuser bypassed plugin host writer")
+			}
+			continue
+		}
 		if response.Code != http.StatusOK {
 			t.Fatalf("superuser %s update status = %d; want 200: %s", target.record.Collection().Name, response.Code, response.Body.String())
 		}
@@ -436,16 +467,20 @@ func TestImmutableOwnershipMigrationIsIdempotentAndKeepsLockedRules(t *testing.T
 		{"user_category_preferences", []string{"user"}},
 		{"user_subcategory_preferences", []string{"user"}},
 	}
-	before := make(map[string]string, len(targets))
+	before := make(map[string]*string, len(targets))
 	for _, target := range targets {
 		collection, err := app.FindCollectionByNameOrId(target.collection)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if collection.UpdateRule == nil {
+		if target.collection == "plugin_instances" {
+			if collection.UpdateRule != nil {
+				t.Fatal("B1 must keep the direct plugin update API locked")
+			}
+		} else if collection.UpdateRule == nil {
 			t.Fatalf("%s update rule unexpectedly locked", target.collection)
 		}
-		before[target.collection] = *collection.UpdateRule
+		before[target.collection] = collection.UpdateRule
 	}
 	var apply func(core.App) error
 	for _, migration := range core.AppMigrations.Items() {
@@ -466,10 +501,13 @@ func TestImmutableOwnershipMigrationIsIdempotentAndKeepsLockedRules(t *testing.T
 			if err != nil {
 				t.Fatal(err)
 			}
-			if collection.UpdateRule == nil || *collection.UpdateRule != before[target.collection] {
+			if !reflect.DeepEqual(collection.UpdateRule, before[target.collection]) {
 				t.Fatal("migration changed the already guarded rule")
 			}
 			for _, field := range target.fields {
+				if collection.UpdateRule == nil {
+					continue
+				}
 				if strings.Count(*collection.UpdateRule, "@request.body."+field+":changed") != 1 {
 					t.Errorf("%s ownership guard must occur once", field)
 				}

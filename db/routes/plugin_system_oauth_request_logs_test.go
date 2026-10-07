@@ -84,14 +84,18 @@ func TestOAuthSaveFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.T) {
 		t.Run(action, func(t *testing.T) {
 			f := newOAuthMetadataFixture(t)
 			path := "/api/plugin-system/oauth/" + action
-			body := map[string]any{"instanceId": f.instanceID}
+			instance, err := f.app.FindRecordById("plugin_instances", f.instanceID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body := map[string]any{"instanceId": f.instanceID, "expected_connection_generation": instance.GetString("connection_generation")}
 			switch action {
 			case "start":
 				body["pluginId"] = "strava"
 				body["redirectUri"] = "https://wanderer.example/settings/plugins/oauth/callback"
 			case "callback":
 				start := f.request(t, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{
-					"instanceId": f.instanceID, "pluginId": "strava",
+					"instanceId": f.instanceID, "pluginId": "strava", "expected_connection_generation": instance.GetString("connection_generation"),
 					"redirectUri": "https://wanderer.example/settings/plugins/oauth/callback",
 				})
 				body["state"] = start["state"]
@@ -175,10 +179,14 @@ func TestOAuthSaveFailuresDoNotLeakIntoPocketBaseRequestLogs(t *testing.T) {
 func TestOAuthInvalidRedirectDoesNotLeakIntoPocketBaseRequestLogs(t *testing.T) {
 	const secret = "oauth-invalid-redirect-secret-sentinel"
 	f := newOAuthMetadataFixture(t)
+	instance, err := f.app.FindRecordById("plugin_instances", f.instanceID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	enablePluginRequestLogs(t, f.app)
 	path := "/api/plugin-system/oauth/start"
 	status, response := interactiveDiagnosticRequest(t, f.handler, f.authToken, path, map[string]any{
-		"pluginId": "strava", "instanceId": f.instanceID,
+		"pluginId": "strava", "instanceId": f.instanceID, "expected_connection_generation": instance.GetString("connection_generation"),
 		"redirectUri": "https://wanderer.example/%zz/settings/plugins/oauth/callback?token=" + secret,
 	})
 	if status != http.StatusBadRequest {

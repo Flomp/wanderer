@@ -36,6 +36,7 @@ type oauthMetadataFixture struct {
 	expectedClientSecret string
 	expectedRefreshToken string
 	expectedPKCEVerifier string
+	tokenHandler         func(http.ResponseWriter, *http.Request, map[string]string) bool
 }
 
 // Use the shipped Strava v1 manifest and production record hooks. Only the
@@ -61,6 +62,9 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 		if r.Method != http.MethodPost || r.Header.Get("Content-Type") != "application/json" ||
 			body["client_id"] != f.expectedClientID || body["client_secret"] != f.expectedClientSecret {
 			t.Error("token request did not use the stored Strava client credentials and JSON format")
+		}
+		if f.tokenHandler != nil && f.tokenHandler(w, r, body) {
+			return
 		}
 		switch body["grant_type"] {
 		case "refresh_token":
@@ -156,21 +160,22 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 		&core.TextField{Name: "plugin_id"}, &core.BoolField{Name: "enabled"},
 		&core.JSONField{Name: "auth"}, &core.JSONField{Name: "config"},
 		&core.TextField{Name: "status"}, &core.JSONField{Name: "last_error"},
+		&core.TextField{Name: "auth_context"}, &core.TextField{Name: "connection_generation"}, &core.TextField{Name: "oauth_token_revision"}, &core.JSONField{Name: "state"}, &core.DateField{Name: "last_sync_at"}, &core.DateField{Name: "retry_not_before"},
 	)
 	if err := app.Save(instances); err != nil {
 		t.Fatal(err)
 	}
-	app.OnRecordsListRequest("plugin_instances").BindFunc(hooks.ListPluginInstanceHandler())
-	app.OnRecordViewRequest("plugin_instances").BindFunc(hooks.ViewPluginInstanceHandler())
-	app.OnRecordCreate("plugin_instances").BindFunc(hooks.CreatePluginInstanceHandler())
-	app.OnRecordAfterCreateSuccess("plugin_instances").BindFunc(hooks.CreateUpdatePluginInstanceSuccessHandler())
-	app.OnRecordUpdate("plugin_instances").BindFunc(hooks.UpdatePluginInstanceHandler())
-	app.OnRecordAfterUpdateSuccess("plugin_instances").BindFunc(hooks.CreateUpdatePluginInstanceSuccessHandler())
+	app.OnRecordEnrich("plugin_instances").BindFunc(hooks.EnrichPluginInstanceHandler())
+	app.OnRecordCreateRequest("plugin_instances").BindFunc(hooks.DenyPluginInstanceWriteHandler())
+	app.OnRecordUpdateRequest("plugin_instances").BindFunc(hooks.DenyPluginInstanceWriteHandler())
 	instance := core.NewRecord(instances)
 	instance.Set("user", owner.Id)
 	instance.Set("plugin_id", manifest.ID)
 	instance.Set("enabled", true)
 	instance.Set("status", "configured")
+	instance.Set("auth_context", "oauth_access_token")
+	instance.Set("connection_generation", pluginsystem.NewConnectionRevision())
+	instance.Set("oauth_token_revision", pluginsystem.NewConnectionRevision())
 	initialAuth := map[string]any{
 		"clientId": "strava-test-client", "clientSecret": "strava-test-client-secret",
 		"accessToken": "strava-test-access", "refreshToken": "strava-test-refresh",
@@ -181,7 +186,9 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 	for _, prepare := range prepareAuth {
 		prepare(initialAuth)
 	}
-	instance.Set("auth", initialAuth)
+	if err := pluginsystem.ApplyAuthPatch(instance, manifest, initialAuth); err != nil {
+		t.Fatal(err)
+	}
 	if err := app.Save(instance); err != nil {
 		t.Fatal(err)
 	}
@@ -190,6 +197,7 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	router.PATCH("/api/plugins/instances/{id}/settings", PluginSystemInstanceSettings)
 	router.POST("/api/plugin-system/oauth/start", PluginSystemOAuthStart)
 	router.POST("/api/plugin-system/oauth/callback", PluginSystemOAuthCallback)
 	router.POST("/api/plugin-system/oauth/revoke", PluginSystemOAuthRevoke)
@@ -202,6 +210,15 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 
 func (f *oauthMetadataFixture) request(t *testing.T, method, path string, body map[string]any) map[string]any {
 	t.Helper()
+	if method == http.MethodPost && (path == "/api/plugin-system/oauth/start" || path == "/api/plugin-system/oauth/revoke") {
+		if _, exists := body["expected_connection_generation"]; !exists {
+			record, err := f.app.FindRecordById("plugin_instances", f.instanceID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body["expected_connection_generation"] = record.GetString("connection_generation")
+		}
+	}
 	data, err := json.Marshal(body)
 	if err != nil {
 		t.Fatal(err)
@@ -277,14 +294,21 @@ func (f *oauthMetadataFixture) modalPayload(t *testing.T) map[string]any {
 		submitted[field] = auth[field]
 	}
 	return map[string]any{
-		"auth": submitted, "enabled": result["enabled"],
+		"auth": submitted, "expected_connection_generation": result["connection_generation"],
 		"config": map[string]any{"host": map[string]any{"completed": true, "planned": false}},
 	}
 }
 
 func (f *oauthMetadataFixture) saveModal(t *testing.T, payload map[string]any) {
 	t.Helper()
-	result := f.request(t, http.MethodPatch, "/api/collections/plugin_instances/records/"+f.instanceID, payload)
+	if _, present := payload["expected_connection_generation"]; !present {
+		fresh, err := f.app.FindRecordById("plugin_instances", f.instanceID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		payload["expected_connection_generation"] = fresh.GetString("connection_generation")
+	}
+	result := f.request(t, http.MethodPatch, "/api/plugins/instances/"+f.instanceID+"/settings", payload)
 	auth := result["auth"].(map[string]any)
 	for _, field := range []string{"clientSecret", "accessToken", "refreshToken"} {
 		if value, present := auth[field]; present && value != "" {
@@ -305,8 +329,8 @@ func TestOAuthMetadataSettingsSaveStillRefreshes(t *testing.T) {
 				t.Errorf("settings save changed omitted %s: got %#v, want %#v", field, saved[field], before[field])
 			}
 		}
-		if _, ok := saved["unusedAuthNote"]; ok {
-			t.Error("settings save restored an unrelated omitted auth field")
+		if saved["unusedAuthNote"] != before["unusedAuthNote"] {
+			t.Error("settings patch changed unrelated auth field")
 		}
 	}
 	instance, auth := f.storedAuth(t)
@@ -355,7 +379,10 @@ func TestOAuthMetadataOpenModalBeforeRevokeKeepsGrantRemoved(t *testing.T) {
 	f.request(t, http.MethodPost, "/api/plugin-system/oauth/revoke", map[string]any{"instanceId": f.instanceID})
 	for _, stage := range []string{"revoke", "old modal save", "repeated modal save"} {
 		if stage != "revoke" {
-			f.saveModal(t, payload)
+			response := connectionRequest(f, http.MethodPatch, "/api/plugins/instances/"+f.instanceID+"/settings", payload)
+			if response.status != http.StatusConflict {
+				t.Fatalf("stale modal: %#v", response)
+			}
 		}
 		_, auth := f.storedAuth(t)
 		f.assertAuthFieldsAbsent(t, stage, "accessToken", "refreshToken", "expiresAt", "tokenType", "oauthContext", "scope", "oauthState", "oauthCodeVerifier", "oauthRedirectURI")
@@ -370,9 +397,10 @@ func TestOAuthMetadataOpenModalBeforeRevokeKeepsGrantRemoved(t *testing.T) {
 
 func TestOAuthMetadataCallbackClearsPersistedFlow(t *testing.T) {
 	f := newOAuthMetadataFixture(t)
-	instance, auth := f.storedAuth(t)
-	auth["oauthCodeVerifier"] = "old-test-pkce-verifier"
-	instance.Set("auth", auth)
+	instance, _ := f.storedAuth(t)
+	if err := pluginsystem.ApplyAuthPatch(instance, f.plugin.Manifest, map[string]any{"oauthCodeVerifier": "old-test-pkce-verifier"}); err != nil {
+		t.Fatal(err)
+	}
 	if err := f.app.Save(instance); err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +428,7 @@ func TestOAuthMetadataCallbackClearsPersistedFlow(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 	f.handler.ServeHTTP(response, req)
-	if response.Code != http.StatusBadRequest || f.tokenRequests.Load() != 1 {
+	if response.Code != http.StatusConflict || f.tokenRequests.Load() != 1 {
 		t.Errorf("completed OAuth state was reusable: replay status %d, token requests %d", response.Code, f.tokenRequests.Load())
 	}
 }
@@ -415,7 +443,6 @@ func TestOAuthMetadataSettingsCredentialEditsRemainEffective(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newOAuthMetadataFixture(t)
-			_, before := f.storedAuth(t)
 			payload := f.modalPayload(t)
 			submitted := payload["auth"].(map[string]any)
 			submitted["clientId"] = "replacement-strava-client"
@@ -428,11 +455,7 @@ func TestOAuthMetadataSettingsCredentialEditsRemainEffective(t *testing.T) {
 			if tc.secret == nil {
 				f.assertAuthFieldsAbsent(t, "explicit credential removal", "clientSecret")
 			}
-			for _, field := range []string{"expiresAt", "tokenType", "oauthContext", "scope"} {
-				if saved[field] != before[field] {
-					t.Errorf("credential edit lost omitted %s", field)
-				}
-			}
+			f.assertAuthFieldsAbsent(t, "active credential replacement", "accessToken", "refreshToken", "expiresAt", "tokenType", "oauthContext", "scope")
 		})
 	}
 }
@@ -460,21 +483,20 @@ func TestOAuthMetadataExplicitNullFieldsAreConsumed(t *testing.T) {
 		})
 		f.assertAuthFieldsAbsent(t, "create", fields...)
 	})
-	t.Run("settings save", func(t *testing.T) {
+	t.Run("internal writer", func(t *testing.T) {
 		f := newOAuthMetadataFixture(t)
-		payload := f.modalPayload(t)
+		instance, _ := f.storedAuth(t)
+		patch := map[string]any{}
 		for _, field := range fields {
-			payload["auth"].(map[string]any)[field] = nil
+			patch[field] = nil
 		}
-		f.saveModal(t, payload)
+		if err := pluginsystem.ApplyAuthPatch(instance, f.plugin.Manifest, patch); err != nil {
+			t.Fatal(err)
+		}
+		if err := f.app.Save(instance); err != nil {
+			t.Fatal(err)
+		}
 		f.assertAuthFieldsAbsent(t, "explicit null", fields...)
-		_, stored := f.storedAuth(t)
-		if stored["accessToken"] != "strava-test-access" || stored["refreshToken"] != "strava-test-refresh" {
-			t.Error("explicit metadata removal changed the remaining encrypted grant")
-		}
-		// Omission after the explicit removal must not resurrect the fields.
-		f.saveModal(t, map[string]any{"auth": map[string]any{"clientId": "strava-test-client"}})
-		f.assertAuthFieldsAbsent(t, "later omitted fields", fields...)
 	})
 }
 

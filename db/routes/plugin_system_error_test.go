@@ -234,7 +234,7 @@ func TestOAuthStartUnreadableStoredClientSecretIsRepairable(t *testing.T) {
 	if _, err := f.app.DB().NewQuery("UPDATE plugin_instances SET auth = {:auth} WHERE id = {:id}").Bind(dbx.Params{"auth": string(encoded), "id": instance.Id}).Execute(); err != nil {
 		t.Fatal(err)
 	}
-	data, _ := json.Marshal(map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
+	data, _ := json.Marshal(map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "expected_connection_generation": instance.GetString("connection_generation"), "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
 	request := httptest.NewRequest(http.MethodPost, "/api/plugin-system/oauth/start", bytes.NewReader(data))
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", f.authToken)

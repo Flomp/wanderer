@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
+	pbtests "github.com/pocketbase/pocketbase/tests"
 	"pocketbase/pluginsystem"
 )
 
@@ -31,14 +32,28 @@ func (syncDiagnosticSession) Call(_ context.Context, export string, _ []byte) ([
 
 func TestSyncDetailFailureLogsHostIdentifiersAndOpaqueSource(t *testing.T) {
 	var output bytes.Buffer
-	app := syncDiagnosticApp{logger: slog.New(slog.NewJSONHandler(&output, nil))}
+	dbApp, err := pbtests.NewTestApp(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(dbApp.Cleanup)
+	app := syncDiagnosticApp{App: dbApp, logger: slog.New(slog.NewJSONHandler(&output, nil))}
 	collection := core.NewBaseCollection("plugin_instances")
-	collection.Fields.Add(&core.TextField{Name: "plugin_id"}, &core.TextField{Name: "user"})
+	collection.Fields.Add(&core.TextField{Name: "plugin_id"}, &core.TextField{Name: "user"}, &core.BoolField{Name: "enabled"},
+		&core.TextField{Name: "auth_context"}, &core.TextField{Name: "connection_generation"}, &core.TextField{Name: "oauth_token_revision"})
+	if err := dbApp.Save(collection); err != nil {
+		t.Fatal(err)
+	}
 	instance := core.NewRecord(collection)
-	instance.Id = "host-instance"
+	instance.Set("enabled", true)
+	instance.Set("connection_generation", pluginsystem.NewConnectionRevision())
+	instance.Set("oauth_token_revision", pluginsystem.NewConnectionRevision())
 	instance.Set("plugin_id", "host-plugin")
+	if err := dbApp.Save(instance); err != nil {
+		t.Fatal(err)
+	}
 	// No known references/user: the tested batch takes the actual detail failure
-	// path without importing a record or needing a provider/database fixture.
+	// path without importing a record; its connection identity is still persisted.
 	plugin := pluginsystem.LocalPlugin{Manifest: pluginsystem.Manifest{ID: "host-plugin"}}
 	sessions := &pluginSyncRuntimeSession{session: syncDiagnosticSession{}}
 	result, err := syncPluginCapability(context.Background(), app, nil, sessions, plugin,
@@ -57,7 +72,7 @@ func TestSyncDetailFailureLogsHostIdentifiersAndOpaqueSource(t *testing.T) {
 	if err := json.Unmarshal([]byte(lines[len(lines)-1]), &record); err != nil {
 		t.Fatal(err)
 	}
-	for key, want := range map[string]any{"plugin": "host-plugin", "instance": "host-instance", "capability": "list_routes", "code": "rate_limited", "class": "rate_limit", "operation": pluginsystem.OperationDetail, "http_status": float64(429)} {
+	for key, want := range map[string]any{"plugin": "host-plugin", "instance": instance.Id, "capability": "list_routes", "code": "rate_limited", "class": "rate_limit", "operation": pluginsystem.OperationDetail, "http_status": float64(429)} {
 		if record[key] != want {
 			t.Fatalf("lost safe diagnostic %s: %s", key, lines[len(lines)-1])
 		}

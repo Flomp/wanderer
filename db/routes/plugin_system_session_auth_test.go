@@ -24,11 +24,12 @@ import (
 // The guest seam captures the actual route input and delegates its connector
 // request to the production Host HTTP implementation, including IP policy.
 type sessionValidateRuntime struct {
-	t          *testing.T
-	calls      atomic.Int32
-	input      pluginSessionAuthRefreshInput
-	policy     pluginsystem.RequestPolicyContext
-	guestError error
+	t            *testing.T
+	calls        atomic.Int32
+	input        pluginSessionAuthRefreshInput
+	policy       pluginsystem.RequestPolicyContext
+	guestError   error
+	beforeReturn func()
 }
 
 func (r *sessionValidateRuntime) Call(ctx context.Context, plugin pluginsystem.LocalPlugin, export string, input []byte, policy pluginsystem.RequestPolicyContext) ([]byte, error) {
@@ -43,6 +44,9 @@ func (r *sessionValidateRuntime) Call(ctx context.Context, plugin pluginsystem.L
 	response, err := pluginsystem.ExecuteHostRequest(ctx, plugin.Manifest, policy, pluginsystem.HostRequestSpec{Method: http.MethodGet, Target: pluginsystem.RequestTarget{Type: "connector", Connector: "api", Path: "/login"}}, pluginsystem.HostRequestOptions{})
 	if err != nil {
 		return nil, err
+	}
+	if r.beforeReturn != nil {
+		r.beforeReturn()
 	}
 	if r.guestError != nil {
 		return nil, r.guestError
@@ -135,7 +139,7 @@ func newSessionValidateFixture(t *testing.T) *sessionValidateFixture {
 		t.Fatal(err)
 	}
 	instances := core.NewBaseCollection("plugin_instances")
-	instances.Fields.Add(&core.RelationField{Name: "user", CollectionId: users.Id, MaxSelect: 1}, &core.TextField{Name: "plugin_id"}, &core.JSONField{Name: "auth"}, &core.JSONField{Name: "config"})
+	instances.Fields.Add(&core.RelationField{Name: "user", CollectionId: users.Id, MaxSelect: 1}, &core.TextField{Name: "plugin_id"}, &core.TextField{Name: "auth_context"}, &core.TextField{Name: "connection_generation"}, &core.TextField{Name: "oauth_token_revision"}, &core.JSONField{Name: "auth"}, &core.JSONField{Name: "config"})
 	if err := app.Save(instances); err != nil {
 		t.Fatal(err)
 	}
@@ -146,6 +150,9 @@ func newSessionValidateFixture(t *testing.T) *sessionValidateFixture {
 	f.instance = core.NewRecord(instances)
 	f.instance.Set("user", f.owner.Id)
 	f.instance.Set("plugin_id", f.manifest.ID)
+	f.instance.Set("auth_context", "dashboard")
+	f.instance.Set("connection_generation", pluginsystem.NewConnectionRevision())
+	f.instance.Set("oauth_token_revision", pluginsystem.NewConnectionRevision())
 	f.instance.Set("auth", map[string]any{"email": "stored@example.test", "password": broken, "oauthContext": "dashboard", "apiKey": broken, "oauthState": broken})
 	f.instance.Set("config", map[string]any{"plugin": map[string]any{"limit": 2}, "host": map[string]any{"connectors": map[string]any{"server": map[string]any{"baseURL": "https://stored.invalid"}}}})
 	if err := app.Save(f.instance); err != nil {
@@ -183,7 +190,7 @@ func (f *sessionValidateFixture) request(t *testing.T, body map[string]any) (int
 	return response.Code, response.Body.String()
 }
 func (f *sessionValidateFixture) body() map[string]any {
-	return map[string]any{"pluginId": f.manifest.ID, "instanceId": f.instance.Id, "auth": map[string]any{"password": "replacement-password"}, "config": map[string]any{"plugin": map[string]any{"limit": 3}, "host": map[string]any{"connectors": map[string]any{"server": map[string]any{"baseURL": f.baseURL, "basePath": "/draft"}}}}}
+	return map[string]any{"pluginId": f.manifest.ID, "instanceId": f.instance.Id, "expected_connection_generation": f.instance.GetString("connection_generation"), "auth": map[string]any{"password": "replacement-password"}, "config": map[string]any{"plugin": map[string]any{"limit": 3}, "host": map[string]any{"connectors": map[string]any{"server": map[string]any{"baseURL": f.baseURL, "basePath": "/draft"}}}}}
 }
 
 func TestSessionValidateUsesDraftConfigAndReplacementCredentialsWithoutSaving(t *testing.T) {

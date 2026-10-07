@@ -66,14 +66,16 @@ type pluginOperationLogContext struct {
 type pluginOperationAction string
 
 const (
-	pluginActionOAuthStart    pluginOperationAction = "oauth_start"
-	pluginActionOAuthCallback pluginOperationAction = "oauth_callback"
-	pluginActionOAuthRevoke   pluginOperationAction = "oauth_revoke"
-	pluginActionSend          pluginOperationAction = "send"
-	pluginActionValidate      pluginOperationAction = "session_validate"
-	pluginActionList          pluginOperationAction = "plugins_list"
-	pluginActionRemapPreview  pluginOperationAction = "category_remap_preview"
-	pluginActionRemapApply    pluginOperationAction = "category_remap_apply"
+	pluginActionOAuthStart       pluginOperationAction = "oauth_start"
+	pluginActionOAuthCallback    pluginOperationAction = "oauth_callback"
+	pluginActionOAuthRevoke      pluginOperationAction = "oauth_revoke"
+	pluginActionSend             pluginOperationAction = "send"
+	pluginActionValidate         pluginOperationAction = "session_validate"
+	pluginActionList             pluginOperationAction = "plugins_list"
+	pluginActionRemapPreview     pluginOperationAction = "category_remap_preview"
+	pluginActionRemapApply       pluginOperationAction = "category_remap_apply"
+	pluginActionInstanceCreate   pluginOperationAction = "instance_create"
+	pluginActionInstanceSettings pluginOperationAction = "instance_settings"
 )
 
 // Keep the existing API envelope, and log the typed failure before conversion
@@ -97,7 +99,7 @@ func pluginHostAPIErrorForEvent(e *core.RequestEvent, context pluginOperationLog
 func logPluginOperationFailure(e *core.RequestEvent, context pluginOperationLogContext, err error) {
 	action := "plugin_operation"
 	switch context.Action {
-	case pluginActionOAuthStart, pluginActionOAuthCallback, pluginActionOAuthRevoke, pluginActionSend, pluginActionValidate, pluginActionList, pluginActionRemapPreview, pluginActionRemapApply:
+	case pluginActionOAuthStart, pluginActionOAuthCallback, pluginActionOAuthRevoke, pluginActionSend, pluginActionValidate, pluginActionList, pluginActionRemapPreview, pluginActionRemapApply, pluginActionInstanceCreate, pluginActionInstanceSettings:
 		action = string(context.Action)
 	}
 	attrs := []any{"action", action}

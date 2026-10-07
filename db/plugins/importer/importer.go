@@ -696,6 +696,9 @@ func fetchConnectorMedia(ctx context.Context, photo pluginsystem.Photo, opts Opt
 		return nil, fmt.Errorf("connector mediaRef is required")
 	}
 	ref := *photo.Source.MediaRef
+	if err := pluginsystem.ValidatePolicyAuthContext(opts.Policy, ref.Auth); err != nil {
+		return nil, err
+	}
 	if ref.AssetID != "" && ref.Path == "" {
 		return nil, fmt.Errorf("mediaRef.assetId is metadata only; path is required")
 	}

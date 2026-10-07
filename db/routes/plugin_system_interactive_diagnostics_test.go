@@ -155,7 +155,7 @@ func TestOAuthCallbackLogsProviderClassificationWithoutSecrets(t *testing.T) {
 				"/api/plugin-system/oauth/start":    PluginSystemOAuthStart,
 				"/api/plugin-system/oauth/callback": PluginSystemOAuthCallback,
 			})
-			started := f.request(t, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
+			started := f.request(t, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "expected_connection_generation": oauthFixtureGeneration(t, f), "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
 			state := started["state"].(string)
 			status, body := interactiveDiagnosticRequest(t, f.handler, f.authToken, "/api/plugin-system/oauth/callback", map[string]any{"instanceId": f.instanceID, "state": state, "code": "test-authorization-code"})
 			if status != http.StatusBadRequest {
@@ -186,7 +186,7 @@ func TestOAuthStartAndRevokeLogSafeLocalFailures(t *testing.T) {
 		f := newOAuthMetadataFixture(t)
 		var output bytes.Buffer
 		handler := interactiveDiagnosticHandler(t, f.app, &output, map[string]func(*core.RequestEvent) error{"/api/test/start": PluginSystemOAuthStart})
-		status, _ := interactiveDiagnosticRequest(t, handler, f.authToken, "/api/test/start", map[string]any{"pluginId": "strava", "instanceId": "request-instance-secret", "authContext": "context-secret", "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
+		status, _ := interactiveDiagnosticRequest(t, handler, f.authToken, "/api/test/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "expected_connection_generation": oauthFixtureGeneration(t, f), "authContext": "context-secret", "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback"})
 		if status != 400 {
 			t.Fatalf("status %d", status)
 		}
@@ -197,7 +197,7 @@ func TestOAuthStartAndRevokeLogSafeLocalFailures(t *testing.T) {
 		f.app.OnRecordUpdate("plugin_instances").BindFunc(func(e *core.RecordEvent) error { return errors.New("database-write-secret") })
 		var output bytes.Buffer
 		handler := interactiveDiagnosticHandler(t, f.app, &output, map[string]func(*core.RequestEvent) error{"/api/test/revoke": PluginSystemOAuthRevoke})
-		status, _ := interactiveDiagnosticRequest(t, handler, f.authToken, "/api/test/revoke", map[string]any{"instanceId": f.instanceID})
+		status, _ := interactiveDiagnosticRequest(t, handler, f.authToken, "/api/test/revoke", map[string]any{"instanceId": f.instanceID, "expected_connection_generation": oauthFixtureGeneration(t, f)})
 		if status == 200 {
 			t.Fatal("failed save unexpectedly succeeded")
 		}
@@ -262,7 +262,7 @@ func newInteractivePluginFixture(t *testing.T, providerHandler http.HandlerFunc)
 		t.Fatal(err)
 	}
 	instances := core.NewBaseCollection("plugin_instances")
-	instances.Fields.Add(&core.RelationField{Name: "user", CollectionId: users.Id, MaxSelect: 1}, &core.TextField{Name: "plugin_id"}, &core.BoolField{Name: "enabled"}, &core.JSONField{Name: "auth"}, &core.JSONField{Name: "config"})
+	instances.Fields.Add(&core.RelationField{Name: "user", CollectionId: users.Id, MaxSelect: 1}, &core.TextField{Name: "plugin_id"}, &core.BoolField{Name: "enabled"}, &core.JSONField{Name: "auth"}, &core.JSONField{Name: "config"}, &core.TextField{Name: "auth_context"}, &core.TextField{Name: "connection_generation"}, &core.TextField{Name: "oauth_token_revision"})
 	if err := app.Save(instances); err != nil {
 		t.Fatal(err)
 	}
@@ -270,6 +270,9 @@ func newInteractivePluginFixture(t *testing.T, providerHandler http.HandlerFunc)
 	f.instance.Set("user", f.owner.Id)
 	f.instance.Set("plugin_id", f.manifest.ID)
 	f.instance.Set("enabled", true)
+	f.instance.Set("auth_context", "dashboard")
+	f.instance.Set("connection_generation", pluginsystem.NewConnectionRevision())
+	f.instance.Set("oauth_token_revision", pluginsystem.NewConnectionRevision())
 	f.instance.Set("auth", map[string]any{"email": "owner@example.test", "password": "credential-secret", "oauthContext": "dashboard"})
 	if err := app.Save(f.instance); err != nil {
 		t.Fatal(err)
@@ -300,7 +303,7 @@ func TestSessionValidateLogsGuestMetadataAtAppBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	status, body := interactiveDiagnosticRequest(t, handler, token, "/api/test/validate", map[string]any{"pluginId": f.manifest.ID, "instanceId": f.instance.Id})
+	status, body := interactiveDiagnosticRequest(t, handler, token, "/api/test/validate", map[string]any{"pluginId": f.manifest.ID, "instanceId": f.instance.Id, "expected_connection_generation": f.instance.GetString("connection_generation")})
 	if status != 400 {
 		t.Fatalf("validate status %d: %#v", status, body)
 	}
@@ -447,4 +450,13 @@ func TestSendProductiveExecutorLogsOnceAtRouteBoundary(t *testing.T) {
 		t.Fatalf("send did not reach productive connector transport: %#v", body)
 	}
 	assertInteractiveDiagnostic(t, &output, map[string]any{"action": "send", "owner": f.owner.Id, "plugin": f.manifest.ID, "instance": f.instance.Id, "code": "provider_unavailable", "operation": pluginsystem.OperationHostHTTP, "cause": "network_unavailable"}, f.baseURL, "query-secret", "provider-token-secret", "credential-secret", "guest-trail-name-secret", "source-file-secret.gpx")
+}
+
+func oauthFixtureGeneration(t *testing.T, fixture *oauthMetadataFixture) string {
+	t.Helper()
+	instance, err := fixture.app.FindRecordById("plugin_instances", fixture.instanceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return instance.GetString("connection_generation")
 }

@@ -11,11 +11,12 @@ import (
 )
 
 type pluginSessionAuthValidateRequest struct {
-	PluginID    string          `json:"pluginId"`
-	InstanceID  string          `json:"instanceId,omitempty"`
-	AuthContext string          `json:"authContext,omitempty"`
-	Auth        map[string]any  `json:"auth,omitempty"`
-	Config      json.RawMessage `json:"config,omitempty"`
+	PluginID           string          `json:"pluginId"`
+	InstanceID         string          `json:"instanceId,omitempty"`
+	AuthContext        string          `json:"authContext,omitempty"`
+	Auth               map[string]any  `json:"auth,omitempty"`
+	Config             json.RawMessage `json:"config,omitempty"`
+	ExpectedGeneration string          `json:"expected_connection_generation"`
 }
 
 type pluginSessionAuthRefreshInput struct {
@@ -51,6 +52,8 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	config := installedPluginConfig(e.App, data.PluginID)
 	plaintext := map[string]bool{}
 	instanceID := data.InstanceID
+	var snapshot pluginsystem.ConnectionSnapshot
+	selected := ""
 	if instanceID != "" {
 		instance, err := pluginAuthInstance(e.App, e.Auth.Id, data.PluginID, instanceID)
 		if err != nil {
@@ -58,12 +61,35 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 		}
 		instanceID = instance.Id
 		logContext.InstanceID = instance.Id
+		if data.ExpectedGeneration == "" {
+			return pluginsystem.ConnectionGenerationRequiredError()
+		}
+		snapshot = pluginsystem.CaptureConnection(instance)
+		if snapshot.Generation != data.ExpectedGeneration {
+			return pluginsystem.ConnectionAPIError(pluginsystem.ErrConnectionConflict)
+		}
+		release, acquired := pluginsystem.TryLockInstance(instance.Id)
+		if !acquired {
+			return pluginsystem.ConnectionAPIError(pluginsystem.ErrInstanceBusy)
+		}
+		defer release()
+		instance, err = pluginsystem.CheckConnection(e.App, snapshot, false)
+		if err != nil {
+			return pluginConnectionAPIErrorForEvent(e, logContext, err)
+		}
+		selected = instance.GetString("auth_context")
 		auth = pluginsystem.JSONMapFromRecord(instance, "auth")
 		pluginsystem.MergePluginConfig(config, pluginsystem.JSONMapFromRecord(instance, "config"))
 	}
 	requested := data.AuthContext
 	if requested == "" {
-		resolved, _, resolveErr := pluginsystem.EffectiveAuthContext(plugin.Manifest, auth)
+		var resolved string
+		var resolveErr error
+		if instanceID == "" {
+			resolved, _, resolveErr = pluginsystem.ResolveAuthContext(plugin.Manifest, "")
+		} else {
+			resolved, _, resolveErr = pluginsystem.EffectiveAuthContext(plugin.Manifest, selected)
+		}
 		if resolveErr != nil {
 			return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 		}
@@ -77,13 +103,25 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 		return pluginOperationAPIErrorForEvent(e, logContext, pluginsystem.Failure("invalid_configuration", pluginsystem.OperationLogin))
 	}
 
+	editable := pluginsystem.EditableAuthCredentialFields(plugin.Manifest, contextName)
+	secrets := pluginsystem.ManifestAuthSecretFields(plugin.Manifest)
 	for key, value := range data.Auth {
+		if !editable[key] {
+			return apis.NewBadRequestError("Unsupported credential field.", nil)
+		}
 		if value != nil {
 			if _, ok := value.(string); !ok {
 				return apis.NewBadRequestError("auth credentials must be strings", nil)
 			}
 		}
-		if value == "" {
+		if value == nil {
+			if !secrets[key] {
+				return apis.NewBadRequestError("Only editable secret credentials can be removed with null.", nil)
+			}
+			delete(auth, key)
+			continue
+		}
+		if value == "" && secrets[key] {
 			continue
 		}
 		auth[key] = value
@@ -107,7 +145,7 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 		return pluginOperationAPIErrorForEvent(e, logContext, pluginAuthFailure(err, pluginsystem.OperationLogin))
 	}
 
-	for _, field := range authContext.Fields {
+	for _, field := range append(append([]string{}, authContext.Fields...), authContext.SecretFields...) {
 		if pluginsystem.StringFromAny(auth[field]) == "" {
 			logPluginOperationFailure(e, logContext, pluginsystem.WithDiagnosticCause(pluginsystem.Failure("invalid_request", pluginsystem.OperationLogin), "host_auth_invalid"))
 			return apis.NewBadRequestError("required session credentials are missing", nil)
@@ -129,8 +167,18 @@ func pluginSystemSessionAuthValidate(e *core.RequestEvent, runtimeFor func(plugi
 	if err != nil {
 		return pluginHostAPIErrorForEvent(e, logContext, "Failed to initialize plugin runtime.", err)
 	}
-	policy = policy.WithHostAuth(auth)
+	policy = policy.WithHostAuth(auth, contextName)
+	if instanceID != "" {
+		if _, err := pluginsystem.CheckConnection(e.App, snapshot, false); err != nil {
+			return pluginConnectionAPIErrorForEvent(e, logContext, err)
+		}
+	}
 	output, err := runtime.Call(e.Request.Context(), plugin, authContext.Refresh.Function, inputBytes, policy)
+	if instanceID != "" {
+		if _, guardErr := pluginsystem.CheckConnection(e.App, snapshot, false); guardErr != nil {
+			return pluginConnectionAPIErrorForEvent(e, logContext, guardErr)
+		}
+	}
 	if err != nil {
 		return pluginOperationAPIErrorForEvent(e, logContext, err)
 	}

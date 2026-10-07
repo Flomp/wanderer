@@ -7,12 +7,15 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,12 +30,13 @@ const (
 )
 
 type OAuthTokenResponse struct {
-	AccessToken  string          `json:"access_token"`
-	RefreshToken string          `json:"refresh_token,omitempty"`
-	TokenType    string          `json:"token_type,omitempty"`
-	ExpiresIn    int             `json:"expires_in,omitempty"`
-	Scope        string          `json:"scope,omitempty"`
-	Raw          json.RawMessage `json:"-"`
+	AccessToken    string          `json:"access_token"`
+	RefreshToken   string          `json:"refresh_token,omitempty"`
+	TokenType      string          `json:"token_type,omitempty"`
+	ExpiresIn      int             `json:"expires_in,omitempty"`
+	Scope          string          `json:"scope,omitempty"`
+	Raw            json.RawMessage `json:"-"`
+	ProviderUserID string          `json:"providerUserId,omitempty"`
 }
 
 // OAuthContext uses the same unambiguous selection as other provider operations.
@@ -190,6 +194,20 @@ func ExchangeOAuthToken(ctx context.Context, manifest Manifest, authContext Auth
 	if token.AccessToken == "" {
 		return nil, WithDiagnosticCause(PluginFailure{PluginError: PluginError{Code: "invalid_output", Operation: operation, HTTPStatus: resp.StatusCode}}, "token_response_invalid")
 	}
+	// Strava's authorization response identifies its athlete explicitly. Other
+	// providers can use providerUserId; absence never invents an account identity.
+	if manifest.ID == "strava" && token.ProviderUserID == "" {
+		var identity struct {
+			Athlete struct {
+				ID json.Number `json:"id"`
+			} `json:"athlete"`
+		}
+		if json.Unmarshal(respBody, &identity) == nil {
+			if id, parseErr := strconv.ParseInt(string(identity.Athlete.ID), 10, 64); parseErr == nil && id > 0 {
+				token.ProviderUserID = strconv.FormatInt(id, 10)
+			}
+		}
+	}
 	return &token, nil
 }
 
@@ -216,9 +234,30 @@ func OAuthTokenURLAllowed(manifest Manifest, tokenURL *url.URL) bool {
 	return false
 }
 
-// RefreshOAuthToken uses the stored refresh token, persists the refreshed auth
-// map, and keeps the plugin instance configured when refresh succeeds.
+// RefreshOAuthToken exchanges outside the transaction and patches tokens only
+// under C/T. A concurrent rotation reloads current auth without provider replay.
 func RefreshOAuthToken(ctx context.Context, app core.App, plugin LocalPlugin, instance *core.Record, auth map[string]any, contextName string) (map[string]any, error) {
+	snapshot := CaptureConnection(instance)
+	current, err := CheckConnection(app, snapshot, false)
+	if err != nil {
+		return auth, err
+	}
+	tokenRevision := instance.GetString("oauth_token_revision")
+	observedError := JSONMapFromRecord(current, "last_error")
+	observedBackoff := current.GetString("retry_not_before")
+	providerUserID := StringFromAny(auth[AuthFieldProviderUserID])
+	if tokenRevision == "" {
+		return auth, ErrConnectionConflict
+	}
+	if current.GetString("oauth_token_revision") != tokenRevision {
+		return reloadOAuthAuth(instance, current, plugin.Manifest, contextName)
+	}
+	if contextName != snapshot.AuthContext {
+		return auth, Failure("invalid_configuration", OperationOAuthRefresh)
+	}
+	if err := CheckOAuthGrantProvenance(plugin.Manifest, auth, contextName); err != nil {
+		return auth, err
+	}
 	_, authContext, err := OAuthContext(plugin, contextName)
 	if err != nil {
 		return auth, err
@@ -236,17 +275,82 @@ func RefreshOAuthToken(ctx context.Context, app core.App, plugin LocalPlugin, in
 		"refresh_token": refreshToken,
 	})
 	if err != nil {
+		fresh, guardErr := CheckConnection(app, snapshot, false)
+		if guardErr != nil {
+			return auth, guardErr
+		}
+		if fresh.GetString("oauth_token_revision") != tokenRevision {
+			return reloadOAuthAuth(instance, fresh, plugin.Manifest, contextName)
+		}
 		return auth, err
 	}
 	if token.RefreshToken == "" {
 		token.RefreshToken = refreshToken
 	}
-	StoreOAuthToken(auth, contextName, token)
-	instance.Set("auth", auth)
-	instance.Set("status", "configured")
-	if err := app.Save(instance); err != nil {
+	if token.ProviderUserID != "" && providerUserID != "" && token.ProviderUserID != providerUserID {
+		return auth, Failure("invalid_grant", OperationOAuthRefresh)
+	}
+	patch := map[string]any{}
+	StoreOAuthToken(patch, contextName, token)
+	updated, err := PatchConnection(app, snapshot, false, func(fresh *core.Record) error {
+		if fresh.GetString("oauth_token_revision") != tokenRevision {
+			return ErrOAuthTokenRevisionConflict
+		}
+		freshProviderUserID := StringFromAny(JSONMapFromRecord(fresh, "auth")[AuthFieldProviderUserID])
+		if providerUserID != "" && freshProviderUserID != providerUserID {
+			return ErrConnectionConflict
+		}
+		if token.ProviderUserID != "" && freshProviderUserID != "" && token.ProviderUserID != freshProviderUserID {
+			return Failure("invalid_grant", OperationOAuthRefresh)
+		}
+		if err := ApplyAuthPatch(fresh, plugin.Manifest, patch); err != nil {
+			return err
+		}
+		fresh.Set("oauth_token_revision", NewConnectionRevision())
+		// A refresh only disproves a diagnosis attached to the exact old token
+		// revision. Unrelated or historical sync errors remain until full sync.
+		diagnosis := JSONMapFromRecord(fresh, "last_error")
+		if diagnosis["authContext"] == snapshot.AuthContext && diagnosis["connectionGeneration"] == snapshot.Generation &&
+			diagnosis["oauthTokenRevision"] == tokenRevision && diagnosis["operation"] == OperationOAuthRefresh && reflect.DeepEqual(diagnosis, observedError) && fresh.GetString("retry_not_before") == observedBackoff {
+			fresh.Set("last_error", map[string]any{})
+			fresh.Set("retry_not_before", "")
+			if fresh.GetBool("enabled") {
+				fresh.Set("status", "configured")
+			}
+		}
+		return nil
+	})
+	if errors.Is(err, ErrOAuthTokenRevisionConflict) {
+		fresh, reloadErr := CheckConnection(app, snapshot, false)
+		if reloadErr != nil {
+			return auth, reloadErr
+		}
+		return reloadOAuthAuth(instance, fresh, plugin.Manifest, contextName)
+	}
+	if err != nil {
+		if errors.Is(err, ErrConnectionObsolete) {
+			return auth, err
+		}
+		var failure PluginFailure
+		if errors.As(err, &failure) {
+			return auth, err
+		}
 		return auth, WithDiagnosticCause(err, "database_save")
 	}
+	return reloadOAuthAuth(instance, updated, plugin.Manifest, contextName)
+}
+
+var ErrOAuthTokenRevisionConflict = errors.New("oauth token revision changed")
+
+func reloadOAuthAuth(instance, fresh *core.Record, manifest Manifest, selected string) (map[string]any, error) {
+	if fresh.GetString("oauth_token_revision") == "" {
+		return nil, ErrConnectionConflict
+	}
+	auth, err := DecryptedOAuthGrant(fresh, manifest, selected)
+	if err != nil {
+		return nil, err
+	}
+	instance.Set("oauth_token_revision", fresh.GetString("oauth_token_revision"))
 	return auth, nil
 }
 
@@ -255,6 +359,9 @@ func RefreshOAuthToken(ctx context.Context, app core.App, plugin LocalPlugin, in
 func StoreOAuthToken(auth map[string]any, contextName string, token *OAuthTokenResponse) {
 	auth[AuthFieldOAuthContext] = contextName
 	auth[AuthFieldAccessToken] = token.AccessToken
+	if token.ProviderUserID != "" {
+		auth[AuthFieldProviderUserID] = token.ProviderUserID
+	}
 	if token.RefreshToken != "" {
 		auth[AuthFieldRefreshToken] = token.RefreshToken
 	}
@@ -269,10 +376,8 @@ func StoreOAuthToken(auth map[string]any, contextName string, token *OAuthTokenR
 	}
 }
 
-// ClearOAuthToken explicitly clears persisted OAuth token material, metadata,
-// and transient flow fields. Nil markers prevent the update hook from restoring
-// these fields as omitted credentials or metadata; the hook consumes the markers
-// before persistence so the cleared fields are absent from stored auth.
+// ClearOAuthToken constructs explicit removals of grant and pending-flow data.
+// ApplyAuthPatch consumes the nil instructions on a freshly loaded record.
 func ClearOAuthToken(auth map[string]any) {
 	for _, key := range slices.Concat(
 		[]string{AuthFieldAccessToken, AuthFieldRefreshToken},
@@ -286,12 +391,12 @@ func ClearOAuthToken(auth map[string]any) {
 // PluginInputAuth exposes only the active context's guest credentials. The
 // accessToken remains available for shipped plugins such as Strava; refresh and
 // client secrets plus transient OAuth flow fields stay host-only.
-func PluginInputAuth(plugin LocalPlugin, auth map[string]any) map[string]any {
-	out, err := ActiveAuth(plugin.Manifest, auth)
+func PluginInputAuth(plugin LocalPlugin, auth map[string]any, selected string) map[string]any {
+	out, err := ActiveAuth(plugin.Manifest, auth, selected)
 	if err != nil {
 		return map[string]any{}
 	}
-	_, context, _ := EffectiveAuthContext(plugin.Manifest, auth)
+	_, context, _ := EffectiveAuthContext(plugin.Manifest, selected)
 	if context.Type == AuthTypeOAuth2 {
 		for _, key := range PluginInputAuthBlockedFields() {
 			delete(out, key)
@@ -303,9 +408,20 @@ func PluginInputAuth(plugin LocalPlugin, auth map[string]any) map[string]any {
 // RefreshOAuthAuthIfNeeded resolves the active context before considering a
 // refresh, so unused OAuth credentials never trigger a provider call.
 func RefreshOAuthAuthIfNeeded(ctx context.Context, app core.App, plugin LocalPlugin, instance *core.Record, auth map[string]any) (map[string]any, error) {
-	name, context, err := EffectiveAuthContext(plugin.Manifest, auth)
+	if instance == nil {
+		return auth, ErrConnectionConflict
+	}
+	name, context, err := EffectiveAuthContext(plugin.Manifest, instance.GetString("auth_context"))
 	if err != nil {
 		return auth, err
+	}
+	if context.Type == AuthTypeOAuth2 {
+		if instance.GetString("oauth_token_revision") == "" {
+			return auth, ErrConnectionConflict
+		}
+		if err := CheckOAuthGrantProvenance(plugin.Manifest, auth, name); err != nil {
+			return auth, err
+		}
 	}
 	if context.Type == AuthTypeOAuth2 && (StringFromAny(auth[AuthFieldAccessToken]) == "" || OAuthNeedsRefresh(auth)) {
 		return RefreshOAuthToken(ctx, app, plugin, instance, auth, name)
