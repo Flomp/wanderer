@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -10,7 +11,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -304,22 +307,213 @@ func TestPluginSetupDiagnosticsUseValidatedBoundedIdentities(t *testing.T) {
 	}
 }
 
+// Signal that the second manager finished its read plan and is about to
+// acquire the writer. The insert hook separately detects an unsynchronized
+// competitor, making omission of RunInTransaction fail deterministically.
+type setupTransactionProbeApp struct {
+	core.App
+	transactions atomic.Int32
+	second       chan struct{}
+}
+
+func (app *setupTransactionProbeApp) RunInTransaction(fn func(core.App) error) error {
+	if app.transactions.Add(1) == 2 {
+		close(app.second)
+	}
+	return app.App.RunInTransaction(fn)
+}
+
 func TestPluginSetupDiagnosticsParallelManagersLogOnce(t *testing.T) {
 	f := newSetupDiagnosticFixture(t)
 	f.bundle(t, "setup-log-plugin", "https://provider.example/%zz?token="+setupURLSecret)
-	const count = 8
-	responses := make(chan *httptest.ResponseRecorder, count)
-	for range count {
-		go func() { responses <- f.get() }()
+	inserted, duplicate, release := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	var creates atomic.Int32
+	f.app.OnRecordCreate("installed_plugins").BindFunc(func(e *core.RecordEvent) error {
+		if creates.Add(1) == 1 {
+			close(inserted)
+			<-release
+		} else {
+			close(duplicate)
+		}
+		return e.Next()
+	})
+	app := &setupTransactionProbeApp{App: f.app, second: make(chan struct{})}
+	results := make(chan error, 2)
+	go func() { results <- pluginsystem.NewManager(app, f.dir).SyncInstalledPlugins(context.Background()) }()
+	select {
+	case <-inserted:
+	case <-time.After(5 * time.Second):
+		close(release)
+		t.Fatal("first cache insert did not reach barrier")
 	}
-	for range count {
-		response := <-responses
-		if response.Code != http.StatusOK {
-			t.Errorf("parallel GET status=%d: %s", response.Code, response.Body.String())
+	go func() { results <- pluginsystem.NewManager(app, f.dir).SyncInstalledPlugins(context.Background()) }()
+	select {
+	case <-app.second:
+	case <-duplicate:
+		t.Error("second manager inserted against a stale snapshot outside the serialized writer")
+	case <-time.After(5 * time.Second):
+		t.Error("second manager did not reach transaction acquisition")
+	}
+	close(release)
+	for range 2 {
+		if err := <-results; err != nil {
+			t.Error(err)
 		}
 	}
-	f.requests = count
+	if got := creates.Load(); got != 1 {
+		t.Errorf("cache insert hooks=%d, want one", got)
+	}
 	f.warnings(t, 1)
+}
+
+func TestPluginSetupDiagnosticsUnchangedCacheDoesNotAcquireWriter(t *testing.T) {
+	for _, populated := range []bool{false, true} {
+		t.Run(map[bool]string{false: "empty directory", true: "unchanged installed bundle"}[populated], func(t *testing.T) {
+			f := newSetupDiagnosticFixture(t)
+			if populated {
+				f.bundle(t, "directory-alias", "")
+			}
+			f.request(t, http.StatusOK)
+			records, err := f.app.FindAllRecords("installed_plugins")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var before string
+			if len(records) == 1 {
+				before = records[0].GetString("updated")
+				records[0].Set("config", map[string]any{"plugin": map[string]any{"custom": "preserved"}})
+				if err := f.app.Save(records[0]); err != nil {
+					t.Fatal(err)
+				}
+				// Reconcile any newly missing manifest defaults before measuring a
+				// genuinely unchanged cache with an open writer.
+				f.request(t, http.StatusOK)
+				fresh, err := f.app.FindRecordById("installed_plugins", records[0].Id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				before = fresh.GetString("updated")
+			}
+			var saves atomic.Int32
+			f.app.OnRecordUpdate("installed_plugins").BindFunc(func(e *core.RecordEvent) error { saves.Add(1); return e.Next() })
+			entered, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+			go func() {
+				done <- f.app.RunInTransaction(func(core.App) error { close(entered); <-release; return nil })
+			}()
+			<-entered
+			response := make(chan *httptest.ResponseRecorder, 1)
+			go func() { response <- f.get() }()
+			select {
+			case result := <-response:
+				f.requests++
+				if result.Code != http.StatusOK {
+					t.Errorf("GET=%d: %s", result.Code, result.Body.String())
+				}
+			case <-time.After(2 * time.Second):
+				close(release)
+				<-done
+				<-response
+				t.Fatal("unchanged GET waited behind a writer")
+			}
+			close(release)
+			if err := <-done; err != nil {
+				t.Fatal(err)
+			}
+			if saves.Load() != 0 {
+				t.Fatal("unchanged listing ran update hooks")
+			}
+			if len(records) == 1 {
+				fresh, err := f.app.FindRecordById("installed_plugins", records[0].Id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if fresh.GetString("updated") != before || !strings.Contains(fresh.GetString("config"), "preserved") {
+					t.Fatal("unchanged cache changed timestamp or user configuration")
+				}
+			}
+		})
+	}
+}
+
+func TestPluginSetupDiagnosticsSortInvalidAuthContexts(t *testing.T) {
+	f := newSetupDiagnosticFixture(t)
+	dir := f.bundle(t, "directory-alias", "")
+	manifest := f.manifest
+	manifest.Auth.Contexts = map[string]pluginsystem.AuthContext{
+		"z-invalid": {Type: "invalid-z"}, "a-invalid": {Type: "invalid-a"},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "plugin.json"), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for range 40 {
+		f.request(t, http.StatusOK)
+	}
+	f.warnings(t, 1)
+}
+
+func TestPluginSetupDiagnosticsStableIdentityCannotExecuteInvalidBundle(t *testing.T) {
+	f := newSetupDiagnosticFixture(t)
+	f.bundle(t, "directory-alias", "")
+	f.request(t, http.StatusOK)
+	f.bundle(t, "directory-alias", "https://provider.example/%zz?token="+setupURLSecret)
+	f.request(t, http.StatusOK)
+	f.bundle(t, "directory-alias", "https://provider.example/%zz?token="+setupURLSecret+"-changed")
+	f.request(t, http.StatusOK)
+	for _, warning := range f.warnings(t, 2) {
+		if warning.Data["plugin"] != f.manifest.ID {
+			t.Errorf("validated identity lost: %#v", warning.Data)
+		}
+	}
+	if _, err := pluginsystem.LoadInstalledPlugin(f.app, f.dir, f.manifest.ID); err == nil {
+		t.Fatal("invalid bundle remained executable through its preserved manifest")
+	}
+}
+
+func TestPluginSetupDiagnosticsDirectoryCollisionDoesNotClaimHealthyPlugin(t *testing.T) {
+	f := newSetupDiagnosticFixture(t)
+	healthyDir := f.bundle(t, "healthy-directory", "")
+	f.request(t, http.StatusOK)
+	healthy, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", f.manifest.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	healthy.Set("config", map[string]any{"plugin": map[string]any{"custom": "healthy-settings"}})
+	if err := f.app.Save(healthy); err != nil {
+		t.Fatal(err)
+	}
+	brokenDir := f.bundle(t, f.manifest.ID, "https://provider.example/%zz?token="+setupURLSecret)
+	for range 3 {
+		f.request(t, http.StatusOK)
+	}
+	warnings := f.warnings(t, 1)
+	if len(warnings) == 1 && warnings[0].Data["plugin"] == f.manifest.ID {
+		t.Fatal("broken directory warning blamed healthy plugin")
+	}
+	fresh, err := f.app.FindRecordById("installed_plugins", healthy.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.GetString("path") != healthyDir || fresh.GetString("status") != "available" || !strings.Contains(fresh.GetString("config"), "healthy-settings") {
+		t.Fatal("broken directory overwrote healthy cache")
+	}
+	broken, err := f.app.FindFirstRecordByData("installed_plugins", "path", brokenDir)
+	if err != nil || broken.Id == healthy.Id || broken.GetString("plugin_id") == f.manifest.ID {
+		t.Fatalf("broken directory was not cached independently: %v", err)
+	}
+	if _, err := pluginsystem.LoadInstalledPlugin(f.app, f.dir, f.manifest.ID); err != nil {
+		t.Fatal("healthy bundle unavailable", err)
+	}
+	if err := os.RemoveAll(brokenDir); err != nil {
+		t.Fatal(err)
+	}
+	f.request(t, http.StatusOK)
+	if _, err := f.app.FindRecordById("installed_plugins", broken.Id); err == nil {
+		t.Fatal("removed broken cache row survived")
+	}
 }
 
 func TestPluginSetupDiagnosticsDoNotLogRolledBackCache(t *testing.T) {

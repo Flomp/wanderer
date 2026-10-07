@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/pocketbase/dbx"
@@ -100,6 +101,21 @@ func (m *Manager) ListLocalPlugins(context.Context) ([]PluginInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	for i := range issues {
+		issue := &issues[i]
+		if _, ok := infoByPath[filepath.Clean(issue.Dir)]; ok {
+			continue
+		}
+		record, err := m.App.FindFirstRecordByData("installed_plugins", "path", issue.Dir)
+		if err != nil {
+			continue
+		}
+		info := PluginInfo{ID: record.GetString("plugin_id"), Name: record.GetString("name"), Type: PluginTypeTrails,
+			Path: issue.Dir, Status: "error", Runtime: record.GetString("runtime"), Version: record.GetString("version")}
+		_ = record.UnmarshalJSONField("manifest", &info.Manifest)
+		infoByPath[filepath.Clean(issue.Dir)] = len(infos)
+		infos = append(infos, info)
+	}
 	return mergePluginIssues(infos, infoByPath, issues), nil
 }
 
@@ -187,170 +203,235 @@ func (m *Manager) SyncInstalledPlugins(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Keep discovery outside the write transaction. Fresh cache reads and all
-	// mutations share its serialized connection, including concurrent managers.
+	// An unchanged listing is read-only. Only a real cache change acquires the
+	// serialized writer, where we rebuild the plan against the current data.
+	plan, err := m.planInstalledPluginCache(ctx, plugins, issues)
+	if err != nil || !plan.changed() {
+		return err
+	}
 	return m.App.RunInTransaction(func(txApp core.App) error {
 		manager := Manager{App: txApp, Dir: m.Dir}
-		return manager.syncInstalledPluginCache(ctx, plugins, issues)
+		fresh, err := manager.planInstalledPluginCache(ctx, plugins, issues)
+		if err != nil {
+			return err
+		}
+		return manager.applyInstalledPluginCache(ctx, fresh)
 	})
 }
 
-func (m *Manager) syncInstalledPluginCache(ctx context.Context, plugins []LocalPlugin, issues []LocalPluginIssue) error {
+type pluginCacheEntry struct {
+	record *core.Record
+	values map[string]any
+	remove bool
+	issue  *LocalPluginIssue
+}
+
+type pluginCachePlan []*pluginCacheEntry
+
+func (plan pluginCachePlan) changed() bool {
+	for _, entry := range plan {
+		if entry.remove || entry.record.IsNew() || !cacheValuesEqual(entry.record, entry.values) {
+			return true
+		}
+	}
+	return false
+}
+
+func cacheValuesEqual(record *core.Record, values map[string]any) bool {
+	for key, wanted := range values {
+		// PocketBase JSON fields are JsonRaw; compare decoded values rather than
+		// their representation, including recursively ordered object keys.
+		a, errA := json.Marshal(record.Get(key))
+		b, errB := json.Marshal(wanted)
+		var current, target any
+		if errA != nil || errB != nil || json.Unmarshal(a, &current) != nil || json.Unmarshal(b, &target) != nil || !reflect.DeepEqual(current, target) {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalPlugin, issues []LocalPluginIssue) (pluginCachePlan, error) {
 	collection, err := m.App.FindCollectionByNameOrId("installed_plugins")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	activePaths := activePluginPaths(plugins, issues)
-	if err := m.deleteStaleInstalledPlugins(ctx, activePaths); err != nil {
-		return err
+	records, err := m.App.FindRecordsByFilter("installed_plugins", "", "id", -1, 0)
+	if err != nil {
+		return nil, err
+	}
+	paths := activePluginPaths(plugins, issues)
+	plan := make(pluginCachePlan, 0, len(records)+len(plugins)+len(issues))
+	byID, byPath := map[string]*pluginCacheEntry{}, map[string]*pluginCacheEntry{}
+	for _, record := range records {
+		entry := &pluginCacheEntry{record: record, values: map[string]any{}}
+		path := filepath.Clean(record.GetString("path"))
+		entry.remove = record.GetString("path") == "" || !paths[path]
+		plan = append(plan, entry)
+		if !entry.remove {
+			byID[record.GetString("plugin_id")] = entry
+			byPath[path] = entry
+		}
+	}
+	newEntry := func(id, path string) *pluginCacheEntry {
+		entry := &pluginCacheEntry{record: core.NewRecord(collection), values: map[string]any{"plugin_id": id, "path": path}}
+		plan = append(plan, entry)
+		byID[id], byPath[filepath.Clean(path)] = entry, entry
+		return entry
+	}
+	// Valid manifest identities get priority. An unrelated broken directory
+	// must never claim their cache row through its directory name.
+	for _, plugin := range plugins {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		path := filepath.Clean(plugin.Dir)
+		entry := byID[plugin.Manifest.ID]
+		pathEntry := byPath[path]
+		if entry != nil && entry != pathEntry && entry.record.GetString("path") != plugin.Dir && entry.record.GetString("status") == "error" {
+			var cached Manifest
+			if entry.record.UnmarshalJSONField("manifest", &cached) != nil || ValidateManifest(cached) != nil || cached.ID != plugin.Manifest.ID {
+				// Keep a never-validated failure, but move its synthetic ID aside.
+				issue := LocalPluginIssue{ID: entry.record.GetString("plugin_id"), Dir: entry.record.GetString("path")}
+				newID := collisionPluginIssueID(issue)
+				entry.values["plugin_id"] = newID
+				delete(byID, plugin.Manifest.ID)
+				byID[newID] = entry
+				entry = nil
+			}
+		}
+		if entry == nil {
+			entry = pathEntry
+		}
+		if entry == nil {
+			entry = newEntry(plugin.Manifest.ID, plugin.Dir)
+		}
+		if pathEntry != nil && pathEntry != entry {
+			pathEntry.remove = true
+		}
+		manifest, err := marshalManifest(plugin.Manifest)
+		if err != nil {
+			return nil, err
+		}
+		entry.values = map[string]any{
+			"plugin_id": plugin.Manifest.ID, "name": plugin.Manifest.Name,
+			"type": plugin.Manifest.Type, "version": plugin.Manifest.Version,
+			"runtime": plugin.Manifest.Runtime.Type, "path": plugin.Dir,
+			"status": "available", "error": "", "manifest": manifest,
+			"config": mergeDefaultConfig(defaultConfig(plugin.Manifest), JSONMapFromRecord(entry.record, "config")),
+		}
+		byID[plugin.Manifest.ID], byPath[path] = entry, entry
 	}
 	for _, issue := range issues {
 		if err := ctx.Err(); err != nil {
-			return err
+			return nil, err
 		}
-		if err := m.savePluginIssue(collection, issue); err != nil {
-			return err
+		entry := byPath[filepath.Clean(issue.Dir)]
+		if entry == nil {
+			id := pluginIssueRecordID(issue)
+			if byID[id] != nil {
+				id = collisionPluginIssueID(issue)
+			}
+			entry = newEntry(id, issue.Dir)
 		}
+		id := entry.record.GetString("plugin_id")
+		if changedID, ok := entry.values["plugin_id"].(string); ok {
+			id = changedID
+		}
+		entry.values = map[string]any{
+			"plugin_id": id, "name": issue.Name, "type": PluginTypeTrails,
+			"version": "unknown", "runtime": RuntimeWASM, "path": issue.Dir,
+			"manifest": map[string]any{"id": id, "type": PluginTypeTrails, "name": issue.Name},
+			"status":   "error", "error": issue.Error,
+		}
+		// Preserve validated identity/metadata for diagnostics and the UI. The
+		// explicit error status still prevents this manifest from executing.
+		var cached Manifest
+		if entry.record.UnmarshalJSONField("manifest", &cached) == nil && ValidateManifest(cached) == nil {
+			for _, key := range []string{"name", "type", "version", "runtime", "manifest"} {
+				entry.values[key] = entry.record.Get(key)
+			}
+		}
+		issueCopy := issue
+		entry.issue = &issueCopy
 	}
-	for _, plugin := range plugins {
+	return plan, nil
+}
+
+func (m *Manager) applyInstalledPluginCache(ctx context.Context, plan pluginCachePlan) error {
+	// Remove obsolete rows first to free unique plugin IDs, then write changes.
+	for _, entry := range plan {
+		if !entry.remove {
+			continue
+		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		record, err := m.findPluginRecord(collection, plugin)
-		if err != nil {
+		if err := m.App.Delete(entry.record); err != nil {
 			return err
 		}
-		record.Set("plugin_id", plugin.Manifest.ID)
-		record.Set("name", plugin.Manifest.Name)
-		record.Set("type", plugin.Manifest.Type)
-		record.Set("version", plugin.Manifest.Version)
-		record.Set("runtime", plugin.Manifest.Runtime.Type)
-		record.Set("path", plugin.Dir)
-		record.Set("status", "available")
-		record.Set("error", "")
-		manifestJSON, err := marshalManifest(plugin.Manifest)
-		if err != nil {
-			return fmt.Errorf("encode installed plugin %s manifest: %w", plugin.Manifest.ID, err)
+	}
+	// Synthetic IDs must be freed before a valid bundle claims the same ID.
+	for _, entry := range plan {
+		if !entry.remove && !entry.record.IsNew() && entry.values["plugin_id"] != nil && entry.values["plugin_id"] != entry.record.GetString("plugin_id") {
+			entry.record.Set("plugin_id", entry.values["plugin_id"])
+			if err := m.App.Save(entry.record); err != nil {
+				return err
+			}
 		}
-		record.Set("manifest", manifestJSON)
-		record.Set("config", mergeDefaultConfig(defaultConfig(plugin.Manifest), JSONMapFromRecord(record, "config")))
-		if err := m.App.Save(record); err != nil {
-			return fmt.Errorf("save installed plugin %s: %w", plugin.Manifest.ID, err)
+	}
+	for _, entry := range plan {
+		if entry.remove || (!entry.record.IsNew() && cacheValuesEqual(entry.record, entry.values)) {
+			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		changedIssue := entry.issue != nil && (entry.record.GetString("status") != "error" || entry.record.GetString("error") != entry.issue.Error)
+		diagnosticID := ""
+		if changedIssue {
+			diagnosticID = pluginSetupDiagnosticID(entry.record, *entry.issue)
+			if id, ok := entry.values["plugin_id"].(string); ok && id == collisionPluginIssueID(*entry.issue) {
+				diagnosticID = id
+			}
+		}
+		for key, value := range entry.values {
+			entry.record.Set(key, value)
+		}
+		if err := m.App.Save(entry.record); err != nil {
+			return err
+		}
+		if changedIssue {
+			code := PublicPluginSetupErrorCode(entry.issue.SetupErrorCode)
+			m.App.TxInfo().OnComplete(func(txErr error) error {
+				if txErr == nil {
+					m.App.Logger().Warn("plugin setup error", "plugin", diagnosticID, "setup_code", code)
+				}
+				return nil
+			})
 		}
 	}
 	return nil
+}
+
+func collisionPluginIssueID(issue LocalPluginIssue) string {
+	id := pluginIssueRecordID(issue)
+	suffix := "-setup-" + pluginIssueHash(issue)
+	if len(id)+len(suffix) > 128 {
+		id = id[:128-len(suffix)]
+	}
+	return strings.TrimRight(id, "-_") + suffix
 }
 
 func activePluginPaths(plugins []LocalPlugin, issues []LocalPluginIssue) map[string]bool {
 	paths := make(map[string]bool, len(plugins)+len(issues))
 	for _, plugin := range plugins {
-		if plugin.Dir != "" {
-			paths[filepath.Clean(plugin.Dir)] = true
-		}
+		paths[filepath.Clean(plugin.Dir)] = true
 	}
 	for _, issue := range issues {
-		if issue.Dir != "" {
-			paths[filepath.Clean(issue.Dir)] = true
-		}
+		paths[filepath.Clean(issue.Dir)] = true
 	}
 	return paths
-}
-
-func (m *Manager) deleteStaleInstalledPlugins(ctx context.Context, activePaths map[string]bool) error {
-	records, err := m.App.FindRecordsByFilter("installed_plugins", "", "", -1, 0)
-	if err != nil {
-		return err
-	}
-	for _, record := range records {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		path := strings.TrimSpace(record.GetString("path"))
-		if path != "" && activePaths[filepath.Clean(path)] {
-			continue
-		}
-		if err := m.App.Delete(record); err != nil {
-			return fmt.Errorf("delete stale installed plugin %s: %w", record.GetString("plugin_id"), err)
-		}
-	}
-	return nil
-}
-
-func (m *Manager) findPluginRecord(collection *core.Collection, plugin LocalPlugin) (*core.Record, error) {
-	recordByID, _ := m.App.FindFirstRecordByFilter(
-		"installed_plugins",
-		"plugin_id={:plugin_id}",
-		dbx.Params{"plugin_id": plugin.Manifest.ID},
-	)
-	var recordByPath *core.Record
-	if plugin.Dir != "" {
-		recordByPath, _ = m.App.FindFirstRecordByFilter(
-			"installed_plugins",
-			"path={:path}",
-			dbx.Params{"path": plugin.Dir},
-		)
-	}
-	if recordByID != nil && recordByPath != nil && recordByID.Id != recordByPath.Id {
-		if err := m.App.Delete(recordByPath); err != nil {
-			return nil, fmt.Errorf("delete superseded installed plugin %s: %w", recordByPath.GetString("plugin_id"), err)
-		}
-	}
-	if recordByID != nil {
-		return recordByID, nil
-	}
-	if recordByPath != nil {
-		return recordByPath, nil
-	}
-	return core.NewRecord(collection), nil
-}
-
-func (m *Manager) savePluginIssue(collection *core.Collection, issue LocalPluginIssue) error {
-	recordID := pluginIssueRecordID(issue)
-	record, _ := m.App.FindFirstRecordByFilter(
-		"installed_plugins",
-		"plugin_id={:plugin_id}",
-		dbx.Params{"plugin_id": recordID},
-	)
-	if record == nil && issue.Dir != "" {
-		record, _ = m.App.FindFirstRecordByFilter(
-			"installed_plugins",
-			"path={:path}",
-			dbx.Params{"path": issue.Dir},
-		)
-	}
-	if record == nil {
-		record = core.NewRecord(collection)
-		record.Set("plugin_id", recordID)
-	}
-	changed := record.GetString("status") != "error" || record.GetString("error") != issue.Error
-	diagnosticID := pluginSetupDiagnosticID(record, issue)
-	record.Set("name", issue.Name)
-	record.Set("type", PluginTypeTrails)
-	record.Set("version", "unknown")
-	record.Set("runtime", RuntimeWASM)
-	record.Set("path", issue.Dir)
-	record.Set("manifest", map[string]any{
-		"id":   record.GetString("plugin_id"),
-		"type": PluginTypeTrails,
-		"name": issue.Name,
-	})
-	record.Set("status", "error")
-	record.Set("error", issue.Error)
-	if err := m.App.Save(record); err != nil {
-		return fmt.Errorf("save plugin setup error %s: %w", issue.ID, err)
-	}
-	if changed {
-		// A nested caller may still roll this cache write back. After-success
-		// hook errors do not mean the SQL commit failed; use the actual txErr.
-		m.App.TxInfo().OnComplete(func(txErr error) error {
-			if txErr == nil {
-				m.App.Logger().Warn("plugin setup error", "plugin", diagnosticID,
-					"setup_code", PublicPluginSetupErrorCode(issue.SetupErrorCode))
-			}
-			return nil
-		})
-	}
-	return nil
 }
 
 // Prefer an already validated manifest identity; a discovery directory name

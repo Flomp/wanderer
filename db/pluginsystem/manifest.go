@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -214,7 +215,13 @@ func validateCapabilities(capabilities []CapabilityManifest) error {
 }
 
 func validateAuth(auth AuthManifest) error {
-	for name, context := range auth.Contexts {
+	names := make([]string, 0, len(auth.Contexts))
+	for name := range auth.Contexts {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	for _, name := range names {
+		context := auth.Contexts[name]
 		if strings.TrimSpace(name) == "" {
 			return fmt.Errorf("auth context name is required")
 		}

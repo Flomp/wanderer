@@ -70,6 +70,9 @@ func LoadInstalledPlugins(app core.App, dir string) ([]LocalPlugin, error) {
 }
 
 func localPluginFromRecord(record *core.Record) (LocalPlugin, error) {
+	if record.GetString("status") == "error" || record.GetString("status") == "disabled" {
+		return LocalPlugin{}, fmt.Errorf("installed plugin is unavailable")
+	}
 	var manifest Manifest
 	if err := record.UnmarshalJSONField("manifest", &manifest); err != nil {
 		return LocalPlugin{}, err
