@@ -151,9 +151,19 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 		return nil, pluginsystem.WithDiagnosticCause(err, "actor_missing")
 	}
 
-	auth, err := decryptedInstanceAuth(instance)
+	// Validate effective connector/config policy before any token exchange or
+	// plugin/provider work; a local rejection must not rotate the stored grant.
+	config := effectivePluginConfig(app, plugin.Manifest.ID, instance)
+	policy, err := pluginInstancePolicy(plugin, config)
 	if err != nil {
-		safe := pluginsystem.WithDiagnosticCause(pluginsystem.Failure("credentials_unreadable", pluginsystem.OperationLogin), "credentials_unreadable")
+		safe := pluginsystem.WithDiagnosticCause(err, "config_rejected")
+		setPluginInstanceStatusForError(app, instance, safe)
+		return nil, safe
+	}
+
+	auth, err := decryptedActiveInstanceAuth(plugin, instance)
+	if err != nil {
+		safe := pluginAuthFailure(err, pluginsystem.OperationLogin)
 		setPluginInstanceStatusForError(app, instance, safe)
 		return nil, safe
 	}
@@ -162,7 +172,10 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 		setPluginInstanceStatusForError(app, instance, err)
 		return nil, err
 	}
-	config := effectivePluginConfig(app, plugin.Manifest.ID, instance)
+	activeAuth, err := pluginsystem.ActiveAuth(plugin.Manifest, auth)
+	if err != nil {
+		return nil, err
+	}
 	pluginConfig := pluginRuntimeConfig(config)
 	hostConfig := pluginHostConfig(config)
 	defaultPublic := userDefaultPublic(app, instance.GetString("user"))
@@ -175,7 +188,7 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 	sessions := &pluginSyncRuntimeSession{
 		runtime: runtime,
 		plugin:  plugin,
-		policy:  pluginInstancePolicy(plugin, config).WithHostAuth(auth),
+		policy:  policy.WithHostAuth(activeAuth),
 	}
 	if err := sessions.open(ctx); err != nil {
 		setPluginInstanceStatusForError(app, instance, err)

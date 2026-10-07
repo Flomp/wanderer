@@ -22,6 +22,34 @@ describe("externalHttpUrl", () => {
 });
 
 describe("plugins_index", () => {
+    it("keeps all contexts without selecting a multi-context manifest by insertion order", async () => {
+        for (const contexts of [
+            { session: { type: "session" }, oauth: { type: "oauth2" } },
+            { oauth: { type: "oauth2" }, session: { type: "session" } },
+        ]) {
+            const items = await plugins_index(async () => new Response(JSON.stringify({ items: [{
+                id: "example", name: "Example", status: "available", capabilities: [],
+                manifest: { auth: { contexts } },
+            }] }), { status: 200 }));
+            expect(items[0].auth.type).toBe("unresolved");
+            expect(items[0].authContext).toBeUndefined();
+            expect(items[0].authContextError).toBe("auth_context_ambiguous");
+            expect(items[0].authContexts).toEqual(contexts);
+        }
+    });
+
+    it("preserves a unique session context and its non-secret input fields", async () => {
+        const contexts = { session: { type: "session", fields: ["email", "password"], secretFields: ["password"] } };
+        const items = await plugins_index(async () => new Response(JSON.stringify({ items: [{
+            id: "example", name: "Example", status: "available", capabilities: [],
+            manifest: { auth: { contexts } },
+        }] }), { status: 200 }));
+        expect(items[0].authContext).toBe("session");
+        expect(items[0].authContextError).toBeUndefined();
+        expect(items[0].auth.fields).toEqual(["email", "password"]);
+        expect(items[0].auth.secretFields).toEqual(["password"]);
+    });
+
     it("maps and sanitizes optional plugin metadata", async () => {
         const plugin: Record<string, any> = {
             id: "example",

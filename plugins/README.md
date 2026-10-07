@@ -80,11 +80,9 @@ flowchart TD
   Discover --> LoadPlugin
   LoadPlugin --> Instance
   Instance --> Actor
-  Instance --> Auth
-  Instance --> Config
-  Actor --> Session
+  Actor --> Config
+  Config --> Auth
   Auth --> Session
-  Config --> Session
   Session --> ListExport
   ListExport --> Summaries
   Summaries --> Dedupe
