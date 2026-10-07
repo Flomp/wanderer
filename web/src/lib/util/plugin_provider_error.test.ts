@@ -44,8 +44,11 @@ describe("safe plugin error display", () => {
     it.each([
         ["Failed to read trail GPX.", "error-sending-trail"],
         ["Failed to save plugin connection.", "error-starting-oauth"],
+        ["Failed to save plugin connection.", "error-completing-oauth"],
     ])("keeps the action fallback for local host failure: %s", (message, key) => {
-        const fallback = en[key as keyof typeof en];
+        expect(typeof en[key as keyof typeof en]).toBe("string");
+        expect(typeof de[key as keyof typeof de]).toBe("string");
+        const fallback = en[key as keyof typeof en] as string;
         const body = { status: 400, message, data: {} };
         for (const detail of [body, { detail: body }, JSON.stringify(body)]) {
             expect(translatePluginAPIError(new APIError(400, message, detail), fallback)).toBe(fallback);

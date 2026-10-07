@@ -28,7 +28,7 @@
             await plugin_oauth_callback({ instanceId, code, state });
             await goto("/settings/plugins");
         } catch (e) {
-            error = translatePluginAPIError(e, $_("plugin-error-internal"));
+            error = translatePluginAPIError(e, $_("error-completing-oauth"));
         }
     });
 </script>

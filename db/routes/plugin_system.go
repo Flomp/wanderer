@@ -70,10 +70,7 @@ func pluginCapability(plugin pluginsystem.LocalPlugin, name string, version stri
 			return capability, nil
 		}
 	}
-	return pluginsystem.CapabilityManifest{}, apis.NewBadRequestError("plugin capability is not available", map[string]string{
-		"name":    name,
-		"version": version,
-	})
+	return pluginsystem.CapabilityManifest{}, apis.NewBadRequestError("plugin capability is not available", nil)
 }
 
 // localPluginCapability resolves an installed plugin and verifies that it

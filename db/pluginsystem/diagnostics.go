@@ -88,7 +88,7 @@ func diagnosticDetail(err error, cause string) string {
 
 func safeDiagnosticCause(cause string) string {
 	switch cause {
-	case "database_lookup", "database_save", "auto_merge", "trail_import", "batch_limit", "plugin_cache_sync", "plugin_list",
+	case "database_lookup", "database_save", "auto_merge", "trail_import", "batch_limit", "plugin_cache_sync", "plugin_list", "post_commit_hook",
 		"input_encoding", "file_read_failed", "trail_gpx_missing", "trail_gpx_empty", "actor_missing", "credentials_unreadable", "auth_context_invalid",
 		"config_rejected", "config_shape_invalid", "required_config_missing", "config_value_type_invalid", "config_option_invalid",
 		"connector_resolution_failed", "tls_mode_unsupported", "tls_custom_not_allowed", "tls_ca_invalid", "storage_origin_invalid",

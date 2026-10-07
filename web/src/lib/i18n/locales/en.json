@@ -216,6 +216,7 @@
   "error-saving-trail": "Error saving trail",
   "error-setting-up-plugin": "Error setting up {provider} plugin",
   "error-starting-oauth": "Error starting OAuth connection",
+  "error-completing-oauth": "Could not complete the connection. Please connect again.",
   "error-updating-avatar": "The avatar could not be updated. Please try again.",
   "error-updating-avatar-forbidden": "You do not have permission to update this avatar.",
   "error-updating-avatar-network": "The upload could not be completed. Check your connection and try again.",
