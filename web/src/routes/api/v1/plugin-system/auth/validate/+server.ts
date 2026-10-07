@@ -33,6 +33,8 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *                 type: object
  *                 additionalProperties:
  *                   type: string
+ *                   nullable: true
+ *                 description: Draft credential patch. Empty secrets preserve stored values; null removes a secret for this validation.
  *               config:
  *                 type: object
  *                 description: Unsaved instance config draft, merged with installed defaults and stored overrides.

@@ -32,7 +32,7 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *               activate_on_success:
  *                 type: boolean
  *                 default: false
- *                 description: Request activation after successful authorization; later explicit enable/disable overrides it.
+ *                 description: True requests activation after successful authorization; false preserves activation. Later explicit enable/disable overrides the request.
  *               redirectUri:
  *                 type: string
  *                 format: uri

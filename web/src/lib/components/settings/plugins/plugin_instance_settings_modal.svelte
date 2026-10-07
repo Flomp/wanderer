@@ -76,6 +76,7 @@
     let isConnected = $derived(hasPluginConnectionMaterial(plugin, draftInstance
         ? { ...draftInstance, auth_context: authContext } : undefined));
     let isSaving = $state(false);
+    let activateAfterConnect = $state(true);
     let plugin_id = $derived(plugin.id);
     let configSchema = $derived(plugin.configSchema ?? []);
     let visibleConfigSchema = $derived(configSchema.filter((field) => !field.hidden));
@@ -404,6 +405,7 @@
     export function openModal() {
         openingInstance = instance ? JSON.parse(JSON.stringify(instance)) : undefined;
         snapshotTaken = true;
+        activateAfterConnect = !openingInstance || openingInstance.enabled;
         authContext = draftInstance?.auth_context ?? (!draftInstance ? plugin.authContext : "") ?? "";
         clearedAuth = {};
         auth = initialAuth();
@@ -563,6 +565,7 @@
 
     async function startOAuth() {
         const candidate = pluginInstanceFromForm();
+        const activateOnSuccess = activateAfterConnect;
         const connectionChanges = authChanged();
         const repairUnreadableGrant = draftInstance?.last_error?.code === "credentials_unreadable" &&
             authContext === draftInstance.auth_context && isConnected;
@@ -583,7 +586,7 @@
             const redirectUri = `${window.location.origin}/settings/plugins/oauth/callback`;
             const result = await plugin_oauth_start({
                 pluginId: plugin.id, instanceId, authContext: resolvedAuth.name, redirectUri,
-                expected_connection_generation: expectedGeneration, activate_on_success: true,
+                expected_connection_generation: expectedGeneration, activate_on_success: activateOnSuccess,
             });
             sessionStorage.setItem(`wanderer_plugin_oauth_${result.state}`, result.instanceId);
             window.location.href = result.url;
@@ -648,6 +651,10 @@
             {/each}
 
             {#if isOAuthPlugin}
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="activate-after-connect" bind:checked={activateAfterConnect} disabled={isSaving} />
+                    {$_("plugin-oauth-activate-after-connect")}
+                </label>
                 <p class="text-xs text-gray-500 max-w-lg">
                     {#if isConnected}
                         {$_("plugin-oauth-material-present-hint")}

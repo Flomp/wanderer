@@ -74,6 +74,8 @@ export async function GET(event: RequestEvent) {
  *                 type: object
  *                 additionalProperties:
  *                   type: string
+ *                   nullable: true
+ *                 description: Editable credentials only. Empty secrets preserve stored material; null removes a secret.
  *               config:
  *                 type: object
  *                 additionalProperties: true
@@ -86,6 +88,8 @@ export async function GET(event: RequestEvent) {
  *         description: Bad Request
  *       401:
  *         description: Unauthorized
+ *       409:
+ *         description: An instance already exists (data.operation.code is plugin_instance_exists).
  *       500:
  *         description: Internal Server Error
  */

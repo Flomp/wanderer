@@ -70,6 +70,8 @@ export async function GET(event: RequestEvent) {
  *                 type: object
  *                 additionalProperties:
  *                   type: string
+ *                   nullable: true
+ *                 description: Editable credentials only. Empty secrets preserve stored material; null removes a secret.
  *               config:
  *                 type: object
  *                 additionalProperties: true
@@ -87,6 +89,8 @@ export async function GET(event: RequestEvent) {
  *         description: Unauthorized
  *       404:
  *         description: Not Found
+ *       409:
+ *         description: Connection conflict (data.operation.code is plugin_connection_conflict).
  *       500:
  *         description: Internal Server Error
  */

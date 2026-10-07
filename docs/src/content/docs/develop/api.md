@@ -38,7 +38,9 @@ curl --location --request PUT 'http://localhost:3000/api/v1/trail/upload' \
 ## Plugin connections
 
 Create and settings writes to PocketBase's `plugin_instances` collection now
-return **403**, including superuser and batch REST writes. Use the host service:
+return **403**, including superuser REST writes. A rejected batch returns an
+outer **400** with the failing collection operation's **403** in its nested
+error response. Use the host service:
 `POST /plugins/instances` and `PATCH /plugins/instances/{id}/settings` on the
 PocketBase backend. The Web API retains `PUT /api/v1/plugin-instance` and
 `POST /api/v1/plugin-instance/{id}` and forwards these requests to the host.
@@ -91,9 +93,14 @@ changes and a transition from disabled to enabled. Credential-only repair,
 unchanged config and category-remap dismissal do not trigger that full check.
 Session validation always checks effective configuration and accepts an optional
 unsaved `config` draft. Existing-instance validation, OAuth start and revoke also
-require `expected_connection_generation`. OAuth start accepts
-`activate_on_success: true` to enable the plugin after successful authorization;
-a later explicit enable/disable action overrides that activation request.
+require `expected_connection_generation`. OAuth start accepts the boolean
+`activate_on_success` (default `false`). A `true` value enables the plugin after successful authorization;
+a `false` value preserves its activation state. The Web dialog sends the visible
+**Activate after connecting** option's value, initially checked for a new instance
+or an instance that was active when the dialog opened, and unchecked for an
+existing disabled or disconnected instance. A repair retains that initial choice
+when clearing a grant disables the instance. A later explicit enable/disable
+action overrides that activation request.
 
 Conflict responses retain the PocketBase envelope:
 

@@ -49,10 +49,10 @@ Before integrating Strava with <span class="-tracking-[0.075em]">wanderer</span>
 
 ![wanderer Strava Plugin](../../../assets/guides/wanderer_integration_strava.png)
 
-6. Click **Save & connect**.
+6. Choose **Activate after connecting**, then click **Save & connect**. The option is checked for a new connection.
 7. You will be redirected to Strava's authorization page. Keep all checkboxes selected and click **Authorize**.
 8. You will then be redirected back to <span class="-tracking-[0.075em]">wanderer</span>.
-9. Successful authorization activates the plugin. A later explicit disable action keeps it disabled.
+9. Successful authorization saves the credentials and activates the plugin when the option was checked. A later explicit enable/disable action overrides that activation request.
 
 If you later change the Client ID or Client Secret, reconnect the plugin. Other
 settings can be saved without repeating the OAuth flow.
@@ -90,8 +90,13 @@ currently running. Saved authorization does not guarantee that the provider
 still accepts it. Temporary provider errors and disabling the plugin preserve
 that saved material.
 
-For OAuth plugins, **Save and reconnect** starts a new authorization and requests
-activation after it succeeds. **Save** changes settings or client credentials
+For OAuth plugins, **Save and reconnect** starts a new authorization. The visible
+**Activate after connecting** option requests activation after it succeeds. It
+starts checked for a new instance or one that was active when the dialog opened,
+including a repair that clears its unreadable grant first. It starts unchecked
+for an existing disabled or disconnected instance. With the option unchecked,
+authorization saves the credentials and preserves the activation state.
+**Save** changes settings or client credentials
 without starting authorization. **Disconnect** clears the saved grant and
 disables the plugin while retaining its authentication method and client inputs.
 If saved credentials cannot be read after an encryption-key change, re-enter
