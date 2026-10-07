@@ -220,10 +220,11 @@ func (m *Manager) SyncInstalledPlugins(ctx context.Context) error {
 }
 
 type pluginCacheEntry struct {
-	record *core.Record
-	values map[string]any
-	remove bool
-	issue  *LocalPluginIssue
+	record       *core.Record
+	values       map[string]any
+	remove       bool
+	issue        *LocalPluginIssue
+	diagnosticID string
 }
 
 type pluginCachePlan []*pluginCacheEntry
@@ -261,6 +262,14 @@ func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalP
 		return nil, err
 	}
 	paths := activePluginPaths(plugins, issues)
+	brokenPaths := map[string]bool{}
+	healthyIDs := map[string]bool{}
+	for _, plugin := range plugins {
+		healthyIDs[plugin.Manifest.ID] = true
+	}
+	for _, issue := range issues {
+		brokenPaths[filepath.Clean(issue.Dir)] = true
+	}
 	plan := make(pluginCachePlan, 0, len(records)+len(plugins)+len(issues))
 	byID, byPath := map[string]*pluginCacheEntry{}, map[string]*pluginCacheEntry{}
 	for _, record := range records {
@@ -279,6 +288,23 @@ func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalP
 		byID[id], byPath[filepath.Clean(path)] = entry, entry
 		return entry
 	}
+	issueID := func(issue LocalPluginIssue, owner *pluginCacheEntry, collision bool) string {
+		id := pluginIssueRecordID(issue)
+		if collision || healthyIDs[id] || byID[id] != nil && byID[id] != owner {
+			id = collisionPluginIssueID(issue)
+		}
+		base := id
+		for suffix := 1; healthyIDs[id] || byID[id] != nil && byID[id] != owner; suffix++ {
+			ending := fmt.Sprintf("-%d", suffix)
+			prefix := base
+			if len(prefix)+len(ending) > 128 {
+				prefix = prefix[:128-len(ending)]
+			}
+			id = strings.TrimRight(prefix, "-_") + ending
+		}
+		return id
+	}
+	claimed := map[*pluginCacheEntry]bool{}
 	// Valid manifest identities get priority. An unrelated broken directory
 	// must never claim their cache row through its directory name.
 	for _, plugin := range plugins {
@@ -288,37 +314,53 @@ func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalP
 		path := filepath.Clean(plugin.Dir)
 		entry := byID[plugin.Manifest.ID]
 		pathEntry := byPath[path]
-		if entry != nil && entry != pathEntry && entry.record.GetString("path") != plugin.Dir && entry.record.GetString("status") == "error" {
+		var inheritedConfig map[string]any
+		if entry != nil && entry != pathEntry && filepath.Clean(entry.record.GetString("path")) != path && brokenPaths[filepath.Clean(entry.record.GetString("path"))] {
 			var cached Manifest
-			if entry.record.UnmarshalJSONField("manifest", &cached) != nil || ValidateManifest(cached) != nil || cached.ID != plugin.Manifest.ID {
-				// Keep a never-validated failure, but move its synthetic ID aside.
-				issue := LocalPluginIssue{ID: entry.record.GetString("plugin_id"), Dir: entry.record.GetString("path")}
-				newID := collisionPluginIssueID(issue)
-				entry.values["plugin_id"] = newID
-				delete(byID, plugin.Manifest.ID)
-				byID[newID] = entry
-				entry = nil
+			if entry.record.UnmarshalJSONField("manifest", &cached) == nil && ValidateManifest(cached) == nil && cached.ID == plugin.Manifest.ID {
+				inheritedConfig = JSONMapFromRecord(entry.record, "config")
 			}
+			// A failed directory remains its own cache entry, including when it
+			// once provided this identity. It cannot overwrite the healthy row.
+			issue := LocalPluginIssue{ID: filepath.Base(entry.record.GetString("path")), Dir: entry.record.GetString("path")}
+			newID := issueID(issue, entry, true)
+			entry.values["plugin_id"] = newID
+			entry.diagnosticID = newID
+			delete(byID, plugin.Manifest.ID)
+			byID[newID] = entry
+			entry = nil
 		}
 		if entry == nil {
-			entry = pathEntry
+			// A path may still refer to a row already moved by an earlier
+			// identity, or reserved for a healthy identity processed later.
+			// Neither may be repurposed for this newly discovered identity.
+			if pathEntry != nil && !claimed[pathEntry] && !healthyIDs[pathEntry.record.GetString("plugin_id")] {
+				entry = pathEntry
+			}
 		}
 		if entry == nil {
 			entry = newEntry(plugin.Manifest.ID, plugin.Dir)
 		}
-		if pathEntry != nil && pathEntry != entry {
+		claimed[entry] = true
+		if pathEntry != nil && pathEntry != entry && !claimed[pathEntry] && !healthyIDs[pathEntry.record.GetString("plugin_id")] {
+			// Another healthy identity may move to this row's former path later
+			// in the same discovery. Keep its record/config for that relocation.
 			pathEntry.remove = true
 		}
 		manifest, err := marshalManifest(plugin.Manifest)
 		if err != nil {
 			return nil, err
 		}
+		config := JSONMapFromRecord(entry.record, "config")
+		if len(config) == 0 && inheritedConfig != nil {
+			config = inheritedConfig
+		}
 		entry.values = map[string]any{
 			"plugin_id": plugin.Manifest.ID, "name": plugin.Manifest.Name,
 			"type": plugin.Manifest.Type, "version": plugin.Manifest.Version,
 			"runtime": plugin.Manifest.Runtime.Type, "path": plugin.Dir,
 			"status": "available", "error": "", "manifest": manifest,
-			"config": mergeDefaultConfig(defaultConfig(plugin.Manifest), JSONMapFromRecord(entry.record, "config")),
+			"config": mergeDefaultConfig(defaultConfig(plugin.Manifest), config),
 		}
 		byID[plugin.Manifest.ID], byPath[path] = entry, entry
 	}
@@ -328,15 +370,20 @@ func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalP
 		}
 		entry := byPath[filepath.Clean(issue.Dir)]
 		if entry == nil {
-			id := pluginIssueRecordID(issue)
-			if byID[id] != nil {
-				id = collisionPluginIssueID(issue)
-			}
+			id := issueID(issue, nil, false)
 			entry = newEntry(id, issue.Dir)
+			if id != pluginIssueRecordID(issue) {
+				entry.diagnosticID = id
+			}
 		}
 		id := entry.record.GetString("plugin_id")
 		if changedID, ok := entry.values["plugin_id"].(string); ok {
 			id = changedID
+		}
+		// Reconstruct the shadow label after reloading a minimal error manifest,
+		// so a changed failure cause still belongs to this diagnostic entry.
+		if id == issueID(issue, entry, true) {
+			entry.diagnosticID = id
 		}
 		entry.values = map[string]any{
 			"plugin_id": id, "name": issue.Name, "type": PluginTypeTrails,
@@ -348,6 +395,9 @@ func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalP
 		// explicit error status still prevents this manifest from executing.
 		var cached Manifest
 		if entry.record.UnmarshalJSONField("manifest", &cached) == nil && ValidateManifest(cached) == nil {
+			if cached.ID != id {
+				entry.diagnosticID = id
+			}
 			for _, key := range []string{"name", "type", "version", "runtime", "manifest"} {
 				entry.values[key] = entry.record.Get(key)
 			}
@@ -371,13 +421,40 @@ func (m *Manager) applyInstalledPluginCache(ctx context.Context, plan pluginCach
 			return err
 		}
 	}
-	// Synthetic IDs must be freed before a valid bundle claims the same ID.
+	// Free every changed identity before assigning final IDs. Dependency
+	// chains and swaps must not depend on PocketBase record-ID order.
+	occupied := map[string]bool{}
+	for _, entry := range plan {
+		occupied[entry.record.GetString("plugin_id")] = true
+		if target, ok := entry.values["plugin_id"].(string); ok {
+			occupied[target] = true
+		}
+	}
+	var renamed []*pluginCacheEntry
 	for _, entry := range plan {
 		if !entry.remove && !entry.record.IsNew() && entry.values["plugin_id"] != nil && entry.values["plugin_id"] != entry.record.GetString("plugin_id") {
-			entry.record.Set("plugin_id", entry.values["plugin_id"])
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			var temporary string
+			for suffix := 0; ; suffix++ {
+				temporary = fmt.Sprintf("cache-transition-%s-%d", entry.record.Id, suffix)
+				if !occupied[temporary] {
+					occupied[temporary] = true
+					break
+				}
+			}
+			entry.record.Set("plugin_id", temporary)
 			if err := m.App.Save(entry.record); err != nil {
 				return err
 			}
+			renamed = append(renamed, entry)
+		}
+	}
+	for _, entry := range renamed {
+		entry.record.Set("plugin_id", entry.values["plugin_id"])
+		if err := m.App.Save(entry.record); err != nil {
+			return err
 		}
 	}
 	for _, entry := range plan {
@@ -391,8 +468,8 @@ func (m *Manager) applyInstalledPluginCache(ctx context.Context, plan pluginCach
 		diagnosticID := ""
 		if changedIssue {
 			diagnosticID = pluginSetupDiagnosticID(entry.record, *entry.issue)
-			if id, ok := entry.values["plugin_id"].(string); ok && id == collisionPluginIssueID(*entry.issue) {
-				diagnosticID = id
+			if entry.diagnosticID != "" {
+				diagnosticID = entry.diagnosticID
 			}
 		}
 		for key, value := range entry.values {

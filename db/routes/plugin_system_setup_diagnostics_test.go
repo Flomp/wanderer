@@ -25,6 +25,164 @@ const setupDiagnosticPath = "/api/test/plugins"
 const setupURLSecret = "manifest-url-secret-sentinel"
 const setupPathSecret = "plugin-parent-path-secret-sentinel"
 
+func TestPluginSetupDiagnosticsHealthyIdentityRenameChainKeepsBothRecords(t *testing.T) {
+	for _, newIdentityFirst := range []bool{false, true} {
+		t.Run(map[bool]string{false: "existing identity discovered first", true: "new identity discovered first"}[newIdentityFirst], func(t *testing.T) {
+			f := newSetupDiagnosticFixture(t)
+			f.manifest.ID = "identity-first"
+			firstPath := f.bundle(t, "a-directory", "")
+			f.manifest.ID = "identity-second"
+			secondPath := f.bundle(t, "b-directory", "")
+			f.request(t, http.StatusOK)
+			retainedID, retainedPath, newPath := "identity-second", firstPath, secondPath
+			if newIdentityFirst {
+				retainedID, retainedPath, newPath = "identity-first", secondPath, firstPath
+			}
+			retained, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", retainedID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			retained.Set("config", map[string]any{"plugin": map[string]any{"admin_value": "retained"}})
+			if err := f.app.Save(retained); err != nil {
+				t.Fatal(err)
+			}
+			f.manifest.ID = retainedID
+			f.bundle(t, filepath.Base(retainedPath), "")
+			f.manifest.ID = "identity-third"
+			f.bundle(t, filepath.Base(newPath), "")
+			f.request(t, http.StatusOK)
+			if count, err := f.app.CountRecords("installed_plugins"); err != nil || count != 2 {
+				t.Fatalf("discovery lost an identity in rename chain: %d/%v", count, err)
+			}
+			fresh, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", retainedID)
+			if err != nil || fresh.Id != retained.Id || fresh.GetString("path") != retainedPath {
+				t.Fatalf("retained identity claimed by new plugin: %v/%v", fresh, err)
+			}
+			config := pluginsystem.JSONMapFromRecord(fresh, "config")
+			if plugin, ok := config["plugin"].(map[string]any); !ok || plugin["admin_value"] != "retained" {
+				t.Fatalf("retained identity lost its administrator config: %#v", config)
+			}
+			third, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", "identity-third")
+			if err != nil || third.Id == retained.Id || third.GetString("path") != newPath || third.GetString("status") != "available" {
+				t.Fatalf("new identity shares or loses the retained row: %v/%v", third, err)
+			}
+			f.request(t, http.StatusOK)
+			if count, err := f.app.CountRecords("installed_plugins"); err != nil || count != 2 {
+				t.Fatalf("repeat discovery changed chain result: %d/%v", count, err)
+			}
+			f.warnings(t, 0)
+		})
+	}
+}
+
+func TestPluginSetupDiagnosticsHealthyIdentitySwapKeepsBothCacheRecords(t *testing.T) {
+	f := newSetupDiagnosticFixture(t)
+	f.manifest.ID = "identity-first"
+	firstPath := f.bundle(t, "first-directory", "")
+	f.manifest.ID = "identity-second"
+	secondPath := f.bundle(t, "second-directory", "")
+	f.request(t, http.StatusOK)
+	before := map[string]string{}
+	for _, id := range []string{"identity-first", "identity-second"} {
+		row, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[id] = row.Id
+		row.Set("config", map[string]any{"plugin": map[string]any{"admin_value": id}})
+		if err := f.app.Save(row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.manifest.ID = "identity-second"
+	f.bundle(t, "first-directory", "")
+	f.manifest.ID = "identity-first"
+	f.bundle(t, "second-directory", "")
+	f.request(t, http.StatusOK)
+	for id, path := range map[string]string{"identity-first": secondPath, "identity-second": firstPath} {
+		row, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", id)
+		if err != nil {
+			t.Fatalf("healthy identity disappeared during relocation: %s/%v", id, err)
+		}
+		if row.Id != before[id] || row.GetString("path") != path || row.GetString("status") != "available" {
+			t.Fatalf("identity relocation lost record/path: %#v", row.FieldsData())
+		}
+		config := pluginsystem.JSONMapFromRecord(row, "config")
+		if plugin, ok := config["plugin"].(map[string]any); !ok || plugin["admin_value"] != id {
+			t.Fatalf("identity config moved to wrong plugin: %#v", config)
+		}
+	}
+	f.request(t, http.StatusOK)
+	if count, err := f.app.CountRecords("installed_plugins"); err != nil || count != 2 {
+		t.Fatalf("repeat discovery changed cache cardinality: %d/%v", count, err)
+	}
+	f.warnings(t, 0)
+}
+
+func TestPluginSetupDiagnosticsBrokenFormerIdentityCannotHideHealthyBundle(t *testing.T) {
+	for _, discoverFailureFirst := range []bool{false, true} {
+		t.Run(map[bool]string{false: "first broken discovery", true: "previously cached failure"}[discoverFailureFirst], func(t *testing.T) {
+			f := newSetupDiagnosticFixture(t)
+			oldPath := f.bundle(t, "former-directory", "")
+			f.request(t, http.StatusOK)
+			old, err := f.app.FindFirstRecordByData("installed_plugins", "path", oldPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			old.Set("config", map[string]any{"plugin": map[string]any{"admin_value": "keep"}})
+			if err := f.app.Save(old); err != nil {
+				t.Fatal(err)
+			}
+			f.bundle(t, "former-directory", "https://provider.example/%zz?token="+setupURLSecret)
+			if discoverFailureFirst {
+				f.request(t, http.StatusOK)
+			}
+			healthyPath := f.bundle(t, "healthy-directory", "")
+			f.request(t, http.StatusOK)
+			f.request(t, http.StatusOK)
+			rows, err := f.app.FindAllRecords("installed_plugins")
+			if err != nil || len(rows) != 2 {
+				t.Fatalf("discovery cache rows=%v, error=%v", rows, err)
+			}
+			healthy, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", f.manifest.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if healthy.GetString("path") != healthyPath || healthy.GetString("status") != "available" {
+				t.Fatalf("healthy identity claimed by broken directory: %#v", healthy.FieldsData())
+			}
+			config := pluginsystem.JSONMapFromRecord(healthy, "config")
+			if plugin, ok := config["plugin"].(map[string]any); !ok || plugin["admin_value"] != "keep" {
+				t.Fatalf("administrator config lost: %#v", config)
+			}
+			broken, err := f.app.FindFirstRecordByData("installed_plugins", "path", oldPath)
+			if err != nil || broken.GetString("status") != "error" || broken.GetString("plugin_id") == f.manifest.ID {
+				t.Fatalf("broken directory was not kept separate: %v/%v", broken, err)
+			}
+			warnings := f.warnings(t, 1)
+			if !discoverFailureFirst && len(warnings) == 1 && warnings[0].Data["plugin"] == f.manifest.ID {
+				t.Fatal("broken directory warning blamed the healthy identity")
+			}
+			response := f.get()
+			var public struct {
+				Items []pluginsystem.PluginInfo `json:"items"`
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &public); err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, item := range public.Items {
+				if item.ID == f.manifest.ID && item.Status == "available" {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("healthy plugin hidden from API: %s", response.Body.String())
+			}
+		})
+	}
+}
+
 type setupDiagnosticFixture struct {
 	app        *pbtests.TestApp
 	dir, token string
@@ -506,6 +664,14 @@ func TestPluginSetupDiagnosticsDirectoryCollisionDoesNotClaimHealthyPlugin(t *te
 	}
 	if _, err := pluginsystem.LoadInstalledPlugin(f.app, f.dir, f.manifest.ID); err != nil {
 		t.Fatal("healthy bundle unavailable", err)
+	}
+	f.bundle(t, f.manifest.ID, "https://provider.example/%zz?token="+setupURLSecret+"-changed")
+	f.request(t, http.StatusOK)
+	warnings = f.warnings(t, 2)
+	for _, warning := range warnings {
+		if warning.Data["plugin"] != broken.GetString("plugin_id") {
+			t.Fatalf("changed failure cause blamed healthy identity: %#v", warning.Data)
+		}
 	}
 	if err := os.RemoveAll(brokenDir); err != nil {
 		t.Fatal(err)
