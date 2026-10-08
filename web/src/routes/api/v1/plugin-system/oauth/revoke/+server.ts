@@ -38,6 +38,9 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *                 connection_generation:
  *                   type: string
  *                   description: The revision committed by this revoke; use it to guard a following authorization start.
+ *                 updated:
+ *                   type: string
+ *                   description: The timestamp committed by this revoke, for identifying its own repair result.
  *       400:
  *         description: Bad Request
  *       401:

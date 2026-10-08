@@ -1,5 +1,6 @@
 import type { PluginInstance, PluginInstanceDraft, PluginInstanceSettings } from "$lib/models/plugin_instance";
 import { APIError } from "$lib/util/api_util";
+import { clearPluginOAuthRepairActivation } from "$lib/util/plugin_oauth_activation";
 import type { ListResult } from "pocketbase";
 import { writable, type Writable } from "svelte/store";
 
@@ -13,11 +14,12 @@ export function rememberPluginInstance(instance: PluginInstance) {
 export async function plugin_instances_show(
     id: string,
     f: typeof fetch = fetch,
+    remember = true,
 ) {
     const r = await f(`/api/v1/plugin-instance/${id}`);
     const response = await r.json();
     if (!r.ok) throw new APIError(r.status, response.message, response);
-    return rememberPluginInstance(response as PluginInstance);
+    return remember ? rememberPluginInstance(response as PluginInstance) : response as PluginInstance;
 }
 
 function settingsBody(instance: PluginInstanceSettings): PluginInstanceSettings {
@@ -83,6 +85,7 @@ export async function plugin_instances_update(
         throw new APIError(r.status, response.message, response);
     }
 
+    if (instance.enabled !== undefined) clearPluginOAuthRepairActivation(instance.id);
     return rememberPluginInstance((await r.json()) as PluginInstance);
 }
 
@@ -107,7 +110,7 @@ export async function plugin_oauth_start(
         throw new APIError(r.status, response.message, response);
     }
 
-    return (await r.json()) as { url: string; state: string; instanceId: string };
+    return (await r.json()) as { url: string; state: string; instanceId: string; connection_generation: string; updated: string };
 }
 
 export async function plugin_auth_validate(
@@ -148,6 +151,7 @@ export async function plugin_oauth_callback(
         throw new APIError(r.status, response.message, response);
     }
 
+    clearPluginOAuthRepairActivation(data.instanceId);
     return (await r.json()) as { ok: boolean };
 }
 
@@ -166,7 +170,8 @@ export async function plugin_oauth_revoke(
         throw new APIError(r.status, response.message, response);
     }
 
-    const response = (await r.json()) as { ok: boolean; connection_generation: string };
+    const response = (await r.json()) as { ok: boolean; connection_generation: string; updated: string };
+    clearPluginOAuthRepairActivation(instanceId);
     await plugin_instances_show(instanceId, f);
     return response;
 }

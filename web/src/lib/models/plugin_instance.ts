@@ -6,6 +6,7 @@ export interface PluginInstance {
     auth?: Record<string, string>;
     auth_context?: string;
     connection_generation?: string;
+    updated?: string;
     busy?: boolean;
     config?: Record<string, unknown>;
     state?: Record<string, unknown>;

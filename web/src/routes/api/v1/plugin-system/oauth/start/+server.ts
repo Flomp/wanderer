@@ -51,6 +51,12 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *                   type: string
  *                 instanceId:
  *                   type: string
+ *                 connection_generation:
+ *                   type: string
+ *                   description: The generation of this flow's own commit, unchanged by start.
+ *                 updated:
+ *                   type: string
+ *                   description: The timestamp of this flow's own commit; later lookups may already describe another write.
  *       400:
  *         description: Bad Request
  *       401:

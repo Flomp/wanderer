@@ -20,6 +20,7 @@ const fixtureSource = `
             config: { host: { connectors: { service: { baseURL: 'https://saved.example' } } },
                 plugin: { selector: 'saved' } },
         };
+        window.fixturePluginInstance = () => instance;
         function save(candidate) { window.modalCalls.push(JSON.parse(JSON.stringify(candidate))); }
     </script>
     <button data-testid="open-settings" onclick={() => settings.openModal()}>Settings</button>
@@ -27,10 +28,10 @@ const fixtureSource = `
 `;
 
 const liveFixtureSource = fixtureSource.replace('const instance = {', 'let instance = $state({')
-    .replace('        };\n        function save(candidate)', `        });
+    .replace('        };\n        window.fixturePluginInstance', `        });
         window.advanceConnection = () => { instance = { ...instance, connection_generation: 'new-generation',
             auth: { email: 'new-connection@example.org', password: '' } }; };
-        function save(candidate)`);
+        window.fixturePluginInstance`);
 
 for (const dev of [true, false]) {
     test(`saves the exact draft validated before a pending provider call (${dev ? 'development' : 'production'})`, async ({ page }) => {

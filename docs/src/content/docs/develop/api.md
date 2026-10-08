@@ -88,6 +88,13 @@ context uses that same input name. Select the API-key context in the guarded
 settings patch before replacing that shared value; returning to OAuth then
 requires fresh authorization.
 
+A settings change that leaves new active credentials incomplete automatically
+disables the instance. This applies to OAuth, API-key, Bearer and session methods;
+an explicit activation in the same patch is rejected atomically. When connecting
+to another OAuth method, preserve the current selection until callback: save only
+configuration and inactive credential fields, then pass the target `authContext`
+to OAuth start.
+
 The host fully validates configuration on create, actual provider/plugin config
 changes and a transition from disabled to enabled. Credential-only repair,
 unchanged config and category-remap dismissal do not trigger that full check.
@@ -101,6 +108,14 @@ or an instance that was active when the dialog opened, and unchecked for an
 existing disabled or disconnected instance. A repair retains that initial choice
 when clearing a grant disables the instance. A later explicit enable/disable
 action overrides that activation request.
+
+Before opening the dialog, the Web client fetches the current instance. Its own
+repair can retain the activation choice in this browser tab across reopening;
+the choice is pinned to the generation and update timestamp returned by that
+repair and discarded when the fresh record differs. OAuth start returns
+`{url, state, instanceId, connection_generation, updated}`; revoke returns
+`{ok, connection_generation, updated}`. These metadata describe each operation's
+own committed write, even if another writer has already changed the instance.
 
 Conflict responses retain the PocketBase envelope:
 

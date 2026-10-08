@@ -711,6 +711,8 @@
   "plugin-error-instance-exists": "Dieses Plugin ist bereits eingerichtet. Die vorhandenen Einstellungen wurden geladen.",
   "plugin-error-instance-disabled": "Dieses Plugin wurde deaktiviert. Prüfe seine Einstellungen vor dem nächsten Senden.",
   "plugin-auth-context": "Authentifizierungsmethode",
+  "plugin-auth-change-removes-oauth": "Beim Speichern dieser Authentifizierungsmethode wird die gespeicherte Autorisierung entfernt. Gib den API-Schlüssel oder die Zugangsdaten für die neue Methode ein.",
+  "plugin-oauth-save-active-credentials-first": "Diese Client-Zugangsdaten werden mit der aktiven Verbindung geteilt. Speichere sie ausdrücklich, bevor du eine andere Authentifizierungsmethode verbindest.",
   "plugin-clear-credential": "Gespeicherten Wert für {field} löschen",
   "plugin-oauth-material-present-hint": "Eine Autorisierung ist gespeichert. Eine erneute Verbindung ersetzt sie. „Nach dem Verbinden aktivieren“ legt fest, ob eine deaktivierte Instanz anschließend aktiviert wird.",
   "plugin-connection-material-present": "Zugangsdaten gespeichert",

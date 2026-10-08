@@ -711,6 +711,8 @@
   "plugin-error-instance-exists": "This plugin is already configured. Its existing settings have been loaded.",
   "plugin-error-instance-disabled": "This plugin was disabled. Review its settings before sending again.",
   "plugin-auth-context": "Authentication method",
+  "plugin-auth-change-removes-oauth": "Saving this authentication method removes the saved authorization. Enter the API key or credentials for the new method.",
+  "plugin-oauth-save-active-credentials-first": "These client credentials are shared with the active connection. Save them explicitly before connecting with another authentication method.",
   "plugin-clear-credential": "Clear saved {field}",
   "plugin-oauth-material-present-hint": "Authorization is saved. Reconnect to replace it. “Activate after connecting” controls whether a disabled instance is enabled afterwards.",
   "plugin-connection-material-present": "Credentials saved",

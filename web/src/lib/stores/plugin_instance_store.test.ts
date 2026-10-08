@@ -26,12 +26,13 @@ describe("plugin_oauth_revoke", () => {
         const result = await plugin_oauth_revoke("abcdefghijklmn1", "opening-generation", async (url, options) => {
             if (url === "/api/v1/plugin-system/oauth/revoke") {
                 expect(JSON.parse(String(options?.body))).toEqual({ instanceId: "abcdefghijklmn1", expected_connection_generation: "opening-generation" });
-                return new Response(JSON.stringify({ ok: true, connection_generation: "own-revoke-generation" }));
+                return new Response(JSON.stringify({ ok: true, connection_generation: "own-revoke-generation", updated: "own-revoke-commit" }));
             }
             expect(url).toBe("/api/v1/plugin-instance/abcdefghijklmn1");
             return new Response(JSON.stringify({ id: "abcdefghijklmn1", plugin_id: "oauth", connection_generation: "newer-generation" }));
         });
         expect(result.connection_generation).toBe("own-revoke-generation");
+        expect(result.updated).toBe("own-revoke-commit");
         expect(get(pluginInstances).find(item => item.id === "abcdefghijklmn1")?.connection_generation).toBe("newer-generation");
     });
 });

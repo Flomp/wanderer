@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePluginAuthContext, resolveProviderAuth, hasPluginConnectionMaterial, editableAuthFields } from "./plugin_auth_context";
+import { resolvePluginAuthContext, resolveProviderAuth, hasPluginConnectionMaterial, editableAuthFields, pluginAuthDraftInstance } from "./plugin_auth_context";
 import type { PluginProvider } from "$lib/models/plugin_provider";
 
 describe("effective plugin auth context", () => {
@@ -64,6 +64,48 @@ describe("redacted connection material", () => {
         expect(hasPluginConnectionMaterial(plugin, { ...instance, auth: { oauthContext: "key", accessToken: "" } })).toBe(false);
         expect(hasPluginConnectionMaterial(plugin, { ...instance, auth: { accessToken: "" } })).toBe(false);
         expect(hasPluginConnectionMaterial(plugin, { ...instance, auth_context: "key", auth: { accessToken: "" } })).toBe(true);
+    });
+    it("never previews a saved OAuth grant as another method's API key", () => {
+        const preview = pluginAuthDraftInstance(plugin, { ...instance, auth: {
+            accessToken: "", refreshToken: "", oauthContext: "oauth", clientId: "client",
+        } }, "key")!;
+        expect(preview.auth).toEqual({ clientId: "client" });
+        expect(hasPluginConnectionMaterial(plugin, preview)).toBe(false);
+        expect(instance.auth).toEqual({ oauthContext: "oauth", accessToken: "" });
+        const legacy = pluginAuthDraftInstance(plugin, { ...instance, auth: { accessToken: "" } }, "key")!;
+        expect(legacy.auth).toEqual({});
+    });
+    it("does not reuse an unattributed token from a removed method after an OAuth-only manifest update", () => {
+        const updatedPlugin = { ...plugin, authContexts: { oauth: { type: "oauth2" } } };
+        for (const oauthContext of [undefined, ""]) {
+            const removed = { ...instance, auth_context: "removed-api-context", auth: { accessToken: "", ...(oauthContext === undefined ? {} : { oauthContext }) } };
+            const preview = pluginAuthDraftInstance(updatedPlugin, removed, "oauth")!;
+            expect(preview.auth).toEqual({});
+            expect(hasPluginConnectionMaterial(updatedPlugin, preview)).toBe(false);
+            expect(hasPluginConnectionMaterial(updatedPlugin, pluginAuthDraftInstance(updatedPlugin, { ...removed, auth_context: "" }, "oauth"))).toBe(true);
+        }
+        const attributed = pluginAuthDraftInstance(updatedPlugin, { ...instance, auth_context: "removed-api-context",
+            auth: { accessToken: "", oauthContext: "oauth" } }, "oauth");
+        expect(hasPluginConnectionMaterial(updatedPlugin, attributed)).toBe(true);
+    });
+    it("recognizes OAuth grant evidence after its stored context is removed", () => {
+        const cases: Record<string, string>[] = [{ refreshToken: "" }, { oauthContext: "removed-oauth" }, { scope: "" }];
+        for (const evidence of cases) {
+            const removed = { ...instance, auth_context: "removed-oauth", auth: { accessToken: "", ...evidence } };
+            const preview = pluginAuthDraftInstance(plugin, removed, "key")!;
+            expect(preview.auth).toEqual({});
+            expect(hasPluginConnectionMaterial(plugin, preview)).toBe(false);
+        }
+    });
+    it("preserves a shared API key when switching between non-OAuth methods", () => {
+        const apiPlugin = { ...plugin, authContexts: {
+            keyA: { type: "api_key", secretField: "accessToken" },
+            keyB: { type: "api_key", secretField: "accessToken" },
+        } };
+        const apiInstance = { ...instance, auth_context: "keyA", auth: { accessToken: "" } };
+        const preview = pluginAuthDraftInstance(apiPlugin, apiInstance, "keyB")!;
+        expect(preview.auth).toEqual({ accessToken: "" });
+        expect(hasPluginConnectionMaterial(apiPlugin, preview)).toBe(true);
     });
     it("keeps encryption declarations separate from the editable input allowlist", () => {
         expect(editableAuthFields({ type: "oauth2", secretFields: ["oauthState", "accessToken"] })).toEqual(["clientSecret"]);

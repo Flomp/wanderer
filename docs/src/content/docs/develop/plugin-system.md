@@ -913,6 +913,24 @@ is plaintext and encrypted exactly once with the current key. Re-entering the
 same raw value can therefore repair an unreadable credential. Secret declarations
 control encryption; editable fields are constrained by the context's input
 allowlist. OAuth token and flow metadata are never client-editable.
+
+Changing the selected method discards an incompatible OAuth grant, and switching
+from an API key to OAuth clears a shared token input instead of treating it as a
+grant. These clears also replace the token revision. A settings change that
+invalidates the active credentials automatically disables the instance if its
+new method is not ready. Explicit activation with missing credentials is rejected
+atomically. Choosing the sole method for a previously empty selection preserves
+the connection generation and sync state; only a configuration diagnosis bound
+to that empty selection and the current generation is cleared.
+
+When connecting to a different OAuth context, the dialog saves only configuration
+and inactive credential inputs before starting the flow. It keeps the active
+selection and grant until a successful callback. A draft API-key method does not
+display the existing OAuth grant as a saved key. The activation checkbox starts
+from a fresh instance read. The browser remembers its choice during its own
+repair, pinned to the returned generation and update timestamp; a different
+record invalidates that remembered choice. OAuth start and revoke return these
+metadata from their own commit, rather than a later lookup.
 The host additionally recognizes the historical 40-hex plaintext Strava
 `accessToken`, `refreshToken`, and `clientSecret` values imported from older
 wanderer versions. Successful decryption takes precedence over this narrow

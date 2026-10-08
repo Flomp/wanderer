@@ -153,6 +153,9 @@ export async function mountTrailModalFixture(page: Page, bundle: string) {
             capabilities: ['prepare_trail_send.v1'], manifest: { auth: {}, metadata: {} },
         }] };
         else if (path === '/api/v1/plugin-instance') json = { items: [{ plugin_id: 'device', enabled: true }] };
+        else if (path.startsWith('/api/v1/plugin-instance/') && request.method() === 'GET') {
+            json = await page.evaluate(() => (window as any).fixturePluginInstance?.()) ?? {};
+        }
         else if (path === '/api/v1/trail-merge/suggest') {
             const { trailIds } = request.postDataJSON();
             json = { targetTrailId: trailIds[0], candidates: trailIds.map((trailId: string) => ({

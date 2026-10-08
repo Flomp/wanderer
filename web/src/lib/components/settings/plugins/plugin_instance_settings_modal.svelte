@@ -18,7 +18,8 @@
         categoryMappingTargetToPickerValue,
         type CategoryMappingTarget,
     } from "$lib/util/category_util";
-    import { resolveProviderAuth, resolvePluginAuthContext, editableAuthFields, hasPluginConnectionMaterial, pluginSecretFields } from "$lib/util/plugin_auth_context";
+    import { resolveProviderAuth, resolvePluginAuthContext, editableAuthFields, hasPluginConnectionMaterial, hasStoredOAuthGrant, pluginAuthDraftInstance, pluginSecretFields } from "$lib/util/plugin_auth_context";
+    import { pluginOAuthActivationDefault, rememberPluginOAuthRepairActivation, clearPluginOAuthRepairActivation } from "$lib/util/plugin_oauth_activation";
     import { pluginSettingsConfigPatch, hasProviderConfigChanges } from "$lib/util/plugin_settings_patch";
     import { mergePluginConfig } from "$lib/util/plugin_config";
     import { translatePluginAPIError, pluginOperationNeedsReload } from "$lib/util/plugin_error_i18n";
@@ -54,9 +55,12 @@
 
     let modal: Modal;
     let openingInstance: PluginInstance | undefined = $state();
+    let openingPropGeneration: string | undefined = $state();
+    let openingPropId: string | undefined = $state();
     let snapshotTaken = $state(false);
     let draftInstance = $derived(snapshotTaken ? openingInstance : instance);
-    let draftStale = $derived(snapshotTaken && (openingInstance?.id !== instance?.id ||
+    let draftStale = $derived(snapshotTaken && (openingPropId !== instance?.id ||
+        instance?.connection_generation !== openingPropGeneration &&
         openingInstance?.connection_generation !== instance?.connection_generation));
     let authContext = $state(initialAuthContext());
     let clearedAuth: Record<string, boolean> = $state({});
@@ -73,8 +77,9 @@
     let secretFields = $derived(pluginSecretFields(plugin));
     let isOAuthPlugin = $derived(resolvedAuth.auth.type === "oauth2");
     let isSessionPlugin = $derived(resolvedAuth.auth.type === "session");
-    let isConnected = $derived(hasPluginConnectionMaterial(plugin, draftInstance
-        ? { ...draftInstance, auth_context: authContext } : undefined));
+    let draftAuthView = $derived(pluginAuthDraftInstance(plugin, draftInstance, authContext));
+    let removesOAuthGrant = $derived(!isOAuthPlugin && hasStoredOAuthGrant(plugin, draftInstance));
+    let isConnected = $derived(hasPluginConnectionMaterial(plugin, draftAuthView));
     let isSaving = $state(false);
     let activateAfterConnect = $state(true);
     let plugin_id = $derived(plugin.id);
@@ -143,7 +148,7 @@
         return Object.fromEntries(
             fields.map((field) => [
                 field,
-                draftInstance?.auth?.[field] == null ? "" : String(draftInstance.auth[field]),
+                pluginSecretFields(plugin).has(field) || draftInstance?.auth?.[field] == null ? "" : String(draftInstance.auth[field]),
             ]),
         );
     }
@@ -402,10 +407,31 @@
         return false;
     }
 
-    export function openModal() {
-        openingInstance = instance ? JSON.parse(JSON.stringify(instance)) : undefined;
+    function matchesStoredAuthContext(targetContext?: string) {
+        if (!draftInstance) return false;
+        if (draftInstance.auth_context) return targetContext === draftInstance.auth_context;
+        const contexts = Object.keys(plugin.authContexts ?? {});
+        return contexts.length === 1 && targetContext === contexts[0];
+    }
+
+    export async function openModal() {
+        isSaving = true;
+        openingPropId = instance?.id;
+        openingPropGeneration = instance?.connection_generation;
+        let latest = instance;
+        try {
+            if (instance?.id) {
+                latest = await plugin_instances_show(instance.id, fetch, false);
+                if (latest.id !== instance.id || latest.plugin_id !== plugin.id) throw new Error("Invalid plugin instance response");
+            }
+        } catch (error) {
+            show_toast({ text: translatePluginAPIError(error, $_("error-setting-up-plugin", { values: { provider: pluginTitle() } })), icon: "close", type: "error" });
+            isSaving = false;
+            return;
+        }
+        openingInstance = latest ? JSON.parse(JSON.stringify(latest)) : undefined;
         snapshotTaken = true;
-        activateAfterConnect = !openingInstance || openingInstance.enabled;
+        activateAfterConnect = pluginOAuthActivationDefault(openingInstance);
         authContext = draftInstance?.auth_context ?? (!draftInstance ? plugin.authContext : "") ?? "";
         clearedAuth = {};
         auth = initialAuth();
@@ -419,6 +445,7 @@
         categoryMappingRows = initialCategoryMappingRows();
         configErrors = {};
         openingConfig = formConfig();
+        isSaving = false;
         modal.openModal();
     }
 
@@ -513,6 +540,8 @@
 
     async function submit(validate = false) {
         const candidate = pluginInstanceFromForm();
+        const rememberRepairChoice = isOAuthPlugin && (!draftInstance || matchesStoredAuthContext(authContext));
+        const activateOnSuccess = activateAfterConnect;
         let persistenceStarted = false;
         if ((!draftInstance || hasProviderConfigChanges(candidate.config) || validate) && !validateConfig()) return;
         try {
@@ -531,7 +560,8 @@
             }
             delete candidate.mappingChanged;
             persistenceStarted = true;
-            await onsave?.(candidate);
+            const saved = await onsave?.(candidate);
+            rememberOwnRepair(saved, candidate, activateOnSuccess, rememberRepairChoice);
             modal.closeModal();
         } catch (e) {
             await reloadAfterConflict(e);
@@ -551,11 +581,20 @@
         return localizedPluginTitle(plugin, $locale);
     }
 
+    function rememberOwnRepair(saved: PluginInstance | void, candidate: PluginInstanceDraft, activate: boolean, rememberChoice: boolean) {
+        if (!saved || saved.enabled || !rememberChoice) return;
+        if (!draftInstance || candidate.expected_connection_generation === draftInstance.connection_generation &&
+            saved.connection_generation !== draftInstance.connection_generation) {
+            rememberPluginOAuthRepairActivation(saved, activate);
+        }
+    }
+
     async function disconnect() {
         if (!draftInstance?.id || !draftInstance.connection_generation) return;
         isSaving = true;
         try {
             await plugin_oauth_revoke(draftInstance.id, draftInstance.connection_generation);
+            clearPluginOAuthRepairActivation(draftInstance.id);
             modal.closeModal();
         } catch (e) {
             await reloadAfterConflict(e);
@@ -566,14 +605,29 @@
     async function startOAuth() {
         const candidate = pluginInstanceFromForm();
         const activateOnSuccess = activateAfterConnect;
-        const connectionChanges = authChanged();
+        const targetContext = resolvedAuth.name;
+        const switchingContext = !!draftInstance && !matchesStoredAuthContext(targetContext);
+        const rememberRepairChoice = isOAuthPlugin && !switchingContext;
+        let activeFields: string[] = [];
+        try {
+            const active = resolveProviderAuth(plugin, draftInstance).auth;
+            activeFields = [...(active.fields ?? []), ...(active.secretFields ?? []),
+                ...(active.secretField ? [active.secretField] : []), ...(active.type === "oauth2" ? ["clientSecret"] : [])];
+        } catch { /* Explicit selection repair. */ }
+        if (switchingContext && Object.keys(candidate.auth ?? {}).some(field => activeFields.includes(field))) {
+            show_toast({ text: $_("plugin-oauth-save-active-credentials-first"), icon: "close", type: "error" });
+            return;
+        }
+        if (switchingContext) delete candidate.authContext;
+        const connectionChanges = !switchingContext && authChanged();
         const repairUnreadableGrant = draftInstance?.last_error?.code === "credentials_unreadable" &&
-            authContext === draftInstance.auth_context && isConnected;
+            !switchingContext && isConnected;
         if ((!draftInstance || hasProviderConfigChanges(candidate.config)) && !validateConfig()) return;
         isSaving = true;
         try {
             delete candidate.mappingChanged;
             const saved = await onsave?.(candidate);
+            rememberOwnRepair(saved, candidate, activateOnSuccess, rememberRepairChoice);
             const instanceId = saved?.id ?? draftInstance?.id;
             let expectedGeneration = !draftInstance || connectionChanges
                 ? saved?.connection_generation : draftInstance.connection_generation;
@@ -582,12 +636,14 @@
                 const revoked = await plugin_oauth_revoke(instanceId, expectedGeneration);
                 expectedGeneration = revoked.connection_generation;
                 if (!expectedGeneration) throw new Error("Missing revoked connection revision");
+                rememberPluginOAuthRepairActivation({ id: instanceId, ...revoked }, activateOnSuccess);
             }
             const redirectUri = `${window.location.origin}/settings/plugins/oauth/callback`;
             const result = await plugin_oauth_start({
-                pluginId: plugin.id, instanceId, authContext: resolvedAuth.name, redirectUri,
+                pluginId: plugin.id, instanceId, authContext: targetContext, redirectUri,
                 expected_connection_generation: expectedGeneration, activate_on_success: activateOnSuccess,
             });
+            rememberPluginOAuthRepairActivation({ id: instanceId, ...result }, activateOnSuccess);
             sessionStorage.setItem(`wanderer_plugin_oauth_${result.state}`, result.instanceId);
             window.location.href = result.url;
         } catch (e) {
@@ -628,11 +684,11 @@
             {#if draftInstance?.last_error?.code === "credentials_unreadable"}
                 <p class="text-sm text-red-400">{$_("plugin-error-credentials-unreadable")}</p>
             {/if}
-            {#each authFields as field}
+            {#each authFields as field (field)}
                 <TextField
                     label={authLabel(field)}
                     placeholder={secretFields.has(field)
-                        ? draftInstance?.id
+                        ? Object.hasOwn(draftAuthView?.auth ?? {}, field)
                             ? `(${$_("unchanged")})`
                             : ""
                         : field == "email"
@@ -642,13 +698,17 @@
                     name={field}
                     type={authFieldType(field)}
                 ></TextField>
-                {#if draftInstance && secretFields.has(field) && Object.hasOwn(draftInstance.auth ?? {}, field)}
+                {#if draftInstance && secretFields.has(field) && Object.hasOwn(draftAuthView?.auth ?? {}, field)}
                     <label class="flex items-center gap-2 text-xs text-gray-500">
                         <input name="clear-{field}" type="checkbox" bind:checked={clearedAuth[field]} />
                         {$_("plugin-clear-credential", { values: { field: authLabel(field) } })}
                     </label>
                 {/if}
             {/each}
+
+            {#if removesOAuthGrant}
+                <p class="text-sm text-amber-500">{$_("plugin-auth-change-removes-oauth")}</p>
+            {/if}
 
             {#if isOAuthPlugin}
                 <label class="flex items-center gap-2 text-sm">

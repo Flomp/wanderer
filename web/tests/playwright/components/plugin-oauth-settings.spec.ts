@@ -13,9 +13,10 @@ function source(status: string, unreadable = false, enabled = false) {
         const plugin = { id: 'oauth', name: 'OAuth', type: 'trails', status: 'available',
             auth, authContext: 'oauth', authContexts: { oauth: auth }, hostConfig: { merge: { available: false } } };
         const instance = { id: 'abcdefghijklmn1', plugin_id: 'oauth', user: 'tester', enabled: ${enabled},
-            status: '${status}', auth_context: 'oauth', connection_generation: 'read-generation', busy: true,
+            status: '${status}', auth_context: 'oauth', connection_generation: 'read-generation', updated: '2026-10-08 10:00:00.000Z', busy: true,
             auth: { clientId: 'client', clientSecret: '', accessToken: '', refreshToken: '', oauthContext: 'oauth' },
             last_error: ${unreadable ? "{ code: 'credentials_unreadable' }" : 'undefined'} };
+        window.fixturePluginInstance = () => instance;
         function save(candidate) {
             window.modalCalls.push(JSON.parse(JSON.stringify(candidate)));
             return { ...instance };
@@ -30,6 +31,7 @@ function activationSource(kind: 'new' | 'repair' | 'active' | 'disabled' | 'disc
         id: 'abcdefghijklmn1', plugin_id: 'oauth', user: 'tester', enabled: kind === 'repair' || kind === 'active',
         status: kind === 'repair' || kind === 'active' ? 'configured' : 'disabled', auth_context: 'oauth',
         connection_generation: 'read-generation',
+        updated: '2026-10-08 10:00:00.000Z',
         auth: { clientId: 'client', clientSecret: '', ...(kind === 'disconnected' ? {} : {
             accessToken: '', refreshToken: '', oauthContext: 'oauth',
         }) },
@@ -42,8 +44,9 @@ function activationSource(kind: 'new' | 'repair' | 'active' | 'disabled' | 'disc
         const plugin = { id: 'oauth', name: 'OAuth', type: 'trails', status: 'available',
             auth, authContext: 'oauth', authContexts: { oauth: auth }, hostConfig: { merge: { available: false } } };
         let instance = $state(${initial});
+        window.fixturePluginInstance = () => instance;
         window.fixtureRevokeApplied = () => {
-            instance = { ...instance, enabled: false, connection_generation: 'revoked-generation',
+            instance = { ...instance, enabled: false, connection_generation: 'revoked-generation', updated: '2026-10-08 10:01:00.000Z',
                 auth: { clientId: 'client', clientSecret: '' }, last_error: undefined };
         };
         function save(candidate) {
@@ -77,13 +80,18 @@ for (const dev of [true, false]) {
                 await mountTrailModalFixture(page, bundle);
                 const starts: unknown[] = [];
                 const revokes: unknown[] = [];
+                let reads = 0;
                 await page.route('**/api/v1/plugin-instance/abcdefghijklmn1', async route => {
+                    if (reads++ === 0) {
+                        await route.fulfill({ json: await page.evaluate(() => (window as any).fixturePluginInstance()) });
+                        return;
+                    }
                     await route.fulfill({ json: { id: 'abcdefghijklmn1', plugin_id: 'oauth', enabled: false,
                         auth_context: 'oauth', connection_generation: 'revoked-generation', status: 'disabled', auth: { clientId: 'client', clientSecret: '' } } });
                 });
                 await page.route('**/api/v1/plugin-system/oauth/revoke', async route => {
                     revokes.push(route.request().postDataJSON());
-                    await route.fulfill({ json: { ok: true, connection_generation: 'revoked-generation' } });
+                    await route.fulfill({ json: { ok: true, connection_generation: 'revoked-generation', updated: '2026-10-08 10:01:00.000Z' } });
                 });
                 await page.route('**/api/v1/plugin-system/oauth/start', async route => {
                     starts.push(route.request().postDataJSON());
@@ -130,7 +138,7 @@ for (const dev of [true, false]) {
                     stored.enabled = false;
                     stored.connection_generation = 'revoked-generation';
                     await page.evaluate(() => (window as any).fixtureRevokeApplied());
-                    await route.fulfill({ json: { ok: true, connection_generation: stored.connection_generation } });
+                    await route.fulfill({ json: { ok: true, connection_generation: stored.connection_generation, updated: '2026-10-08 10:01:00.000Z' } });
                 });
                 await page.route('**/api/v1/plugin-system/oauth/start', async route => {
                     starts.push(route.request().postDataJSON());
@@ -193,6 +201,7 @@ for (const dev of [true, false]) {
                         data: { operation: { code: 'plugin_connection_conflict', message: 'safe' } } } });
                 });
                 await page.getByTestId('open').click();
+                await expect(page.locator('dialog[open]')).toBeVisible();
                 await page.evaluate(() => (window as any).advanceConnection());
                 const dialog = page.locator('dialog[open]');
                 await expect(dialog).toContainText('plugin-error-connection-conflict');
@@ -224,6 +233,7 @@ for (const dev of [true, false]) {
                 await route.fulfill({ json: { url: 'http://trail-modals.test/#authorization', state: 'forbidden-flow', instanceId: 'abcdefghijklmn1' } });
             });
             await page.getByTestId('open').click();
+            await expect(page.locator('dialog[open]')).toBeVisible();
             await page.evaluate(() => (window as any).advanceConnection());
             const dialog = page.locator('dialog[open]');
             await expect(dialog).toContainText('plugin-error-connection-conflict');
@@ -241,9 +251,14 @@ for (const dev of [true, false]) {
             const starts: any[] = [];
             await page.route('**/api/v1/plugin-system/oauth/revoke', async route => {
                 expect(route.request().postDataJSON().expected_connection_generation).toBe('read-generation');
-                await route.fulfill({ json: { ok: true, connection_generation: 'own-revoke-generation' } });
+                await route.fulfill({ json: { ok: true, connection_generation: 'own-revoke-generation', updated: '2026-10-08 10:01:00.000Z' } });
             });
+            let reads = 0;
             await page.route('**/api/v1/plugin-instance/abcdefghijklmn1', async route => {
+                if (reads++ === 0) {
+                    await route.fulfill({ json: await page.evaluate(() => (window as any).fixturePluginInstance()) });
+                    return;
+                }
                 await route.fulfill({ json: { id: 'abcdefghijklmn1', plugin_id: 'oauth', enabled: true,
                     auth_context: 'oauth', connection_generation: 'healthy-new-generation', status: 'configured',
                     auth: { clientId: 'other-client', clientSecret: '', accessToken: '', oauthContext: 'oauth' } } });
