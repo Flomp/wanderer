@@ -183,6 +183,53 @@ func TestPluginSetupDiagnosticsBrokenFormerIdentityCannotHideHealthyBundle(t *te
 	}
 }
 
+func TestPluginSetupDiagnosticsRestoreDisplacedValidatedIdentity(t *testing.T) {
+	f := newSetupDiagnosticFixture(t)
+	originalPath := f.bundle(t, "former-directory", "")
+	f.request(t, http.StatusOK)
+	original, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", f.manifest.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original.Set("config", map[string]any{"plugin": map[string]any{"admin_value": "keep"}})
+	if err := f.app.Save(original); err != nil {
+		t.Fatal(err)
+	}
+	f.bundle(t, "former-directory", "https://provider.example/%zz?token="+setupURLSecret)
+	competitorPath := f.bundle(t, "healthy-directory", "")
+	f.request(t, http.StatusOK)
+	displaced, err := f.app.FindRecordById("installed_plugins", original.Id)
+	if err != nil || displaced.GetString("plugin_id") == f.manifest.ID || displaced.GetString("status") != "error" {
+		t.Fatalf("original diagnostic was not displaced: %v/%v", displaced, err)
+	}
+	if err := os.RemoveAll(competitorPath); err != nil {
+		t.Fatal(err)
+	}
+	f.request(t, http.StatusOK)
+	restored, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", f.manifest.ID)
+	if err != nil || restored.Id != original.Id || restored.GetString("path") != originalPath || restored.GetString("status") != "error" {
+		t.Fatalf("validated diagnostic identity not restored: %v/%v", restored, err)
+	}
+	if !strings.Contains(restored.GetString("config"), "keep") {
+		t.Fatal("identity restoration lost administrator configuration")
+	}
+	if _, err := pluginsystem.LoadInstalledPlugin(f.app, f.dir, f.manifest.ID); err == nil {
+		t.Fatal("restored diagnostic made broken bundle executable")
+	}
+	var saves atomic.Int32
+	f.app.OnRecordUpdate("installed_plugins").BindFunc(func(e *core.RecordEvent) error { saves.Add(1); return e.Next() })
+	f.request(t, http.StatusOK)
+	if saves.Load() != 0 {
+		t.Fatal("restored identity did not remain stable")
+	}
+	f.bundle(t, "former-directory", "")
+	f.request(t, http.StatusOK)
+	healthy, err := f.app.FindFirstRecordByData("installed_plugins", "plugin_id", f.manifest.ID)
+	if err != nil || healthy.Id != original.Id || healthy.GetString("status") != "available" {
+		t.Fatalf("bundle repair did not reuse restored identity: %v/%v", healthy, err)
+	}
+}
+
 type setupDiagnosticFixture struct {
 	app        *pbtests.TestApp
 	dir, token string

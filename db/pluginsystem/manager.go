@@ -380,6 +380,16 @@ func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalP
 		if changedID, ok := entry.values["plugin_id"].(string); ok {
 			id = changedID
 		}
+		// A validated identity displaced by a healthy bundle belongs to its
+		// original diagnostic row again once that competing bundle is gone.
+		// Keep the error manifest non-executable; restore only the cache key.
+		var cached Manifest
+		if entry.record.UnmarshalJSONField("manifest", &cached) == nil && ValidateManifest(cached) == nil && !healthyIDs[cached.ID] && (byID[cached.ID] == nil || byID[cached.ID] == entry) {
+			delete(byID, id)
+			id = cached.ID
+			byID[id] = entry
+			entry.diagnosticID = ""
+		}
 		// Reconstruct the shadow label after reloading a minimal error manifest,
 		// so a changed failure cause still belongs to this diagnostic entry.
 		if id == issueID(issue, entry, true) {
@@ -393,7 +403,6 @@ func (m *Manager) planInstalledPluginCache(ctx context.Context, plugins []LocalP
 		}
 		// Preserve validated identity/metadata for diagnostics and the UI. The
 		// explicit error status still prevents this manifest from executing.
-		var cached Manifest
 		if entry.record.UnmarshalJSONField("manifest", &cached) == nil && ValidateManifest(cached) == nil {
 			if cached.ID != id {
 				entry.diagnosticID = id
