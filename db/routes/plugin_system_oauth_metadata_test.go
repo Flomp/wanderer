@@ -160,6 +160,7 @@ func newOAuthMetadataFixture(t *testing.T, prepareAuth ...func(map[string]any)) 
 		&core.TextField{Name: "plugin_id"}, &core.BoolField{Name: "enabled"},
 		&core.JSONField{Name: "auth"}, &core.JSONField{Name: "config"},
 		&core.TextField{Name: "status"}, &core.JSONField{Name: "last_error"},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 		&core.TextField{Name: "auth_context"}, &core.TextField{Name: "connection_generation"}, &core.TextField{Name: "oauth_token_revision"}, &core.JSONField{Name: "state"}, &core.DateField{Name: "last_sync_at"}, &core.DateField{Name: "retry_not_before"},
 	)
 	if err := app.Save(instances); err != nil {

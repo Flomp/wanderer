@@ -115,7 +115,7 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 		values.Set("code_challenge", pluginsystem.PKCEChallenge(verifier))
 	}
 
-	_, err = pluginsystem.PatchConnection(e.App, snapshot, false, func(fresh *core.Record) error {
+	committed, err := pluginsystem.PatchConnection(e.App, snapshot, false, func(fresh *core.Record) error {
 		return pluginsystem.ApplyAuthPatch(fresh, plugin.Manifest, patch)
 	})
 	if err != nil {
@@ -136,9 +136,11 @@ func PluginSystemOAuthStart(e *core.RequestEvent) error {
 	authURL.RawQuery = query.Encode()
 
 	return e.JSON(http.StatusOK, map[string]any{
-		"url":        authURL.String(),
-		"state":      state,
-		"instanceId": instance.Id,
+		"url":                   authURL.String(),
+		"state":                 state,
+		"instanceId":            instance.Id,
+		"connection_generation": committed.GetString("connection_generation"),
+		"updated":               committed.GetString("updated"),
 	})
 }
 
@@ -294,7 +296,7 @@ func PluginSystemOAuthRevoke(e *core.RequestEvent) error {
 		return pluginHostAPIErrorForEvent(e, logContext, "Failed to save plugin connection.", pluginsystem.WithDiagnosticCause(err, "database_save"))
 	}
 
-	return e.JSON(http.StatusOK, map[string]any{"ok": true, "connection_generation": committed.GetString("connection_generation")})
+	return e.JSON(http.StatusOK, map[string]any{"ok": true, "connection_generation": committed.GetString("connection_generation"), "updated": committed.GetString("updated")})
 }
 
 func pluginAuthInstance(app core.App, userID string, pluginID string, instanceID string) (*core.Record, error) {

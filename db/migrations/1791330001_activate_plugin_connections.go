@@ -77,7 +77,10 @@ func activatePluginConnectionsWithManifestDir(app core.App, dir string) error {
 			if manifestErr != nil && !fallbackLoaded {
 				fallback, err = connectionMigrationManifests(dir)
 				if err != nil {
-					return err
+					// An unavailable bundle directory must not prevent the host
+					// from starting. Leave selection unresolved for owner repair.
+					tx.Logger().Warn("plugin connection migration could not read bundle manifests", "cause", "bundle_directory_unreadable")
+					fallback = nil
 				}
 				fallbackLoaded = true
 			}

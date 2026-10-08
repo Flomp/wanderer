@@ -206,6 +206,7 @@ func PluginSystemInstanceSettings(e *core.RequestEvent) error {
 		}
 		selectionChanged := selected != record.GetString("auth_context")
 		selectionResolved := !activeChanged && !grantChanged && soleContextSelectionResolution(record, manifest, selected, auth)
+		selectionDisprovesDiagnosis := selectionResolved && soleSelectionDisprovesDiagnosis(record)
 		activeChanged = activeChanged || selectionChanged && !selectionResolved
 		if selectionChanged || activeChanged || clientActiveCredentialIntent(record, manifest, dto["auth"]) {
 			expected, _ := dto["expected_connection_generation"].(string)
@@ -245,6 +246,9 @@ func PluginSystemInstanceSettings(e *core.RequestEvent) error {
 		if grantChanged {
 			record.Set("oauth_token_revision", pluginsystem.NewConnectionRevision())
 		}
+		if selectionDisprovesDiagnosis {
+			record.Set("last_error", map[string]any{})
+		}
 		record.Set("auth_context", selected)
 		if _, changed := dto["config"]; changed {
 			record.Set("config", config)
@@ -252,14 +256,17 @@ func PluginSystemInstanceSettings(e *core.RequestEvent) error {
 		if enabled, explicit := dto["enabled"].(bool); explicit {
 			record.Set("enabled", enabled)
 		}
-		if activation || activeChanged {
+		if activation || activeChanged || selectionDisprovesDiagnosis {
 			var freshAuth map[string]any
 			_ = record.UnmarshalJSONField("auth", &freshAuth)
 			status := pluginsystem.LocalConnectionStatus(manifest, selected, freshAuth, record.GetBool("enabled"), time.Now())
 			if (activation || activeChanged && dto["enabled"] == true) && status != "configured" {
 				return apis.NewBadRequestError("The plugin connection is not ready to enable.", nil)
 			}
-			if activeChanged && manifest.Auth.Contexts[selected].Type == pluginsystem.AuthTypeOAuth2 && !oauthConnectionHasGrant(manifest, selected, freshAuth) {
+			context := manifest.Auth.Contexts[selected]
+			missingCredentials := context.Type != pluginsystem.AuthTypeOAuth2 && status != "configured"
+			missingGrant := context.Type == pluginsystem.AuthTypeOAuth2 && !oauthConnectionHasGrant(manifest, selected, freshAuth)
+			if activeChanged && (missingCredentials || missingGrant) {
 				record.Set("enabled", false)
 				status = "disabled"
 			}
@@ -327,8 +334,16 @@ func applyClientCredentialPatch(record *core.Record, manifest pluginsystem.Manif
 	// Selection alone must not reinterpret an OAuth access token as an API key
 	// or borrow a grant from another OAuth context. Preserve a grant only when
 	// its provenance belongs to the newly selected OAuth context.
-	if selected != record.GetString("auth_context") && storedOAuthGrant(manifest, record.GetString("auth_context"), originalAuth) {
-		if manifest.Auth.Contexts[selected].Type != pluginsystem.AuthTypeOAuth2 || pluginsystem.CheckOAuthGrantProvenance(manifest, originalAuth, selected) != nil {
+	access, _ := originalAuth[pluginsystem.AuthFieldAccessToken].(string)
+	refresh, _ := originalAuth[pluginsystem.AuthFieldRefreshToken].(string)
+	grantContext, _ := originalAuth["oauthContext"].(string)
+	selectingOAuthWithTokens := manifest.Auth.Contexts[selected].Type == pluginsystem.AuthTypeOAuth2 && (access != "" || refresh != "")
+	// The sole-context legacy exception applies to an unresolved selection,
+	// not to credentials belonging to a different selected mode. A manifest
+	// update can remove that old mode; its API key still is not an OAuth grant.
+	unattributedSelectionSwitch := record.GetString("auth_context") != "" && grantContext == ""
+	if selected != record.GetString("auth_context") && (storedOAuthGrant(manifest, record.GetString("auth_context"), originalAuth) || selectingOAuthWithTokens) {
+		if manifest.Auth.Contexts[selected].Type != pluginsystem.AuthTypeOAuth2 || unattributedSelectionSwitch || pluginsystem.CheckOAuthGrantProvenance(manifest, originalAuth, selected) != nil {
 			pluginsystem.ClearOAuthGrant(auth)
 			grantChanged = true
 		}
@@ -448,6 +463,14 @@ func soleContextSelectionResolution(record *core.Record, manifest pluginsystem.M
 		return false
 	}
 	return context.Type != pluginsystem.AuthTypeOAuth2 || pluginsystem.CheckOAuthGrantProvenance(manifest, auth, selected) == nil
+}
+
+// A pure resolution disproves only the current generation's diagnosis that was
+// made without an auth selection. Other errors and their retry budget remain
+// historical until the operation that can establish their recovery succeeds.
+func soleSelectionDisprovesDiagnosis(record *core.Record) bool {
+	diagnosis := pluginsystem.JSONMapFromRecord(record, "last_error")
+	return diagnosis["code"] == "invalid_configuration" && diagnosis["authContext"] == "" && diagnosis["connectionGeneration"] == record.GetString("connection_generation")
 }
 
 func pluginInstanceWriteError(e *core.RequestEvent, err error) error {

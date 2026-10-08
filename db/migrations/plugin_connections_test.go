@@ -205,6 +205,56 @@ func TestConnectionMigrationManifestFallbackRejectsAmbiguousOrInvalidJSON(t *tes
 	}
 }
 
+func TestPluginConnectionMigrationUnavailableBundleDirectoryDoesNotBlockStartup(t *testing.T) {
+	app := core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir()})
+	if err := app.Bootstrap(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = app.ResetBootstrapState() })
+	instances := core.NewBaseCollection("plugin_instances")
+	instances.Fields.Add(&core.TextField{Name: "plugin_id"}, &core.TextField{Name: "status"}, &core.BoolField{Name: "enabled"}, &core.JSONField{Name: "auth"}, &core.JSONField{Name: "last_error"})
+	if err := app.Save(instances); err != nil {
+		t.Fatal(err)
+	}
+	if err := addPluginConnectionFields1791330000(app); err != nil {
+		t.Fatal(err)
+	}
+	instances, _ = app.FindCollectionByNameOrId("plugin_instances")
+	legacy := core.NewRecord(instances)
+	legacy.Set("plugin_id", "not-installed")
+	legacy.Set("enabled", true)
+	legacy.Set("status", "syncing")
+	legacy.Set("auth", map[string]any{"password": "preserved-credential"})
+	legacy.Set("last_error", map[string]any{"code": "historical"})
+	if err := app.Save(legacy); err != nil {
+		t.Fatal(err)
+	}
+	// ENOTDIR gives a deterministic read failure even when tests run as root.
+	unreadable := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(unreadable, []byte("not a bundle directory"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := activatePluginConnectionsWithManifestDir(app, unreadable); err != nil {
+		t.Fatalf("unavailable bundles blocked startup: %v", err)
+	}
+	fresh, err := app.FindRecordById("plugin_instances", legacy.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.GetString("auth_context") != "" || fresh.GetString("connection_generation") == "" || fresh.GetString("oauth_token_revision") == "" || fresh.GetString("status") != "error" {
+		t.Fatalf("missing-manifest migration state: %#v", fresh.FieldsData())
+	}
+	for _, field := range []string{"auth", "last_error", "enabled"} {
+		if !reflect.DeepEqual(fresh.Get(field), legacy.Get(field)) {
+			t.Errorf("unavailable bundles changed %s", field)
+		}
+	}
+	locked, _ := app.FindCollectionByNameOrId("plugin_instances")
+	if locked.CreateRule != nil || locked.UpdateRule != nil {
+		t.Fatal("startup fallback did not apply host-only write rules")
+	}
+}
+
 func migrationConnectionManifest(id string, contexts map[string]pluginsystem.AuthContext) pluginsystem.Manifest {
 	return pluginsystem.Manifest{ManifestVersion: "1.0", ID: id, Type: pluginsystem.PluginTypeTrails, Name: id, Version: "1.0", Runtime: pluginsystem.RuntimeManifest{Type: pluginsystem.RuntimeWASM, Entrypoint: "plugin.wasm"}, Capabilities: []pluginsystem.CapabilityManifest{{Name: "list", Version: "1.0", Export: "list"}}, Auth: pluginsystem.AuthManifest{Contexts: contexts}}
 }

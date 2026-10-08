@@ -416,9 +416,16 @@ func TestRefreshPreservesConcurrentFirstAccountPinning(t *testing.T) {
 			waitConnectionBarrier(t, arrived)
 			// Another host operation learns the account from this unchanged token
 			// chain. It keeps G/T and gives the final refresh CAS a known pin.
-			pinned, err := pluginsystem.PatchConnection(f.app, c, false, func(fresh *core.Record) error {
+			_, err := pluginsystem.PatchConnection(f.app, c, false, func(fresh *core.Record) error {
 				return pluginsystem.ApplyAuthPatch(fresh, f.plugin.Manifest, map[string]any{"providerUserId": "learned-account"})
 			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Compare two database reads, including updated. The in-memory
+			// Autodate value can carry a different time location from its stored
+			// representation even when they denote exactly the same timestamp.
+			pinned, err := f.app.FindRecordById("plugin_instances", f.instanceID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -450,6 +457,41 @@ func TestRefreshPreservesConcurrentFirstAccountPinning(t *testing.T) {
 	}
 }
 
+func TestOAuthStartReturnsItsOwnCommittedRevisionAfterConcurrentConnectionChange(t *testing.T) {
+	f := newOAuthMetadataFixture(t)
+	before, _ := f.storedAuth(t)
+	arrived, resume := make(chan struct{}), make(chan struct{})
+	cleanupConnectionBarrier(t, resume)
+	var paused atomic.Bool
+	var startUpdated string
+	f.app.OnRecordAfterUpdateSuccess("plugin_instances").BindFunc(func(e *core.RecordEvent) error {
+		if e.Record.Id == f.instanceID && paused.CompareAndSwap(false, true) {
+			startUpdated = e.Record.GetString("updated")
+			close(arrived)
+			<-resume
+		}
+		return e.Next()
+	})
+	result := make(chan connectionHTTPResult, 1)
+	go func() {
+		result <- connectionRequest(f, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback", "expected_connection_generation": before.GetString("connection_generation"), "activate_on_success": true})
+	}()
+	waitConnectionBarrier(t, arrived)
+	f.request(t, http.MethodPatch, "/api/plugins/instances/"+f.instanceID+"/settings", map[string]any{"auth": map[string]any{"clientSecret": "concurrent-client-secret"}, "expected_connection_generation": before.GetString("connection_generation")})
+	newer, _ := f.storedAuth(t)
+	if newer.GetString("connection_generation") == before.GetString("connection_generation") {
+		t.Fatal("competing connection writer did not commit")
+	}
+	close(resume)
+	response := waitConnectionResult(t, result)
+	if response.status != http.StatusOK || response.body["connection_generation"] != before.GetString("connection_generation") || response.body["updated"] != startUpdated || startUpdated == "" {
+		t.Fatalf("start rebound its response to a newer connection: %#v", response)
+	}
+	if len(response.body) != 5 || response.body["instanceId"] != f.instanceID || response.body["state"] == "" || response.body["url"] == "" {
+		t.Fatalf("unexpected start response: %#v", response.body)
+	}
+}
+
 func TestRevokeReturnsItsOwnCommittedGenerationAfterConcurrentConnectionChange(t *testing.T) {
 	f := newOAuthMetadataFixture(t)
 	before, _ := f.storedAuth(t)
@@ -457,11 +499,13 @@ func TestRevokeReturnsItsOwnCommittedGenerationAfterConcurrentConnectionChange(t
 	cleanupConnectionBarrier(t, resume)
 	var paused atomic.Bool
 	var revokedGeneration string
+	var revokedUpdated string
 	// PocketBase invokes this success hook after the transaction has committed.
 	// Pausing here leaves the DB free for a real competing Settings writer.
 	f.app.OnRecordAfterUpdateSuccess("plugin_instances").BindFunc(func(e *core.RecordEvent) error {
 		if e.Record.Id == f.instanceID && paused.CompareAndSwap(false, true) {
 			revokedGeneration = e.Record.GetString("connection_generation")
+			revokedUpdated = e.Record.GetString("updated")
 			close(arrived)
 			<-resume
 		}
@@ -485,7 +529,7 @@ func TestRevokeReturnsItsOwnCommittedGenerationAfterConcurrentConnectionChange(t
 	if response.status != http.StatusOK || response.body["connection_generation"] != revokedGeneration {
 		t.Fatalf("revoke rebound its response to the newer connection: %#v", response)
 	}
-	if len(response.body) != 2 || response.body["ok"] != true {
+	if len(response.body) != 3 || response.body["ok"] != true || response.body["updated"] != revokedUpdated || revokedUpdated == "" {
 		t.Fatalf("revoke exposed unexpected fields: %#v", response.body)
 	}
 	start := connectionRequest(f, http.MethodPost, "/api/plugin-system/oauth/start", map[string]any{"pluginId": "strava", "instanceId": f.instanceID, "redirectUri": "https://wanderer.example/settings/plugins/oauth/callback", "expected_connection_generation": response.body["connection_generation"]})
