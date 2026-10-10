@@ -15,7 +15,7 @@ import { CrosshairPlugin } from "chartjs-plugin-crosshair";
 
 import type { Waypoint } from "$lib/models/waypoint";
 import { formatTimeHHMM } from "$lib/util/format_util";
-import { haversineCumulatedDistanceWgs84, smoothElevations, waypointTrackIndex } from "./tools";
+import { haversineCumulatedDistanceWgs84, MIN_STORED_DISTANCE_METERS, smoothElevations, waypointTrackIndex } from "./tools";
 
 // The crosshair plugin only initializes `chart.crosshair` for charts with a
 // cartesian x scale, but several of its hooks dereference it unconditionally.
@@ -45,9 +45,11 @@ const MILES_HOUR_PER_METER_SECOND = 2.23694
 
 function extractLineStrings(
     geoJson: GeoJsonObject
-): { lineStrings: Array<LineString | MultiLineString>, times: Date[] } {
+): { lineStrings: Array<LineString | MultiLineString>, times: Date[], timesComplete: boolean } {
     const lineStrings: Array<LineString | MultiLineString> = [];
     const times: Date[] = [];
+    // GPX points without a time become null, which `new Date` reads as 1970.
+    let timesComplete = true;
 
     function extractFromGeometry(geometry: GeometryObject) {
         if (geometry.type === "LineString" || geometry.type === "MultiLineString") {
@@ -62,6 +64,7 @@ function extractLineStrings(
         if (feature.properties?.coordinateProperties?.times) {
             const coordinateTimes = feature.properties?.coordinateProperties?.times.map((t: string) => new Date(t))
             times.push(...coordinateTimes)
+            timesComplete &&= feature.properties.coordinateProperties.times.every((t: string | null) => !!t);
         }
     }
 
@@ -84,11 +87,11 @@ function extractLineStrings(
         extractFromGeometry(geoJson as GeometryObject);
     }
 
-    return { lineStrings, times };
+    return { lineStrings, times, timesComplete };
 }
 
-function geoJsonObjectToPositionsAndTimes(geoJson: GeoJsonObject): { positions: Position[], times: Date[] } {
-    const { lineStrings, times } = extractLineStrings(geoJson);
+function geoJsonObjectToPositionsAndTimes(geoJson: GeoJsonObject): { positions: Position[], times: Date[], timesComplete: boolean } {
+    const { lineStrings, times, timesComplete } = extractLineStrings(geoJson);
     const positionsGroups: Position[][] = [];
 
     for (let i = 0; i < lineStrings.length; i += 1) {
@@ -99,7 +102,7 @@ function geoJsonObjectToPositionsAndTimes(geoJson: GeoJsonObject): { positions: 
             positionsGroups.push(feature.coordinates.flat());
         }
     }
-    return { positions: positionsGroups.flat(), times };
+    return { positions: positionsGroups.flat(), times, timesComplete };
 }
 
 /**
@@ -388,6 +391,7 @@ export class ElevationProfile {
     private waypointPositions: number[] = []
     private waypoints: Waypoint[] = [];
     private times: Date[] = [];
+    private timesComplete = false;
     private cumulatedTime: number[] = []
     private speed: number[] = [];
 
@@ -913,20 +917,26 @@ export class ElevationProfile {
 
     private placeWaypoints() {
         this.waypoints.forEach((waypoint, waypointIndex) => {
-            const index = waypointTrackIndex(this.elevatedPositions, this.times, this.cumulatedDistance, waypoint);
+            const index = waypointTrackIndex(
+                this.elevatedPositions,
+                this.timesComplete ? this.times : [],
+                this.cumulatedDistance,
+                waypoint,
+            );
             if (index < 0) {
                 return;
             }
             this.waypointPositions[waypointIndex] = this.cumulatedDistanceAdjustedUnit[index];
-            waypoint.distance_from_start = this.cumulatedDistance[index];
+            waypoint.distance_from_start = Math.max(MIN_STORED_DISTANCE_METERS, this.cumulatedDistance[index]);
         });
     }
 
     async setData(data: GeoJsonObject, waypoints?: Waypoint[]) {
         // Concatenates the positions that may come from multiple LineStrings or MultiLineString
-        const { positions, times } = geoJsonObjectToPositionsAndTimes(data);
+        const { positions, times, timesComplete } = geoJsonObjectToPositionsAndTimes(data);
 
         this.times = times;
+        this.timesComplete = timesComplete;
 
         const windowSize = Math.min(25, Math.ceil(positions.length / 100));
         this.elevatedPositions = smoothElevations(positions, windowSize);

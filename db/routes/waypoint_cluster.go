@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -35,9 +36,10 @@ type waypointClusterPhoto struct {
 }
 
 type waypointClusterWaypoint struct {
-	ID  string  `json:"id"`
-	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
+	ID   string  `json:"id"`
+	Lat  float64 `json:"lat"`
+	Lon  float64 `json:"lon"`
+	Time *int64  `json:"time,omitempty"`
 }
 
 type waypointPhotoCluster struct {
@@ -147,7 +149,7 @@ func clusterWaypointPhotos(photos []waypointClusterPhoto, waypoints []waypointCl
 		}
 	}
 
-	for _, photo := range photos {
+	for _, photo := range sortPhotosByTime(photos) {
 		if !mergeSettings.Enabled {
 			clusters = append(clusters, newWaypointPhotoCluster(photo))
 			continue
@@ -170,6 +172,21 @@ func clusterWaypointPhotos(photos []waypointClusterPhoto, waypoints []waypointCl
 	}
 
 	return clusters
+}
+
+// sortPhotosByTime orders photos with a time chronologically, followed by the
+// ones without a time in their original order, so that a chain of photos each
+// close in time to the previous one merges regardless of upload order.
+func sortPhotosByTime(photos []waypointClusterPhoto) []waypointClusterPhoto {
+	sorted := make([]waypointClusterPhoto, len(photos))
+	copy(sorted, photos)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].Time == nil || sorted[j].Time == nil {
+			return sorted[i].Time != nil && sorted[j].Time == nil
+		}
+		return *sorted[i].Time < *sorted[j].Time
+	})
+	return sorted
 }
 
 func photoTimeFitsCluster(cluster waypointPhotoCluster, photo waypointClusterPhoto) bool {
@@ -202,6 +219,8 @@ func newWaypointCluster(waypoint waypointClusterWaypoint) waypointPhotoCluster {
 		Count:    1,
 		Lat:      waypoint.Lat,
 		Lon:      waypoint.Lon,
+		MinTime:  waypoint.Time,
+		MaxTime:  waypoint.Time,
 	}
 }
 

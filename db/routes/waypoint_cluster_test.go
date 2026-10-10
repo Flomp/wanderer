@@ -56,3 +56,31 @@ func TestClusterWaypointPhotosMergesWithoutTimes(t *testing.T) {
 		t.Fatalf("got %+v, want one cluster with 2 photos", clusters)
 	}
 }
+
+func TestClusterWaypointPhotosMergesChainInAnyOrder(t *testing.T) {
+	settings := waypointMergeSettings{Enabled: true, Radius: defaultWaypointMergeRadius}
+
+	photos := []waypointClusterPhoto{
+		clusterTestPhoto("a", 47.0, minutes(0)),
+		clusterTestPhoto("c", 47.0, minutes(20)),
+		clusterTestPhoto("b", 47.0001, minutes(10)),
+	}
+	clusters := clusterWaypointPhotos(photos, nil, settings)
+	if len(clusters) != 1 || len(clusters[0].Photos) != 3 {
+		t.Fatalf("got %+v, want one cluster with 3 photos", clusters)
+	}
+}
+
+func TestClusterWaypointPhotosKeepsWaypointTimeApart(t *testing.T) {
+	settings := waypointMergeSettings{Enabled: true, Radius: defaultWaypointMergeRadius}
+
+	// A waypoint imported from a photo on the way out, then a photo of the same
+	// spot on the way back.
+	outTime := int64(8 * 60 * 1000)
+	waypoints := []waypointClusterWaypoint{{ID: "out", Lat: 47.0, Lon: 11, Time: &outTime}}
+	photos := []waypointClusterPhoto{clusterTestPhoto("back", 47.0002, minutes(300))}
+	clusters := clusterWaypointPhotos(photos, waypoints, settings)
+	if len(clusters) != 2 || len(clusters[0].Photos) != 0 {
+		t.Fatalf("got %+v, want the photo in a cluster of its own", clusters)
+	}
+}

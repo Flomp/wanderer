@@ -106,6 +106,10 @@
         valhallaAnchorTitle,
     } from "$lib/util/valhalla_anchor_util";
     import EXIF from "$lib/vendor/exif-js/exif.js";
+    import {
+        haversineCumulatedDistanceWgs84,
+        MIN_STORED_DISTANCE_METERS,
+    } from "$lib/vendor/maplibre-elevation-profile/tools";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
@@ -217,6 +221,7 @@
                     .array(
                         ClientWaypointCreateSchema.extend({
                             marker: z.any().optional(),
+                            _time: z.date().optional(),
                         }),
                     )
                     .optional(),
@@ -642,8 +647,9 @@
                 editedWaypoint.lon !== savedWaypoint.lon
             ) {
                 // The elevation profile keeps a moved waypoint on its previous
-                // pass of the track unless the stored distance is cleared.
+                // pass of the track unless its placement hints are cleared.
                 savedWaypoint.distance_from_start = undefined;
+                savedWaypoint._time = undefined;
             }
             $formData.expand!.waypoints_via_trail![editedWaypointIndex] =
                 savedWaypoint;
@@ -666,6 +672,7 @@
                     id: wp.id!,
                     lat: wp.lat,
                     lon: wp.lon,
+                    time: wp._time?.getTime(),
                 })) ?? []
         );
     }
@@ -830,6 +837,7 @@
         editableWaypoint.lat = position.lat;
         editableWaypoint.lon = position.lng;
         editableWaypoint.distance_from_start = undefined;
+        editableWaypoint._time = undefined;
         $formData.expand!.waypoints_via_trail = [
             ...($formData.expand!.waypoints_via_trail ?? []),
         ];
@@ -1415,8 +1423,38 @@
 
     function reverseTrail() {
         reverseRoute();
+        mirrorWaypointDistances();
 
         updateTrailWithRouteData();
+    }
+
+    // Keeps the elevation profile placing each waypoint on the same pass of the
+    // reversed track. Reversing does not change the total distance, so this
+    // also undoes itself when the reversal is undone.
+    function mirrorWaypointDistances() {
+        const total = haversineCumulatedDistanceWgs84(
+            valhallaStore.route
+                .flatten()
+                .map((pt) => [pt.$.lon ?? 0, pt.$.lat ?? 0]),
+        ).at(-1);
+        for (const wp of $formData.expand?.waypoints_via_trail ?? []) {
+            if (wp.distance_from_start != null) {
+                wp.distance_from_start =
+                    total !== undefined
+                        ? Math.max(
+                              MIN_STORED_DISTANCE_METERS,
+                              total - wp.distance_from_start,
+                          )
+                        : undefined;
+            }
+        }
+    }
+
+    // Stored distances from start no longer fit a cropped or replaced track.
+    function clearWaypointDistances() {
+        for (const wp of $formData.expand?.waypoints_via_trail ?? []) {
+            wp.distance_from_start = undefined;
+        }
     }
 
     function resetTrail() {
@@ -1438,6 +1476,7 @@
         drawingActive = false;
         routeSegments = [];
         $formData.expand!.gpx_data = undefined;
+        clearWaypointDistances();
         updateTrailWithRouteData();
     }
 
@@ -1526,6 +1565,7 @@
             return;
         }
         setRoute(croppedGPX, true);
+        clearWaypointDistances();
         updateTrailWithRouteData();
         clearAnchors();
         initRouteAnchors(croppedGPX, true);
@@ -2064,6 +2104,9 @@
 
     function undoRouteEdit() {
         const entry = undo();
+        if (entry?.reversesRoute) {
+            mirrorWaypointDistances();
+        }
         if (entry?.anchorsBefore) {
             valhallaStore.anchors = entry.anchorsBefore;
             refreshAnchorLabels();
@@ -2076,6 +2119,9 @@
 
     function redoRouteEdit() {
         const entry = redo();
+        if (entry?.reversesRoute) {
+            mirrorWaypointDistances();
+        }
         if (entry?.anchorsAfter) {
             valhallaStore.anchors = entry.anchorsAfter;
             refreshAnchorLabels();
