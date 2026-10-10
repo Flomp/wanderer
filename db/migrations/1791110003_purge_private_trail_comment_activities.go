@@ -7,17 +7,17 @@ import (
 
 // Comments on private trails used to be federated like any other. The
 // Create/Update activities recorded for them carry the comment text and are
-// publicly listed on the author's outbox, so they are removed. Copies already
-// delivered to mentioned remote actors are not retracted.
+// publicly listed on the author's outbox, so they are removed. They are found
+// through the trail they reply to rather than through the comment, which also
+// covers comments deleted since: deleting one only records a Delete and
+// leaves its Create/Update in place. Summit logs on these trails are matched
+// the same way. Copies already delivered to mentioned remote actors are not
+// retracted.
 const purgePrivateTrailCommentActivities1791110003 = `
 	DELETE FROM activitypub_activities
 	WHERE type IN ('Create', 'Update')
-		AND json_extract(object, '$.id') IN (
-			SELECT comments.iri
-			FROM comments
-			JOIN trails ON trails.id = comments.trail
-			WHERE trails.public = FALSE
-				AND comments.iri != ''
+		AND json_extract(object, '$.inReplyTo') IN (
+			SELECT iri FROM trails WHERE public = FALSE AND iri != ''
 		)
 `
 
