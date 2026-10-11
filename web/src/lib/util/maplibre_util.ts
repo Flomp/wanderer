@@ -188,7 +188,7 @@ export function createEditTrailMapPopup(lnglat: M.LngLat, onCreateWaypointClick:
 export function createPopupFromTrail(trail: Trail) {
     const photos = trail.photos ?? [];
     const thumbnail = photos.length
-        ? getFileURL(trail, photos.at(trail.thumbnail ?? 0) ?? photos[0])
+        ? getFileURL(trail, photos.at(trail.thumbnail ?? 0) ?? photos[0], "600x0")
         : get(theme) === "light"
             ? emptyStateTrailLight
             : emptyStateTrailDark;

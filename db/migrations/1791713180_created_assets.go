@@ -136,6 +136,7 @@ func createAssetsCollection(app core.App) (*core.Collection, error) {
 				"required": false,
 				"system": false,
 				"thumbs": [
+					"300x300",
 					"600x0"
 				],
 				"type": "file"
@@ -310,7 +311,7 @@ func createAssetsCollection(app core.App) (*core.Collection, error) {
 		"name": "assets",
 		"system": false,
 		"type": "base",
-		"updateRule": "@request.auth.id != \"\" && author.user = @request.auth.id",
+		"updateRule": "@request.auth.id != \"\" && author.user = @request.auth.id && @request.body.author:changed = false && @request.body.external_provider:changed = false && @request.body.external_id:changed = false",
 		"viewRule": "author.user = @request.auth.id"
 	}`, assetFileMaxBytes, assetExternalUniqueIndex)
 

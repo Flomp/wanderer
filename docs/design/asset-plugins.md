@@ -67,7 +67,7 @@ plugin returns Photo descriptors
 | Remote asset service | `db/services/assets/service.go` | Streaming, status, repair, materialization, and deletion of private remote assets. |
 | Asset routes | `db/routes/assets.go` | File endpoint and asynchronous remote-asset jobs. |
 | Lifecycle hooks | `db/hooks/trails.go`, `db/hooks/plugin_instances.go`, `db/hooks/assets.go` | Publication safety, disable/delete protection, and search-index updates. |
-| Database schema | `db/migrations/1778359896_created_assets.go` | Collections, fields, rules, and unique indexes. |
+| Database schema | `db/migrations/1791713180_created_assets.go` | Collections, fields, rules, and unique indexes. |
 | Runtime | `db/pluginsystem/runtime.go`, `db/pluginsystem/worker.go`, `db/pluginsystem/worker_process.go` | Dedicated worker process and WASM invocation. |
 | Host networking | `db/pluginsystem/host_http.go`, `db/pluginsystem/policy.go`, `db/services/pluginhost/config.go` | Connector resolution, host policy, authentication injection, and effective configuration. |
 | Frontend picker | `web/src/lib/components/photo/photo_library_picker_modal.svelte` | Parallel search, filtering, deduplication, map display, and selection. |
@@ -313,7 +313,7 @@ installed_plugins.config
 
 ### 6.1 The `assets` collection
 
-Migration `db/migrations/1778359896_created_assets.go` defines, among other fields:
+Migration `db/migrations/1791713180_created_assets.go` defines, among other fields:
 
 | Field | Meaning |
 | --- | --- |

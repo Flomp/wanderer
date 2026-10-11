@@ -1257,6 +1257,8 @@ func createTrailSummitLog(ctx mergeContext) (string, error) {
 		record.Set("gpx", gpxFile)
 	}
 
+	// Trail descriptions can be longer than the generated summit-log field.
+	util.SanitizeHTMLFieldsWithLimits(record)
 	if err := ctx.App.Save(record); err != nil {
 		return "", err
 	}
@@ -1399,6 +1401,8 @@ func mergeTrailComments(ctx mergeContext) ([]string, error) {
 			"author": ctx.ActorID,
 			"trail":  ctx.Target.Id,
 		})
+		// Attribution is added to an existing comment and consumes its budget.
+		util.SanitizeHTMLFieldsWithLimits(record)
 		if err := ctx.App.Save(record); err != nil {
 			return nil, err
 		}

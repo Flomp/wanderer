@@ -117,6 +117,10 @@ func RemoteTrailGet(e *core.RequestEvent) error {
 			cachedID := record.Id
 			record, err = performFullSync(e.App, ctx, e.Request.URL, record)
 			if err != nil {
+				if errors.Is(err, errRemoteGone) {
+					dropGoneRemoteRecord(e.App, "trails", cachedID)
+					return e.NotFoundError("Trail not found", err)
+				}
 				cached := cachedRecordFallback(e.App, "trails", cachedID, err)
 				if cached == nil {
 					if errors.Is(err, util.ErrRateLimited) {
@@ -152,7 +156,13 @@ func RemoteTrailGet(e *core.RequestEvent) error {
 					syncRecord := record.Fresh()
 					go func() {
 						defer trailSyncing.Delete(iri)
-						performFullSync(e.App, bgCtx, &urlCopy, syncRecord)
+						_, err := performFullSync(e.App, bgCtx, &urlCopy, syncRecord)
+						switch {
+						case errors.Is(err, errRemoteGone):
+							dropGoneRemoteRecord(e.App, "trails", syncRecord.Id)
+						case err != nil:
+							backgroundSyncFailed(e.App, "trails", iri, err)
+						}
 					}()
 				}
 			}
@@ -263,6 +273,8 @@ func performFullSync(app core.App, ctx context.Context, reqURL *url.URL, localTr
 				remoteMap = fallbackMap
 				assetExpandsRequested = false
 				err = nil
+			} else if errors.Is(fallbackErr, errRemoteGone) {
+				err = fallbackErr
 			}
 		}
 	}
@@ -282,6 +294,7 @@ func performFullSync(app core.App, ctx context.Context, reqURL *url.URL, localTr
 		localTrail.Set("needs_full_sync", false)
 		localTrail.Set("full_sync_completed", true)
 
+		util.SanitizeHTMLFieldsWithLimits(localTrail)
 		if err := txApp.Save(localTrail); err != nil {
 			return err
 		}
@@ -320,9 +333,11 @@ func performFullSync(app core.App, ctx context.Context, reqURL *url.URL, localTr
 
 // fetchRemoteJSONMap performs the remote GET and decodes the JSON body.
 // Transport failures and 5xx responses are wrapped in errRemoteUnavailable so
-// the caller can degrade to a cached record (see cachedRecordFallback); other
-// non-200 responses are returned as a *remoteFetchStatusError so the caller
-// can decide whether to retry with a reduced query.
+// the caller can degrade to a cached record (see cachedRecordFallback); 404 and
+// 410 are wrapped in errRemoteGone so the caller drops its copy (see
+// dropGoneRemoteRecord); other non-200 responses are returned as a
+// *remoteFetchStatusError so the caller can decide whether to retry with a
+// reduced query.
 func fetchRemoteJSONMap(ctx context.Context, client *http.Client, remoteURL *url.URL, kind string) (map[string]any, error) {
 	req, _ := http.NewRequestWithContext(ctx, "GET", remoteURL.String(), nil)
 	res, err := client.Do(req)
@@ -338,6 +353,9 @@ func fetchRemoteJSONMap(ctx context.Context, client *http.Client, remoteURL *url
 		}
 		if res.StatusCode >= http.StatusInternalServerError {
 			return nil, fmt.Errorf("%w: %w", errRemoteUnavailable, statusErr)
+		}
+		if isGoneStatus(res.StatusCode) {
+			return nil, fmt.Errorf("%w: %w", errRemoteGone, statusErr)
 		}
 		return nil, statusErr
 	}
@@ -516,7 +534,7 @@ func syncTrailMetadata(app core.App, record *core.Record, data map[string]any) {
 }
 
 func resolveAndSyncTags(app core.App, data map[string]any) []string {
-	var localTagIds []string
+	localTagIds := []string{}
 
 	expand, ok := data["expand"].(map[string]any)
 	if !ok {
@@ -528,7 +546,7 @@ func resolveAndSyncTags(app core.App, data map[string]any) []string {
 		return localTagIds
 	}
 
-	tagCol, _ := app.FindCollectionByNameOrId("tags")
+	seenTags := make(map[string]struct{})
 
 	for _, t := range remoteTags {
 		tagMap, ok := t.(map[string]any)
@@ -536,22 +554,18 @@ func resolveAndSyncTags(app core.App, data map[string]any) []string {
 			continue
 		}
 
-		tagName, _ := tagMap["name"].(string)
-		if tagName == "" {
+		tagName, ok := tagMap["name"].(string)
+		if !ok {
 			continue
 		}
-
-		localTag, _ := app.FindFirstRecordByData("tags", "name", tagName)
-
-		if localTag == nil {
-			localTag = core.NewRecord(tagCol)
-			localTag.Set("name", tagName)
-
-			if err := app.Save(localTag); err != nil {
-				continue
-			}
+		localTag, err := util.ResolveFederatedTag(app, tagName)
+		if err != nil || localTag == nil {
+			continue
 		}
-
+		if _, seen := seenTags[localTag.Id]; seen {
+			continue
+		}
+		seenTags[localTag.Id] = struct{}{}
 		localTagIds = append(localTagIds, localTag.Id)
 	}
 
@@ -582,6 +596,7 @@ func syncWaypoints(txApp core.App, ctx context.Context, trail *core.Record, orig
 		wp.Set("trail", trail.Id)
 		wp.Set("iri", iri)
 
+		util.SanitizeHTMLFieldsWithLimits(wp)
 		if err := txApp.Save(wp); err != nil {
 			return err
 		}
@@ -630,6 +645,7 @@ func syncSummitLogs(txApp core.App, ctx context.Context, trail *core.Record, ori
 		sl.Set("trail", trail.Id)
 		sl.Set("iri", iri)
 
+		util.SanitizeHTMLFieldsWithLimits(sl)
 		if err := txApp.Save(sl); err != nil {
 			return err
 		}

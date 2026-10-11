@@ -59,6 +59,10 @@ func RemoteListGet(e *core.RequestEvent) error {
 			cachedID := record.Id
 			record, err = performFullListSync(e.App, ctx, e.Request.URL, record)
 			if err != nil {
+				if errors.Is(err, errRemoteGone) {
+					dropGoneRemoteRecord(e.App, "lists", cachedID)
+					return e.NotFoundError("List not found", err)
+				}
 				cached := cachedRecordFallback(e.App, "lists", cachedID, err)
 				if cached == nil {
 					if errors.Is(err, util.ErrRateLimited) {
@@ -92,7 +96,13 @@ func RemoteListGet(e *core.RequestEvent) error {
 					syncRecord := record.Fresh()
 					go func() {
 						defer listSyncing.Delete(iri)
-						performFullListSync(e.App, bgCtx, &urlCopy, syncRecord)
+						_, err := performFullListSync(e.App, bgCtx, &urlCopy, syncRecord)
+						switch {
+						case errors.Is(err, errRemoteGone):
+							dropGoneRemoteRecord(e.App, "lists", syncRecord.Id)
+						case err != nil:
+							backgroundSyncFailed(e.App, "lists", iri, err)
+						}
 					}()
 				}
 			}
@@ -199,6 +209,8 @@ func performFullListSync(app core.App, ctx context.Context, reqURL *url.URL, loc
 			if fallbackMap, fallbackErr := fetchRemoteJSONMap(ctx, client, &legacyURL, "list"); fallbackErr == nil {
 				remoteMap = fallbackMap
 				err = nil
+			} else if errors.Is(fallbackErr, errRemoteGone) {
+				err = fallbackErr
 			}
 		}
 	}
@@ -228,6 +240,7 @@ func performFullListSync(app core.App, ctx context.Context, reqURL *url.URL, loc
 			}
 		}
 
+		util.SanitizeHTMLFieldsWithLimits(localList)
 		if err := txApp.Save(localList); err != nil {
 			return err
 		}
@@ -310,6 +323,7 @@ func syncTrails(txApp core.App, ctx context.Context, list *core.Record, origin s
 		trail.Set("author", author)
 		trail.Set("iri", iri)
 
+		util.SanitizeHTMLFieldsWithLimits(trail)
 		if err := txApp.Save(trail); err != nil {
 			return err
 		}

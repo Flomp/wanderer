@@ -1,9 +1,14 @@
 import ExifReader from "exifreader";
 import type { ExpandedTags } from "exifreader";
+import { convertDateTimeOriginalToDate, convertGPSTimestampToDate } from "./date_util";
 
 export interface GPSCoordinates {
     lat: number;
     lon: number;
+}
+
+export interface GPSCoordinatesWithTime extends GPSCoordinates {
+    time?: Date;
 }
 
 export interface PhotoExifMetadata {
@@ -44,12 +49,45 @@ const PHOTO_METADATA_OPTIONS: ExifLoadOptions = {
     excludeTags: { mpf: true },
 };
 
+const GPS_TIME_OPTIONS: ExifLoadOptions = {
+    expanded: true,
+    includeTags: {
+        gps: true,
+        exif: [
+            "GPSDateStamp",
+            "GPSTimeStamp",
+            "DateTimeOriginal",
+            "OffsetTimeOriginal",
+            "OffsetTime",
+            "OffsetTimeDigitized",
+        ],
+    },
+    excludeTags: { mpf: true },
+};
+
 export async function extractGPSCoordinates(
     source: Blob | string | ArrayBuffer | SharedArrayBuffer,
 ): Promise<GPSCoordinates | undefined> {
     try {
         const tags = await loadExifTags(source, GPS_OPTIONS);
         return gpsCoordinatesFromExpandedTags(tags);
+    } catch {
+        return undefined;
+    }
+}
+
+// Unlike takenAt, the time is only set when it is exact, since it picks the
+// pass of a track that covers the same ground twice.
+export async function extractGPSCoordinatesAndTime(
+    source: Blob | string | ArrayBuffer | SharedArrayBuffer,
+): Promise<GPSCoordinatesWithTime | undefined> {
+    try {
+        const tags = await loadExifTags(source, GPS_TIME_OPTIONS);
+        const coordinates = gpsCoordinatesFromExpandedTags(tags);
+        if (!coordinates) {
+            return undefined;
+        }
+        return { ...coordinates, time: exactTimeFromExpandedTags(tags) };
     } catch {
         return undefined;
     }
@@ -110,6 +148,35 @@ function takenAtFromExpandedTags(tags: ExpandedTags): string | undefined {
         tagString(tags.exif?.OffsetTimeDigitized) ??
         tagString(tags.exif?.OffsetTime);
     return parseExifDate(value, offset);
+}
+
+function exactTimeFromExpandedTags(tags: ExpandedTags): Date | undefined {
+    return (
+        convertGPSTimestampToDate(
+            tagString(tags.exif?.GPSDateStamp),
+            gpsTimeStampValues(tags.exif?.GPSTimeStamp),
+        ) ??
+        convertDateTimeOriginalToDate(
+            tagString(tags.exif?.DateTimeOriginal),
+            // some devices only write the offset of the other timestamps, all
+            // in one zone
+            tagString(tags.exif?.OffsetTimeOriginal) ??
+                tagString(tags.exif?.OffsetTime) ??
+                tagString(tags.exif?.OffsetTimeDigitized),
+        )
+    );
+}
+
+// exifreader reads the hours, minutes and seconds of GPSTimeStamp as
+// [numerator, denominator] pairs.
+function gpsTimeStampValues(tag: { value?: unknown } | undefined): number[] | undefined {
+    const value = tag?.value;
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+    return value.map((part: unknown) =>
+        Array.isArray(part) ? Number(part[0]) / Number(part[1]) : Number(part),
+    );
 }
 
 function tagString(tag: { value?: unknown; description?: string } | undefined): string | undefined {

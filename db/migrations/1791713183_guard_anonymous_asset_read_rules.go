@@ -10,13 +10,13 @@ import (
 // anonymous requests. Only authenticated requests may satisfy ownership checks.
 func init() {
 	m.Register(func(app core.App) error {
-		return setAnonymousAssetReadRules1789200004(app, false)
+		return setAnonymousAssetReadRules1791713183(app, false)
 	}, func(app core.App) error {
-		return setAnonymousAssetReadRules1789200004(app, true)
+		return setAnonymousAssetReadRules1791713183(app, true)
 	})
 }
 
-func setAnonymousAssetReadRules1789200004(app core.App, rollback bool) error {
+func setAnonymousAssetReadRules1791713183(app core.App, rollback bool) error {
 	for _, rules := range []struct {
 		collection, previous, current string
 	}{

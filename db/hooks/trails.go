@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -260,29 +261,54 @@ func DeleteTrailAssetCleanupHandler() func(e *core.RecordRequestEvent) error {
 			return err
 		}
 
-		if err := e.Next(); err != nil {
-			return err
-		}
+		return deleteThenRemoveOrphanedAssets(e, assetIDs)
+	}
+}
 
-		return util.DeleteAssetsIfOrphanedByAuthor(e.App, assetIDs, e.Record.GetString("author"))
+const trailDeleteRecipientsKey = "__delete_recipients"
+
+// CollectTrailDeleteRecipientsHandler works out who has to be told before the
+// trail is deleted, and keeps the list on the record for DeleteTrailHandler.
+// The comments, summit logs, likes and shares that name those actors are
+// cascaded away with the trail, so afterwards is too late.
+func CollectTrailDeleteRecipientsHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		trail := e.Record
+		audience, err := federation.TrailDeleteRecipients(e.App, trail, trail.GetBool("public"))
+		if err != nil {
+			e.App.Logger().Error(
+				"could not collect recipients to announce trail deletion to",
+				"trail", trail.Id, "error", err,
+			)
+			audience = federation.DeleteAudience{}
+		}
+		trail.Set(trailDeleteRecipientsKey, audience)
+		return e.Next()
 	}
 }
 
 func DeleteTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
-		task, err := client.Index("trails").DeleteDocument(record.Id, nil)
+		ctx, cancel := context.WithTimeout(e.Context, 5*time.Second)
+		defer cancel()
+		task, err := client.Index("trails").DeleteDocumentWithContext(ctx, record.Id, nil)
 		if err != nil {
-			return err
+			e.App.Logger().Warn("trail deletion could not be queued in search index",
+				"trail", record.Id, "error", err)
+		} else {
+			completed, err := client.WaitForTaskWithContext(ctx, task.TaskUID, 50*time.Millisecond)
+			if err != nil {
+				e.App.Logger().Warn("trail deletion not confirmed by search index",
+					"trail", record.Id, "task", task.TaskUID, "error", err)
+			} else if completed.Status != meilisearch.TaskStatusSucceeded {
+				e.App.Logger().Error("search index failed to delete trail",
+					"trail", record.Id, "task", task.TaskUID, "status", completed.Status)
+			}
 		}
 
-		interval := 500 * time.Millisecond
-		_, err = client.WaitForTask(task.TaskUID, interval)
-		if err != nil {
-			log.Fatalf("Error waiting for task completion: %v", err)
-		}
-
-		err = federation.CreateTrailDeleteActivity(e.App, e.Record)
+		audience, _ := record.GetRaw(trailDeleteRecipientsKey).(federation.DeleteAudience)
+		err = federation.CreateTrailDeleteActivity(e.App, record, audience)
 		if err != nil {
 			return err
 		}

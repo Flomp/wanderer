@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { sanitizeHTML } from "$lib/util/sanitize_html";
     import type { Waypoint } from "$lib/models/waypoint";
     import {
         getFileURL,
@@ -23,7 +24,7 @@
     let imgSrc: string[] = $state([]);
     $effect(() => {
         const persistedPhotos = (waypoint.photos ?? [])
-            .map((p) => getFileURL(waypoint, p));
+            .map((p) => getFileURL(waypoint, p, "300x300"));
         const assetPluginPhotos = (waypoint._assetCandidates ?? [])
             .flatMap((candidate) => {
                 if (!candidate.pluginId) {
@@ -107,7 +108,7 @@
         </div>
 
         {#if waypoint.description}
-            <p>{@html waypoint.description}</p>
+            <div>{@html sanitizeHTML(waypoint.description)}</div>
         {/if}
 
         <span class="text-sm text-gray-500"

@@ -4,6 +4,7 @@ import { enrichTrailResponse, withTrailAssetExpandParams } from "$lib/server/tra
 import type { Trail } from "$lib/models/trail";
 import { Collection, handleError, remove, update } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
+import { acceptsActivityPub, activityPubObject } from "$lib/server/activitypub_objects";
 
 /**
  * @swagger
@@ -38,6 +39,10 @@ import { json, type RequestEvent } from "@sveltejs/kit";
 export async function GET(event: RequestEvent) {
     const { url, params } = event;
 
+    if (acceptsActivityPub(event.request)) {
+        return activityPubObject(event, `/api/v1/activitypub/trail/${params.id}`);
+    }
+
     try {
         const searchParams = withTrailAssetExpandParams(url.searchParams);
         let trail: Trail = await event.locals.pb.send(`/remote/trail/${params.id}?` + searchParams, {
@@ -48,7 +53,7 @@ export async function GET(event: RequestEvent) {
         await enrichRecord(trail, url.searchParams.get("share") ?? undefined);
         await applyLegacyPhotoNamesForMissingAssetExpands(event, trail);
         trail.expand?.waypoints_via_trail?.sort((a, b) => (a.distance_from_start ?? 0) - (b.distance_from_start ?? 0))
-        return json(trail)
+        return json(trail, { headers: { vary: "Accept" } })
     } catch (e: any) {
         return handleError(e);
     }

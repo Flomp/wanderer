@@ -14,6 +14,7 @@ class Waypoint {
     marker?: M.Marker;
     photos: string[];
     _photos?: File[];
+    _time?: Date;
     _assetCandidates?: { pluginId?: string; assetId: string; lat: number; lon: number; originalFileName?: string; takenAt?: string }[];
     _assetLinks?: string[];
     _assetPluginLinks?: PhotoLibraryPluginLink[];

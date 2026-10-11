@@ -79,7 +79,7 @@
         formatElevation,
         formatTimeHHMM,
     } from "$lib/util/format_util";
-    import { extractGPSCoordinates } from "$lib/util/exif_util";
+    import { extractGPSCoordinatesAndTime } from "$lib/util/exif_util";
     import { cropGPX, fromFile, gpx2trail } from "$lib/util/gpx_util";
 
     import { page } from "$app/state";
@@ -108,6 +108,7 @@
     import { designSelectableCategories } from "$lib/util/category_util";
     import { dateInputValue } from "$lib/util/date_util";
     import { getIconForLocation } from "$lib/util/icon_util.js";
+    import { normalizeNewTagName } from "$lib/util/tag_name";
     import {
         createAnchorMarker,
         createEditTrailMapPopup,
@@ -119,6 +120,10 @@
         renderValhallaAnchorMarker,
         valhallaAnchorTitle,
     } from "$lib/util/valhalla_anchor_util";
+    import {
+        haversineCumulatedDistanceWgs84,
+        MIN_STORED_DISTANCE_METERS,
+    } from "$lib/vendor/maplibre-elevation-profile/tools";
     import { validator } from "@felte/validator-zod";
     import cryptoRandomString from "crypto-random-string";
     import { createForm } from "felte";
@@ -271,6 +276,7 @@
                     .array(
                         ClientWaypointCreateSchema.extend({
                             marker: z.any().optional(),
+                            _time: z.date().optional(),
                         }),
                     )
                     .optional(),
@@ -763,6 +769,17 @@
             ) ?? -1;
 
         if (editedWaypointIndex >= 0) {
+            const editedWaypoint =
+                $formData.expand!.waypoints_via_trail![editedWaypointIndex];
+            if (
+                editedWaypoint.lat !== savedWaypoint.lat ||
+                editedWaypoint.lon !== savedWaypoint.lon
+            ) {
+                // The elevation profile keeps a moved waypoint on its previous
+                // pass of the track unless its placement hints are cleared.
+                savedWaypoint.distance_from_start = undefined;
+                savedWaypoint._time = undefined;
+            }
             $formData.expand!.waypoints_via_trail![editedWaypointIndex] =
                 savedWaypoint;
         } else {
@@ -886,6 +903,7 @@
             ...existing,
             ...incoming,
             marker: existing.marker,
+            _time: existing._time ?? incoming._time,
             photos: incoming.photos?.length ? incoming.photos : (existing.photos ?? []),
             _photos: [
                 ...(existing._photos ?? []),
@@ -923,6 +941,7 @@
                     id: wp.id!,
                     lat: wp.lat,
                     lon: wp.lon,
+                    time: wp._time?.getTime(),
                 })) ?? []
         );
     }
@@ -1086,6 +1105,8 @@
         }
         editableWaypoint.lat = position.lat;
         editableWaypoint.lon = position.lng;
+        editableWaypoint.distance_from_start = undefined;
+        editableWaypoint._time = undefined;
         $formData.expand!.waypoints_via_trail = [
             ...($formData.expand!.waypoints_via_trail ?? []),
         ];
@@ -1665,8 +1686,38 @@
 
     function reverseTrail() {
         reverseRoute();
+        mirrorWaypointDistances();
 
         updateTrailWithRouteData();
+    }
+
+    // Keeps the elevation profile placing each waypoint on the same pass of the
+    // reversed track. Reversing does not change the total distance, so this
+    // also undoes itself when the reversal is undone.
+    function mirrorWaypointDistances() {
+        const total = haversineCumulatedDistanceWgs84(
+            valhallaStore.route
+                .flatten()
+                .map((pt) => [pt.$.lon ?? 0, pt.$.lat ?? 0]),
+        ).at(-1);
+        for (const wp of $formData.expand?.waypoints_via_trail ?? []) {
+            if (wp.distance_from_start != null) {
+                wp.distance_from_start =
+                    total !== undefined
+                        ? Math.max(
+                              MIN_STORED_DISTANCE_METERS,
+                              total - wp.distance_from_start,
+                          )
+                        : undefined;
+            }
+        }
+    }
+
+    // Stored distances from start no longer fit a cropped or replaced track.
+    function clearWaypointDistances() {
+        for (const wp of $formData.expand?.waypoints_via_trail ?? []) {
+            wp.distance_from_start = undefined;
+        }
     }
 
     function resetTrail() {
@@ -1688,6 +1739,7 @@
         drawingActive = false;
         routeSegments = [];
         $formData.expand!.gpx_data = undefined;
+        clearWaypointDistances();
         updateTrailWithRouteData();
     }
 
@@ -1776,6 +1828,7 @@
             return;
         }
         setRoute(croppedGPX, true);
+        clearWaypointDistances();
         updateTrailWithRouteData();
         clearAnchors();
         initRouteAnchors(croppedGPX, true);
@@ -1932,6 +1985,7 @@
         id: string;
         longitude: number;
         latitude: number;
+        time?: Date;
         file: File;
     }
 
@@ -1953,6 +2007,7 @@
         id: string;
         lat: number;
         lon: number;
+        time?: number;
     }
 
     interface WaypointPhotoClusterRequest {
@@ -1994,7 +2049,7 @@
         const photoCoords: GPXCoord[] = [];
 
         for (const [index, file] of Array.from(files).entries()) {
-            const coordinates = await extractGPSCoordinates(file);
+            const coordinates = await extractGPSCoordinatesAndTime(file);
             if (!coordinates) {
                 show_toast(
                     {
@@ -2011,6 +2066,7 @@
                 id: index.toString(),
                 latitude: coordinates.lat,
                 longitude: coordinates.lon,
+                time: coordinates.time,
                 file,
             });
         }
@@ -2024,6 +2080,7 @@
                     id: coords.id,
                     lat: coords.latitude,
                     lon: coords.longitude,
+                    time: coords.time?.getTime(),
                 })),
                 waypoints: getExistingWaypointClusterInputs(),
             });
@@ -2039,12 +2096,13 @@
             return;
         }
 
-        const fileMap = new Map(photoCoords.map((coords) => [coords.id, coords.file]));
+        const photoMap = new Map(photoCoords.map((coords) => [coords.id, coords]));
 
         for (const cluster of clusterResponse.clusters) {
-            const photos = cluster.photos
-                .map((id) => fileMap.get(id))
-                .filter((file): file is File => file != null);
+            const clusterPhotos = cluster.photos
+                .map((id) => photoMap.get(id))
+                .filter((coords): coords is GPXCoord => coords != null);
+            const photos = clusterPhotos.map((coords) => coords.file);
 
             if (!photos.length) {
                 continue;
@@ -2078,12 +2136,16 @@
                 },
             );
             wp._photos = photos;
+            wp._time = clusterPhotos.find((coords) => coords.time)?.time;
             commitWaypoint(wp);
         }
     }
 
     function undoRouteEdit() {
         const entry = undo();
+        if (entry?.reversesRoute) {
+            mirrorWaypointDistances();
+        }
         if (entry?.anchorsBefore) {
             valhallaStore.anchors = entry.anchorsBefore;
             refreshAnchorLabels();
@@ -2096,6 +2158,9 @@
 
     function redoRouteEdit() {
         const entry = redo();
+        if (entry?.reversesRoute) {
+            mirrorWaypointDistances();
+        }
         if (entry?.anchorsAfter) {
             valhallaStore.anchors = entry.anchorsAfter;
             refreshAnchorLabels();
@@ -2353,6 +2418,7 @@
         ></Editor>
         <Combobox
             bind:value={getTrailTags, setTrailTags}
+            normalizeNewItemText={normalizeNewTagName}
             onupdate={searchTags}
             items={tagItems}
             label={$_("tags")}
@@ -2503,7 +2569,7 @@
                             <img
                                 class="w-8 aspect-square rounded-full object-cover"
                                 src={list.avatar
-                                    ? getFileURL(list, list.avatar)
+                                    ? getFileURL(list, list.avatar, "100x100")
                                     : $theme === "light"
                                       ? emptyStateTrailLight
                                       : emptyStateTrailDark}

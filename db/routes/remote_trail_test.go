@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -240,6 +241,21 @@ func TestFetchRemoteJSONMapClassifiesErrors(t *testing.T) {
 		}
 	})
 
+	t.Run("gone is neither degradable nor retryable", func(t *testing.T) {
+		for _, status := range []int{http.StatusNotFound, http.StatusGone} {
+			server := newServer(status, "")
+			remoteURL, _ := url.Parse(server.URL)
+			_, err := fetchRemoteJSONMap(context.Background(), server.Client(), remoteURL, "trail")
+			server.Close()
+			if !errors.Is(err, errRemoteGone) {
+				t.Fatalf("expected %d to be wrapped in errRemoteGone, got %v", status, err)
+			}
+			if isDegradableSyncError(err) || shouldRetryRemoteFetchWithoutAssetExpands(err) {
+				t.Fatalf("%d must be neither degradable nor retryable, got %v", status, err)
+			}
+		}
+	})
+
 	t.Run("transport error is degradable", func(t *testing.T) {
 		server := newServer(http.StatusOK, "{}")
 		remoteURL, _ := url.Parse(server.URL)
@@ -262,4 +278,46 @@ func TestFetchRemoteJSONMapClassifiesErrors(t *testing.T) {
 			t.Fatalf("expected plain decode error, got %v", err)
 		}
 	})
+}
+
+// legacyRetryTransport rejects a fetch that carries asset expands and answers
+// the retry without them with status.
+type legacyRetryTransport struct{ status int }
+
+func (t legacyRetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	status := t.status
+	if strings.Contains(req.URL.Query().Get("expand"), "_assets_via_") {
+		status = http.StatusBadRequest
+	}
+	return &http.Response{
+		StatusCode: status,
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader("{}")),
+	}, nil
+}
+
+func TestFullSyncReportsGoneFromLegacyRetry(t *testing.T) {
+	for _, tt := range []struct {
+		collection, path, query string
+		handler                 func(*core.RequestEvent) error
+		sync                    func(core.App, context.Context, *url.URL, *core.Record) (*core.Record, error)
+	}{
+		{"trails", "trail", "", RemoteTrailGet, performFullSync},
+		{"lists", "list", "expand=trails.trail_assets_via_trail.asset", RemoteListGet, performFullListSync},
+	} {
+		for _, status := range []int{http.StatusNotFound, http.StatusGone} {
+			t.Run(tt.collection+"/"+http.StatusText(status), func(t *testing.T) {
+				f := setupGoneTest(t, status, tt.collection, tt.path, tt.handler)
+				newRemoteSyncHTTPClient = func() *http.Client {
+					return &http.Client{Transport: legacyRetryTransport{status}}
+				}
+				record := f.cached(t, true)
+
+				_, err := tt.sync(f.app, context.Background(), &url.URL{RawQuery: tt.query}, record)
+				if !errors.Is(err, errRemoteGone) {
+					t.Fatalf("err = %v, want errRemoteGone", err)
+				}
+			})
+		}
+	}
 }

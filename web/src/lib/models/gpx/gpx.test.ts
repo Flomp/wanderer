@@ -53,6 +53,24 @@ describe("GPX.parse", () => {
         expect(trackPointCount(GPX.parse(xml))).toBe(2);
     });
 
+    it("keeps a GPX 1.0 file readable after a parse/toString round trip", () => {
+        const xml = `<gpx version="1.0" creator="x" xmlns="http://www.topografix.com/GPX/1/0">${track("")}</gpx>`;
+
+        const out = GPX.parse(xml).toString();
+
+        expect(out.match(/\sxmlns="/g)).toHaveLength(1);
+        expect(trackPointCount(GPX.parse(out))).toBe(2);
+    });
+
+    it("keeps a single xmlns when a root attribute contains a greater-than sign", () => {
+        const xml = `<gpx version="1.0" creator="a > b" xmlns="http://www.topografix.com/GPX/1/0">${track("")}</gpx>`;
+
+        const out = GPX.parse(xml).toString();
+
+        expect(out.match(/\sxmlns="/g)).toHaveLength(1);
+        expect(trackPointCount(GPX.parse(out))).toBe(2);
+    });
+
     it("leaves foreign namespace prefixes untouched when no GPX prefix is bound", () => {
         const extensions = `<extensions><osmand:speed>1.2</osmand:speed><locus:activity>hike</locus:activity></extensions>`;
         const xml = `<gpx version="1.1" creator="x" xmlns="${GPX_NS}" xmlns:osmand="https://osmand.net" xmlns:locus="http://www.locusmap.eu">${track("", extensions)}</gpx>`;
@@ -194,5 +212,25 @@ describe("GPX.parse", () => {
         ''
     ])("preserves errors from the existing XML parser: %s", (xml) => {
         expect(() => GPX.parse(xml)).toThrow();
+    });
+
+    it("evaluates features lazily upon access", () => {
+        const xml = `<?xml version="1.0"?><gpx version="1.1" creator="x" xmlns="${GPX_NS}">${track("")}</gpx>`;
+        const gpx = GPX.parse(xml);
+
+        // Verify private field is not populated before access
+        expect((gpx as any)._features).toBeUndefined();
+
+        // toGeoJSON does not trigger features calculation
+        const geojson = gpx.toGeoJSON();
+        expect(geojson.type).toBe("FeatureCollection");
+        expect((gpx as any)._features).toBeUndefined();
+
+        // Accessing features computes and caches it
+        const features = gpx.features;
+        expect(features).toBeDefined();
+        expect(features.duration).toBe(60_000);
+        expect(features.distance).toBeDefined();
+        expect((gpx as any)._features).toBe(features);
     });
 });

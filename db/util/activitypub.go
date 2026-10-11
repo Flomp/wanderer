@@ -91,6 +91,7 @@ func ActorFromUser(app core.App, u *core.Record) (*core.Record, error) {
 	record.Set("user", u.Id)
 	record.Set("last_fetched", time.Now())
 
+	SanitizeHTMLFieldsWithLimits(record)
 	err = app.Save(record)
 	if err != nil {
 		return nil, err
@@ -107,6 +108,97 @@ func generateKeyPair() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 
 	pub := &priv.PublicKey
 	return priv, pub, nil
+}
+
+// ObjectKind names the sort of thing an ActivityPub object IRI points at.
+type ObjectKind string
+
+const (
+	ObjectKindUnknown   ObjectKind = ""
+	ObjectKindTrail     ObjectKind = "trail"
+	ObjectKindComment   ObjectKind = "comment"
+	ObjectKindSummitLog ObjectKind = "summit-log"
+	ObjectKindList      ObjectKind = "list"
+	ObjectKindWaypoint  ObjectKind = "waypoint"
+	ObjectKindActor     ObjectKind = "actor"
+	ObjectKindActivity  ObjectKind = "activity"
+)
+
+// ObjectKindFromIRI classifies an object IRI by the path segment that names its
+// type.
+//
+// It exists because searching the whole IRI for a keyword is not safe: the host
+// is part of that string, so an instance at https://mylist.social matches "list"
+// for every object it ever sends, and a user called "trailrunner" matches
+// "trail" in their own actor IRI. Routing an activity on that basis hands it to
+// the wrong handler.
+//
+// Wanderer object IRIs are <origin>/api/v1/<kind>/<id>, with actors and
+// activities a level deeper under <origin>/api/v1/activitypub/<kind>/<id>. The
+// origin may carry a path prefix of its own, so the version segment is located
+// rather than assumed to sit at a fixed offset. Anything unrecognised — content
+// from other ActivityPub software, say — is reported as unknown for the caller
+// to decide about.
+func ObjectKindFromIRI(iri string) ObjectKind {
+	u, err := url.Parse(iri)
+	if err != nil {
+		return ObjectKindUnknown
+	}
+
+	segments := make([]string, 0, 6)
+	for _, s := range strings.Split(u.Path, "/") {
+		if s != "" {
+			segments = append(segments, s)
+		}
+	}
+
+	for i, s := range segments {
+		if s != "v1" || i == 0 || segments[i-1] != "api" {
+			continue
+		}
+
+		rest := segments[i+1:]
+		if len(rest) == 0 {
+			return ObjectKindUnknown
+		}
+
+		if rest[0] == "activitypub" {
+			// .../activitypub/<kind>/<id>; without an id this names a
+			// collection endpoint rather than an object.
+			if len(rest) < 3 {
+				return ObjectKindUnknown
+			}
+			switch rest[1] {
+			case "user":
+				return ObjectKindActor
+			case "activity":
+				return ObjectKindActivity
+			}
+			return ObjectKindUnknown
+		}
+
+		// Likewise: <kind> alone is the collection, <kind>/<id> is an object.
+		if len(rest) < 2 {
+			return ObjectKindUnknown
+		}
+
+		switch rest[0] {
+		case "trail":
+			return ObjectKindTrail
+		case "comment":
+			return ObjectKindComment
+		case "summit-log":
+			return ObjectKindSummitLog
+		case "list":
+			return ObjectKindList
+		case "waypoint":
+			return ObjectKindWaypoint
+		}
+
+		return ObjectKindUnknown
+	}
+
+	return ObjectKindUnknown
 }
 
 // IsLocalIRI reports whether iri belongs to this instance's own ORIGIN.
@@ -194,6 +286,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 	var distance, duration, elevation_gain, elevation_loss float64
 	var diffculty string
 	trailTags := []string{}
+	seenTags := make(map[string]struct{})
 	tags, err := pub.ToItemCollection(t.Tag)
 	if err != nil {
 		return nil, err
@@ -219,24 +312,14 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		case "distance":
 			distance, err = strconv.ParseFloat(content[:len(content)-1], 64)
 		case "tag":
-			existingTag, err := app.FindFirstRecordByData("tags", "name", content)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					collection, err := app.FindCollectionByNameOrId("tags")
-					if err != nil {
-						continue
-					}
-					existingTag = core.NewRecord(collection)
-					existingTag.Set("name", content)
-					err = app.Save(existingTag)
-					if err != nil {
-						continue
-					}
-				} else {
-					continue
-				}
+			existingTag, tagErr := ResolveFederatedTag(app, content)
+			if tagErr != nil || existingTag == nil {
+				continue
 			}
-
+			if _, seen := seenTags[existingTag.Id]; seen {
+				continue
+			}
+			seenTags[existingTag.Id] = struct{}{}
 			trailTags = append(trailTags, existingTag.Id)
 		}
 		if err != nil {
@@ -306,6 +389,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		}
 	}
 
+	SanitizeHTMLFieldsWithLimits(record)
 	if err := app.Save(record); err != nil {
 		return nil, err
 	}
@@ -525,6 +609,9 @@ func ObjectFromTrail(app core.App, trail *core.Record, mentions *pub.ItemCollect
 		Longitude: trail.GetFloat("lon"),
 	}
 	trailObject.AttributedTo = pub.IRI(trailAuthor.GetString("iri"))
+	// Public, like its Create; GoToSocial rejects objects without to/cc.
+	trailObject.To = pub.ItemCollection{pub.PublicNS}
+	trailObject.CC = pub.ItemCollection{pub.IRI(trailAuthor.GetString("followers"))}
 	trailObject.Published = trail.GetDateTime("created").Time()
 	trailObject.ID = pub.IRI(trail.GetString("iri"))
 	trailObject.URL = pub.IRI(activityURL)
@@ -614,6 +701,7 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) (
 		}
 	}
 
+	SanitizeHTMLFieldsWithLimits(record)
 	err = app.Save(record)
 
 	return record, err
@@ -679,6 +767,9 @@ func ObjectFromComment(app core.App, comment *core.Record, mentions *pub.ItemCol
 	commentObject.Content = pub.NaturalLanguageValuesNew(pub.LangRefValueNew(pub.NilLangRef, comment.GetString("text")))
 	commentObject.Published = comment.GetDateTime("created").Time()
 	commentObject.AttributedTo = pub.IRI(commentAuthor.GetString("iri"))
+	// Public, like its Create; GoToSocial rejects objects without to/cc.
+	commentObject.To = pub.ItemCollection{pub.PublicNS}
+	commentObject.CC = pub.ItemCollection{pub.IRI(commentAuthor.GetString("followers"))}
 	commentObject.InReplyTo = pub.IRI(commentTrail.GetString("iri"))
 
 	if mentions != nil {
@@ -704,6 +795,12 @@ func TrailObjectFromIRI(iri string) (*pub.Object, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		// An error body decodes to an empty object, which would be stored as
+		// a trail without an id.
+		return nil, fmt.Errorf("fetching trail %s returned: %d", fetchURL, resp.StatusCode)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -713,6 +810,9 @@ func TrailObjectFromIRI(iri string) (*pub.Object, error) {
 	err = json.Unmarshal(body, &object)
 	if err != nil {
 		return nil, err
+	}
+	if object.ID == "" {
+		return nil, fmt.Errorf("fetching trail %s returned an object without an id", fetchURL)
 	}
 
 	return &object, nil

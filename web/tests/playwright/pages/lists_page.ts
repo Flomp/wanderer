@@ -35,12 +35,31 @@ export class ListsPage {
 
     this.dropdownButton = page.getByLabel('Open dropdown');
 
-    this.confirmModal = page.locator("#confirm-modal");
-    this.confirmModalConfirmButton = this.confirmModal.locator("button").filter({ hasText: "Delete" });
+    this.confirmModal = page.locator("dialog[open]").filter({
+      has: page.locator('button[name="delete"]')
+    });
+    this.confirmModalConfirmButton = this.confirmModal.locator('button[name="delete"]');
   }
 
   async goto() {
-    await this.page.goto('/lists', { waitUntil: 'networkidle' });
+    await this.loadOverview();
+  }
+
+  private async loadOverview() {
+    const [searchResponse] = await Promise.all([
+      this.page.waitForResponse(
+        response => new URL(response.url()).pathname === '/api/v1/search/lists'
+          && response.request().method() === 'POST',
+      ),
+      this.page.goto('/lists', { waitUntil: 'domcontentloaded' }),
+    ]);
+    expect(searchResponse.status(), 'Overview search must succeed').toBe(200);
+    await expect(this.listItems.first().or(
+      this.page.locator('#list-container').getByRole('img', {
+        name: 'Empty State showing a wanderer going into the distance', exact: true,
+      }),
+    )).toBeVisible();
+    return searchResponse.request().postDataJSON();
   }
 
   private async selectDropdownAction(action: string) {
@@ -58,35 +77,37 @@ export class ListsPage {
     return url.pathname.startsWith(pathPrefix) && response.request().method() === method && response.ok();
   }
 
-  private listItemByName(name: string) {
-    return this.listItems.filter({ hasText: name }).first();
-  }
-
-  private async waitForListItem(name: string, text?: string) {
-    await expect(async () => {
-      await this.page.goto('/lists', { waitUntil: 'domcontentloaded' });
-      await this.page.locator("#list-container").waitFor({ state: 'visible' });
-
-      const listItem = this.listItemByName(name);
-      await expect(listItem).toBeVisible({ timeout: 5000 });
-      if (text) {
-        await expect(listItem).toContainText(text, { timeout: 1000 });
-      }
-    }).toPass({
-      intervals: [500, 1000, 2000],
-      timeout: 20000,
+  private async waitUntilIndexed(
+    id: string,
+    expected?: { name: string; description?: string },
+  ) {
+    // Reuse the overview's actual filter and the browser's current cookies.
+    // Poll only the search API: map/image traffic must not delay indexing checks.
+    const body = await this.loadOverview();
+    const indexedList = expect.poll(async () => {
+      const searchResponse = await this.page.request.post('/api/v1/search/lists', {
+        data: body,
+      });
+      expect(searchResponse.status(), 'Polled list search must succeed').toBe(200);
+      const { hits } = await searchResponse.json() as {
+        hits: { id: string; name: string; description?: string }[];
+      };
+      return hits.find(item => item.id === id);
+    }, {
+      timeout: 15000, intervals: [100, 250, 500],
+      message: `List ${id} must ${expected ? 'match its saved values' : 'leave the search index'}`,
     });
-  }
-
-  private async waitForListCount(count: number) {
-    await expect(async () => {
-      await this.page.goto('/lists', { waitUntil: 'domcontentloaded' });
-      await this.page.locator("#list-container").waitFor({ state: 'visible' });
-      await expect(this.listItems).toHaveCount(count, { timeout: 5000 });
-    }).toPass({
-      intervals: [500, 1000, 2000],
-      timeout: 20000,
-    });
+    if (expected) {
+      await indexedList.toMatchObject(expected);
+    } else {
+      await indexedList.toBeUndefined();
+    }
+    await this.goto();
+    if (expected) {
+      await expect(this.listItems.filter({
+        has: this.page.getByRole('heading', { name: expected.name, exact: true }),
+      }).first()).toBeVisible();
+    }
   }
 
   async create(name: string = "Test List") {
@@ -96,12 +117,12 @@ export class ListsPage {
       "./tests/playwright/fixtures/avatar.webp"
     ]);
 
-    await Promise.all([
-      this.page.waitForResponse(resp => this.isApiResponse(resp, '/api/v1/list/form', 'PUT')),
+    const [createdList] = await Promise.all([
+      this.page.waitForResponse(resp => this.isApiResponse(resp, '/api/v1/list/form', 'PUT'))
+        .then(response => response.json() as Promise<{ id: string }>),
       this.listFormSaveButton.click()
     ]);
-
-    await this.waitForListItem(name);
+    await this.waitUntilIndexed(createdList.id, { name });
   }
 
   async update(name: string = "Updated List", description = "New Description") {
@@ -112,44 +133,34 @@ export class ListsPage {
     await this.listFormName.fill(name);
     await this.listFormDescription.fill(description);
 
-    await Promise.all([
-      this.page.waitForResponse(resp => this.isApiResponseWithPathPrefix(resp, '/api/v1/list/form/', 'POST')),
+    const [updatedList] = await Promise.all([
+      this.page.waitForResponse(resp => this.isApiResponseWithPathPrefix(resp, '/api/v1/list/form/', 'POST'))
+        .then(response => response.json() as Promise<{ id: string; description: string }>),
       this.listFormSaveButton.click()
     ]);
-
-    await this.waitForListItem(name, description);
+    await this.waitUntilIndexed(updatedList.id, { name, description: updatedList.description });
   }
 
   async delete() {
-    const countBefore = await this.listItems.count();
     await this.listItems.first().click();
     await this.selectDropdownAction("Delete");
 
-    await Promise.all([
+    const [response] = await Promise.all([
       this.page.waitForResponse(resp => this.isApiResponseWithPathPrefix(resp, '/api/v1/list/', 'DELETE')),
       this.confirmModalConfirmButton.click()
     ]);
-
-    await this.waitForListCount(countBefore - 1);
+    const deletedId = new URL(response.url()).pathname.split('/').at(-1)!;
+    await this.waitUntilIndexed(deletedId);
   }
 
   async removeAll() {
-    const response = await this.page.request.get('/api/v1/list?perPage=-1');
-    if (!response.ok()) {
-      throw new Error(`Failed to fetch lists for cleanup: ${response.status()}`);
+    await this.goto();
+
+    let count = await this.listItems.count();
+    while (count > 0) {
+      await this.delete();
+      count = await this.listItems.count();
     }
-
-    const result: { items?: Array<{ id?: string }> } = await response.json();
-    await Promise.all((result.items ?? []).map(async (item) => {
-      if (!item.id) {
-        return;
-      }
-
-      const deleteResponse = await this.page.request.delete(`/api/v1/list/${item.id}`);
-      if (!deleteResponse.ok() && deleteResponse.status() !== 404 && deleteResponse.status() !== 403) {
-        throw new Error(`Failed to delete list ${item.id}: ${deleteResponse.status()}`);
-      }
-    }));
   }
 
 

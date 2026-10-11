@@ -490,14 +490,6 @@ func TrailThumbnailAsset(app core.App, trailID string) (*core.Record, error) {
 	return assets[0], nil
 }
 
-func TrailThumbnailURL(app core.App, trailID string, origin string) (string, error) {
-	asset, err := TrailThumbnailAsset(app, trailID)
-	if err != nil || asset == nil {
-		return "", err
-	}
-	return AssetPublicMediaURL(asset, origin), nil
-}
-
 func TrailThumbnailURLs(app core.App, trails []*core.Record, origin string) (map[string]string, error) {
 	urls := make(map[string]string, len(trails))
 	if len(trails) == 0 {

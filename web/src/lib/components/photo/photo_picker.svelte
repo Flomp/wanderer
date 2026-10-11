@@ -179,7 +179,8 @@
     function handlePhotoExif(index: number, src: string) {
         const fileIndex = index - photos.length;
         const coordinates = fileIndex >= 0 ? assetFileCoordinatesFor(photoFiles?.[fileIndex]) : undefined;
-        onexif?.(src, coordinates);
+        // Thumbnails carry no EXIF data, so saved photos are read from the original file.
+        onexif?.(fileIndex >= 0 ? src : getFileURL(parent, photos[index]), coordinates);
     }
 
     function assetThumbnailURL(preview: AssetPluginPreview): string {
@@ -289,7 +290,7 @@
         {#each (photos ?? []).concat(photoPreviews) as photo, i}
             <div class="shrink-0 grow-0 basis-auto">
                 <PhotoCard
-                    src={i >= photos.length ? photo : getFileURL(parent, photo)}
+                    src={i >= photos.length ? photo : getFileURL(parent, photo, "600x0")}
                     ondelete={() => handlePhotoDelete(i)}
                     isThumbnail={thumbnail === i}
                     onthumbnail={() => makePhotoThumbnail(i)}

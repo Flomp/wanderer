@@ -1,7 +1,9 @@
 package hooks
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"pocketbase/util"
 	"sync"
 	"time"
@@ -140,4 +142,18 @@ func (d *trailReindexDebouncer) flush(app core.App, trailID string) {
 	if err := util.IndexTrails(app, []*core.Record{trail}, d.client); err != nil {
 		app.Logger().Warn("failed to reindex trail after asset link change", "trail", trailID, "error", err)
 	}
+}
+
+// deleteThenRemoveOrphanedAssets deletes the record and then the assets only it
+// used. Post-commit hooks report their errors through e.Next() after the record
+// is already gone, so the cleanup still runs in that case.
+func deleteThenRemoveOrphanedAssets(e *core.RecordRequestEvent, assetIDs []string) error {
+	nextErr := e.Next()
+	if nextErr == nil {
+		return util.DeleteAssetsIfOrphanedByAuthor(e.App, assetIDs, e.Record.GetString("author"))
+	}
+	if _, err := e.App.FindRecordById(e.Record.Collection(), e.Record.Id); !errors.Is(err, sql.ErrNoRows) {
+		return nextErr
+	}
+	return errors.Join(nextErr, util.DeleteAssetsIfOrphanedByAuthor(e.App, assetIDs, e.Record.GetString("author")))
 }
