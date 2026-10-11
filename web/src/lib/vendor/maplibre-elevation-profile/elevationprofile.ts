@@ -13,7 +13,6 @@ import zoomPlugin from "chartjs-plugin-zoom";
 // @ts-ignore
 import { CrosshairPlugin } from "chartjs-plugin-crosshair";
 
-import { haversineDistance } from "$lib/models/gpx/utils";
 import type { Waypoint } from "$lib/models/waypoint";
 import { formatDistance, formatTimeHHMM } from "$lib/util/format_util";
 import {
@@ -24,7 +23,7 @@ import {
     waypointHasPopupMedia,
     type WaypointPopupMedia,
 } from "$lib/util/waypoint_map_util";
-import { haversineCumulatedDistanceWgs84, smoothElevations } from "./tools";
+import { haversineCumulatedDistanceWgs84, MIN_STORED_DISTANCE_METERS, smoothElevations, waypointTrackIndex } from "./tools";
 
 // The crosshair plugin only initializes `chart.crosshair` for charts with a
 // cartesian x scale, but several of its hooks dereference it unconditionally.
@@ -54,9 +53,11 @@ const MILES_HOUR_PER_METER_SECOND = 2.23694
 
 function extractLineStrings(
     geoJson: GeoJsonObject
-): { lineStrings: Array<LineString | MultiLineString>, times: Date[] } {
+): { lineStrings: Array<LineString | MultiLineString>, times: Date[], timesComplete: boolean } {
     const lineStrings: Array<LineString | MultiLineString> = [];
     const times: Date[] = [];
+    // GPX points without a time become null, which `new Date` reads as 1970.
+    let timesComplete = true;
 
     function extractFromGeometry(geometry: GeometryObject) {
         if (geometry.type === "LineString" || geometry.type === "MultiLineString") {
@@ -71,6 +72,7 @@ function extractLineStrings(
         if (feature.properties?.coordinateProperties?.times) {
             const coordinateTimes = feature.properties?.coordinateProperties?.times.map((t: string) => new Date(t))
             times.push(...coordinateTimes)
+            timesComplete &&= feature.properties.coordinateProperties.times.every((t: string | null) => !!t);
         }
     }
 
@@ -93,11 +95,11 @@ function extractLineStrings(
         extractFromGeometry(geoJson as GeometryObject);
     }
 
-    return { lineStrings, times };
+    return { lineStrings, times, timesComplete };
 }
 
-function geoJsonObjectToPositionsAndTimes(geoJson: GeoJsonObject): { positions: Position[], times: Date[] } {
-    const { lineStrings, times } = extractLineStrings(geoJson);
+function geoJsonObjectToPositionsAndTimes(geoJson: GeoJsonObject): { positions: Position[], times: Date[], timesComplete: boolean } {
+    const { lineStrings, times, timesComplete } = extractLineStrings(geoJson);
     const positionsGroups: Position[][] = [];
 
     for (let i = 0; i < lineStrings.length; i += 1) {
@@ -108,7 +110,7 @@ function geoJsonObjectToPositionsAndTimes(geoJson: GeoJsonObject): { positions: 
             positionsGroups.push(feature.coordinates.flat());
         }
     }
-    return { positions: positionsGroups.flat(), times };
+    return { positions: positionsGroups.flat(), times, timesComplete };
 }
 
 /**
@@ -397,6 +399,7 @@ export class ElevationProfile {
     private waypointPositions: number[] = []
     private waypoints: Waypoint[] = [];
     private times: Date[] = [];
+    private timesComplete = false;
     private cumulatedTime: number[] = []
     private speed: number[] = [];
 
@@ -543,15 +546,12 @@ export class ElevationProfile {
                             tickColor: "#0002"
                         },
                         ticks: {
-                            stepSize: 0.1,
+                            maxTicksLimit: 12,
                             align: "inner",
                             display: this.settings.displayDistanceLabels,
                             color: this.settings.labelColor,
                             maxRotation: 0,
-                            callback: (value, index) => {
-                                if (index % 10 !== 0) {
-                                    return "";
-                                }
+                            callback: (value) => {
                                 const roundedValue = ~~((value as number) * 100) / 100;
                                 return this.settings.displayUnits
                                     ? `${roundedValue} ${distanceUnit}`
@@ -896,6 +896,22 @@ export class ElevationProfile {
         this.chart.update();
     }
 
+    private placeWaypoints() {
+        this.waypoints.forEach((waypoint, waypointIndex) => {
+            const index = waypointTrackIndex(
+                this.elevatedPositions,
+                this.timesComplete ? this.times : [],
+                this.cumulatedDistance,
+                waypoint,
+            );
+            if (index < 0) {
+                return;
+            }
+            this.waypointPositions[waypointIndex] = this.cumulatedDistanceAdjustedUnit[index];
+            waypoint.distance_from_start = Math.max(MIN_STORED_DISTANCE_METERS, this.cumulatedDistance[index]);
+        });
+    }
+
     private syncWaypointMarkers(chart: {
         scales: Record<string, { getPixelForValue: (value: number) => number }>;
     }) {
@@ -1017,11 +1033,13 @@ export class ElevationProfile {
 
     async setData(data: GeoJsonObject, waypoints?: Waypoint[]) {
         // Concatenates the positions that may come from multiple LineStrings or MultiLineString
-        const { positions, times } = geoJsonObjectToPositionsAndTimes(data);
+        const { positions, times, timesComplete } = geoJsonObjectToPositionsAndTimes(data);
 
         this.times = times;
+        this.timesComplete = timesComplete;
 
-        this.elevatedPositions = smoothElevations(positions, Math.ceil(positions.length / 100));
+        const windowSize = Math.min(25, Math.ceil(positions.length / 100));
+        this.elevatedPositions = smoothElevations(positions, windowSize);
 
         this.cumulatedDistance = haversineCumulatedDistanceWgs84(
             this.elevatedPositions
@@ -1058,23 +1076,9 @@ export class ElevationProfile {
         const minSegmentDistance = (this.cumulatedDistance.at(-1) ?? 1000) / 100;
         let segmentStartIndex = 0;
 
-        // Initialize an array to store the minimum distance for each waypoint
-        const minDistances = new Array(waypoints?.length).fill(Infinity);
+        this.placeWaypoints();
 
         for (let i = 0; i < this.elevatedPositions.length; i++) {
-
-            // Check if a waypoint is closest to this point
-            this.waypoints.forEach((waypoint, waypointIndex) => {
-                const distance = haversineDistance(this.elevatedPositions[i][1], this.elevatedPositions[i][0], waypoint.lat, waypoint.lon);
-
-                // Update if the current route coordinate is closer to the waypoint
-                if (distance < minDistances[waypointIndex]) {
-                    minDistances[waypointIndex] = distance;
-                    this.waypointPositions[waypointIndex] = this.cumulatedDistanceAdjustedUnit[i];
-                    waypoint.distance_from_start = this.cumulatedDistance[i];
-                }
-            });
-
             const elevation = this.elevatedPositions[i][2];
             const time = this.times[i]
             if (i > 1) {

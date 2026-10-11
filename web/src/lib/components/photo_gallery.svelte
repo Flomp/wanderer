@@ -3,7 +3,9 @@
     import PhotoSwipeVideoPlugin from "$lib/vendor/photo-swipe-video-plugin";
     import type { DataSource } from "photoswipe";
     import PhotoSwipeLightbox from "photoswipe/lightbox";
-    import { onMount } from "svelte";
+    import { pushState } from "$app/navigation";
+    import { page } from "$app/state";
+    import { onMount, onDestroy } from "svelte";
 
     interface Props {
         photos: string[];
@@ -22,6 +24,26 @@
 
     let lightbox: PhotoSwipeLightbox;
     let lightboxDataSource: DataSource;
+
+    // An open lightbox is a shallow history entry, so Back closes it and
+    // Forward reopens it. The id keeps several galleries on a page apart.
+    const galleryId = $props.id();
+    let ownsHistoryEntry = false;
+
+    $effect(() => {
+        const entry = page.state.lightbox;
+        if (!lightbox) {
+            return;
+        }
+        if (entry?.id === galleryId) {
+            if (!lightbox.pswp) {
+                openGallery(entry.index);
+            }
+        } else if (lightbox.pswp) {
+            ownsHistoryEntry = false;
+            lightbox.pswp.close();
+        }
+    });
 
     function hasDimensions(item: SlideItem) {
         return (
@@ -127,10 +149,16 @@
         });
         const videoPlugin = new PhotoSwipeVideoPlugin(lightbox);
 
-        lightbox.init();
-
         lightbox.on("beforeOpen", () => {
             const pswp = lightbox.pswp;
+
+            if (page.state.lightbox?.id !== galleryId) {
+                pushState("", {
+                    lightbox: { id: galleryId, index: pswp?.options.index ?? 0 },
+                });
+            }
+            ownsHistoryEntry = true;
+
             const ds = pswp?.options?.dataSource;
 
             if (Array.isArray(ds)) {
@@ -141,5 +169,22 @@
                 );
             }
         });
+
+        // Closed from the UI: drop the entry it added. Closing via Back has
+        // already removed it.
+        lightbox.on("close", () => {
+            if (ownsHistoryEntry && page.state.lightbox?.id === galleryId) {
+                history.back();
+            }
+            ownsHistoryEntry = false;
+        });
+
+        lightbox.init();
+    });
+
+    onDestroy(() => {
+        // Unmounting must not navigate, so give up the entry before closing.
+        ownsHistoryEntry = false;
+        lightbox?.destroy();
     });
 </script>
