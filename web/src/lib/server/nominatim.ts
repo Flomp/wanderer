@@ -5,6 +5,7 @@ import type { RequestEvent } from "@sveltejs/kit";
 const NOMINATIM_RATE_LIMIT_MS = 1000;
 const NOMINATIM_MAX_RETRIES = 2;
 let lastNominatimCall = 0;
+let nominatimRequestQueue: Promise<void> = Promise.resolve();
 
 function getNominatimBaseUrl(): string {
     return resolveBaseUrl("NOMINATIM_URL", "https://nominatim.openstreetmap.org");
@@ -16,7 +17,7 @@ function needsRateLimiting(baseUrl: string): boolean {
 
 const waitTimer = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-async function nominatimRateLimiter(baseUrl: string) {
+async function waitForNominatimSlot(baseUrl: string) {
     if (!needsRateLimiting(baseUrl)) {
         return;
     }
@@ -30,6 +31,41 @@ async function nominatimRateLimiter(baseUrl: string) {
     lastNominatimCall = Date.now();
 }
 
+async function withNominatimQueue<T>(baseUrl: string, request: () => Promise<T>): Promise<T> {
+    if (!needsRateLimiting(baseUrl)) {
+        return request();
+    }
+
+    const previousRequest = nominatimRequestQueue;
+    let releaseRequest!: () => void;
+    nominatimRequestQueue = new Promise<void>(resolve => {
+        releaseRequest = resolve;
+    });
+
+    await previousRequest;
+    try {
+        return await request();
+    } finally {
+        releaseRequest();
+    }
+}
+
+function retryAfterMs(header: string | null, attempt: number): number {
+    if (header !== null) {
+        const seconds = Number(header);
+        if (Number.isFinite(seconds) && seconds >= 0) {
+            return seconds * 1000;
+        }
+
+        const retryAt = Date.parse(header);
+        if (Number.isFinite(retryAt)) {
+            return Math.max(0, retryAt - Date.now());
+        }
+    }
+
+    return NOMINATIM_RATE_LIMIT_MS * 2 ** (attempt - 1);
+}
+
 export async function fetchNominatim(event: RequestEvent, path: string, params: URLSearchParams): Promise<Response> {
     const baseUrl = getNominatimBaseUrl();
     const base = new URL(baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
@@ -40,24 +76,34 @@ export async function fetchNominatim(event: RequestEvent, path: string, params: 
         url.search = query;
     }
 
-    let attempt = 0;
+    return withNominatimQueue(baseUrl, async () => {
+        let attempt = 0;
 
-    while (true) {
-        await nominatimRateLimiter(baseUrl);
+        while (true) {
+            await waitForNominatimSlot(baseUrl);
 
-        try {
-            return await event.fetch(url.toString(), {
-                method: "GET",
-                headers: {
-                    "User-Agent": `wanderer/${version}`,
-                },
-            });
-        } catch (error) {
-            if (attempt < NOMINATIM_MAX_RETRIES) {
-                attempt++;
-                continue;
+            try {
+                const response = await event.fetch(url.toString(), {
+                    method: "GET",
+                    headers: {
+                        "User-Agent": `wanderer/${version}`,
+                    },
+                });
+
+                if (response.status === 429 && attempt < NOMINATIM_MAX_RETRIES) {
+                    attempt++;
+                    await waitTimer(retryAfterMs(response.headers.get("Retry-After"), attempt));
+                    continue;
+                }
+
+                return response;
+            } catch (error) {
+                if (attempt < NOMINATIM_MAX_RETRIES) {
+                    attempt++;
+                    continue;
+                }
+                throw new Error(`Nominatim fetch failed for ${url.toString()}`, { cause: error });
             }
-            throw new Error(`Nominatim fetch failed for ${url.toString()}`, { cause: error });
         }
-    }
+    });
 }
