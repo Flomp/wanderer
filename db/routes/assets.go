@@ -445,8 +445,8 @@ func AssetFile(e *core.RequestEvent) error {
 		return e.NotFoundError("", nil)
 	}
 
-	if e.Request.URL.Query().Get("thumb") != "" {
-		entry, err := fetchAssetRecordPluginThumbnailEntry(e.Request.Context(), e.App, asset)
+	if thumb := e.Request.URL.Query().Get("thumb"); thumb != "" {
+		entry, err := fetchAssetRecordPluginThumbnailEntry(e.Request.Context(), e.App, asset, pluginAssetThumbnailSize(thumb))
 		if err != nil {
 			return e.NotFoundError("", err)
 		}

@@ -18,7 +18,12 @@ const AssetMetadataPatchSchema = z.object({
  * @swagger
  * /api/v1/assets/{id}:
  *   delete:
- *     summary: Delete asset
+ *     summary: Delete asset or remove it from a target
+ *     description: >
+ *       Without a target, deletes an asset the user is the author of, together with its links.
+ *       With `trail`, `waypoint` or `summit_log`, removes the asset from the given target instead, which needs the same
+ *       permission as attaching photos to it. The asset itself is then deleted only when it has no links left and the
+ *       user is its author; `assetDeleted` says whether that happened.
  *     tags:
  *       - Assets
  *     parameters:
@@ -27,9 +32,24 @@ const AssetMetadataPatchSchema = z.object({
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: trail
+ *         schema:
+ *           type: string
+ *         description: Trail to remove the asset from. Ignored together with `waypoint` or `summit_log`.
+ *       - in: query
+ *         name: waypoint
+ *         schema:
+ *           type: string
+ *         description: Waypoint to remove the asset from.
+ *       - in: query
+ *         name: summit_log
+ *         schema:
+ *           type: string
+ *         description: Summit log to remove the asset from.
  *     responses:
  *       200:
- *         description: Asset deleted
+ *         description: Asset deleted or removed from the target
  *         content:
  *           application/json:
  *             schema:
@@ -37,10 +57,17 @@ const AssetMetadataPatchSchema = z.object({
  *               properties:
  *                 acknowledged:
  *                   type: boolean
+ *                 assetDeleted:
+ *                   type: boolean
+ *                   description: Only with a target. Whether the asset itself was deleted.
  *       400:
- *         description: Invalid asset id
+ *         description: Invalid asset or target id
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Without a target, the user is not the asset's author; otherwise insufficient permissions for the target
  *       404:
- *         description: Asset not found
+ *         description: Asset or target not found
  *       500:
  *         description: Internal Server Error
  */
@@ -75,6 +102,77 @@ export async function DELETE(event: RequestEvent) {
     }
 }
 
+/**
+ * @swagger
+ * /api/v1/assets/{id}:
+ *   patch:
+ *     summary: Fill in missing photo metadata
+ *     description: >
+ *       Fills in what a photo asset is missing, as the photo metadata maintenance does with the photo's own EXIF data
+ *       or values the user enters. Only the asset's author can change it. Fields that do not apply are ignored, and
+ *       when nothing applies the asset is returned unchanged.
+ *     tags:
+ *       - Assets
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               lat:
+ *                 type: number
+ *                 minimum: -90
+ *                 maximum: 90
+ *                 description: >
+ *                   Latitude, sent together with `lon`. Both are written only when the asset has no coordinates yet
+ *                   (`lat` and `lon` both 0), or with `replaceCoordinates` on a migrated asset.
+ *               lon:
+ *                 type: number
+ *                 minimum: -180
+ *                 maximum: 180
+ *                 description: Longitude, sent together with `lat`.
+ *               takenAt:
+ *                 type: string
+ *                 format: date-time
+ *                 description: >
+ *                   Time the photo was taken, written only when the asset's `taken_at` is empty and stored in UTC.
+ *                   A value that cannot be read as a date is ignored. The time gets no `metadata.capture_time`
+ *                   mark, so it does not count as the photo's own capture time, for example as `capturedAt` in
+ *                   `POST /api/v1/assets/library`.
+ *               replaceCoordinates:
+ *                 type: boolean
+ *                 description: >
+ *                   Replace existing coordinates with `lat` and `lon`. Applies only to an asset migrated from the
+ *                   photos of an earlier version (`metadata.source_collection` is set), which got the coordinates of
+ *                   its trail or waypoint rather than its own.
+ *               markChecked:
+ *                 type: boolean
+ *                 description: >
+ *                   Record the check in `metadata.exif_backfill.checked_at`, keeping the other metadata. The photo
+ *                   metadata maintenance then no longer lists the asset.
+ *     responses:
+ *       200:
+ *         description: The asset, updated or unchanged
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Asset'
+ *       400:
+ *         description: Invalid asset id or body, or only one of `lat` and `lon`
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Asset not found, or a change to an asset the user is not the author of
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function PATCH(event: RequestEvent) {
     try {
         if (!event.locals.user) {

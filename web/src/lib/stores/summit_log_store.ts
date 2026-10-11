@@ -4,6 +4,7 @@ import { type AuthRecord, type ListResult } from "pocketbase";
 import { get, writable, type Writable } from "svelte/store";
 import { currentUser } from "./user_store";
 import { isURL, objectToFormData } from "$lib/util/file_util";
+import { assetIdFromPhotoURL, shownAssetLinks } from "$lib/util/asset_link_util";
 import { assets_attach_to_target, assets_delete_removed, type AssetImportOmissionHandler, type CompletedAssetAttachments } from "./asset_store";
 import { subcategories } from "./subcategory_store";
 import { buildPocketBaseCategoryFilter } from "$lib/util/trail_filter_util";
@@ -69,7 +70,7 @@ export async function summit_logs_create(summitLog: SummitLog, f: (url: RequestI
     try {
         model.photos = await assets_attach_to_target({
             files: summitLog._photos,
-            assetIds: summitLog._assetLinks,
+            assetIds: shownAssetLinks(summitLog._assetLinks, summitLog.photos),
             pluginLinks: summitLog._assetPluginLinks,
             target: {
                 trail: model.trail ?? summitLog.trail,
@@ -131,7 +132,7 @@ export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: 
     try {
         model.photos = await assets_attach_to_target({
             files: newSummitLog._photos,
-            assetIds: newSummitLog._assetLinks,
+            assetIds: shownAssetLinks(newSummitLog._assetLinks, newSummitLog.photos),
             pluginLinks: newSummitLog._assetPluginLinks,
             target: {
                 trail: model.trail ?? newSummitLog.trail,
@@ -142,7 +143,7 @@ export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: 
         });
     } catch (cause) {
         const attachedPhotos: string[] = cause instanceof APIError ? cause.detail?.attachedPhotos ?? [] : [];
-        model.photos = [...new Set([...(oldSummitLog.photos ?? []), ...attachedPhotos])];
+        model.photos = [...new Set([...(oldSummitLog.photos ?? []), ...savedAttachedPhotos(attachedPhotos, newSummitLog, cause)])];
         throw savedSummitLogFailure(cause, newSummitLog, model, remainingSummitLogAttachments(newSummitLog, cause), [
             ...new Set([...(newSummitLog.photos ?? []), ...attachedPhotos]),
         ]);
@@ -156,6 +157,16 @@ export async function summit_logs_update(oldSummitLog: SummitLog, newSummitLog: 
     }
 
     return applySavedSummitLog(newSummitLog, model, {});
+}
+
+// The attached photos start with those the form already had. The ones linked
+// by ID are saved only once linking completed: listed earlier, dropping one
+// before the retry would send a removal, and that deletes a library photo
+// without other links.
+function savedAttachedPhotos(attachedPhotos: string[], log: SummitLog, error: unknown): string[] {
+    const linked = error instanceof APIError && error.detail?.completedAttachments?.assetIds;
+    const unlinked = new Set(linked ? [] : log._assetLinks);
+    return attachedPhotos.filter((photo) => !unlinked.has(assetIdFromPhotoURL(photo) ?? ""));
 }
 
 type RemainingSummitLogAttachments = Pick<SummitLog, "_photos" | "_assetLinks" | "_assetPluginLinks">;

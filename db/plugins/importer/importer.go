@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"mime"
@@ -233,7 +234,8 @@ type CategoryMappingValue struct {
 // ImportTrail is the boundary between plugin output and wanderer records. It
 // validates the provider identity, deduplicates by trail_external_reference,
 // stores the GPX/photos, maps GPX metrics onto the trail record, and creates the
-// optional related waypoints and summit log.
+// optional related waypoints and summit log. A public trail is published last,
+// like from the editor, so that the activity announcing it carries its photos.
 func ImportTrail(ctx context.Context, app core.App, item pluginsystem.TrailImport, opts Options) (*Result, error) {
 	if item.Source.Provider == "" || item.Source.ExternalID == "" {
 		return nil, fmt.Errorf("source provider and externalId are required")
@@ -278,7 +280,7 @@ func ImportTrail(ctx context.Context, app core.App, item pluginsystem.TrailImpor
 	record.Load(map[string]any{
 		"name":           fallbackName(item.Name),
 		"description":    item.Description,
-		"public":         public,
+		"public":         false,
 		"completed":      item.Kind == "completed",
 		"distance":       metrics.Distance,
 		"elevation_gain": metrics.ElevationGain,
@@ -305,21 +307,54 @@ func ImportTrail(ctx context.Context, app core.App, item pluginsystem.TrailImpor
 	if err := util.EnsureTrailExternalReference(app, record.Id, item.Source.Provider, item.Source.ExternalID, opts.Manifest.ID, ProviderCategoryFromImport(item)); err != nil {
 		return nil, err
 	}
-	if _, err := importPhotoAssets(ctx, app, item.Photos, opts, PhotoAssetTarget{Trail: record.Id, PublicTrail: public}, mediaBudget); err != nil {
-		return nil, err
-	}
-
-	if err := createWaypoints(ctx, app, item.Waypoints, opts, mediaBudget, record.Id, public, trackIndex); err != nil {
-		return nil, err
-	}
-
-	if opts.CreateSummitLogForCompleted && item.Kind == "completed" {
-		if err := createSummitLog(app, record.Id, opts.ActorID, date, metrics); err != nil {
-			return nil, err
+	importErr := func() error {
+		if _, err := importPhotoAssets(ctx, app, item.Photos, opts, PhotoAssetTarget{Trail: record.Id, PublicTrail: public}, mediaBudget); err != nil {
+			return err
 		}
+		if err := createWaypoints(ctx, app, item.Waypoints, opts, mediaBudget, record.Id, public, trackIndex); err != nil {
+			return err
+		}
+		if opts.CreateSummitLogForCompleted && item.Kind == "completed" {
+			return createSummitLog(app, record.Id, opts.ActorID, date, metrics)
+		}
+		return nil
+	}()
+	// The next sync skips a trail it has imported, so the trail gets the
+	// visibility the provider asked for even when the import stopped part way.
+	if public {
+		if err := publishImportedTrail(app, record.Id); err != nil {
+			return nil, errors.Join(importErr, err)
+		}
+	}
+	if importErr != nil {
+		return nil, importErr
 	}
 
 	return &Result{TrailID: record.Id, Created: true}, nil
+}
+
+// publishImportedTrail makes an imported trail public the way a publication
+// from the editor does. A hook that fails after the commit, such as a search
+// index that is down, does not fail the import: the trail is public by then.
+func publishImportedTrail(app core.App, trailID string) error {
+	committed := false
+	err := app.RunInTransaction(func(txApp core.App) error {
+		txApp.TxInfo().OnComplete(func(txErr error) error {
+			committed = txErr == nil
+			return nil
+		})
+		trail, err := txApp.FindRecordById("trails", trailID)
+		if err != nil {
+			return err
+		}
+		trail.Set("public", true)
+		return txApp.Save(trail)
+	})
+	if err != nil && committed {
+		app.Logger().Warn("imported trail published but follow-up processing failed", "trail", trailID, "error", err)
+		return nil
+	}
+	return err
 }
 
 func normalizedDifficulty(value string) string {
@@ -473,12 +508,15 @@ func trackDistanceIndexFromGPX(gpxData *gpx.GPX) trackDistanceIndex {
 	if gpxData == nil {
 		return index
 	}
+	// The distance runs on across the gaps between segments and tracks, as the
+	// web's distance from start does, but a gap is no recorded track that a
+	// waypoint could be projected onto.
 	totalDistance := 0.0
+	var previous geoPoint
+	hasPrevious := false
 	for _, track := range gpxData.Tracks {
 		for _, segment := range track.Segments {
-			var previous geoPoint
-			hasPrevious := false
-			for _, point := range segment.Points {
+			for i, point := range segment.Points {
 				current := geoPoint{Lat: point.Latitude, Lon: point.Longitude}
 				if !hasPrevious {
 					index.points = append(index.points, indexedTrackPoint{
@@ -490,15 +528,15 @@ func trackDistanceIndexFromGPX(gpxData *gpx.GPX) trackDistanceIndex {
 					continue
 				}
 				length := util.HaversineDistanceMeters(previous.Lat, previous.Lon, current.Lat, current.Lon)
-				if length > 0 {
+				if length > 0 && i > 0 {
 					index.segments = append(index.segments, indexedTrackSegment{
 						start:         previous,
 						end:           current,
 						startDistance: totalDistance,
 						length:        length,
 					})
-					totalDistance += length
 				}
+				totalDistance += length
 				index.points = append(index.points, indexedTrackPoint{
 					point:    current,
 					distance: totalDistance,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -168,6 +169,102 @@ func TestTrailTrackPointsFromBytesUsesTimestamps(t *testing.T) {
 	}
 	if end.Format(time.RFC3339) != "2026-01-01T10:15:00Z" {
 		t.Fatalf("got end %s", end.Format(time.RFC3339))
+	}
+}
+
+// webDistancesFromStart is the distance from start in the web's elevation
+// profile: it joins the points of all segments and tracks into one line and
+// adds up haversineDistance with a 6371 km radius between neighbours.
+func webDistancesFromStart(points [][2]float64) []float64 {
+	distances := []float64{0}
+	for i := 1; i < len(points); i++ {
+		lat1, lon1 := points[i-1][0], points[i-1][1]
+		lat2, lon2 := points[i][0], points[i][1]
+		dLat := (lat2 - lat1) * (math.Pi / 180)
+		dLon := (lon2 - lon1) * (math.Pi / 180)
+		a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+			math.Cos(lat1*(math.Pi/180))*math.Cos(lat2*(math.Pi/180))*math.Sin(dLon/2)*math.Sin(dLon/2)
+		c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+		distances = append(distances, distances[i-1]+6371*c*1000)
+	}
+	return distances
+}
+
+// An out-and-back recording that pauses at the turnaround and goes on in a new
+// segment 3 m away. The web counts that gap and trusts a stored distance from
+// start only within 1 m of its own, so the server has to count it too or the
+// web loses the pass the server chose.
+func TestTrailTrackPointsFromBytesCountsGapsBetweenSegments(t *testing.T) {
+	gpxWith := func(separator string) []byte {
+		return []byte(`<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <trkseg>
+      <trkpt lat="46.0000" lon="8.00000"><time>2026-10-03T08:00:00Z</time></trkpt>
+      <trkpt lat="46.0045" lon="8.00000"><time>2026-10-03T08:15:00Z</time></trkpt>
+      <trkpt lat="46.0090" lon="8.00000"><time>2026-10-03T08:30:00Z</time></trkpt>
+    </trkseg>` + separator + `
+    <trkseg>
+      <trkpt lat="46.0090" lon="8.00004"><time>2026-10-03T08:40:00Z</time></trkpt>
+      <trkpt lat="46.0045" lon="8.00004"><time>2026-10-03T08:55:00Z</time></trkpt>
+      <trkpt lat="46.0000" lon="8.00004"><time>2026-10-03T09:10:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`)
+	}
+	web := webDistancesFromStart([][2]float64{
+		{46.0000, 8.00000}, {46.0045, 8.00000}, {46.0090, 8.00000},
+		{46.0090, 8.00004}, {46.0045, 8.00004}, {46.0000, 8.00004},
+	})
+	back := time.Date(2026, 10, 3, 8, 55, 0, 0, time.UTC)
+
+	for name, content := range map[string][]byte{
+		"two segments": gpxWith(""),
+		"two tracks":   gpxWith("\n  </trk>\n  <trk>"),
+	} {
+		points, _, _, err := trailTrackPointsFromBytes(content)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if len(points) != len(web) {
+			t.Fatalf("%s: got %d points, want %d", name, len(points), len(web))
+		}
+		for i, point := range points {
+			if math.Abs(point.Distance-web[i]) > 0.001 {
+				t.Errorf("%s: point %d at %.3f m, the web has it at %.3f m", name, i, point.Distance, web[i])
+			}
+		}
+		if got := assetPluginDistanceFromStart(points, 46.0045, 8.00002, &back); math.Abs(got-web[4]) > 1 {
+			t.Errorf("%s: return-pass waypoint stored at %.2f m, the web's return-pass point is at %.2f m", name, got, web[4])
+		}
+	}
+}
+
+func TestAssetPluginCandidateCaptureTimesNeedAnOffset(t *testing.T) {
+	var output pluginAssetLibraryOutput
+	if err := json.Unmarshal([]byte(`{"candidates": [
+		{"assetId": "utc", "capturedAt": "2026-06-23T10:18:00Z"},
+		{"assetId": "offset", "capturedAt": " 2026-06-23T12:18:00.5+02:00 "},
+		{"assetId": "local", "capturedAt": "2026-06-23T10:18:00"},
+		{"assetId": "invalid", "capturedAt": "yesterday"},
+		{"assetId": "none"}
+	]}`), &output); err != nil {
+		t.Fatal(err)
+	}
+
+	normalizeAssetPluginCandidateCaptureTimes(output.Candidates)
+
+	want := map[string]string{
+		"utc":     "2026-06-23T10:18:00Z",
+		"offset":  "2026-06-23T10:18:00.5Z",
+		"local":   "",
+		"invalid": "",
+		"none":    "",
+	}
+	for _, candidate := range output.Candidates {
+		if candidate.CapturedAt != want[candidate.AssetID] {
+			t.Errorf("%s: capturedAt %q, want %q", candidate.AssetID, candidate.CapturedAt, want[candidate.AssetID])
+		}
 	}
 }
 
@@ -606,14 +703,197 @@ func TestAssetPluginDistanceFromStart(t *testing.T) {
 		{Lat: 46.020, Lon: 8.020, Distance: 3000},
 	}
 
-	if got := assetPluginDistanceFromStart(points, 46.011, 8.011); got != 1500 {
+	if got := assetPluginDistanceFromStart(points, 46.011, 8.011, nil); got != 1500 {
 		t.Fatalf("got %v, want 1500", got)
 	}
 }
 
 func TestAssetPluginDistanceFromStartDefaultsToZeroWithoutPoints(t *testing.T) {
-	if got := assetPluginDistanceFromStart(nil, 46.011, 8.011); got != 0 {
+	if got := assetPluginDistanceFromStart(nil, 46.011, 8.011, nil); got != 0 {
 		t.Fatalf("got %v, want 0", got)
+	}
+}
+
+// outAndBackTrackPoints walks 1 km north and back from 10:00 to 11:00, passing
+// the point 500 m from the start at 10:15 and again at 10:45.
+func outAndBackTrackPoints() []pluginAssetTrackPoint {
+	start := time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC)
+	points := make([]pluginAssetTrackPoint, 0, 21)
+	for i := 0; i <= 20; i++ {
+		step := i
+		if i > 10 {
+			step = 20 - i
+		}
+		point := pluginAssetTrackPoint{
+			Lat:       46 + 0.0009*float64(step),
+			Lon:       8,
+			Timestamp: start.Add(time.Duration(i) * 3 * time.Minute).Format(time.RFC3339),
+		}
+		if i > 0 {
+			previous := points[i-1]
+			point.Distance = previous.Distance + util.HaversineDistanceMeters(previous.Lat, previous.Lon, point.Lat, point.Lon)
+		}
+		points = append(points, point)
+	}
+	return points
+}
+
+func TestAssetPluginPhotosOfAnOutAndBackTrailKeepTheirPass(t *testing.T) {
+	points := outAndBackTrackPoints()
+	lat, lon := points[5].Lat, points[5].Lon
+	outward := time.Date(2026, 10, 3, 10, 15, 0, 0, time.UTC)
+	back := outward.Add(30 * time.Minute)
+	photos := []pluginsystem.Photo{
+		{ExternalID: "outward", Lat: &lat, Lon: &lon, CapturedAt: &outward},
+		{ExternalID: "back", Lat: &lat, Lon: &lon, CapturedAt: &back},
+	}
+
+	clusters, _, _, err := assetPluginPhotoClusters(nil, "", photos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(clusters) != 2 {
+		t.Fatalf("got %d clusters, want one per pass: %#v", len(clusters), clusters)
+	}
+	want := map[string]float64{"outward": points[5].Distance, "back": points[15].Distance}
+	for _, cluster := range clusters {
+		photo := cluster.Photos[0]
+		got := assetPluginDistanceFromStart(points, cluster.Lat, cluster.Lon, assetPluginClusterTime(cluster))
+		if math.Abs(got-want[photo]) > 0.01 {
+			t.Fatalf("%s photo placed at %.1f m, want %.1f m", photo, got, want[photo])
+		}
+	}
+
+	// A file or upload time does not tell the passes apart.
+	for i := range photos {
+		photos[i].TakenAt, photos[i].CapturedAt = photos[i].CapturedAt, nil
+	}
+	if clusters, _, _, _ := assetPluginPhotoClusters(nil, "", photos); len(clusters) != 1 {
+		t.Fatalf("got %d clusters without capture times, want 1", len(clusters))
+	}
+}
+
+func TestAssetPluginDistanceFromStartFallsBackToNearestPoint(t *testing.T) {
+	points := outAndBackTrackPoints()
+	lat, lon := points[5].Lat, points[5].Lon
+	back := time.Date(2026, 10, 3, 10, 45, 0, 0, time.UTC)
+	afterTrack := time.Date(2026, 10, 3, 12, 0, 0, 0, time.UTC)
+	outwardOnly := time.Date(2026, 10, 3, 10, 27, 0, 0, time.UTC)
+	untimed := outAndBackTrackPoints()
+	untimed[3].Timestamp = ""
+
+	for name, test := range map[string]struct {
+		points  []pluginAssetTrackPoint
+		takenAt *time.Time
+	}{
+		"without photo time":         {points, nil},
+		"photo time after the track": {points, &afterTrack},
+		"track point without time":   {untimed, &back},
+		"single pass":                {points[:11], &outwardOnly},
+	} {
+		if got := assetPluginDistanceFromStart(test.points, lat, lon, test.takenAt); got != points[5].Distance {
+			t.Errorf("%s: placed at %.1f m, want the nearest point at %.1f m", name, got, points[5].Distance)
+		}
+	}
+}
+
+func TestAssetLibraryCandidateOffersOnlyMarkedCaptureTimes(t *testing.T) {
+	collection := core.NewBaseCollection("assets")
+	collection.Fields.Add(
+		&core.TextField{Name: "storage_mode"},
+		&core.TextField{Name: "external_provider"},
+		&core.NumberField{Name: "lat"},
+		&core.NumberField{Name: "lon"},
+		&core.DateField{Name: "taken_at"},
+		&core.DateField{Name: "created"},
+		&core.JSONField{Name: "metadata"},
+	)
+	mark := func(source, takenAt string) map[string]any {
+		return map[string]any{assetCaptureTimeKey: map[string]any{"source": source, "taken_at": takenAt}}
+	}
+	for name, test := range map[string]struct {
+		takenAt  string
+		metadata map[string]any
+		want     string
+	}{
+		"marked":                {"2026-10-03T08:15:00Z", mark("exif", "2026-10-03T08:15:00.000Z"), "2026-10-03T08:15:00Z"},
+		"unmarked":              {"2026-10-03T08:15:00Z", map[string]any{}, ""},
+		"marked without time":   {"", mark("immich", "2026-10-03T08:15:00Z"), ""},
+		"marked for other time": {"2026-10-03T00:00:00Z", mark("exif", "2026-10-03T08:15:00Z"), ""},
+	} {
+		record := core.NewRecord(collection)
+		record.Id = "asset"
+		record.Set("storage_mode", "link_private")
+		record.Set("lat", 46.0)
+		record.Set("lon", 8.0)
+		record.Set("taken_at", test.takenAt)
+		record.Set("created", "2026-10-04T08:00:00Z")
+		record.Set("metadata", test.metadata)
+
+		candidate, ok := assetLibraryCandidate(record, pluginAssetLibraryActionInput{}, false)
+		if !ok || candidate.CapturedAt != test.want || candidate.TakenAt == "" {
+			t.Errorf("%s: candidate = %#v, ok = %v, want capturedAt %q", name, candidate, ok, test.want)
+		}
+	}
+}
+
+func TestAssetPluginImportStoresAndMarksCaptureTimes(t *testing.T) {
+	app, auth := newAssetImportRouteTestApp(t)
+	assets, err := app.FindCollectionByNameOrId("assets")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assets.Fields.Add(&core.DateField{Name: "taken_at"})
+	if err := app.Save(assets); err != nil {
+		t.Fatal(err)
+	}
+	waypoints, err := app.FindCollectionByNameOrId("waypoints")
+	if err != nil {
+		t.Fatal(err)
+	}
+	waypoint := core.NewRecord(waypoints)
+	if err := app.Save(waypoint); err != nil {
+		t.Fatal(err)
+	}
+
+	capturedAt := time.Date(2026, 10, 3, 8, 15, 0, 0, time.UTC)
+	fileTime := capturedAt.Add(2 * time.Hour)
+	source := pluginsystem.MediaSource{Type: "url", URL: "https://media.example/photo.jpg"}
+	output := pluginAssetLibraryOutput{Photos: []pluginsystem.Photo{
+		{ExternalID: "captured", TakenAt: &fileTime, CapturedAt: &capturedAt, Source: source},
+		{ExternalID: "file-time", TakenAt: &fileTime, Source: source},
+	}}
+	results, omitted, err := importAssetPluginPhotosForTrail(context.Background(), app, auth.Id,
+		pluginsystem.LocalPlugin{Manifest: pluginsystem.Manifest{ID: "immich"}}, nil,
+		map[string]any{"host": map[string]any{"photoMode": "link_private"}}, output, pluginAssetLibraryRequest{}, waypoint.Id, false)
+	if err != nil || len(results) != 2 || len(omitted) != 0 {
+		t.Fatalf("unexpected import result: %#v, %#v, %v", results, omitted, err)
+	}
+
+	for externalID, want := range map[string]struct {
+		takenAt    time.Time
+		source     string
+		capturedAt string
+	}{
+		"captured":  {capturedAt, "immich", "2026-10-03T08:15:00Z"},
+		"file-time": {fileTime, "", ""},
+	} {
+		asset, err := app.FindFirstRecordByData("assets", "external_id", externalID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		metadata := map[string]any{}
+		if err := asset.UnmarshalJSONField("metadata", &metadata); err != nil {
+			t.Fatal(err)
+		}
+		if !asset.GetDateTime("taken_at").Time().Equal(want.takenAt) ||
+			util.AssetMetadataString(metadata, assetCaptureTimeKey, "source") != want.source ||
+			assetLibraryCapturedAt(asset, metadata) != want.capturedAt {
+			t.Errorf("%s: taken_at %s, metadata %v", externalID, asset.GetDateTime("taken_at"), metadata)
+		}
+		if metadata["remote"] == nil {
+			t.Errorf("%s: marking lost the remote metadata: %v", externalID, metadata)
+		}
 	}
 }
 

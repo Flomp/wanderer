@@ -121,7 +121,7 @@ func (c immichClient) thumbnail(input assetLibraryInput) (assetLibraryOutput, er
 					Auth:      immichAuth,
 					Path:      "/api/assets/" + url.PathEscape(assetID) + "/thumbnail",
 					Query: []sdk.QueryParam{
-						{Name: "size", Value: "preview"},
+						{Name: "size", Value: immichThumbnailSize(input.Request.ThumbnailSize)},
 					},
 					AssetID: assetID,
 				},
@@ -349,6 +349,7 @@ func photoFromAsset(asset immichAsset, importSize string) (sdk.Photo, bool) {
 		Lat:         lat,
 		Lon:         lon,
 		Source:      mediaSourceForAsset(asset.ID, importSize),
+		CapturedAt:  captureTime(asset),
 	}, true
 }
 

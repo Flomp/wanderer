@@ -118,5 +118,9 @@ services:
 ```
 
 Provider plugin connector CAs are configured per connector when a plugin
-supports custom TLS. They are not read from `NODE_EXTRA_CA_CERTS` or
-`SSL_CERT_FILE`.
+supports custom TLS. `NODE_EXTRA_CA_CERTS` does not apply to connectors because
+the `db` service performs all provider requests. `SSL_CERT_FILE` on the `db`
+service applies to all Go TLS connections, including plugin connectors:
+connectors using system TLS trust the CAs in that bundle, and a connector's
+custom CA bundle is added on top of them. Connectors whose base URL comes from a
+user's plugin setting always use system TLS, so they trust these CAs as well.

@@ -10,9 +10,10 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// The summit-log photo cleanup runs on the delete request, while the trail
-// reindex and the federation delete run after the commit. A failing reindex is
-// still reported, but must not leave the deleted summit log's photos behind.
+// A deleted summit log takes the photos along that nothing else links to,
+// whoever added them. The trail reindex and the federation delete run after
+// the commit as well; a failing reindex is still reported, but must not leave
+// the photos behind.
 func TestSummitLogDeleteRemovesOrphanedAssets(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
@@ -68,15 +69,7 @@ func TestSummitLogDeleteRemovesOrphanedAssets(t *testing.T) {
 			t.Cleanup(server.Close)
 			setupEventHandlers(&pocketbase.PocketBase{App: app}, meilisearch.New(server.URL))
 
-			event := new(core.RecordRequestEvent)
-			event.RequestEvent = &core.RequestEvent{App: app}
-			event.Request = httptest.NewRequest(http.MethodDelete, "/api/collections/summit_logs/records/"+log.Id, nil)
-			event.Response = httptest.NewRecorder()
-			event.Collection = log.Collection()
-			event.Record = log
-			err := app.OnRecordDeleteRequest().Trigger(event, func(e *core.RecordRequestEvent) error {
-				return e.App.Delete(e.Record)
-			})
+			err := app.Delete(log)
 			if !tc.searchDown && err != nil {
 				t.Fatal(err)
 			}
@@ -91,11 +84,11 @@ func TestSummitLogDeleteRemovesOrphanedAssets(t *testing.T) {
 			if exists(orphan.Id) {
 				t.Errorf("orphaned asset of the summit log survived its deletion (delete error: %v)", err)
 			}
+			if exists(foreign.Id) {
+				t.Errorf("another author's asset survived the deletion of the summit log it was linked to (delete error: %v)", err)
+			}
 			if !exists(shared.Id) {
 				t.Error("asset still linked to the trail was deleted")
-			}
-			if !exists(foreign.Id) {
-				t.Error("another author's asset was deleted")
 			}
 		})
 	}

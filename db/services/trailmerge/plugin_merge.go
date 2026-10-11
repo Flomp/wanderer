@@ -11,7 +11,7 @@ import (
 // matching candidate when auto-merge is enabled. It returns the effective trail
 // ID that callers should continue to work with: the merge target when a merge
 // happened (the source trail is then deleted), otherwise the unchanged source
-// trail ID.
+// trail ID. The summit logs the merge creates go to announce; see Merge.
 func TryAutoMergeImportedTrail(
 	app core.App,
 	client meilisearch.ServiceManager,
@@ -19,6 +19,7 @@ func TryAutoMergeImportedTrail(
 	actor *core.Record,
 	sourceTrailID string,
 	settings PluginAutoMergeSettings,
+	announce func(summitLog *core.Record),
 ) (string, error) {
 	if actor == nil || sourceTrailID == "" || !settings.Enabled {
 		return sourceTrailID, nil
@@ -48,7 +49,7 @@ func TryAutoMergeImportedTrail(
 		return sourceTrailID, nil
 	}
 
-	if err := Merge(app, client, ctx, actor, sourceTrailID, targetTrailID, DefaultPluginAutoMergeMergeSettings()); err != nil {
+	if err := Merge(app, client, ctx, actor, sourceTrailID, targetTrailID, DefaultPluginAutoMergeMergeSettings(), announce); err != nil {
 		return sourceTrailID, err
 	}
 	return targetTrailID, nil

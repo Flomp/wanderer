@@ -100,7 +100,7 @@ export async function create<T>(event: RequestEvent, schema: ZodSchema, collecti
     return r
 }
 
-export async function update<T>(event: RequestEvent, schema: ZodSchema, collection: Collection) {
+export async function update<T>(event: RequestEvent, schema: ZodSchema, collection: Collection, options?: { expand?: string }) {
     const params = event.params
     const safeParams = RecordIdSchema.parse(params);
 
@@ -112,6 +112,7 @@ export async function update<T>(event: RequestEvent, schema: ZodSchema, collecti
 
     const r = await event.locals.pb.collection(Collection[collection]).update<T>(safeParams.id, safeData, {
         ...safeSearchParams,
+        ...options,
         ...(collection === Collection.trails ? {
             fetch: event.fetch,
             signal: event.request.signal,

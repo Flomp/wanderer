@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { photoLibraryPluginLinks, type PhotoLibraryCandidate } from "$lib/models/photo_library";
+    import {
+        earliestPhotoLibraryCaptureTime,
+        photoLibraryCaptureTime,
+        photoLibraryPluginLinks,
+        type PhotoLibraryCandidate,
+    } from "$lib/models/photo_library";
     import type { PluginProvider } from "$lib/models/plugin_provider";
     import { Waypoint } from "$lib/models/waypoint";
     import { _ } from "svelte-i18n";
@@ -43,6 +48,7 @@
         id: string;
         lat: number;
         lon: number;
+        time?: number;
         candidate: PhotoLibraryCandidate;
     }
 
@@ -96,6 +102,7 @@
                     id: input.id,
                     lat: input.lat,
                     lon: input.lon,
+                    time: input.time,
                 })),
                 waypoints: existingWaypoints
                     .filter((waypoint) => waypoint.id)
@@ -103,6 +110,7 @@
                         id: waypoint.id!,
                         lat: waypoint.lat,
                         lon: waypoint.lon,
+                        time: waypoint._time?.getTime(),
                     })),
             }),
         });
@@ -123,6 +131,7 @@
             id: candidateKey(candidate),
             lat,
             lon,
+            time: photoLibraryCaptureTime(candidate),
             candidate,
         };
     }
@@ -158,6 +167,8 @@
             takenAt: candidate.takenAt,
         }));
         waypoint._assetPluginLinks = photoLibraryPluginLinks(pluginCandidates);
+        // An existing waypoint keeps its place on the track.
+        waypoint._time = existing ? existing._time : earliestPhotoLibraryCaptureTime(candidates);
         return waypoint;
     }
 

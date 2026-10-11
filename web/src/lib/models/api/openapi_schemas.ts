@@ -408,11 +408,21 @@
  *           description: Duration in seconds
  *         photos:
  *           type: array
+ *           readOnly: true
+ *           description: >
+ *             Derived from the photo assets linked to the trail and not writable. Each entry is a file URL,
+ *             `/api/v1/files/{assetsCollectionId}/{assetId}/{file}` for a stored photo or
+ *             `/api/v1/assets/{assetId}/file` for a photo kept in a connected photo library.
+ *             Manage photos through `PUT /api/v1/assets` and `DELETE /api/v1/assets/{id}`, and choose the
+ *             thumbnail through `PATCH /api/v1/trail/{id}/thumbnail`.
  *           items:
  *             type: string
  *         thumbnail:
  *           type: integer
- *           description: Index of thumbnail photo
+ *           description: >
+ *             Index of the thumbnail in `photos`: the photo marked as thumbnail through
+ *             `PATCH /api/v1/trail/{id}/thumbnail` (`trail_assets.is_thumbnail`), or else the first photo. A generated
+ *             route preview counts only when the trail has no other photo.
  *         like_count:
  *           type: integer
  *           default: 0
@@ -486,13 +496,11 @@
  *           type: number
  *         duration:
  *           type: number
- *         photos:
- *           type: array
- *           items:
- *             type: string
- *           default: []
  *         thumbnail:
  *           type: integer
+ *           description: >
+ *             Legacy index of the thumbnail in the trail's `photos`. Trail responses use the photo marked through
+ *             `PATCH /api/v1/trail/{id}/thumbnail` (`trail_assets.is_thumbnail`) or else the first photo, not this index.
  *         like_count:
  *           type: integer
  *           default: 0
@@ -546,12 +554,11 @@
  *           type: number
  *         duration:
  *           type: number
- *         photos:
- *           type: array
- *           items:
- *             type: string
  *         thumbnail:
  *           type: integer
+ *           description: >
+ *             Legacy index of the thumbnail in the trail's `photos`. Trail responses use the photo marked through
+ *             `PATCH /api/v1/trail/{id}/thumbnail` (`trail_assets.is_thumbnail`) or else the first photo, not this index.
  *         like_count:
  *           type: integer
  *           default: 0
@@ -647,6 +654,18 @@
  *           type: number
  *         photos:
  *           type: array
+ *           readOnly: true
+ *           description: >
+ *             Derived from the photo assets linked to the summit log and not writable. Each entry is a file URL,
+ *             `/api/v1/files/{assetsCollectionId}/{assetId}/{file}` for a stored photo or
+ *             `/api/v1/assets/{assetId}/file` for a photo kept in a connected photo library.
+ *             Filled only where the summit log comes with its photo links: embedded in a trail, for example from
+ *             `GET /api/v1/trail/{id}` (`expand.summit_logs_via_trail`), in the feeds, in `GET /api/v1/summit-log`
+ *             with `expand=summit_log_assets_via_summit_log.asset` (empty without it) and in
+ *             `GET /api/v1/profile/{handle}/stats` for `source: summit_log`. The feed and stats of a profile on
+ *             another instance give absolute URLs. The endpoints that create, read or update a single summit log
+ *             leave it out.
+ *             Manage photos through `PUT /api/v1/assets` and `DELETE /api/v1/assets/{id}`.
  *           items:
  *             type: string
  *         created:
@@ -703,11 +722,6 @@
  *           type: number
  *         duration:
  *           type: number
- *         photos:
- *           type: array
- *           items:
- *             type: string
- *           default: []
  *
  *     SummitLogUpdateInput:
  *       type: object
@@ -727,10 +741,6 @@
  *           type: number
  *         duration:
  *           type: number
- *         photos:
- *           type: array
- *           items:
- *             type: string
  *
  *     Waypoint:
  *       type: object
@@ -766,6 +776,15 @@
  *           description: Author user ID (15 chars)
  *         photos:
  *           type: array
+ *           readOnly: true
+ *           description: >
+ *             Derived from the photo assets linked to the waypoint and not writable. Each entry is a file URL,
+ *             `/api/v1/files/{assetsCollectionId}/{assetId}/{file}` for a stored photo or
+ *             `/api/v1/assets/{assetId}/file` for a photo kept in a connected photo library.
+ *             Filled only where the waypoint comes with its photo links, for example embedded in a trail from
+ *             `GET /api/v1/trail/{id}` or `GET /api/v1/trail` (`expand.waypoints_via_trail`). The waypoint endpoints
+ *             leave it out.
+ *             Manage photos through `PUT /api/v1/assets` and `DELETE /api/v1/assets/{id}`.
  *           items:
  *             type: string
  *         trail:
@@ -807,11 +826,6 @@
  *         author:
  *           type: string
  *           description: Author user ID (15 chars)
- *         photos:
- *           type: array
- *           items:
- *             type: string
- *           default: []
  *         trail:
  *           type: string
  *
@@ -834,10 +848,6 @@
  *           type: number
  *         icon:
  *           type: string
- *         photos:
- *           type: array
- *           items:
- *             type: string
  *
  *     List:
  *       type: object
@@ -1500,12 +1510,6 @@
  *           type: string
  *         author:
  *           type: string
- *         trail:
- *           type: string
- *         waypoint:
- *           type: string
- *         summit_log:
- *           type: string
  *         external_provider:
  *           type: string
  *         external_id:
@@ -1522,6 +1526,10 @@
  *
  *     AssetPluginCandidate:
  *       type: object
+ *       description: >
+ *         A photo offered for attaching to a trail, waypoint or summit log, either from the user's own photos in
+ *         wanderer (`POST /api/v1/assets/library`) or from a photo library plugin
+ *         (`POST /api/v1/plugins/assets/{plugin}/candidates`).
  *       required:
  *         - assetId
  *         - originalFileName
@@ -1532,11 +1540,20 @@
  *       properties:
  *         assetId:
  *           type: string
+ *           description: The asset record ID for a photo in wanderer, otherwise the plugin's ID for the photo.
  *         originalFileName:
  *           type: string
  *         takenAt:
  *           type: string
  *           format: date-time
+ *           description: The photo's time for display and sorting. It can be a file or upload time.
+ *         capturedAt:
+ *           type: string
+ *           format: date-time
+ *           description: >
+ *             When the photo was taken according to its own metadata, such as its EXIF capture date. Only set when
+ *             that metadata provides it, unlike `takenAt`, which can be a file or upload time. A local time without a
+ *             time zone counts as UTC.
  *         lat:
  *           type: number
  *         lon:
@@ -1553,6 +1570,52 @@
  *           type: string
  *         country:
  *           type: string
+ *         source:
+ *           type: string
+ *           description: Set to `wanderer` for a photo in wanderer.
+ *         providerId:
+ *           type: string
+ *           description: For a photo in wanderer, `externalProvider` when set, otherwise `wanderer`.
+ *         externalProvider:
+ *           type: string
+ *           description: For a photo in wanderer, the plugin it was imported or linked from, such as `immich`.
+ *         externalId:
+ *           type: string
+ *           description: For a photo in wanderer, its ID at `externalProvider`.
+ *         thumbnailUrl:
+ *           type: string
+ *           description: >
+ *             For a photo in wanderer, the URL of its full-size file; add a `thumb` query such as `?thumb=300x300`
+ *             for a smaller image. Plugin candidates usually leave it out; their previews come from
+ *             `GET /api/v1/plugins/assets/{plugin}/thumbnail/{assetId}`.
+ *
+ *     PhotoLibraryBounds:
+ *       type: object
+ *       description: >
+ *         Map area to search for photos, in degrees. `south` must not be greater than `north`; `west` greater than
+ *         `east` crosses the antimeridian.
+ *       required:
+ *         - west
+ *         - south
+ *         - east
+ *         - north
+ *       properties:
+ *         west:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         south:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         east:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         north:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
  *
  *     Error:
  *       type: object

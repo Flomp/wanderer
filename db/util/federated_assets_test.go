@@ -128,62 +128,78 @@ func TestDeleteAssetIfOrphanedByAuthorDeletesOwnedOrphan(t *testing.T) {
 	}
 }
 
-func TestTrailThumbnailAssetPrefersMarkedLink(t *testing.T) {
-	app := setupFederatedAssetsTestApp(t)
-	defer app.Cleanup()
+// A trail's thumbnail is its marked photo, else its first one. The route
+// preview the editor generates stands in only for a trail without a real
+// photo, as it did when it was stored as an ordinary trail photo.
+func TestTrailThumbnailURLsPrefersRealPhotosOverGeneratedPreview(t *testing.T) {
+	type photo struct {
+		file     string
+		metadata map[string]any
+		marked   bool
+	}
+	preview := map[string]any{"generated": map[string]any{"kind": "route-preview"}}
+	migratedPreview := map[string]any{"source_file": "route_abcdef1234.webp"}
+	for _, tc := range []struct {
+		name   string
+		photos []photo
+		want   int
+	}{
+		{
+			name:   "marked photo",
+			photos: []photo{{file: "first.jpg"}, {file: "marked.jpg", marked: true}},
+			want:   1,
+		},
+		{
+			name:   "photo over marked preview",
+			photos: []photo{{file: "route.webp", metadata: migratedPreview, marked: true}, {file: "photo.jpg"}},
+			want:   1,
+		},
+		{
+			name:   "preview without photo",
+			photos: []photo{{file: "preview.webp", metadata: preview}},
+			want:   0,
+		},
+		{
+			name:   "marked preview",
+			photos: []photo{{file: "old.webp", metadata: preview}, {file: "new.webp", metadata: preview, marked: true}},
+			want:   1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := setupFederatedAssetsTestApp(t)
+			defer app.Cleanup()
 
-	first := createFederatedTestAsset(t, app, "actor1", "https://origin/api/v1/assets/a1")
-	marked := createFederatedTestAsset(t, app, "actor1", "https://origin/api/v1/assets/a2")
-	createFederatedTestLink(t, app, "trail_assets", "trail", "trail1", first.Id)
-	link := createFederatedTestLink(t, app, "trail_assets", "trail", "trail1", marked.Id)
-	link.Set("is_thumbnail", true)
-	if err := app.Save(link); err != nil {
-		t.Fatal(err)
-	}
+			assetIDs := make([]string, len(tc.photos))
+			for i, p := range tc.photos {
+				asset := createFederatedTestAsset(t, app, "actor1", "")
+				asset.Set("file", p.file)
+				asset.Set("metadata", p.metadata)
+				if err := app.Save(asset); err != nil {
+					t.Fatal(err)
+				}
+				link := createFederatedTestLink(t, app, "trail_assets", "trail", "trail1", asset.Id)
+				link.Set("is_thumbnail", p.marked)
+				if err := app.Save(link); err != nil {
+					t.Fatal(err)
+				}
+				assetIDs[i] = asset.Id
+			}
+			trail := core.NewRecord(core.NewBaseCollection("trails"))
+			trail.Id = "trail1"
 
-	thumbnail, err := TrailThumbnailAsset(app, "trail1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if thumbnail == nil || thumbnail.Id != marked.Id {
-		t.Fatalf("got thumbnail %v, want %s", thumbnail, marked.Id)
-	}
-}
-
-func TestTrailThumbnailURLsUsesMarkedPhotoAndSkipsGeneratedPreview(t *testing.T) {
-	app := setupFederatedAssetsTestApp(t)
-	defer app.Cleanup()
-
-	preview := createFederatedTestAsset(t, app, "actor1", "")
-	preview.Set("file", "wanderer-route-preview.webp")
-	if err := app.Save(preview); err != nil {
-		t.Fatal(err)
-	}
-	photo := createFederatedTestAsset(t, app, "actor1", "")
-	photo.Set("file", "photo.jpg")
-	if err := app.Save(photo); err != nil {
-		t.Fatal(err)
-	}
-	createFederatedTestLink(t, app, "trail_assets", "trail", "trail1", preview.Id)
-	link := createFederatedTestLink(t, app, "trail_assets", "trail", "trail1", photo.Id)
-	link.Set("is_thumbnail", true)
-	if err := app.Save(link); err != nil {
-		t.Fatal(err)
-	}
-	trail := core.NewRecord(core.NewBaseCollection("trails"))
-	trail.Id = "trail1"
-
-	urls, err := TrailThumbnailURLs(app, []*core.Record{trail}, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	collection, err := app.FindCollectionByNameOrId("assets")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := "/api/v1/files/" + collection.Id + "/" + photo.Id + "/photo.jpg"
-	if urls["trail1"] != want {
-		t.Fatalf("thumbnail URL = %q, want %q", urls["trail1"], want)
+			urls, err := TrailThumbnailURLs(app, []*core.Record{trail}, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			collection, err := app.FindCollectionByNameOrId("assets")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := "/api/v1/files/" + collection.Id + "/" + assetIDs[tc.want] + "/" + tc.photos[tc.want].file
+			if urls["trail1"] != want {
+				t.Fatalf("thumbnail URL = %q, want %q", urls["trail1"], want)
+			}
+		})
 	}
 }
 
@@ -202,16 +218,18 @@ func TestReconcileFederatedPhotoAssetsSetsTrailThumbnail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	thumbnail, err := TrailThumbnailAsset(app, "trail1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if thumbnail == nil || thumbnail.Id != marked.Id {
-		t.Fatalf("got thumbnail %v, want %s", thumbnail, marked.Id)
-	}
 	assertFederatedLinkCount(t, app, "trail_assets", "trail", "trail1", 2)
 	if first.Id == marked.Id {
 		t.Fatal("test assets unexpectedly share an id")
+	}
+	for _, asset := range []*core.Record{first, marked} {
+		link, err := app.FindFirstRecordByFilter("trail_assets", "trail={:trail} && asset={:asset}", dbx.Params{"trail": "trail1", "asset": asset.Id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := link.GetBool("is_thumbnail"), asset.Id == marked.Id; got != want {
+			t.Fatalf("asset %s is_thumbnail = %t, want %t", asset.Id, got, want)
+		}
 	}
 }
 

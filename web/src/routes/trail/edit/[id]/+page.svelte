@@ -45,6 +45,7 @@
     import { summitLog } from "$lib/stores/summit_log_store";
     import { show_toast } from "$lib/stores/toast_store.svelte.js";
     import {
+        shownTrailPhotos,
         trail,
         trails_create,
         trails_update,
@@ -485,6 +486,10 @@
                 }
                 // Store operations reconcile saved waypoint IDs and photos into
                 // this form, retaining failed selections for the next attempt.
+                // Library photos that are not linked yet stay pending cards, and
+                // the next save adds them to `photos` again. Shown as photos as
+                // well, they would appear twice and shift the thumbnail index.
+                form.photos = shownTrailPhotos(form as Trail);
                 setFields(form);
                 pendingTrailPhotoCandidates = pendingTrailPhotoCandidates.filter((candidate) =>
                     candidate.source === "wanderer"
@@ -851,9 +856,11 @@
         );
     }
 
+    // Photos from the wanderer library are in `photos` by now, and an
+    // `_assetLinks` ID is only linked while its photo is there. A copied photo
+    // the user removed stays in the list, so only plugin links count.
     function hasPendingAssetLinks(target: Trail) {
         return Boolean(
-            target._assetLinks?.length ||
             target._assetPluginLinks?.some((link) => link.assetIds.length),
         );
     }

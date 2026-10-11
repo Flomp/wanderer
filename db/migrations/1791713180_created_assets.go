@@ -2,14 +2,16 @@ package migrations
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
+	"path"
+	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 func init() {
@@ -472,6 +474,18 @@ func migrateExistingPhotosToAssets(app core.App, assetCollection *core.Collectio
 		{Collection: "summit_logs", LinkCollection: "summit_log_assets", LinkField: "summit_log", TrailCoordinateLink: true},
 	}
 
+	// The legacy files may only go once the migration has committed, and the
+	// copies made for the assets must go again if it rolls back.
+	txInfo := app.TxInfo()
+	if txInfo == nil {
+		return errors.New("the photo migration must run inside a transaction")
+	}
+	files := &migratedPhotoFiles{}
+	txInfo.OnComplete(func(txErr error) error {
+		files.cleanup(app, txErr)
+		return nil
+	})
+
 	fsys, err := app.NewFilesystem()
 	if err != nil {
 		return err
@@ -483,19 +497,63 @@ func migrateExistingPhotosToAssets(app core.App, assetCollection *core.Collectio
 		return err
 	}
 
+	// Like the other backfills, write without record hooks: they would reindex
+	// and federate every trail with photos and bump its updated timestamp. The
+	// file field uploads and deletes files in those hooks, so the migration
+	// handles the files itself.
+	withoutHooks := app.UnsafeWithoutHooks()
 	for _, cfg := range configs {
 		records, err := app.FindAllRecords(cfg.Collection)
 		if err != nil {
 			return err
 		}
 		for _, record := range records {
-			if err := migrateRecordPhotosToAssets(app, fsys, assetCollection, cfg, record, trailProviders); err != nil {
+			if err := migrateRecordPhotosToAssets(withoutHooks, fsys, files, assetCollection, cfg, record, trailProviders); err != nil {
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+// migratedPhotoFiles collects the storage paths the photo migration copies
+// from and to.
+type migratedPhotoFiles struct {
+	assetDirs   []string
+	legacyFiles []string
+}
+
+// cleanup deletes the migrated legacy files after a commit and the asset copies
+// after a rollback. Failures are only logged: the outcome of the transaction is
+// final, and whatever is left over is no longer referenced.
+func (f *migratedPhotoFiles) cleanup(app core.App, txErr error) {
+	fsys, err := app.NewFilesystem()
+	if err != nil {
+		app.Logger().Warn("failed to clean up files after asset migration", "error", err)
+		return
+	}
+	defer fsys.Close()
+
+	if txErr != nil {
+		for _, dir := range f.assetDirs {
+			for _, err := range fsys.DeletePrefix(dir + "/") {
+				app.Logger().Warn("failed to delete asset file after asset migration rollback", "dir", dir, "error", err)
+			}
+		}
+		return
+	}
+
+	for _, key := range f.legacyFiles {
+		if err := fsys.Delete(key); err != nil && !errors.Is(err, filesystem.ErrNotFound) {
+			app.Logger().Warn("failed to delete legacy photo after asset migration", "file", key, "error", err)
+			continue
+		}
+		dir, name := path.Split(key)
+		for _, err := range fsys.DeletePrefix(dir + "thumbs_" + name + "/") {
+			app.Logger().Warn("failed to delete legacy photo thumbs after asset migration", "file", key, "error", err)
+		}
+	}
 }
 
 func loadTrailProviders(app core.App) (map[string]string, error) {
@@ -512,7 +570,8 @@ func loadTrailProviders(app core.App) (map[string]string, error) {
 	return result, nil
 }
 
-func migrateRecordPhotosToAssets(app core.App, fsys *filesystem.System, assetCollection *core.Collection, cfg photoMigrationConfig, source *core.Record, trailProviders map[string]string) error {
+// migrateRecordPhotosToAssets expects an app without record hooks.
+func migrateRecordPhotosToAssets(app core.App, fsys *filesystem.System, files *migratedPhotoFiles, assetCollection *core.Collection, cfg photoMigrationConfig, source *core.Record, trailProviders map[string]string) error {
 	photos := source.GetStringSlice("photos")
 	if len(photos) == 0 {
 		return nil
@@ -533,26 +592,44 @@ func migrateRecordPhotosToAssets(app core.App, fsys *filesystem.System, assetCol
 		return nil
 	}
 
+	// Without hooks nothing fills in ids and autodates. Links are listed by
+	// created, so the timestamps are stepped to keep the legacy photo order.
+	migratedAt := types.NowDateTime()
 	thumbnailIndex := source.GetInt("thumbnail")
 	for i, photo := range photos {
-		tempPath, cleanup, err := copyLegacyPhotoToTempFile(fsys, source, photo)
-		if err != nil {
-			app.Logger().Warn("skipping invalid legacy photo during asset migration", "collection", cfg.Collection, "record", source.Id, "photo", photo, "error", err)
+		if photo == "" || strings.ContainsAny(photo, `/\`) {
+			app.Logger().Warn("skipping invalid legacy photo during asset migration", "collection", cfg.Collection, "record", source.Id, "photo", photo)
 			continue
 		}
-		file, err := filesystem.NewFileFromPath(tempPath)
-		if err != nil {
-			cleanup()
-			app.Logger().Warn("skipping invalid legacy photo during asset migration", "collection", cfg.Collection, "record", source.Id, "photo", photo, "error", err)
-			continue
-		}
+		createdAt := migratedAt.Add(time.Duration(i) * time.Millisecond)
 
 		asset := core.NewRecord(assetCollection)
+		asset.Id = core.GenerateDefaultRandomId()
+		legacyFile := source.BaseFilesPath() + "/" + photo
+		assetFile := asset.BaseFilesPath() + "/" + photo
+		// Registered before copying so that a rollback also removes a partial copy.
+		files.assetDirs = append(files.assetDirs, asset.BaseFilesPath())
+		if err := fsys.Copy(legacyFile, assetFile); err != nil {
+			// Only a missing legacy file may be skipped. Skipping any other
+			// failure, such as a full disk or a failed S3 request, would detach
+			// the photo for good once the photos column is dropped.
+			if !errors.Is(err, filesystem.ErrNotFound) {
+				return fmt.Errorf("failed to copy legacy photo %s: %w", legacyFile, err)
+			}
+			app.Logger().Warn("skipping missing legacy photo during asset migration", "collection", cfg.Collection, "record", source.Id, "photo", photo, "error", err)
+			continue
+		}
+		if err := checkLegacyPhotoCopy(fsys, legacyFile, assetFile); err != nil {
+			return fmt.Errorf("failed to copy legacy photo %s: %w", legacyFile, err)
+		}
+
 		asset.Set("type", "photo")
 		asset.Set("storage_mode", "copy")
 		asset.Set("remote_status", "available")
-		asset.Set("file", file)
+		asset.Set("file", photo)
 		asset.Set("author", author)
+		asset.SetRaw("created", createdAt)
+		asset.SetRaw("updated", createdAt)
 		asset.Set("metadata", map[string]any{
 			"source_collection": cfg.Collection,
 			"source_record":     source.Id,
@@ -581,61 +658,48 @@ func migrateRecordPhotosToAssets(app core.App, fsys *filesystem.System, assetCol
 		}
 
 		if err := app.Save(asset); err != nil {
-			cleanup()
 			return err
 		}
-		cleanup()
 
 		link := core.NewRecord(linkCollection)
+		link.Id = core.GenerateDefaultRandomId()
 		link.Set("asset", asset.Id)
 		link.Set(cfg.LinkField, source.Id)
+		link.SetRaw("created", createdAt)
+		link.SetRaw("updated", createdAt)
 		if cfg.Collection == "trails" && i == thumbnailIndex {
 			link.Set("is_thumbnail", true)
 		}
 		if err := app.Save(link); err != nil {
 			return err
 		}
+		files.legacyFiles = append(files.legacyFiles, legacyFile)
 	}
 
-	source.Set("photos", []string{})
-	return app.Save(source)
+	// The photos column itself is dropped by removeLegacyPhotoFields.
+	return nil
 }
 
-func copyLegacyPhotoToTempFile(fsys *filesystem.System, source *core.Record, photo string) (string, func(), error) {
-	reader, err := fsys.GetReader(source.BaseFilesPath() + "/" + photo)
+// checkLegacyPhotoCopy makes sure a copy is complete before the migration
+// relies on it, because the legacy file is deleted once the migration commits.
+// PocketBase's S3 driver reports success for a CopyObject "200 OK" that carries
+// an error in its body.
+func checkLegacyPhotoCopy(fsys *filesystem.System, legacyFile, assetFile string) error {
+	copied, err := fsys.Attributes(assetFile)
+	if errors.Is(err, filesystem.ErrNotFound) {
+		return fmt.Errorf("the copy %s is missing", assetFile)
+	}
 	if err != nil {
-		return "", func() {}, err
+		return err
 	}
-	defer reader.Close()
-
-	tempDir, err := os.MkdirTemp("", "wanderer-asset-migration-*")
+	legacy, err := fsys.Attributes(legacyFile)
 	if err != nil {
-		return "", func() {}, err
+		return err
 	}
-	cleanup := func() {
-		_ = os.RemoveAll(tempDir)
+	if copied.Size != legacy.Size {
+		return fmt.Errorf("the copy %s has %d bytes instead of %d", assetFile, copied.Size, legacy.Size)
 	}
-
-	name := filepath.Base(photo)
-	if name == "." || name == string(filepath.Separator) {
-		name = "photo"
-	}
-	tempPath := filepath.Join(tempDir, name)
-	target, err := os.Create(tempPath)
-	if err != nil {
-		cleanup()
-		return "", func() {}, err
-	}
-	if _, err := io.Copy(target, reader); err != nil {
-		_ = target.Close()
-		cleanup()
-		return "", func() {}, err
-	}
-	if err := target.Close(); err != nil {
-		cleanup()
-		return "", func() {}, err
-	}
-	return tempPath, cleanup, nil
+	return nil
 }
 
 func removeLegacyPhotoFields(app core.App) error {

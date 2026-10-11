@@ -247,7 +247,7 @@ that export with an action in `request.action`:
 | `check` | Validate the submitted credentials and connector configuration. |
 | `candidates` | Return external photo candidates for a map viewport, trail, or coordinate. |
 | `import` | Return `Photo` descriptors for selected external asset IDs. |
-| `thumbnail` | Return a preview photo descriptor for one external asset ID. |
+| `thumbnail` | Return a preview photo descriptor for one external asset ID in the size class `request.thumbnailSize`. |
 
 The host creates wanderer asset records from returned photos. Depending on
 `hostConfig.photoMode`, files are either copied immediately or stored as private
@@ -261,10 +261,19 @@ Manual map searches include `request.bounds` with `west`, `south`, `east`, and
 can still provide nearest-point metadata. `west > east` crosses the antimeridian;
 `west=-180, east=180` covers all longitudes. Requests without bounds retain the
 route or coordinate radius behavior.
+Thumbnail calls also send `request.thumbnailSize`: `small` when the requested
+image is at most 300 px on its longest edge, otherwise `large`. Treat a missing
+value as `large`; returning the same media for both classes is allowed.
+Candidates and photos may carry an optional `capturedAt`: the RFC 3339 time the
+photo was taken according to its own metadata, such as its EXIF date. Never
+derive it from a file or upload time, and send a local time without a time zone
+as UTC. The host stores it as the photo time instead of `takenAt`.
 When asset photos create new waypoints, the host merges nearby photos using the
 trail category's waypoint merge settings and names new waypoints from nearby
 OpenStreetMap points of interest, falling back to reverse geocoding and then the
-photo coordinate.
+photo coordinate. With `capturedAt`, nearby photos taken more than 15 minutes
+apart stay in separate waypoints, and a new waypoint is placed on the pass of
+the track recorded at the time of its first photo.
 
 ### List plugins
 

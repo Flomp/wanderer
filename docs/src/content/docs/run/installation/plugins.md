@@ -63,7 +63,10 @@ those settings as administrator trust decisions: only enable private-network
 access or custom CAs for plugin bundles and endpoints you trust.
 
 Provider plugin connector CAs are configured per connector when a plugin
-supports custom TLS. They are not read from `NODE_EXTRA_CA_CERTS`.
+supports custom TLS. They are not read from `NODE_EXTRA_CA_CERTS`. A CA bundle
+set through `SSL_CERT_FILE` on the `db` service is trusted by all connectors,
+both with system TLS and in addition to a connector's custom CA. See
+[Custom CA certificates](/run/environment-configuration#custom-ca-certificates).
 
 ## Self-hosted asset plugins
 

@@ -11,6 +11,7 @@
     import type { PhotoLibraryBounds, PhotoLibraryCandidate } from "$lib/models/photo_library";
     import type { PluginProvider } from "$lib/models/plugin_provider";
     import { baseMapStyles } from "$lib/vendor/maplibre-layer-manager/layers";
+    import { getFileURL } from "$lib/util/file_util";
     import { markerElement, syncMarkerHighlightClass } from "$lib/util/maplibre_util";
     import { polylineToGeoJSON } from "$lib/util/polyline_util";
     import { normalizePhotoLibraryBounds, photoLibraryBoundsContain } from "$lib/util/photo_library_bounds";
@@ -62,6 +63,7 @@
     const DATE_RANGE_EXPAND_THRESHOLD = 1 / 3;
     const DEFAULT_LOOKBACK_YEARS = 1;
     const WANDERER_LIBRARY_PER_PAGE = 100;
+    const TILE_THUMB_SIZE = "300x300";
 
     interface Props {
         id?: string;
@@ -676,6 +678,12 @@
         return candidate.thumbnailUrl ?? pluginThumbnailUrl(candidate);
     }
 
+    // List and map tiles load a small thumbnail; the preview pane keeps the
+    // full-size URL.
+    function tileThumbnailUrl(candidate: PhotoLibraryCandidate) {
+        return getFileURL(candidate, thumbnailUrl(candidate), TILE_THUMB_SIZE);
+    }
+
     function toggleCandidate(candidate: PhotoLibraryCandidate) {
         const key = candidateKey(candidate);
         if (selectedKeys.has(key)) {
@@ -1167,7 +1175,7 @@
                 <div class="photo-library-popup-grid ${photos.length === 1 ? "is-single" : ""}">
                     ${photos.map((candidate, index) => `
                         <div class="photo-library-popup-thumb">
-                            <img src="${escapeAttribute(thumbnailUrl(candidate))}" alt="">
+                            <img src="${escapeAttribute(tileThumbnailUrl(candidate))}" alt="">
                             ${overflowCount > 0 && index === photos.length - 1 ? `<span class="photo-library-popup-more">+${overflowCount}</span>` : ""}
                         </div>
                     `).join("")}
@@ -1330,7 +1338,7 @@
                                             class="flex min-w-0 flex-1 items-center gap-3 text-left"
                                             onclick={() => setPreviewCandidate(candidate)}
                                         >
-                                            <img src={thumbnailUrl(candidate)} alt="" class="h-12 w-12 shrink-0 rounded object-cover" loading="lazy" />
+                                            <img src={tileThumbnailUrl(candidate)} alt="" class="h-12 w-12 shrink-0 rounded object-cover" loading="lazy" />
                                             <div class="min-w-0 flex-1">
                                                 <div class="truncate text-sm font-medium">{candidate.originalFileName}</div>
                                                 <div class="flex flex-wrap items-center gap-x-2 text-xs text-gray-500">

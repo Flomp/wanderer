@@ -1,3 +1,51 @@
+<script module lang="ts">
+    import type { Waypoint } from "$lib/models/waypoint";
+    import {
+        mergePhotoLibraryPluginLinks,
+        photoLibraryPluginLinks,
+        type PhotoLibraryCandidate,
+    } from "$lib/models/photo_library";
+
+    // Adds the photos picked from the library to the waypoint before it is
+    // saved. A duplicated waypoint links its copied photos through
+    // `_assetLinks` too, and a waypoint not saved yet may still wait for
+    // earlier picks, so the new picks are added to these.
+    export function applyPhotoLibrarySelection(wp: Waypoint, candidates: PhotoLibraryCandidate[]) {
+        const pluginCandidates = candidates.filter((c) => c.source !== "wanderer");
+        const wandererCandidates = candidates.filter((c) => c.source === "wanderer");
+        const earlierCandidates = wp._assetCandidates ?? [];
+        wp._assetCandidates = [
+            ...earlierCandidates,
+            ...pluginCandidates
+                .map((c) => ({
+                    pluginId: c.pluginId ?? c.providerId ?? "",
+                    assetId: c.assetId,
+                    lat: c.lat,
+                    lon: c.lon,
+                    originalFileName: c.originalFileName,
+                    takenAt: c.takenAt,
+                }))
+                .filter((c) => !earlierCandidates.some((earlier) =>
+                    earlier.pluginId === c.pluginId && earlier.assetId === c.assetId,
+                )),
+        ];
+        wp._assetPluginLinks = mergePhotoLibraryPluginLinks(
+            wp._assetPluginLinks,
+            photoLibraryPluginLinks(pluginCandidates),
+        );
+        wp._assetLinks = Array.from(new Set([
+            ...(wp._assetLinks ?? []),
+            ...wandererCandidates.map((c) => c.assetId),
+        ]));
+        wp.photos = Array.from(new Set([
+            ...(wp.photos ?? []),
+            ...wandererCandidates
+                .map((candidate) => candidate.thumbnailUrl)
+                .filter((url): url is string => Boolean(url)),
+        ]));
+    }
+</script>
+
 <script lang="ts">
     import { type Snippet } from "svelte";
 
@@ -17,9 +65,8 @@
     import Textarea from "../base/textarea.svelte";
     import PhotoPicker from "../photo/photo_picker.svelte";
     import AssetPhotoPickerModal from "../trail/asset_photo_picker_modal.svelte";
-    import type { Waypoint } from "$lib/models/waypoint";
     import type { PluginProvider } from "$lib/models/plugin_provider";
-    import { photoLibraryCandidateKey, photoLibraryPluginLinks, type PhotoLibraryCandidate } from "$lib/models/photo_library";
+    import { photoLibraryCandidateKey } from "$lib/models/photo_library";
 
     interface Props {
         children?: Snippet<[any]>;
@@ -66,24 +113,7 @@
                 _photos: $data._photos ?? [],
             } as Waypoint;
             if (pendingCandidates.length > 0) {
-                const pluginCandidates = pendingCandidates.filter((c) => c.source !== "wanderer");
-                const wandererCandidates = pendingCandidates.filter((c) => c.source === "wanderer");
-                wp._assetCandidates = pluginCandidates.map((c) => ({
-                    pluginId: c.pluginId ?? c.providerId ?? "",
-                    assetId: c.assetId,
-                    lat: c.lat,
-                    lon: c.lon,
-                    originalFileName: c.originalFileName,
-                    takenAt: c.takenAt,
-                }));
-                wp._assetPluginLinks = photoLibraryPluginLinks(pluginCandidates);
-                wp._assetLinks = wandererCandidates.map((c) => c.assetId);
-                wp.photos = [
-                    ...(wp.photos ?? []),
-                    ...wandererCandidates
-                        .map((candidate) => candidate.thumbnailUrl)
-                        .filter((url): url is string => Boolean(url)),
-                ];
+                applyPhotoLibrarySelection(wp, pendingCandidates);
             }
             const shouldClose = await onsave?.(wp);
 

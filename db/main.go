@@ -174,13 +174,16 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordCreateRequest("user_subcategory_preferences").BindFunc(hooks.ValidateUserSubcategoryPreferenceHandler())
 	app.OnRecordUpdateRequest("user_subcategory_preferences").BindFunc(hooks.ValidateUserSubcategoryPreferenceHandler())
 
+	// Trail and summit log saves share their Creates and Updates with their photo links.
+	federationUpdates := hooks.NewFederationUpdates(app)
+
 	app.OnRecordCreateRequest("trails").BindFunc(hooks.ValidateTrailSubcategoryHandler())
 	app.OnRecordUpdateRequest("trails").BindFunc(hooks.UseTrailRequestContext)
 	app.OnRecordUpdateRequest("trails").BindFunc(hooks.ValidateTrailSubcategoryHandler())
 	app.OnRecordCreate("trails").BindFunc(hooks.SetTrailCompletedAtHandler())
 	app.OnRecordUpdate("trails").BindFunc(hooks.SetTrailCompletedAtHandler())
 	app.OnRecordUpdate("trails").BindFunc(hooks.MaterializePrivateRemoteAssetLinksBeforePublish(app))
-	app.OnRecordAfterCreateSuccess("trails").BindFunc(hooks.CreateTrailHandler(client))
+	app.OnRecordAfterCreateSuccess("trails").BindFunc(hooks.CreateTrailHandler(client, federationUpdates))
 
 	app.OnFileDownloadRequest("assets").BindFunc(hooks.AuthorizeAssetFileDownload())
 	app.OnRecordUpdate("assets").BindFunc(hooks.InvalidateAssetContentHashOnFileChange())
@@ -189,22 +192,28 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterDeleteSuccess("assets").BindFunc(hooks.ReindexTrailOnAssetChange(client))
 	assetLinkReindexHandler := hooks.ReindexTrailOnAssetLinkChange(client)
 	app.OnRecordAfterCreateSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkReindexHandler)
+	app.OnRecordAfterUpdateSuccess("trail_assets").BindFunc(assetLinkReindexHandler)
 	app.OnRecordAfterDeleteSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkReindexHandler)
+	assetLinkFederationHandler := hooks.FederateOnAssetLinkChange(federationUpdates)
+	app.OnRecordAfterCreateSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkFederationHandler)
+	app.OnRecordAfterUpdateSuccess("trail_assets").BindFunc(assetLinkFederationHandler)
+	app.OnRecordAfterDeleteSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkFederationHandler)
 	app.OnRecordCreate("trail_assets").BindFunc(hooks.MaterializePrivateRemoteAssetOnPublicLink(app, "trail"))
 	app.OnRecordCreate("waypoint_assets").BindFunc(hooks.MaterializePrivateRemoteAssetOnPublicLink(app, "waypoint"))
 	app.OnRecordCreate("summit_log_assets").BindFunc(hooks.MaterializePrivateRemoteAssetOnPublicLink(app, "summit_log"))
-	app.OnRecordDeleteRequest("trails").BindFunc(hooks.DeleteTrailAssetCleanupHandler())
-	app.OnRecordAfterUpdateSuccess("trails").BindFunc(hooks.UpdateTrailHandler(client))
+	// Ahead of the other delete hooks of these collections, which stop at their first error.
+	app.OnRecordDelete("trails", "waypoints", "summit_logs").BindFunc(hooks.CollectDeletedRecordAssetsHandler())
+	app.OnRecordAfterDeleteSuccess("trails", "waypoints", "summit_logs").BindFunc(hooks.DeleteOrphanedAssetsHandler())
+	app.OnRecordAfterDeleteError("trails", "waypoints", "summit_logs").BindFunc(hooks.DeleteOrphanedAssetsAfterErrorHandler())
+	app.OnRecordAfterUpdateSuccess("trails").BindFunc(hooks.UpdateTrailHandler(client, federationUpdates))
 	app.OnRecordDelete("trails").BindFunc(hooks.CollectTrailDeleteRecipientsHandler())
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(hooks.DeleteTrailHandler(client))
 
-	app.OnRecordCreateRequest("summit_logs").BindFunc(hooks.CreateSummitLogHandler(client))
-	app.OnRecordUpdateRequest("summit_logs").BindFunc(hooks.UpdateSummitLogHandler())
-	app.OnRecordDeleteRequest("summit_logs").BindFunc(hooks.DeleteSummitLogAssetCleanupHandler())
+	app.OnRecordCreateRequest("summit_logs").BindFunc(hooks.CreateSummitLogHandler(client, federationUpdates))
+	app.OnRecordUpdateRequest("summit_logs").BindFunc(hooks.UpdateSummitLogHandler(federationUpdates))
 	app.OnRecordAfterDeleteSuccess("summit_logs").BindFunc(hooks.DeleteSummitLogHandler(client))
 
 	app.OnRecordCreateRequest("waypoints").BindFunc(hooks.CreateWaypointHandler())
-	app.OnRecordDeleteRequest("waypoints").BindFunc(hooks.DeleteWaypointHandler())
 
 	app.OnRecordCreateRequest("comments").BindFunc(hooks.CreateCommentHandler())
 	app.OnRecordUpdateRequest("comments").BindFunc(hooks.UpdateCommentHandler())
@@ -248,7 +257,7 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 
 	app.OnRecordValidate().BindFunc(util.SanitizeHTML())
 
-	app.OnServe().BindFunc(onBeforeServeHandler(client))
+	app.OnServe().BindFunc(onBeforeServeHandler(client, federationUpdates))
 
 	app.OnBootstrap().BindFunc(hooks.OnBootstrapHandler())
 }
@@ -257,10 +266,10 @@ func setupCommands(app *pocketbase.PocketBase) {
 	app.RootCmd.AddCommand(commands.Dedup(app))
 }
 
-func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.ServeEvent) error {
+func onBeforeServeHandler(client meilisearch.ServiceManager, federationUpdates *hooks.FederationUpdates) func(se *core.ServeEvent) error {
 	return func(se *core.ServeEvent) error {
-		registerRoutes(se, client)
-		registerCronJobs(se.App, client)
+		registerRoutes(se, client, federationUpdates)
+		registerCronJobs(se.App, client, federationUpdates)
 		initData(se.App, client)
 
 		return se.Next()
@@ -268,7 +277,7 @@ func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.Serve
 
 }
 
-func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
+func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager, federationUpdates *hooks.FederationUpdates) {
 	se.Router.GET("/health", routes.Health)
 
 	se.Router.POST("/auth/token", routes.AuthToken)
@@ -281,7 +290,7 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.GET("/geocoding/search", routes.GeocodingSearch)
 
 	se.Router.POST("/trail-merge/suggest", routes.TrailMergeSuggest)
-	se.Router.POST("/trail-merge", routes.TrailMerge(client))
+	se.Router.POST("/trail-merge", routes.TrailMerge(client, federationUpdates.EnqueueCreate))
 	se.Router.POST("/trails/{id}/publication", routes.TrailPublicationStart)
 	se.Router.GET("/trails/{id}/publication", routes.TrailPublicationStatus)
 	se.Router.POST("/asset-merge/suggest", routes.AssetMergeSuggest)
@@ -332,14 +341,14 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 
 }
 
-func registerCronJobs(app core.App, client meilisearch.ServiceManager) {
+func registerCronJobs(app core.App, client meilisearch.ServiceManager, federationUpdates *hooks.FederationUpdates) {
 	schedule := os.Getenv("POCKETBASE_CRON_SYNC_SCHEDULE")
 	if len(schedule) == 0 {
 		schedule = "0 2 * * *"
 	}
 
 	app.Cron().MustAdd("plugin-sync", schedule, func() {
-		if err := routes.PluginSystemSyncConfigured(context.Background(), app, client); err != nil {
+		if err := routes.PluginSystemSyncConfigured(context.Background(), app, client, federationUpdates.EnqueueCreate); err != nil {
 			warning := fmt.Sprintf("Error syncing with WASM plugins: %v", err)
 			fmt.Println(warning)
 			app.Logger().Error(warning)

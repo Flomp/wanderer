@@ -39,6 +39,96 @@ export async function GET(event: RequestEvent) {
     return proxyPluginAssetAction(event, "GET");
 }
 
+/**
+ * @swagger
+ * /api/v1/plugins/assets/{plugin}/candidates:
+ *   post:
+ *     summary: Search a photo library plugin
+ *     description: >
+ *       Asks the user's enabled instance of the photo library plugin `plugin`, such as Immich, for photos near a
+ *       trail's track, near a position or inside a map area. Results come in batches. While `hasMore` is true, send
+ *       the same search with the returned `cursorId` to get the next batch. When `restartRequired` is true, the cursor
+ *       has expired or no longer matches the search, and the search has to start again without `cursorId`.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: plugin
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Plugin ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               trailId:
+ *                 type: string
+ *                 description: Trail to search along. The user must be its author.
+ *               trailData:
+ *                 type: string
+ *                 description: GPX content to search along, for a trail that is not saved yet.
+ *               lat:
+ *                 type: number
+ *                 description: Latitude of a position to search around, such as a waypoint's.
+ *               lon:
+ *                 type: number
+ *                 description: Longitude of a position to search around.
+ *               bounds:
+ *                 $ref: '#/components/schemas/PhotoLibraryBounds'
+ *               takenAfter:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Start of the time window to search.
+ *               takenBefore:
+ *                 type: string
+ *                 format: date-time
+ *                 description: End of the time window to search.
+ *               doubleRadius:
+ *                 type: boolean
+ *                 description: Asks the plugin to search a wider area.
+ *               cursorId:
+ *                 type: string
+ *                 description: Cursor from the previous response, to get the next batch.
+ *     responses:
+ *       200:
+ *         description: A batch of matching photos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 candidates:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/AssetPluginCandidate'
+ *                 hasMore:
+ *                   type: boolean
+ *                 cursorId:
+ *                   type: string
+ *                   description: Cursor for the next batch while `hasMore` is true.
+ *                 restartRequired:
+ *                   type: boolean
+ *                 hasTimestamps:
+ *                   type: boolean
+ *                   description: Whether the track had timestamps the plugin could use, as reported by the plugin.
+ *                 takenAfter:
+ *                   type: string
+ *                   description: Start of the time window the plugin searched, if it used one.
+ *       400:
+ *         description: Bad Request, no enabled instance of the plugin, or an error reported by the plugin
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions for trail
+ *       404:
+ *         description: Not Found
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function POST(event: RequestEvent) {
     return proxyPluginAssetAction(event, "POST");
 }

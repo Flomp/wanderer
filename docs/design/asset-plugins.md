@@ -54,9 +54,9 @@ plugin returns Photo descriptors
 | --- | --- | --- |
 | Manifest | `plugins/immich/plugin.json` | Plugin type, capability, authentication context, connector permissions, plugin configuration, and host configuration. |
 | Provider entry point | `plugins/immich/main.go` | `asset_library_v1` export, input/output handling, and structured plugin failures. |
-| Provider logic | `plugins/immich/immich.go` | `check`, `candidates`, `import`, and `thumbnail` actions plus Immich API access. |
+| Provider logic | `plugins/immich/immich.go`, `plugins/immich/thumbnail.go` | `check`, `candidates`, `import`, and `thumbnail` actions plus Immich API access. |
 | Provider pagination | `plugins/immich/pagination.go` | SDK-independent candidate page consumption, strict budgets, and raw-offset continuation. |
-| Provider matching | `plugins/immich/matching.go` | Geographic filtering, distance calculation, and ordering. |
+| Provider matching | `plugins/immich/matching.go` | Geographic filtering, distance calculation, ordering, and capture times. |
 | Provider types | `plugins/immich/types.go`, `plugins/immich/types_tinygo.go` | Shared matching types plus TinyGo-only SDK protocol and Immich response types. |
 | Plugin SDK | `plugins/sdk/types.go`, `plugins/sdk/host_http.go` | `Photo`, `MediaSource`, `MediaRef`, host-request protocol, and WASM host imports. |
 | Host endpoints | `db/routes/plugin_system_assets.go` | Capability calls, candidate search, import, auto-attach, thumbnail cache, and authorization. |
@@ -66,7 +66,7 @@ plugin returns Photo descriptors
 | Asset data model | `db/util/assets.go` | Asset creation, deduplication, reuse, and linking. |
 | Remote asset service | `db/services/assets/service.go` | Streaming, status, repair, materialization, and deletion of private remote assets. |
 | Asset routes | `db/routes/assets.go` | File endpoint and asynchronous remote-asset jobs. |
-| Lifecycle hooks | `db/hooks/trails.go`, `db/hooks/plugin_instances.go`, `db/hooks/assets.go` | Publication safety, disable/delete protection, and search-index updates. |
+| Lifecycle hooks | `db/hooks/trails.go`, `db/hooks/plugin_instances.go`, `db/hooks/assets.go`, `db/hooks/federation_updates.go` | Publication safety, disable/delete protection, removal of orphaned photos after deletes, search-index updates, and federation of photo changes. |
 | Database schema | `db/migrations/1791713180_created_assets.go` | Collections, fields, rules, and unique indexes. |
 | Runtime | `db/pluginsystem/runtime.go`, `db/pluginsystem/worker.go`, `db/pluginsystem/worker_process.go` | Dedicated worker process and WASM invocation. |
 | Host networking | `db/pluginsystem/host_http.go`, `db/pluginsystem/policy.go`, `db/services/pluginhost/config.go` | Connector resolution, host policy, authentication injection, and effective configuration. |
@@ -108,7 +108,7 @@ Every operation uses the same WASM export and selects behavior through `request.
 | `check` | Draft authentication and configuration | Optional `userId` | Validate configuration and credentials. |
 | `candidates` | Track points and/or coordinate, time range, `search`, optional `state` | `candidates`, `state`, `hasMore`, `stats`, `hasTimestamps` | Find one bounded batch of matching provider photos. |
 | `import` | `assetIds` and context | `photos`, `omittedAssetIds` | Resolve selected provider IDs to an exact partition of importable and explicitly omitted media. |
-| `thumbnail` | Exactly one ID in `assetIds` | First item in `photos` | Resolve an authenticated preview descriptor. |
+| `thumbnail` | Exactly one ID in `assetIds`, optional `thumbnailSize` | First item in `photos` | Resolve an authenticated preview descriptor in the requested size class. |
 
 `import-to-target` and `import-to-waypoint` are host endpoints, not additional plugin actions. The host normalizes them to `request.action=import` before invoking WASM.
 
@@ -179,9 +179,10 @@ Important boundaries:
 - `search` is a separate read-budget block. `maxItems` bounds returned candidates, `maxScannedItems` bounds provider assets evaluated in this call, and `maxProviderRequests` lets the plugin stop cooperatively before the runtime's hard request ceiling.
 - `state` is provider-specific continuation data. The host passes it back unchanged to the next plugin call but never exposes it to the browser.
 - `trailId` is context only. The plugin has no direct database access.
-- `points[].distance` is cumulative distance from the beginning of the track in metres.
+- `points[].distance` is cumulative distance from the beginning of the track in metres. It runs on across the gaps between segments and between tracks, as the distance from start in the web's elevation profile does.
 - Track points are reduced to approximately 2,000 points before plugin invocation.
 - Explicit `takenAfter` and `takenBefore` values are validated as RFC 3339 and mirrored into `startedAt` and `endedAt`.
+- `thumbnailSize` accompanies only `action=thumbnail`. It is `small` when the requested image is at most 300 pixels on its longest edge and `large` otherwise. Plugins treat a missing value as `large`, since older hosts omit the field, and may return the same media for both classes.
 - Optional `bounds: {west, south, east, north}` uses geographic degrees and replaces radius filtering. All four coordinates must be finite and in range, with `south <= north`. `west > east` crosses the antimeridian; `west=-180, east=180` covers all longitudes. Track points remain available for route-position metadata.
 
 ### 4.3 Success and failure semantics
@@ -205,6 +206,7 @@ Plugins must either fail the export or return a structured `error` when an opera
       "assetId": "provider-asset-id",
       "originalFileName": "IMG_1234.jpg",
       "takenAt": "2026-06-23T10:18:00Z",
+      "capturedAt": "2026-06-23T10:18:00Z",
       "lat": 47.377,
       "lon": 8.542,
       "distance": 32.4,
@@ -230,6 +232,10 @@ Plugins must either fail the export or return a structured `error` when an opera
 
 `assetId` must be stable within the provider. `pointLat`, `pointLon`, and `distanceFromStart` describe the nearest track point, not the original photo position. The host and frontend use them for ordering and for positioning automatically generated camera waypoints. `stats.scannedItems` is plugin-reported observability data and is not a host enforcement mechanism.
 
+`takenAt` is the provider's photo time for display and ordering and may be a file or upload time. The optional `capturedAt` is set only when the time comes from the photo's own metadata, such as its EXIF capture date. Both are RFC 3339 times with an offset; a local time without a time zone is reported as UTC. The trail editor uses `capturedAt` to keep photos of different passes over the same spot apart and to place new waypoints on the right pass (section 7.7).
+
+`callAssetPlugin` checks each candidate's `capturedAt` before the host or the browser uses it (`normalizeAssetPluginCandidateCaptureTimes`). A value that parses as RFC 3339 with an offset is passed on in UTC. Any other value, including a time without an offset, is dropped, and that candidate then has no capture time; the browser would read a time without an offset in its own time zone. `takenAt` is passed on unchanged.
+
 `hasMore=true` requires a non-empty state that differs from the input state. The host compares canonical JSON hashes and rejects unchanged or cyclic states as protocol errors. Immich uses `{page, offset}`, where `offset` counts raw provider items evaluated within the current page. The browser receives only an opaque process-local `cursorId`; the server store binds it to the user, actor, plugin instance, normalized search, effective configuration, and authentication. Unknown, expired, or mismatched browser cursors produce `restartRequired=true`, causing the picker to discard that plugin's displayed results and restart its search. Full rationale and limits are recorded in [`asset-candidates-pagination.md`](asset-candidates-pagination.md).
 
 ### 4.5 Photo and media output
@@ -242,6 +248,7 @@ Plugins must either fail the export or return a structured `error` when an opera
       "filename": "IMG_1234.jpg",
       "contentType": "image/jpeg",
       "takenAt": "2026-06-23T10:18:00Z",
+      "capturedAt": "2026-06-23T10:18:00Z",
       "lat": 47.377,
       "lon": 8.542,
       "source": {
@@ -266,6 +273,8 @@ Plugins must either fail the export or return a structured `error` when an opera
 ```
 
 For `action=import`, the `externalId` values in `photos` and the `assetId` values in `omittedAssetIds` must be unique, disjoint, requested by the host, and together equal the complete deduplicated request set. Missing, duplicated, overlapping, or unrequested IDs are protocol errors. Manual HTTP import endpoints return `{ "imported": [...], "omitted": [...] }` rather than a bare result array.
+
+`capturedAt` follows the candidate rule: only a time from the photo's own metadata, never a file or upload time. Every asset plugin import stores it, when present, as the asset's `taken_at` instead of `takenAt` and marks it in `metadata.capture_time`. Server-side clustering and waypoint placement use only `capturedAt` (section 7.11). Trail plugin imports ignore the field. Unlike a candidate's, a photo's `capturedAt` or `takenAt` is not dropped when it lacks an offset: the host decodes both as times, so such a value makes the whole output invalid and the call fails.
 
 Supported source types:
 
@@ -324,8 +333,9 @@ Migration `db/migrations/1791713180_created_assets.go` defines, among other fiel
 | `author` | The user's local ActivityPub actor. |
 | `external_provider` | Plugin ID, for example `immich`. |
 | `external_id` | Stable provider asset ID. |
-| `taken_at`, `lat`, `lon` | Photo metadata supplied by the plugin. |
+| `taken_at`, `lat`, `lon` | Photo metadata supplied by the plugin or read from the uploaded file. Plugin imports store a photo's `capturedAt` as `taken_at` when present and its `takenAt` otherwise. |
 | `metadata.remote` | For remote links: `pluginId`, filename, content type, and the complete `MediaSource`. |
+| `metadata.capture_time` | `{source, taken_at}` marking `taken_at` as the time the photo was taken by its own metadata. `source` is `exif` for uploads with an EXIF GPS time or `DateTimeOriginal` and the plugin ID for asset plugin imports. The mark counts only while its `taken_at` equals the asset's, so a time changed later, for example by an asset merge, is no longer vouched for. Creation-time fallbacks, dates entered in maintenance, and migrated legacy photos never get it. |
 | `remote_checked_at` | Time of the last remote fetch or repair check. |
 | `remote_error` | Last remote error message. |
 | `remote_missing_since` | First observation of a 404 or 410 response. |
@@ -376,7 +386,7 @@ The entry point is `PhotoLibraryPickerModal.openModal`.
 3. `loadCandidates` starts `loadWandererCandidates` for the internal library and one `loadPluginCandidates` call for every enabled asset plugin in parallel.
 4. One failing provider does not hide results from other providers. Errors appear alongside the map, which remains available for another search.
 5. Plugin requests pass through `PluginSystemAssetCandidates` and `pluginSystemAssetCall`.
-6. `assetLibraryActionInputForApp` reads optional `trailData` first and otherwise loads the stored GPX. `trailTrackPointsFromBytes` calculates cumulative distance and time boundaries, then `decimateTrackPoints` reduces large tracks.
+6. `assetLibraryActionInputForApp` reads optional `trailData` first and otherwise loads the stored GPX. `trailTrackPointsFromBytes` calculates the cumulative distance, which runs on across the gaps between segments and tracks, and the time boundaries, then `decimateTrackPoints` reduces large tracks.
 7. `assetPluginInvocationForUser` requires an active instance, decrypts authentication, and builds effective configuration and connector policy.
 8. `callAssetPluginCandidates` loads or creates a process-local cursor entry, invokes `callAssetPlugin` with picker limits of 100 returned items, 2,500 scanned provider items, and 10 cooperative provider requests, and validates state progress.
 9. `callAssetPlugin` starts a worker with a hard budget of 24 plugin-originated host requests, serializes the capability input, and invokes the manifest export.
@@ -384,10 +394,10 @@ The entry point is `PhotoLibraryPickerModal.openModal`.
 11. The browser response contains candidates and, when more data exists, an opaque `cursorId`; raw plugin `state` and `stats` are never serialized to the browser.
 12. The frontend adds `source=plugin`, provider identity, and the protected thumbnail URL. It stores pagination independently per plugin and renders a load-more action for each provider with another batch.
 13. A continuation sends the same search parameters plus `cursorId`. New candidates are mixed into the existing list and `uniqueCandidates` deduplicates by `(externalProvider, externalId)`. When a corresponding wanderer asset already exists, the local candidate wins and the plugin result is hidden.
-14. An expired, unknown, or mismatched cursor returns `restartRequired`; the picker removes the old candidates for that plugin and begins again. The display is globally re-sorted after every batch by `distanceFromStart`, distance, and capture time.
+14. An expired, unknown, or mismatched cursor returns `restartRequired`; the picker removes the old candidates for that plugin and begins again. The display is globally re-sorted after every batch by `distanceFromStart`, distance, and `takenAt`.
 15. In viewport mode, map movement starts a new search after a short debounce, resets pagination, and cancels the previous search. In trail mode, map movement only filters the displayed trail-matching candidates and does not request a new search. Responses from replaced searches are ignored. Selected photos survive viewport and date changes; incoming results update markers without fitting or moving the map.
 
-`AssetLibraryCandidates` serves the internal library. It filters the user's photos by date and a spatial bounding box, calculates exact Haversine distance, and removes assets already linked to the current target. Explicit viewport searches and searches without spatial context use page/offset pagination with a default of 100 and maximum of 250 records. Legacy spatial searches without explicit bounds are unpaginated so distance ranking sees the full matching set. Their internal radius is 1,000 metres or 2,000 metres with `doubleRadius`, independent of the provider-specific Immich radius. Explicit bounds replace this radius cutoff.
+`AssetLibraryCandidates` serves the internal library. It filters the user's photos by date and a spatial bounding box, calculates exact Haversine distance, and removes assets already linked to the current target. Explicit viewport searches and searches without spatial context use page/offset pagination with a default of 100 and maximum of 250 records. Legacy spatial searches without explicit bounds are unpaginated so distance ranking sees the full matching set. Their internal radius is 1,000 metres or 2,000 metres with `doubleRadius`, independent of the provider-specific Immich radius. Explicit bounds replace this radius cutoff. A library candidate's `takenAt` falls back to the record's creation time, but `capturedAt` is offered only while `metadata.capture_time` vouches for the asset's `taken_at`.
 
 ### 7.4 Immich matching
 
@@ -411,14 +421,16 @@ A picker call returns at most 100 candidates, evaluates at most 2,500 raw provid
 
 `candidateForAsset` compares a photo with every supplied track point and records the nearest point. Without a track, a viewport search uses the photo's coordinates; a legacy radius search uses the requested single coordinate. `sortMatches` orders by increasing distance and then by descending `takenAt` string.
 
+A candidate's `takenAt` is Immich's `fileCreatedAt`. `captureTime` derives `capturedAt` from the EXIF date: `exifInfo.dateTimeOriginal` when `exifInfo.timeZone` is known, otherwise Immich's `localDateTime`, which holds the local time as UTC, falling back to `dateTimeOriginal`. An asset without `dateTimeOriginal` has no capture time. Imports set `capturedAt` on `sdk.Photo` the same way.
+
 ### 7.5 Authenticated thumbnails
 
-1. The picker generates `/api/v1/plugins/assets/{plugin}/thumbnail/{assetId}`.
-2. The SvelteKit thumbnail proxy forwards the bearer token and `If-None-Match`, then streams the backend response unchanged.
-3. `PluginSystemAssetThumbnail` requires authentication and an active plugin instance.
-4. `fetchPluginAssetThumbnailEntryForUser` checks the in-memory cache using a key containing user, plugin, instance, and provider asset ID.
+1. The picker generates `/api/v1/plugins/assets/{plugin}/thumbnail/{assetId}`. List tiles and map popups add `?thumb=300x300`, as do the photo picker's and waypoint card's tiles for pending provider photos; the preview pane requests the URL without it.
+2. The SvelteKit thumbnail proxy accepts an optional `thumb` of the form `WxH` with an optional `t`, `b`, or `f` suffix and rejects any other value with `400`. It forwards `thumb`, the bearer token, and `If-None-Match`, then streams the backend response unchanged.
+3. `PluginSystemAssetThumbnail` requires authentication and an active plugin instance. `pluginAssetThumbnailSize` maps `?thumb=` to a size class: `small` when the longest edge is at most 300 pixels, otherwise `large`, which also applies when `thumb` is missing or unreadable.
+4. `fetchPluginAssetThumbnailEntryForUser` checks the in-memory cache using a key containing user, plugin, instance, provider asset ID, and size class.
 5. `beginPluginAssetThumbnailFetch` collapses concurrent misses for the same key into one provider fetch.
-6. On a miss, `fetchPluginAssetThumbnailEntryUncached` invokes the `thumbnail` action. Immich returns a connector reference to `/api/assets/{id}/thumbnail?size=preview`.
+6. On a miss, `fetchPluginAssetThumbnailEntryUncached` invokes the `thumbnail` action with the size class in `request.thumbnailSize`. Immich returns a connector reference to `/api/assets/{id}/thumbnail` with `size=thumbnail` for `small` and `size=preview` otherwise.
 7. `importer.FetchPhotoMedia` reads at most 8 MiB and applies connector, authentication, redirect, and content-type policy.
 8. The host creates a SHA-256-based ETag and caches bytes for 24 hours. The cache holds at most 512 entries and 64 MiB and evicts the least recently used entry.
 9. The HTTP response uses `private, no-cache` and `Vary: Authorization`; a matching ETag produces `304 Not Modified`.
@@ -458,12 +470,12 @@ Before any plugin call, all import routes trim and stably deduplicate `assetIds`
 ### 7.7 Photo waypoints in the trail editor
 
 1. `AssetWaypointModal` opens the same photo-library picker with track data.
-2. `candidateClusterInput` prefers `pointLat` and `pointLon`, which identify the nearest track point, and falls back to the photo coordinate.
-3. `clusterSelectedCandidates` calls `/api/v1/waypoint/cluster` with selected photos, existing waypoints, the trail category, and `resolveNames=true`.
+2. `candidateClusterInput` prefers `pointLat` and `pointLon`, which identify the nearest track point, and falls back to the photo coordinate. It sends the candidate's `capturedAt`, never `takenAt`, as the photo `time`.
+3. `clusterSelectedCandidates` calls `/api/v1/waypoint/cluster` with selected photos, existing waypoints with the `_time` the editor knows for them, the trail category, and `resolveNames=true`.
 4. `getWaypointMergeSettings` reads `wp_merge_enabled` and `wp_merge_radius` from category settings; the default is enabled with a radius of 50 metres.
-5. `clusterWaypointPhotos` assigns a photo to the first cluster whose current center lies within the radius. The center becomes the arithmetic mean after every insertion. With merging disabled, each photo receives its own cluster.
+5. `clusterWaypointPhotos` takes photos with a time in chronological order, followed by those without one. It assigns a photo to the first cluster whose current center lies within the radius; when the photo and the cluster both have times, the photo must also lie within 15 minutes of the cluster's time span, so photos from two passes over the same spot stay apart. The center becomes the arithmetic mean after every insertion. With merging disabled, each photo receives its own cluster.
 6. With `resolveNames=true`, `resolveWaypointClusterNames` applies the provider-independent `resolveWaypointName` server function to every new spatial cluster. Clusters assigned to existing waypoints are not renamed. The local-photo workflow sets the same flag, while merge-only checks omit it because they do not create photo waypoints.
-7. `clusterToWaypoint` reuses an existing waypoint or creates a new frontend waypoint model with the server-provided name and a camera icon. Provider IDs remain in `_assetPluginLinks` until the waypoint is saved.
+7. `clusterToWaypoint` reuses an existing waypoint or creates a new frontend waypoint model with the server-provided name and a camera icon. A new waypoint gets the earliest capture time of its photos as `_time`; an existing waypoint keeps its own. The editor's elevation profile places the waypoint through `waypointTrackIndex` and stores the result as `distance_from_start`: where the track passes the spot more than once, every track point has a time, and `_time` lies within the track's time range, it picks the pass recorded closest to `_time`. Provider IDs remain in `_assetPluginLinks` until the waypoint is saved.
 8. `waypoints_create` or `waypoints_update` saves the waypoint first and then calls `assets_attach_to_target`.
 
 ### 7.8 Auto-attach after a trail plugin import
@@ -478,7 +490,7 @@ The trigger is in `db/routes/plugin_system_sync.go`.
 6. Non-upload providers require `completed=true` on the trail.
 7. `autoAttachAssetPluginForTrail` builds a candidate request with `useTrailTime=true`. Without a complete GPX start and end time, nothing is imported automatically.
 8. The host calls `candidates` repeatedly with 2,500-item and 2,500-scan limits, threading validated state through at most 25 batches. Empty batches are valid when state progresses; an unchanged state, a cycle, or reaching the cap with `hasMore=true` is a visible error.
-9. Candidates from every batch are deduplicated by `assetId` and globally sorted by `distanceFromStart`, distance, ascending valid RFC 3339 capture time with invalid values last, and bytewise `assetId`.
+9. Candidates from every batch are deduplicated by `assetId` and globally sorted by `distanceFromStart`, distance, ascending valid RFC 3339 `takenAt` with invalid values last, and bytewise `assetId`.
 10. `existingTrailAssetExternalIDs` removes provider photos that already exist for the same user and are already linked to the trail.
 11. The host invokes `import` in blocks of at most 200 IDs, validates every exact output partition, collects all photos and omissions, and restores candidate rank by `externalId` even if a plugin changes response order.
 12. Only after every plugin import block succeeds, `importAssetPluginPhotosForTrail(..., enforceLimits=true)` receives the complete ordered photo set once, clusters, imports, and links photos while enforcing configured host limits.
@@ -503,8 +515,8 @@ The maintenance page uses `GET /plugins/assets/maintenance/trails` and `POST /pl
 
 `importAssetPluginPhotosForTrail` clusters provider photos as follows:
 
-1. `assetPluginPhotoClusters` separates photos with coordinates from standalone photos without coordinates.
-2. `assetPluginWaypointClusterContext` loads existing trail waypoints and the trail category.
+1. `assetPluginPhotoClusters` separates photos with coordinates from standalone photos without coordinates. A photo's `capturedAt`, never its `takenAt`, becomes its cluster time, so photos from different passes over the same spot stay apart as described in section 7.7.
+2. `assetPluginWaypointClusterContext` loads existing trail waypoints, which carry no time, and the trail category.
 3. `clusterWaypointPhotos` applies the category's merge settings.
 4. A cluster assigned to an existing waypoint imports into that waypoint.
 5. A new spatial cluster creates a camera waypoint through `assetPluginWaypointForCluster`.
@@ -512,7 +524,9 @@ The maintenance page uses `GET /plugins/assets/maintenance/trails` and `POST /pl
 7. When limits are enforced, `limitAssetPluginWaypointClusters` preserves existing-waypoint clusters and standalone photos but limits the number of newly created spatial waypoints to `maxWaypoints`.
 8. A newly created waypoint is deleted when import produces no asset records, including a failed import with no successful photos. A waypoint with successfully imported photos is retained when a later photo fails, and those partial results are returned.
 
-`assetPluginWaypointForCluster` calls the same provider-independent `resolveWaypointName` function as the frontend clustering route. `createAssetPluginWaypoint` stores the resolved name, an empty description, coordinates, `icon=camera`, author, and trail. `assetPluginDistanceFromStart` copies the cumulative distance of the nearest track point.
+`assetPluginWaypointForCluster` calls the same provider-independent `resolveWaypointName` function as the frontend clustering route. `createAssetPluginWaypoint` stores the resolved name, an empty description, coordinates, `icon=camera`, author, trail, and `distance_from_start`. `assetPluginDistanceFromStart` takes the cumulative distance of the nearest track point. Where the track passes the spot more than once, track points up to 25 metres farther away than the nearest one count as equally near, and consecutive ones form a pass. When every track point has a time and the cluster's earliest capture time lies within the track's time range, the pass recorded closest to that time wins and its nearest point is used, as `waypointTrackIndex` does in the web elevation profile.
+
+The web knows no time for a saved waypoint and picks its pass by the stored `distance_from_start` instead, which it trusts only within 1 m of a track point's own distance from start. The distances of the track points from `trailTrackPointsFromBytes` therefore run on across the gaps between segments and tracks, as the web's elevation profile joins them into one line. Trail plugin imports compute the `distance_from_start` of their waypoints on the same basis with `trackDistanceIndexFromGPX` in `db/plugins/importer/importer.go`. It places a waypoint at the nearest position on a recorded segment; the gap between two segments counts towards the distance, but no waypoint is placed on it.
 
 ### 7.12 Automatic waypoint names
 
@@ -545,7 +559,7 @@ A private URL or connector reference without an expiry may be retained without a
 3. `web/src/routes/api/v1/assets/[id]/file/+server.ts` validates the ID, share token, and thumbnail parameter and forwards authentication.
 4. `routes.AssetFile` applies the PocketBase view rule. If a local file now exists, it redirects to the PocketBase file endpoint.
 5. A remaining private remote asset linked to a public trail is refused as a safety measure.
-6. A request with `?thumb=...` invokes the plugin thumbnail action. Otherwise `assetservice.FetchRemotePluginAsset` reconstructs the original `Photo` descriptor from `metadata.remote` and loads it without another WASM call.
+6. A request with `?thumb=...` invokes the plugin thumbnail action; the `thumb` value picks the size class as in section 7.5. Otherwise `assetservice.FetchRemotePluginAsset` reconstructs the original `Photo` descriptor from `metadata.remote` and loads it without another WASM call.
 7. Success sets `remote_status=available`; 404 and 410 set `missing`; every other failure sets `inaccessible`. Private bytes are returned with `Cache-Control: private, max-age=300` but are not persisted.
 
 Remote retrieval requires the asset plugin to remain installed, the user's instance to remain enabled, and its authentication to remain valid.
@@ -603,9 +617,9 @@ Before disabling a plugin, the UI requests the summary. Existing remote links mu
 
 ### 7.17 Removing individual photos and orphan cleanup
 
-`assets_delete_removed` extracts asset IDs from local and remote photo URLs and sends `DELETE /api/v1/assets/{id}` with the concrete target. `AssetDelete` removes only the matching link. `DeleteAssetIfOrphanedByAuthor` deletes the asset record only when no trail, waypoint, or summit-log link remains.
+`assets_delete_removed` extracts asset IDs from local and remote photo URLs and sends `DELETE /api/v1/assets/{id}` with the concrete target. `AssetDelete` removes only the matching link. `DeleteAssetIfOrphanedByAuthor` then deletes the asset record only when it belongs to the requesting user and no trail, waypoint, or summit-log link remains.
 
-Before deleting a trail, `DeleteTrailAssetCleanupHandler` gathers affected assets and deletes author-owned orphans after the trail is removed. The maintenance route `DELETE /assets/orphans` can clean up as many as 500 explicitly named, unlinked assets owned by the current user.
+Deleting a trail, waypoint, or summit log removes the photos that only it used, whoever added them. This holds for every delete path, including the API, cascades, inbound federation deletes, remote copies dropped because their origin no longer has them, deduplication, trail merges, and account deletion. `CollectDeletedRecordAssetsHandler` on `OnRecordDelete` notes the record's linked asset IDs while the links still exist, since they cascade away with the record. After the commit, `DeleteOrphanedAssetsHandler` on `OnRecordAfterDeleteSuccess` deletes the noted assets that no link is left for and only logs its errors. When a trail is deleted, its waypoints and summit logs note and remove their own photos as the cascade reaches them. Both hooks are bound ahead of the other delete hooks of these collections, which stop at their first error. If a cascaded record's hook fails after the commit, PocketBase reports that error as the trail's and skips the trail's after-success hooks; `DeleteOrphanedAssetsAfterErrorHandler` on `OnRecordAfterDeleteError` then removes the photos, but only outside a transaction and when the record is really gone, so a rolled-back delete keeps them. The maintenance route `DELETE /assets/orphans` can clean up as many as 500 explicitly named, unlinked assets owned by the current user.
 
 ### 7.18 Deduplication and asset merge
 
@@ -617,6 +631,29 @@ Import deduplication primarily happens in `CreatePhotoAsset` through external id
 - Equal capture seconds and coordinates rounded to four decimal places.
 
 `SuggestGroups` forms transitively connected groups. `chooseTargetAsset` prefers a local copy, more links, more complete metadata, an older asset, and finally the lexicographically smaller ID. `MergeWithContext` moves all links through `EnsurePublicTrailSafeAssetLink`, fills missing metadata, stores conflicts in a snapshot, and deletes source assets.
+
+### 7.19 Federation of photo changes
+
+Photos reach followers inside the ActivityPub `Note` of their trail or summit log. A trail's Note attaches up to its first three photos and a summit log's Note all of its photos. Waypoints are not federated on their own: a change to a waypoint's photos sends an Update of its trail. A wanderer instance that receives an Update for a trail it already holds marks its copy for a full sync, which loads the waypoints and their photos again the next time the trail is opened there.
+
+The editor saves a trail or summit log first and links its photos afterwards, one request at a time. `FederationUpdates` in `db/hooks/federation_updates.go` therefore holds back the activity of each trail and summit log until its changes have settled and then sends one activity, built from the record and the photos linked at that moment:
+
+| Change | Queued by | Activity | Wait |
+| --- | --- | --- | --- |
+| A local user's trail is created public, by any path. | `CreateTrailHandler` through `EnqueueCreate` | Create | 10 seconds |
+| A summit log is created through the API. | `CreateSummitLogHandler` through `EnqueueCreate` | Create | 10 seconds |
+| A trail merge creates a summit log on the target trail, through the `TrailMerge` route or the plugin auto-merge after a trail import. | `trailmerge.Merge` through its `announce` callback, which both set to `EnqueueCreate` | Create | 10 seconds |
+| A save changes a trail's `public` from false to true: the publication job, a plain update, a re-publication, or `publishImportedTrail` at the end of `importer.ImportTrail`. | `UpdateTrailHandler` through `EnqueueTrailSave` | Create | 10 seconds |
+| Any other save of a public trail, or an update of a summit log through the API. | `UpdateTrailHandler` through `EnqueueTrailSave`, `UpdateSummitLogHandler` through `Enqueue` | Update | 2 seconds |
+| A photo is linked to or unlinked from a trail, waypoint, or summit log, or a trail's thumbnail mark changes. | `FederateOnAssetLinkChange` on `trail_assets`, `waypoint_assets`, and `summit_log_assets` | Update of the trail or summit log | 2 seconds |
+
+1. Only a public trail or a summit log on a public trail is queued, checked when the change is queued. Changes made while a trail is private are not announced on their own: its publication sends the trail's Create, and a summit log saved before that gets no activity of its own.
+2. Each trail or summit log has at most one pending activity. A later change restarts its timer but never shortens the wait already set, and a pending Create stays a Create. Photos linked in several rounds after the save therefore go out with the Create. Receivers notify mentioned users once per delivered activity, so they are notified once rather than again for an Update with the photos.
+3. `importer.ImportTrail` creates a public import as a private trail, adds its waypoints and photos, and publishes it only then, so the import goes out as one Create with its photos.
+4. When the wait is over, `federate` loads the record again. A record deleted in the meantime is skipped, since its deletion is announced on its own, and so is a record whose author is not local: copies of remote content get their links while they sync, and their own instance announces them. `CreateTrailActivity` and `CreateSummitLogActivity` send nothing when the trail is no longer public. Errors are logged, and a panic is recovered.
+5. The 10-second `federationCreateDelay` bounds how long a Create waits for photos. A photo linked after the Create went out follows in an Update. Updates wait for the 2-second `federationUpdateDelay`.
+6. A merge links the photos of the summit logs it creates inside its transaction, and their link hooks queue an Update after the commit. `Merge` then hands each new log to `announce`, which turns the pending Update into one Create with the photos. The `TrailMerge` route and the plugin auto-merge after a trail import (`TryAutoMergeImportedTrail`, called by the plugin sync) both pass `EnqueueCreate`. With a nil callback, `Merge` would send the Create of each new log right away, and for a log with photos the Update its photo links queued would follow about 2 seconds later.
+7. Pending activities are kept in memory only. On a graceful shutdown or restart, an `OnTerminate` handler that `NewFederationUpdates` binds builds and stores them right away, in the order their timers would have fired, and waits for activities whose timers fired just before and that are still being built. `federation.PostActivity` delivers each activity to its inboxes in the background, which ends with the process, so the handler then waits through `federation.WaitForDeliveries` for these deliveries and for any others still running, such as a Like sent just before. It runs after PocketBase has shut down its web server, which gives running requests a second to finish, and while the database is still open. It waits up to 5 seconds (`federationShutdownTimeout`) for all of this and then leaves the rest behind: an inbox that has not accepted its delivery by then misses the activity, which stays stored and is not sent again. What is queued or sent after the handler has returned, for example by a request still running after its second, is lost, and so are the pending activities on a crash.
 
 ## 8. Runtime and network execution
 
@@ -720,7 +757,7 @@ The browser-facing `/api/v1` endpoints are implemented by SvelteKit; the second 
 | POST | `/api/v1/plugins/assets/{plugin}/import` | `/plugins/assets/{plugin}/import` | Import with trail clustering. |
 | POST | `/api/v1/plugins/assets/{plugin}/import-to-waypoint` | `/plugins/assets/{plugin}/import-to-waypoint` | Specific import into one waypoint. |
 | POST | `/api/v1/plugins/assets/{plugin}/import-to-target` | `/plugins/assets/{plugin}/import-to-target` | Import into a trail, waypoint, or summit log. |
-| GET | `/api/v1/plugins/assets/{plugin}/thumbnail/{id}` | `/plugins/assets/{plugin}/thumbnail/{id}` | Protected provider preview. |
+| GET | `/api/v1/plugins/assets/{plugin}/thumbnail/{id}` | `/plugins/assets/{plugin}/thumbnail/{id}` | Protected provider preview; an optional `?thumb=` selects the size class. |
 | POST | `/api/v1/assets/library` | `/assets/library` | Internal wanderer photo library. |
 | POST | `/api/v1/plugins/assets/auto-attach` | `/plugins/assets/auto-attach` | Start asynchronous auto-attach manually. |
 | GET | `/api/v1/plugins/assets/maintenance/trails` | `/plugins/assets/maintenance/trails` | Completed trails without visible photos. |
@@ -754,7 +791,8 @@ The generic SvelteKit action proxy has a fixed method and action allowlist. New 
 | `immichClient.check` | Validates `/api/users/me` and a small metadata search, then returns the Immich user ID. |
 | `immichClient.candidates` | Normalizes configuration, determines the time window, executes one bounded resumable search, and returns candidates, state, and scan statistics. |
 | `immichClient.importAssets` | Resolves selected IDs one at a time and creates either an `sdk.Photo` descriptor or an explicit `sdk.OmittedAsset`; an empty selection is a successful no-op. |
-| `immichClient.thumbnail` | Builds a preview connector reference for the first ID without fetching bytes itself. |
+| `immichClient.thumbnail` | Builds a connector reference for the first ID in the requested size class without fetching bytes itself. |
+| `immichThumbnailSize` | Maps `thumbnailSize=small` to Immich's `thumbnail` size and every other value to `preview`; it lives in `plugins/immich/thumbnail.go`. |
 | `immichClient.searchAssets` | Small page-limited metadata search retained for `check`. |
 | `immichClient.searchAssetCandidates` | Maps SDK limits, builds the Immich metadata request, and supplies provider pages to the SDK-independent pagination state machine. |
 | `searchAssetCandidatePages` | Enforces candidate, evaluated-item, and provider-request limits, resumes at the raw offset within a provider page, and returns candidates, statistics, and continuation state. |
@@ -768,7 +806,7 @@ The generic SvelteKit action proxy has a fixed method and action allowlist. New 
 | `candidateWindow` | Prefers an explicit time range; otherwise expands complete track times by `timeWindowMinutes`. |
 | `explicitRequestTimeWindow` | Parses individual or paired RFC 3339 boundaries; parsing failure means no explicit window. |
 | `requestTrailTimeWindow` | Accepts only a complete, parseable `startedAt` and `endedAt` pair. |
-| `photoFromAsset` | Maps external ID, filename, time, and optional EXIF coordinates into `sdk.Photo`. |
+| `photoFromAsset` | Maps external ID, filename, file time as `takenAt`, EXIF capture time as `capturedAt`, and optional EXIF coordinates into `sdk.Photo`. |
 | `mediaSourceForAsset` | Selects the Immich original or preview path and sets connector, authentication, query, and asset ID. |
 | `contentTypeForImportSize` | Fixes preview content type to `image/jpeg`; original imports let the response declare the type. |
 | `previewFilename` | Replaces an existing extension with `.jpg` and uses ID-based fallbacks. |
@@ -781,8 +819,9 @@ The generic SvelteKit action proxy has a fixed method and action allowlist. New 
 | Function | Detailed responsibility |
 | --- | --- |
 | `matchAssetCandidates` | Applies owner, EXIF-coordinate, and radius filters; `doubleRadius` doubles the provider radius. |
-| `sortMatches` | Orders by ascending distance and, for equal distance, descending capture time. |
-| `candidateForAsset` | Finds the nearest track point or compares against one coordinate and constructs the candidate. |
+| `sortMatches` | Orders by ascending distance and, for equal distance, descending `takenAt`. |
+| `candidateForAsset` | Finds the nearest track point or compares against one coordinate and constructs the candidate with `fileCreatedAt` as `takenAt` and the EXIF capture time as `capturedAt`. |
+| `captureTime` | Returns the EXIF capture time in UTC: `exifInfo.dateTimeOriginal` with a known `exifInfo.timeZone`, otherwise `localDateTime`, falling back to `dateTimeOriginal`. Empty without `dateTimeOriginal`. |
 | `haversineMeters` | Computes great-circle distance using an Earth radius of 6,371,000 metres. |
 | `degreesToRadians` | Converts degrees to radians. |
 
@@ -801,11 +840,12 @@ The generic SvelteKit action proxy has a fixed method and action allowlist. New 
 | `mergeAssetPluginDraftConfig` | Applies only permitted instance overrides to effective configuration. |
 | `mergeSubmittedPluginAuth` | Replaces stored authentication only with non-empty, non-null submitted values. |
 | `assetPluginConnectorConfig` | Delegates safe derivation of connector configuration from the plugin URL. |
-| `callAssetPlugin` | Opens a worker session, filters authentication and configuration, serializes input, invokes the export, and decodes output. |
+| `callAssetPlugin` | Opens a worker session, filters authentication and configuration, serializes input, invokes the export, decodes output, and normalizes candidate capture times. |
+| `normalizeAssetPluginCandidateCaptureTimes` | Passes each candidate's `capturedAt` on in UTC and drops a value that is not RFC 3339 with an offset. |
 | `newAssetLibraryActionInput` | Copies request fields into the plugin protocol. |
 | `assetLibraryActionInputForApp` | Adds track points, preferring explicit trail XML over stored GPX; auto-attach may use track times as the search window. |
 | `assetLibraryActionInputForWandererLibrary` | More tolerant internal-library variant that logs some GPX failures instead of aborting. |
-| `trailTrackPoints`, `trailTrackPointsFromBytes` | Read and parse GPX into positions, cumulative distance, and time boundaries. |
+| `trailTrackPoints`, `trailTrackPointsFromBytes` | Read and parse GPX into positions, cumulative distance across the gaps between segments and tracks as in the web's elevation profile, and time boundaries. |
 | `applyAssetLibraryTrackPoints` | Applies geometry without implicitly creating a time range. |
 | `applyAssetLibraryExplicitTimeWindow` | Validates explicit boundaries and mirrors them into start and end. |
 | `applyAssetLibraryTrailTimeWindow` | Sets a window only when the GPX provides both boundaries. |
@@ -824,10 +864,12 @@ The cursor implementation in `db/routes/plugin_system_asset_cursor.go` provides 
 | `assetLibraryExistingExternalRefs` | Returns every external identity belonging to the actor. |
 | `assetLibraryCoordinateBounds` | Expands track or point bounds by the search radius and handles poles and the date line conservatively. |
 | `assetLibraryCandidate` | Excludes generated route previews and records without usable URL or coordinate and calculates proximity to the track. |
+| `assetLibraryCapturedAt` | Offers `taken_at` as `capturedAt` only while `metadata.capture_time` vouches for it, never the creation-time fallback. |
 | `nearestAssetLibraryTrackPoint` | Performs a linear nearest-point search over supplied track points. |
-| `sortAssetLibraryCandidates` | Orders by track position, distance, newest capture time, and asset ID. |
-| `PluginSystemAssetThumbnail` | Authenticated provider thumbnail endpoint. |
-| `fetchPluginAssetThumbnailEntryForUser` | Resolves plugin context and coordinates cache and singleflight behavior. |
+| `sortAssetLibraryCandidates` | Orders by track position, distance, newest `takenAt`, and asset ID. |
+| `PluginSystemAssetThumbnail` | Authenticated provider thumbnail endpoint; an optional `?thumb=` selects the size class. |
+| `pluginAssetThumbnailSize` | Maps a `?thumb=` size of the form `WxH`, optionally suffixed with `t`, `b`, or `f`, to `small` when the longest edge is at most 300 pixels and to `large` otherwise, including missing or unreadable values. |
+| `fetchPluginAssetThumbnailEntryForUser` | Resolves plugin context and coordinates cache and singleflight behavior per size class. |
 | `fetchPluginAssetThumbnailEntryUncached` | Obtains a plugin descriptor and fetches media under host policy. |
 | `getPluginAssetThumbnailCache`, `putPluginAssetThumbnailCache` | Enforce TTL and size and perform eviction. |
 | `writePluginAssetThumbnail`, `pluginAssetThumbnailETag` | Produce private cache headers, conditional responses, and the ETag. |
@@ -851,13 +893,14 @@ The cursor implementation in `db/routes/plugin_system_asset_cursor.go` provides 
 | `existingTrailAssetExternalIDs` | Intersects candidate IDs with provider assets already linked to the trail. |
 | `importAssetPluginPhotosToTarget` | Direct manual import into the explicitly selected target. |
 | `importAssetPluginPhotosForTrail` | Shared import path for a waypoint target or trail clustering. |
+| `importAssetPluginPhotoAssets`, `markAssetPluginCaptureTimes` | Used by every asset plugin import: store a photo's `capturedAt` as `taken_at` instead of `takenAt`, then mark it in `metadata.capture_time` with the plugin ID through a save without hooks. A previously imported asset keeps its time and is marked only when that time matches. |
 | `assetPluginPhotoImportLimits` | Returns enforceable limits only when `enforce=true`. |
-| `assetPluginPhotoClusters` | Prepares provider photos for common waypoint clustering. |
+| `assetPluginPhotoClusters` | Prepares provider photos for common waypoint clustering, with `capturedAt` as the only photo time. |
 | `assetPluginWaypointForCluster` | Reuses an existing waypoint or creates a named camera waypoint. |
 | `assetPluginMaxWaypoints`, `limitAssetPluginWaypointClusters` | Read and enforce the limit for new automatically generated waypoints. |
 | `assetPluginWaypointClusterContext` | Loads trail waypoints and category. |
-| `createAssetPluginWaypoint` | Persists an automatically generated waypoint. |
-| `assetPluginDistanceFromStart` | Copies the nearest track point's cumulative distance. |
+| `createAssetPluginWaypoint` | Persists an automatically generated waypoint, placed for the earliest capture time of its cluster (`assetPluginClusterTime`). |
+| `assetPluginDistanceFromStart` | Returns the nearest track point's cumulative distance or, where the track passes the spot more than once, that of the nearest point of the pass recorded closest to the photo time. `assetPluginTrackTimesCovering` allows the time to decide only when every track point has a time and the track's times cover it. |
 
 ### 13.7 Authorization: `db/routes/plugin_system_assets.go`
 
@@ -887,13 +930,14 @@ The cursor implementation in `db/routes/plugin_system_asset_cursor.go` provides 
 | `pluginMediaResponse` | Validates content type, reads through a size limit, and returns the final URL. |
 | `stripConnectorAuth` | Removes authorization and configured authentication headers and query parameters before a storage redirect. |
 | `safeMediaFileName` | Removes path and special-character hazards and adds an appropriate extension. |
+| `trackDistanceIndexFromGPX` | Indexes an imported trail's track for the `distance_from_start` of its waypoints, with distances that run on across the gaps between segments and tracks and only recorded segments to place a waypoint on. |
 
 ### 13.9 Asset persistence: `db/util/assets.go`
 
 | Function | Detailed responsibility |
 | --- | --- |
 | `CreatePhotoAsset` | Validates storage input and author, deduplicates external identity, creates the asset, and links targets. |
-| `reuseExternalPhotoAsset` | Adds a local file or capture time when missing and links additional targets. |
+| `reuseExternalPhotoAsset` | Adds a local file or `taken_at` when missing and links additional targets. |
 | `findExistingExternalPhotoAsset` | Searches by author, provider, external ID, and photo type. |
 | `LinkAssetToPhotoTargets` | Creates all links implied by the storage input. |
 | `PhotoAssetLinkTargets` | Chooses a direct trail link or waypoint/summit-log link. |
@@ -903,6 +947,7 @@ The cursor implementation in `db/routes/plugin_system_asset_cursor.go` provides 
 | `AssetPublicMediaURL`, `AssetPublicFileURL` | Select a local file path or remote file endpoint. |
 | `AssetIDsForTrail`, `TrailIDsForAsset` | Traverse direct, waypoint, and summit-log links. |
 | `DeleteAssetIfOrphanedByAuthor` | Deletes only author-owned assets without remaining links. |
+| `DeleteAssetsIfOrphaned` | Deletes every listed asset without remaining links, whoever its author, continues past failures, and returns the errors joined. |
 
 ### 13.10 Remote service: `db/services/assets/service.go`
 
@@ -943,6 +988,12 @@ The cursor implementation in `db/routes/plugin_system_asset_cursor.go` provides 
 | `encryptPluginInstanceAuth`, `censorPluginInstanceAuth` | `db/hooks/plugin_instances.go` | Encrypt stored secrets and remove them from user responses. |
 | `ReindexTrailOnAssetChange` | `db/hooks/assets.go` | Reindexes every trail affected by a changed asset. |
 | `ReindexTrailOnAssetLinkChange` | `db/hooks/assets.go` | Debounces reindexing after a link change. |
+| `CollectDeletedRecordAssetsHandler` | `db/hooks/assets.go` | Notes the assets linked to a trail, waypoint, or summit log before it is deleted. |
+| `DeleteOrphanedAssetsHandler` | `db/hooks/assets.go` | After the commit, deletes the noted assets left without links, whoever their author, and only logs errors. |
+| `DeleteOrphanedAssetsAfterErrorHandler` | `db/hooks/assets.go` | Runs the same cleanup when the delete went through but a cascaded hook failed after the commit; it does nothing inside a transaction or while the record still exists. |
+| `FederationUpdates.Enqueue`, `EnqueueCreate`, `EnqueueTrailSave` | `db/hooks/federation_updates.go` | Queue one Update or Create per public trail or summit log on a public trail. A pending Create stays one and its wait is never shortened; a trail save that makes the trail public queues a Create. |
+| `FederationUpdates.flushAll` | `db/hooks/federation_updates.go` | Bound to `OnTerminate`: on shutdown, sends every pending activity right away, waits for the activities whose timers fired just before and that are still being built, then waits through `federation.WaitForDeliveries` for the inbox deliveries that `PostActivity` runs in the background, its own and any others still running, up to 5 seconds in all. |
+| `FederateOnAssetLinkChange` | `db/hooks/federation_updates.go` | Queues an Update of the trail or summit log whose photo link was created, deleted, or changed; a waypoint's photo queues its trail. |
 
 ### 13.12 Clustering and name resolution
 
@@ -992,7 +1043,9 @@ The cursor implementation in `db/routes/plugin_system_asset_cursor.go` provides 
 | `loadPluginCandidates`, `loadMorePluginCandidates` | `photo_library_picker_modal.svelte` | Invoke initial and cursor-based provider batches, keep per-plugin pagination state, restart expired cursors, and merge identity and thumbnail information. |
 | `loadWandererCandidates` | `photo_library_picker_modal.svelte` | Loads the internal library with pagination and known external references. |
 | `uniqueCandidates` | `photo_library_picker_modal.svelte` | Deduplicates across sources and orders candidates. |
+| `tileThumbnailUrl` | `photo_library_picker_modal.svelte` | Adds `?thumb=300x300` for list tiles and map popups; the preview pane keeps the full-size URL. |
 | `photoLibraryPluginLinks` | `web/src/lib/models/photo_library.ts` | Groups a selection by plugin ID and unique asset IDs. |
+| `photoLibraryCaptureTime`, `earliestPhotoLibraryCaptureTime` | `web/src/lib/models/photo_library.ts` | Read a candidate's `capturedAt`, ignoring `takenAt` and invalid values, and pick the earliest capture time of a new photo waypoint. |
 | `assets_import_plugin_links` | `web/src/lib/stores/asset_store.ts` | Runs `import-to-target` once per plugin and consumes the `{imported, omitted}` response envelope. |
 | `assets_attach_to_target` | `web/src/lib/stores/asset_store.ts` | Orchestrates uploads, local links, and plugin imports. |
 | `assets_delete_removed` | `web/src/lib/stores/asset_store.ts` | Removes target-specific links and then possible orphans. |
@@ -1004,18 +1057,25 @@ The cursor implementation in `db/routes/plugin_system_asset_cursor.go` provides 
 
 | File | Existing coverage |
 | --- | --- |
-| `plugins/immich/matching_test.go` | Immich candidate filtering, ordering, and output shape. |
+| `plugins/immich/matching_test.go` | Immich candidate filtering, ordering, output shape, and capture times. |
 | `plugins/immich/pagination_test.go` | Dense-page continuation, strict mid-page scan limits, raw-asset offsets, provider-request limits, and monotonic `nextPage` validation without TinyGo build tags. |
-| `db/routes/plugin_system_assets_test.go` | Trigger flags, time windows, GPX points, internal pagination, cursor binding and state validation, import partitions and limits, global ordering, clustering, naming fallbacks, and browser output shape. |
+| `plugins/immich/thumbnail_test.go` | Immich thumbnail size for each `thumbnailSize` value. |
+| `db/routes/plugin_system_assets_test.go` | Trigger flags, time windows, GPX points and their distances across segment and track gaps, candidate capture-time normalization, internal pagination, cursor binding and state validation, import partitions and limits, global ordering, clustering, capture-time marks, pass-aware waypoint placement, naming fallbacks, and browser output shape. |
+| `db/routes/plugin_system_assets_thumbnail_test.go` | Size classes read from `?thumb=` and separate cache entries per class for the plugin thumbnail and asset file endpoints. |
 | `db/routes/waypoint_cluster_test.go` | Server-side naming of new spatial clusters without renaming existing-waypoint or empty clusters. |
 | `db/pluginsystem/worker_test.go` | Runtime request defaults and ceilings, whole-call budget failure, per-call counter reset, and the maximum 200-photo import request count. |
 | `db/routes/plugin_system_policy_test.go` | Host connector configuration and protection against connector overrides during draft checks. |
-| `db/plugins/importer/importer_test.go` | Media policy, limits, photo metadata mapping, and trail import helpers. |
+| `db/plugins/importer/importer_test.go` | Media policy, limits, photo metadata mapping, and trail import helpers, including waypoint distances across segment gaps. |
 | `db/util/assets_test.go` | Asset creation, reuse, links, URLs, and cleanup. |
 | `db/services/assetmerge/service_test.go` | Duplicate suggestions, link movement, metadata, and hash persistence. |
 | `db/migrations/asset_share_rules_test.go` | Asset and link rules and the external identity unique index. |
+| `db/hooks/federation_updates_test.go` | One Update once photo links settle, one Create with its photos for new and newly published content, no downgrade of a pending Create, its longer wait, Updates for later edits, pending activities sent on shutdown within the timeout, and the shutdown waiting for the inbox deliveries of these and of activities sent shortly before, and for an activity whose timer fired just before the shutdown and that is still being built, but no longer than the timeout for an inbox that does not answer. |
+| `db/trail_merge_federation_test.go` | A trail merge sends nothing right away and announces each summit log it creates with one Create that carries its photos; the plugin auto-merge hands the summit logs it creates to the same announcer. |
+| `db/trail_asset_cleanup_test.go`, `db/summit_log_asset_cleanup_test.go` | Removal of orphaned photos when trails, waypoints, and summit logs are deleted, including inbound federation deletes, failing cascade hooks, and deletes inside a transaction. |
+| `web/src/lib/models/photo_library.test.ts`, `web/src/lib/util/exif_util.test.ts`, `web/src/routes/api/v1/assets/server.test.ts` | Capture-time helpers and return-pass placement, EXIF capture-time rules, and capture-time marks on upload. |
+| `web/src/routes/api/v1/plugins/assets/[plugin]/thumbnail/[id]/server.test.ts` | Validation and forwarding of `thumb` by the thumbnail proxy. |
 
-Changes to this stack should run at least the Go tests for `plugins/immich`, `db/routes`, `db/plugins/importer`, `db/util`, and `db/services/assets`, or the corresponding full `go test ./...`, plus relevant frontend and documentation builds.
+Changes to this stack should run at least the Go tests for `plugins/immich`, `db/routes`, `db/plugins/importer`, `db/util`, `db/services/assets`, `db/hooks`, and the `db` main package, which binds the lifecycle hooks, or the corresponding full `go test ./...`, plus relevant frontend and documentation builds.
 
 ## 15. Implementing another asset plugin
 
@@ -1023,10 +1083,10 @@ Changes to this stack should run at least the Go tests for `plugins/immich`, `db
 2. Declare every provider target as a connector and every required authentication context; do not assume direct network access.
 3. Implement one export with all four actions and reject unknown actions explicitly.
 4. Return stable `assetId` and `externalId` values; robust idempotency depends on them.
-5. Return candidates with reliable positions when claiming spatial matching and set `pointLat` and `pointLon` to the track point actually used.
+5. Return candidates with reliable positions when claiming spatial matching and set `pointLat` and `pointLon` to the track point actually used. Set `capturedAt` only from the photo's own metadata, never from a file or upload time.
 6. Do not embed media bytes in `import` JSON. Return a `url` or, preferably, a declared connector `MediaRef`.
 7. Use non-expiring sources for durable `link_private` support; expiring sources are copied automatically.
-8. Keep `thumbnail` small and deterministic. The host cache is scoped by user, instance, and asset ID.
+8. Keep `thumbnail` small and deterministic, and use `request.thumbnailSize` to pick the provider's size when it offers several; returning the same media for both classes is allowed. The host cache is scoped by user, instance, asset ID, and size class.
 9. Bound provider pagination with `search`, return a progressing state whenever `hasMore=true`, resume within provider pages without skipping raw assets, and report evaluated items in `stats.scannedItems`.
 10. Make `check` detect an invalid URL, credentials, and essential read permissions.
 11. Cover matching, import, failure, and policy behavior with plugin and host tests.
@@ -1037,7 +1097,10 @@ Changes to this stack should run at least the Go tests for `plugins/immich`, `db
 - Provider candidate scans have weak snapshot consistency. Immich page changes caused by deletion or EXIF date edits can skip an item across calls, while duplicate results are removed by provider identity.
 - Immich resolves selected import IDs sequentially with one metadata request per ID.
 - Remote jobs and the thumbnail cache are process-local and are neither persisted nor shared between backend instances.
+- Pending federation activities are process-local as well. A graceful shutdown builds, stores, and delivers them, and waits for deliveries still running, within 5 seconds in all; an inbox that has not accepted its delivery by then misses the activity. A crash loses them, including the Create of content saved within the last 10 seconds; followers then hear of that content only with its next Update, if any.
 - Publication downloads run in a trail-specific background job with per-photo timeouts and bounded concurrency. Successful copies persist across retry and restart; job status does not. A final transaction checks permissions, unchanged trail metadata, and remaining remote links before publication. Already-public trails with legacy remote links require explicit materialization from plugin settings; their remaining `link_private` assets cannot be served anonymously.
 - Manual plugin endpoints require trail ownership, while the internal library supports edit shares.
 - Auto-attach requires a complete GPX time span; geometry without timestamps is insufficient.
+- Waypoints store no capture time. Server-side clustering therefore sees existing waypoints without one, and the trail editor knows `_time` only for photo waypoints created in the current session, so a later import can still merge a photo from another pass into an existing waypoint within the merge radius.
+- Immich fills `dateTimeOriginal` from the file time when a photo has no EXIF date at all. Such a time cannot be told apart and arrives as `capturedAt`.
 - `maxWaypoints<=0` currently means unlimited in `limitAssetPluginWaypointClusters`, although the manifest field is presented as a maximum.

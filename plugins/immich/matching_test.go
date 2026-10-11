@@ -129,6 +129,71 @@ func TestMatchAssetCandidatesWithoutBoundsRetainsRadius(t *testing.T) {
 	}
 }
 
+func TestCaptureTimeReadsLocalTimeWithoutZoneAsUTC(t *testing.T) {
+	tests := []struct {
+		name  string
+		asset immichAsset
+		want  string
+	}{
+		{
+			name: "with time zone",
+			asset: immichAsset{
+				LocalDateTime: "2026-06-23T12:18:00.000Z",
+				ExifInfo:      immichExifInfo{DateTimeOriginal: "2026-06-23T10:18:00.000Z", TimeZone: "Europe/Zurich"},
+			},
+			want: "2026-06-23T10:18:00Z",
+		},
+		{
+			name: "without time zone",
+			asset: immichAsset{
+				LocalDateTime: "2026-06-23T12:18:00.000Z",
+				ExifInfo:      immichExifInfo{DateTimeOriginal: "2026-06-23T10:18:00.000Z"},
+			},
+			want: "2026-06-23T12:18:00Z",
+		},
+		{
+			name:  "without time zone or local time",
+			asset: immichAsset{ExifInfo: immichExifInfo{DateTimeOriginal: "2026-06-23T10:18:00+02:00"}},
+			want:  "2026-06-23T08:18:00Z",
+		},
+		{
+			name:  "without EXIF date",
+			asset: immichAsset{FileCreatedAt: "2026-06-23T10:18:00.000Z", LocalDateTime: "2026-06-23T10:18:00.000Z"},
+		},
+		{
+			name:  "unreadable EXIF date",
+			asset: immichAsset{ExifInfo: immichExifInfo{DateTimeOriginal: "2026:06:23 10:18:00", TimeZone: "UTC"}},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := captureTime(test.asset); got != test.want {
+				t.Fatalf("captureTime = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestMatchAssetCandidatesKeepsFileTimeAndAddsCaptureTime(t *testing.T) {
+	asset := geotaggedImmichAsset("photo", 46, 8)
+	asset.FileCreatedAt = "2026-06-23T10:18:00.000Z"
+	asset.ExifInfo.DateTimeOriginal = "2026-06-23T10:18:00.000Z"
+	asset.ExifInfo.TimeZone = "UTC+2"
+	withoutExifDate := geotaggedImmichAsset("file-time-only", 46, 8)
+	withoutExifDate.FileCreatedAt = "2026-06-23T10:19:00.000Z"
+
+	candidates := matchAssetCandidates([]immichAsset{asset, withoutExifDate}, assetLibraryRequest{Lat: 46, Lon: 8}, immichConfig{MaxDistanceMeters: 100})
+	if len(candidates) != 2 {
+		t.Fatalf("candidates = %#v, want two", candidates)
+	}
+	if candidates[0].TakenAt != asset.FileCreatedAt || candidates[0].CapturedAt != "2026-06-23T10:18:00Z" {
+		t.Fatalf("candidate times = %q, %q", candidates[0].TakenAt, candidates[0].CapturedAt)
+	}
+	if candidates[1].TakenAt != withoutExifDate.FileCreatedAt || candidates[1].CapturedAt != "" {
+		t.Fatalf("a file time must not count as capture time: %#v", candidates[1])
+	}
+}
+
 func geotaggedImmichAsset(id string, lat, lon float64) immichAsset {
 	return immichAsset{ID: id, ExifInfo: immichExifInfo{Latitude: &lat, Longitude: &lon}}
 }

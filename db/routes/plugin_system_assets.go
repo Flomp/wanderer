@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -30,10 +31,25 @@ const pluginAssetThumbnailMaxBytes int64 = 8 << 20
 const pluginAssetThumbnailCacheMaxBytes int64 = 64 << 20
 const pluginAssetThumbnailCacheMaxEntries = 512
 const pluginAssetThumbnailCacheTTL = 24 * time.Hour
+
+// Size classes a plugin thumbnail is asked for in request.thumbnailSize: small
+// for tiles up to pluginAssetThumbnailSmallMaxEdge pixels on their longest
+// edge, large for bigger previews.
+const pluginAssetThumbnailSizeSmall = "small"
+const pluginAssetThumbnailSizeLarge = "large"
+const pluginAssetThumbnailSmallMaxEdge = 300
+
 const defaultAssetPluginMaxWaypoints = 25
 const pluginAssetMaintenanceProvider = "maintenance"
 const pluginAssetImportMaxIDs = 200
 const defaultAssetAutoAttachMaxBatches = 25
+
+// assetCaptureTimeKey marks in an asset's metadata that taken_at is when the
+// photo was taken by its own metadata, with its source ("exif" for uploads, the
+// plugin id for asset plugin imports) and the time it vouches for, so that it no
+// longer counts once taken_at changes, e.g. when duplicates are merged. File,
+// upload and date-only times never get it.
+const assetCaptureTimeKey = "capture_time"
 
 var pluginAssetPickerSearchLimits = pluginAssetSearchLimits{
 	MaxItems:            100,
@@ -146,6 +162,9 @@ type pluginAssetLibraryActionInput struct {
 	DoubleRadius bool                     `json:"doubleRadius,omitempty"`
 	Bounds       *pluginAssetSearchBounds `json:"bounds,omitempty"`
 	AssetIDs     []string                 `json:"assetIds,omitempty"`
+	// ThumbnailSize is the size class of a thumbnail call. Plugins that
+	// predate it ignore it and return the same media for both classes.
+	ThumbnailSize string `json:"thumbnailSize,omitempty"`
 }
 
 type assetLibraryPagination struct {
@@ -197,6 +216,10 @@ type pluginAssetCandidate struct {
 	City              string  `json:"city,omitempty"`
 	Country           string  `json:"country,omitempty"`
 	ThumbnailURL      string  `json:"thumbnailUrl,omitempty"`
+	// CapturedAt is set only when the time comes from the photo's own
+	// metadata. Unlike file or upload times in TakenAt, it can tell apart the
+	// passes of a track that covers the same ground twice.
+	CapturedAt string `json:"capturedAt,omitempty"`
 }
 
 type assetLibraryExternalRef struct {
@@ -458,19 +481,41 @@ func PluginSystemAssetThumbnail(e *core.RequestEvent) error {
 	if pluginID == "" || assetID == "" {
 		return apis.NewBadRequestError("plugin and asset are required", nil)
 	}
-	entry, err := fetchPluginAssetThumbnailEntryForUser(e.Request.Context(), e.App, e.Auth.Id, "", pluginID, assetID)
+	size := pluginAssetThumbnailSize(e.Request.URL.Query().Get("thumb"))
+	entry, err := fetchPluginAssetThumbnailEntryForUser(e.Request.Context(), e.App, e.Auth.Id, "", pluginID, assetID, size)
 	if err != nil {
 		return err
 	}
 	return writePluginAssetThumbnail(e, entry)
 }
 
-func fetchPluginAssetThumbnailEntryForUser(ctx context.Context, app core.App, userID string, actorID string, pluginID string, assetID string) (pluginAssetThumbnailCacheEntry, error) {
+// pluginAssetThumbnailSize maps a ?thumb= size in PocketBase's WxH format, with
+// an optional t, b or f suffix, to the size class of a plugin thumbnail: small
+// when the longest edge is at most pluginAssetThumbnailSmallMaxEdge pixels,
+// otherwise large, as for a missing or unreadable size.
+func pluginAssetThumbnailSize(thumb string) string {
+	dimensions := strings.TrimSpace(thumb)
+	if last := len(dimensions) - 1; last > 0 && strings.IndexByte("tbf", dimensions[last]) >= 0 {
+		dimensions = dimensions[:last]
+	}
+	widthValue, heightValue, found := strings.Cut(dimensions, "x")
+	width, widthErr := strconv.Atoi(widthValue)
+	height, heightErr := strconv.Atoi(heightValue)
+	if !found || widthErr != nil || heightErr != nil || width < 0 || height < 0 {
+		return pluginAssetThumbnailSizeLarge
+	}
+	if longestEdge := max(width, height); longestEdge > 0 && longestEdge <= pluginAssetThumbnailSmallMaxEdge {
+		return pluginAssetThumbnailSizeSmall
+	}
+	return pluginAssetThumbnailSizeLarge
+}
+
+func fetchPluginAssetThumbnailEntryForUser(ctx context.Context, app core.App, userID string, actorID string, pluginID string, assetID string, size string) (pluginAssetThumbnailCacheEntry, error) {
 	plugin, capability, instance, auth, config, err := assetPluginInvocationForUser(app, userID, pluginID)
 	if err != nil {
 		return pluginAssetThumbnailCacheEntry{}, err
 	}
-	cacheKey := pluginAssetThumbnailCacheKey(userID, pluginID, instance.Id, assetID)
+	cacheKey := pluginAssetThumbnailCacheKey(userID, pluginID, instance.Id, assetID, size)
 	if entry, ok := getPluginAssetThumbnailCache(cacheKey); ok {
 		return entry, nil
 	}
@@ -493,14 +538,15 @@ func fetchPluginAssetThumbnailEntryForUser(ctx context.Context, app core.App, us
 		}
 		finishPluginAssetThumbnailFetch(cacheKey, call, entry, err)
 	}()
-	entry, err = fetchPluginAssetThumbnailEntryUncached(ctx, cacheKey, plugin, capability, instance, auth, config, userID, actorID, assetID)
+	entry, err = fetchPluginAssetThumbnailEntryUncached(ctx, cacheKey, plugin, capability, instance, auth, config, userID, actorID, assetID, size)
 	return entry, err
 }
 
-func fetchPluginAssetThumbnailEntryUncached(ctx context.Context, cacheKey string, plugin pluginsystem.LocalPlugin, capability pluginsystem.CapabilityManifest, instance *core.Record, auth map[string]any, config map[string]any, userID string, actorID string, assetID string) (pluginAssetThumbnailCacheEntry, error) {
+func fetchPluginAssetThumbnailEntryUncached(ctx context.Context, cacheKey string, plugin pluginsystem.LocalPlugin, capability pluginsystem.CapabilityManifest, instance *core.Record, auth map[string]any, config map[string]any, userID string, actorID string, assetID string, size string) (pluginAssetThumbnailCacheEntry, error) {
 	output, err := callAssetPlugin(ctx, plugin, capability, instance, auth, config, pluginAssetLibraryActionInput{
-		Action:   "thumbnail",
-		AssetIDs: []string{assetID},
+		Action:        "thumbnail",
+		AssetIDs:      []string{assetID},
+		ThumbnailSize: size,
 	})
 	if err != nil {
 		return pluginAssetThumbnailCacheEntry{}, err
@@ -557,7 +603,7 @@ func finishPluginAssetThumbnailFetch(cacheKey string, call *pluginAssetThumbnail
 	pluginAssetThumbnailFetches.Unlock()
 }
 
-func fetchAssetRecordPluginThumbnailEntry(ctx context.Context, app core.App, asset *core.Record) (pluginAssetThumbnailCacheEntry, error) {
+func fetchAssetRecordPluginThumbnailEntry(ctx context.Context, app core.App, asset *core.Record, size string) (pluginAssetThumbnailCacheEntry, error) {
 	remote, err := assetservice.RemotePhotoAssetFromRecord(asset)
 	if err != nil {
 		return pluginAssetThumbnailCacheEntry{}, err
@@ -577,7 +623,7 @@ func fetchAssetRecordPluginThumbnailEntry(ctx context.Context, app core.App, ass
 	if err != nil {
 		return pluginAssetThumbnailCacheEntry{}, err
 	}
-	return fetchPluginAssetThumbnailEntryForUser(ctx, app, userID, asset.GetString("author"), pluginID, assetID)
+	return fetchPluginAssetThumbnailEntryForUser(ctx, app, userID, asset.GetString("author"), pluginID, assetID, size)
 }
 
 func AssetLibraryCandidates(e *core.RequestEvent) error {
@@ -667,8 +713,8 @@ func AssetLibraryCandidates(e *core.RequestEvent) error {
 	})
 }
 
-func pluginAssetThumbnailCacheKey(userID string, pluginID string, instanceID string, assetID string) string {
-	return strings.Join([]string{userID, pluginID, instanceID, assetID}, "\x00")
+func pluginAssetThumbnailCacheKey(userID string, pluginID string, instanceID string, assetID string, size string) string {
+	return strings.Join([]string{userID, pluginID, instanceID, assetID, size}, "\x00")
 }
 
 func getPluginAssetThumbnailCache(key string) (pluginAssetThumbnailCacheEntry, bool) {
@@ -1314,6 +1360,23 @@ func parseAssetPluginCandidateTime(value string) (time.Time, bool) {
 	return parsed, err == nil
 }
 
+// normalizeAssetPluginCandidateCaptureTimes passes a candidate's capturedAt on
+// in UTC and drops one that is not an RFC 3339 time with an offset: the
+// browser would read a time without a zone in its own zone.
+func normalizeAssetPluginCandidateCaptureTimes(candidates []pluginAssetCandidate) {
+	for i := range candidates {
+		if candidates[i].CapturedAt == "" {
+			continue
+		}
+		capturedAt, ok := parseAssetPluginCandidateTime(candidates[i].CapturedAt)
+		if !ok {
+			candidates[i].CapturedAt = ""
+			continue
+		}
+		candidates[i].CapturedAt = capturedAt.UTC().Format(time.RFC3339Nano)
+	}
+}
+
 func assetPluginAutoAttachAllowedForTrail(provider string, completed bool) bool {
 	if strings.TrimSpace(provider) == "upload" {
 		return true
@@ -1464,6 +1527,7 @@ func callAssetPlugin(ctx context.Context, plugin pluginsystem.LocalPlugin, capab
 	if err := json.Unmarshal(outputBytes, &output); err != nil {
 		return pluginAssetLibraryOutput{}, fmt.Errorf("plugin returned invalid %s output: %w", capability.Export, err)
 	}
+	normalizeAssetPluginCandidateCaptureTimes(output.Candidates)
 	return output, nil
 }
 
@@ -1592,13 +1656,15 @@ func trailTrackPointsFromBytes(content []byte) ([]pluginAssetTrackPoint, time.Ti
 		return nil, time.Time{}, time.Time{}, err
 	}
 	points := make([]pluginAssetTrackPoint, 0)
+	// The distance runs on across the gaps between segments and tracks, as in
+	// the web's elevation profile, which joins them into one line and trusts a
+	// stored distance from start only within 1 m of its own.
 	totalDistance := 0.0
 	var previous *pluginAssetTrackPoint
 	var startedAt time.Time
 	var endedAt time.Time
 	for _, track := range parsed.Tracks {
 		for _, segment := range track.Segments {
-			previous = nil
 			for _, point := range segment.Points {
 				current := pluginAssetTrackPoint{Lat: point.Latitude, Lon: point.Longitude, Distance: totalDistance}
 				if !point.Timestamp.IsZero() {
@@ -1941,7 +2007,22 @@ func assetLibraryCandidate(record *core.Record, request pluginAssetLibraryAction
 		City:              "",
 		Country:           "",
 		ThumbnailURL:      thumbnailURL,
+		CapturedAt:        assetLibraryCapturedAt(record, metadata),
 	}, true
+}
+
+// assetLibraryCapturedAt offers taken_at as capture time only while the mark
+// vouches for it, never the created fallback.
+func assetLibraryCapturedAt(record *core.Record, metadata map[string]any) string {
+	takenAt := record.GetDateTime("taken_at").Time()
+	if takenAt.IsZero() || util.AssetMetadataString(metadata, assetCaptureTimeKey, "source") == "" {
+		return ""
+	}
+	vouched, err := time.Parse(time.RFC3339, util.AssetMetadataString(metadata, assetCaptureTimeKey, "taken_at"))
+	if err != nil || !vouched.Truncate(time.Millisecond).Equal(takenAt.Truncate(time.Millisecond)) {
+		return ""
+	}
+	return util.RecordDateTimeRFC3339(record, "taken_at")
 }
 
 func assetLibraryFilename(record *core.Record, metadata map[string]any) string {
@@ -2054,7 +2135,7 @@ func importAssetPluginPhotosToTarget(e *core.RequestEvent, plugin pluginsystem.L
 		return err
 	}
 	hostConfig := pluginhost.HostConfig(config)
-	records, omitted, err := importer.ImportPhotoAssetsWithOmissions(e.Request.Context(), e.App, output.Photos, importer.Options{
+	records, omitted, err := importAssetPluginPhotoAssets(e.Request.Context(), e.App, output.Photos, importer.Options{
 		UserID:      e.Auth.Id,
 		ActorID:     actor.Id,
 		PhotoMode:   util.ConfigString(hostConfig, "photoMode"),
@@ -2106,7 +2187,7 @@ func importAssetPluginPhotosForTrail(ctx context.Context, app core.App, userID s
 		Auth:        auth,
 	}
 	if waypointID != "" {
-		records, omitted, err := importer.ImportPhotoAssetsWithOmissions(ctx, app, output.Photos, opts, importer.PhotoAssetTarget{
+		records, omitted, err := importAssetPluginPhotoAssets(ctx, app, output.Photos, opts, importer.PhotoAssetTarget{
 			Trail:       data.TrailID,
 			Waypoint:    waypointID,
 			PublicTrail: trailIsPublic(app, data.TrailID),
@@ -2158,7 +2239,7 @@ func importAssetPluginPhotosForTrail(ctx context.Context, app core.App, userID s
 			}
 			target.Waypoint = waypoint.Id
 		}
-		records, skipped, err := importer.ImportPhotoAssetsWithOmissions(ctx, app, photos, opts, target)
+		records, skipped, err := importAssetPluginPhotoAssets(ctx, app, photos, opts, target)
 		omitted = append(omitted, skipped...)
 		if len(records) == 0 {
 			if createdWaypoint {
@@ -2183,6 +2264,59 @@ func importAssetPluginPhotosForTrail(ctx context.Context, app core.App, userID s
 	return results, omitted, nil
 }
 
+// importAssetPluginPhotoAssets imports photos through the importer, which
+// stores TakenAt as the photo time. A capture time takes its place, and the
+// assets that got one are marked so that the photo library offers it later.
+func importAssetPluginPhotoAssets(ctx context.Context, app core.App, photos []pluginsystem.Photo, opts importer.Options, target importer.PhotoAssetTarget) ([]*core.Record, []pluginAssetOmission, error) {
+	withCaptureTimes := make([]pluginsystem.Photo, len(photos))
+	for i, photo := range photos {
+		if photo.CapturedAt != nil {
+			photo.TakenAt = photo.CapturedAt
+		}
+		withCaptureTimes[i] = photo
+	}
+	records, omitted, err := importer.ImportPhotoAssetsWithOmissions(ctx, app, withCaptureTimes, opts, target)
+	markAssetPluginCaptureTimes(app, opts.Manifest.ID, photos, records)
+	return records, omitted, err
+}
+
+// markAssetPluginCaptureTimes marks the imported assets whose taken_at is the
+// capture time of their photo. An asset imported before keeps its time and is
+// only marked when that is the same.
+func markAssetPluginCaptureTimes(app core.App, pluginID string, photos []pluginsystem.Photo, records []*core.Record) {
+	capturedAt := make(map[string]time.Time, len(photos))
+	for _, photo := range photos {
+		if photo.CapturedAt != nil {
+			capturedAt[photo.ExternalID] = photo.CapturedAt.UTC().Truncate(time.Millisecond)
+		}
+	}
+	for _, record := range records {
+		takenAt, ok := capturedAt[record.GetString("external_id")]
+		if !ok || !record.GetDateTime("taken_at").Time().Truncate(time.Millisecond).Equal(takenAt) {
+			continue
+		}
+		metadata := map[string]any{}
+		_ = record.UnmarshalJSONField("metadata", &metadata)
+		if metadata == nil {
+			metadata = map[string]any{}
+		}
+		if assetLibraryCapturedAt(record, metadata) != "" {
+			continue
+		}
+		metadata[assetCaptureTimeKey] = map[string]any{
+			"source":   pluginID,
+			"taken_at": takenAt.Format(time.RFC3339Nano),
+		}
+		record.Set("metadata", metadata)
+		record.IgnoreUnchangedFields(true)
+		// The mark is no search field, so this skips the hooks that would
+		// reindex the linked trails once per photo.
+		if err := app.UnsafeWithoutHooks().Save(record); err != nil {
+			app.Logger().Warn("failed to mark asset capture time", "asset", record.Id, "plugin", pluginID, "error", err)
+		}
+	}
+}
+
 func assetPluginPhotoImportLimits(hostConfig map[string]any, enforce bool) *importer.PhotoImportLimits {
 	if !enforce {
 		return nil
@@ -2204,8 +2338,18 @@ func assetPluginWaypointForCluster(ctx context.Context, app core.App, actorID st
 		resolvedName, _ := resolveWaypointName(ctx, app.Logger(), cluster.Lat, cluster.Lon, mergeSettings.Radius)
 		name = resolvedName
 	}
-	waypoint, err := createAssetPluginWaypoint(app, actorID, trailID, name, cluster.Lat, cluster.Lon, trackPoints)
+	waypoint, err := createAssetPluginWaypoint(app, actorID, trailID, name, cluster.Lat, cluster.Lon, assetPluginClusterTime(cluster), trackPoints)
 	return waypoint, true, err
+}
+
+// assetPluginClusterTime returns the earliest capture time of a cluster's
+// photos, like the editor uses for waypoints from device photos.
+func assetPluginClusterTime(cluster waypointPhotoCluster) *time.Time {
+	if cluster.MinTime == nil {
+		return nil
+	}
+	takenAt := time.UnixMilli(*cluster.MinTime).UTC()
+	return &takenAt
 }
 
 func assetPluginPhotoClusters(app core.App, trailID string, photos []pluginsystem.Photo) ([]waypointPhotoCluster, map[string]pluginsystem.Photo, waypointMergeSettings, error) {
@@ -2219,11 +2363,18 @@ func assetPluginPhotoClusters(app core.App, trailID string, photos []pluginsyste
 			standaloneClusters = append(standaloneClusters, waypointPhotoCluster{Photos: []string{id}})
 			continue
 		}
-		clusterPhotos = append(clusterPhotos, waypointClusterPhoto{
+		clusterPhoto := waypointClusterPhoto{
 			ID:  id,
 			Lat: *photo.Lat,
 			Lon: *photo.Lon,
-		})
+		}
+		// Only a capture time keeps photos of different passes over the same
+		// spot apart; a file or upload time would split or join them by chance.
+		if photo.CapturedAt != nil {
+			capturedAt := photo.CapturedAt.UnixMilli()
+			clusterPhoto.Time = &capturedAt
+		}
+		clusterPhotos = append(clusterPhotos, clusterPhoto)
 	}
 
 	existingWaypoints, categoryID, err := assetPluginWaypointClusterContext(app, trailID)
@@ -2435,13 +2586,13 @@ func trailIsPublic(app core.App, trailID string) bool {
 	return err == nil && trail.GetBool("public")
 }
 
-func createAssetPluginWaypoint(app core.App, actorID string, trailID string, name string, lat float64, lon float64, trackPoints []pluginAssetTrackPoint) (*core.Record, error) {
+func createAssetPluginWaypoint(app core.App, actorID string, trailID string, name string, lat float64, lon float64, takenAt *time.Time, trackPoints []pluginAssetTrackPoint) (*core.Record, error) {
 	collection, err := app.FindCollectionByNameOrId("waypoints")
 	if err != nil {
 		return nil, err
 	}
 	waypoint := core.NewRecord(collection)
-	distanceFromStart := assetPluginDistanceFromStart(trackPoints, lat, lon)
+	distanceFromStart := assetPluginDistanceFromStart(trackPoints, lat, lon, takenAt)
 	waypoint.Load(map[string]any{
 		"name":                strings.TrimSpace(name),
 		"description":         "",
@@ -2458,17 +2609,102 @@ func createAssetPluginWaypoint(app core.App, actorID string, trailID string, nam
 	return waypoint, nil
 }
 
-func assetPluginDistanceFromStart(points []pluginAssetTrackPoint, lat, lon float64) float64 {
-	bestDistance := -1.0
-	bestFromStart := 0.0
-	for _, point := range points {
-		distance := util.HaversineDistanceMeters(lat, lon, point.Lat, point.Lon)
-		if bestDistance < 0 || distance < bestDistance {
-			bestDistance = distance
-			bestFromStart = point.Distance
+// Track points this much farther from a waypoint than the nearest one count as
+// equally near, about the error of a phone GPS fix. The web's elevation profile
+// uses the same tolerance.
+const assetPluginWaypointPassToleranceMeters = 25.0
+
+// assetPluginDistanceFromStart returns the distance from start of the track
+// point a new waypoint belongs to: the nearest one. Where the track covers the
+// same ground twice (out-and-back, lollipop), several passes are about as near,
+// so the photo time picks the pass if every track point has a time and the
+// track's times cover it, and then the nearest point of that pass. This follows
+// waypointTrackIndex in the web's elevation profile, which places the waypoint
+// again when the trail is edited.
+func assetPluginDistanceFromStart(points []pluginAssetTrackPoint, lat, lon float64, takenAt *time.Time) float64 {
+	if len(points) == 0 {
+		return 0
+	}
+	offTrack := make([]float64, len(points))
+	nearest := 0
+	for i, point := range points {
+		offTrack[i] = util.HaversineDistanceMeters(lat, lon, point.Lat, point.Lon)
+		if offTrack[i] < offTrack[nearest] {
+			nearest = i
 		}
 	}
-	return bestFromStart
+	times, ok := assetPluginTrackTimesCovering(points, takenAt)
+	if !ok {
+		return points[nearest].Distance
+	}
+
+	// Consecutive points within the tolerance belong to the same pass.
+	maxOffTrack := offTrack[nearest] + assetPluginWaypointPassToleranceMeters
+	passes := [][]int{}
+	for i := range points {
+		if offTrack[i] > maxOffTrack {
+			continue
+		}
+		if last := len(passes) - 1; last >= 0 && passes[last][len(passes[last])-1] == i-1 {
+			passes[last] = append(passes[last], i)
+		} else {
+			passes = append(passes, []int{i})
+		}
+	}
+	if len(passes) < 2 {
+		return points[nearest].Distance
+	}
+
+	var bestPass []int
+	bestGap := time.Duration(math.MaxInt64)
+	for _, pass := range passes {
+		for _, i := range pass {
+			gap := times[i].Sub(*takenAt)
+			if gap < 0 {
+				gap = -gap
+			}
+			if gap < bestGap {
+				bestPass = pass
+				bestGap = gap
+			}
+		}
+	}
+	index := bestPass[0]
+	for _, i := range bestPass[1:] {
+		if offTrack[i] < offTrack[index] {
+			index = i
+		}
+	}
+	return points[index].Distance
+}
+
+// assetPluginTrackTimesCovering returns the times of the track points when all
+// of them have one and they cover the photo time. A photo outside the track's
+// time range was not taken while recording it, e.g. on a drawn route whose
+// times are synthetic, so its time says nothing about the pass.
+func assetPluginTrackTimesCovering(points []pluginAssetTrackPoint, takenAt *time.Time) ([]time.Time, bool) {
+	if takenAt == nil {
+		return nil, false
+	}
+	times := make([]time.Time, len(points))
+	var start, end time.Time
+	for i, point := range points {
+		parsed, err := time.Parse(time.RFC3339, point.Timestamp)
+		if err != nil {
+			return nil, false
+		}
+		times[i] = parsed
+		if i == 0 || parsed.Before(start) {
+			start = parsed
+		}
+		if i == 0 || parsed.After(end) {
+			end = parsed
+		}
+	}
+	if takenAt.Before(start) || takenAt.After(end) {
+		return nil, false
+	}
+	return times, true
 }
 
 func userOwnsTrail(app core.App, userID, trailID string) (bool, error) {

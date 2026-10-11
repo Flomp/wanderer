@@ -1,6 +1,6 @@
 import { TrailUpdateSchema } from '$lib/models/api/trail_schema';
 import { applyLegacyPhotoNamesForMissingAssetExpands } from "$lib/server/legacy_photo_compat";
-import { enrichTrailResponse, withTrailAssetExpandParams } from "$lib/server/trail_response_util";
+import { enrichTrailResponse, withTrailAssetExpandParams, withTrailPhotoExpand } from "$lib/server/trail_response_util";
 import type { Trail } from "$lib/models/trail";
 import { Collection, handleError, remove, update } from "$lib/util/api_util";
 import { json, type RequestEvent } from "@sveltejs/kit";
@@ -61,7 +61,9 @@ export async function GET(event: RequestEvent) {
 
 export async function POST(event: RequestEvent) {
     try {
-        const r = await update<Trail>(event, TrailUpdateSchema, Collection.trails)
+        const r = await update<Trail>(event, TrailUpdateSchema, Collection.trails, withTrailPhotoExpand({
+            expand: event.url.searchParams.get("expand") ?? undefined,
+        }))
         await enrichRecord(r)
         return json(r);
     } catch (e: any) {

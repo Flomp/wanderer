@@ -10,8 +10,9 @@ import { json, type RequestEvent } from "@sveltejs/kit";
  *   post:
  *     summary: Update summit log with file upload
  *     description: >
- *       Updates a summit log with file upload (photos/GPX) and date normalization. The record is addressed by the `id` path parameter; an `id` in the body is optional and must match it (400 `id_mismatch` otherwise).
+ *       Updates a summit log with GPX file upload and date normalization. The record is addressed by the `id` path parameter; an `id` in the body is optional and must match it (400 `id_mismatch` otherwise).
  *       A `gpx` part replaces the track: the file is converted to GPX (FIT, KML, KMZ and TCX are accepted) and `distance`, `duration`, `elevation_gain` and `elevation_loss` are derived from it unless the request sets them explicitly.
+ *       A `photos` part is ignored; upload and attach photos through `PUT /api/v1/assets` with the `summit_log` target field.
  *     tags:
  *       - Summit Logs
  *     parameters:

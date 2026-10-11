@@ -6,8 +6,10 @@ interface TrailResponseOptions {
     share?: string;
 }
 
+const trailPhotoExpand = "trail_assets_via_trail.asset";
+
 const trailAssetExpands = [
-    "trail_assets_via_trail.asset",
+    trailPhotoExpand,
     "waypoints_via_trail.waypoint_assets_via_waypoint.asset",
     "summit_logs_via_trail.summit_log_assets_via_summit_log.asset",
 ];
@@ -16,6 +18,12 @@ const listTrailAssetExpands = trailAssetExpands.map((expand) => `trails.${expand
 
 export function withTrailAssetExpands<T extends { expand?: string }>(options: T): T {
     return withRequiredExpands(options, trailAssetExpands);
+}
+
+// Only the trail's own photos: clients merge an update response over the
+// loaded trail, and waypoint or summit log expands would replace theirs.
+export function withTrailPhotoExpand<T extends { expand?: string }>(options: T): T {
+    return withRequiredExpands(options, [trailPhotoExpand]);
 }
 
 export function withTrailAssetExpandParams(params: URLSearchParams): URLSearchParams {

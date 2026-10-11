@@ -320,19 +320,23 @@ func AssetFilename(record *core.Record, metadata map[string]any) string {
 	if record == nil {
 		return ""
 	}
+	return assetFilename(metadata, record.GetString("file"), record.GetString("external_id"), record.Id)
+}
+
+func assetFilename(metadata map[string]any, file string, externalID string, assetID string) string {
 	if remoteFilename := AssetMetadataString(metadata, "remote", "filename"); remoteFilename != "" {
 		return remoteFilename
 	}
 	if sourceFile := AssetMetadataString(metadata, "source_file"); sourceFile != "" {
 		return sourceFile
 	}
-	if file := record.GetString("file"); file != "" {
+	if file != "" {
 		return file
 	}
-	if externalID := record.GetString("external_id"); externalID != "" {
+	if externalID != "" {
 		return externalID
 	}
-	return record.Id
+	return assetID
 }
 
 func IsGeneratedRoutePreviewAsset(record *core.Record) bool {
@@ -341,12 +345,20 @@ func IsGeneratedRoutePreviewAsset(record *core.Record) bool {
 	}
 	metadata := map[string]any{}
 	_ = record.UnmarshalJSONField("metadata", &metadata)
+	return isGeneratedRoutePreview(metadata, AssetFilename(record, metadata), record.GetString("external_provider"), !record.GetDateTime("taken_at").IsZero())
+}
+
+// isGeneratedRoutePreview recognises the route preview the trail editor
+// generates for a trail without photos: by its metadata, or, for previews
+// stored before that marker, by its name on an asset that has neither a
+// provider nor a capture time.
+func isGeneratedRoutePreview(metadata map[string]any, filename string, externalProvider string, hasTakenAt bool) bool {
 	if AssetMetadataString(metadata, "generated", "kind") == "route-preview" {
 		return true
 	}
-	filename := strings.ToLower(AssetFilename(record, metadata))
+	filename = strings.ToLower(filename)
 	hasLegacyGeneratedName := strings.HasPrefix(filename, "wanderer-route-preview") || routePreviewFilenamePattern.MatchString(filename)
-	return hasLegacyGeneratedName && record.GetString("external_provider") == "" && record.GetDateTime("taken_at").IsZero()
+	return hasLegacyGeneratedName && externalProvider == "" && !hasTakenAt
 }
 
 func RecordDateTimeRFC3339(record *core.Record, field string) string {
@@ -444,52 +456,9 @@ func PhotoAssetsForTarget(app core.App, targetField string, targetID string, lim
 	return ordered, nil
 }
 
-func TrailThumbnailAsset(app core.App, trailID string) (*core.Record, error) {
-	if trailID == "" {
-		return nil, nil
-	}
-
-	links, err := app.FindRecordsByFilter(
-		"trail_assets",
-		"trail={:trail} && is_thumbnail=true",
-		"-updated",
-		1,
-		0,
-		dbx.Params{"trail": trailID},
-	)
-	if err != nil && strings.Contains(err.Error(), "invalid sort field") {
-		links, err = app.FindRecordsByFilter(
-			"trail_assets",
-			"trail={:trail} && is_thumbnail=true",
-			"",
-			1,
-			0,
-			dbx.Params{"trail": trailID},
-		)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if len(links) > 0 {
-		asset, err := app.FindRecordById("assets", links[0].GetString("asset"))
-		if err != nil {
-			return nil, err
-		}
-		if asset.GetString("type") == "photo" {
-			return asset, nil
-		}
-	}
-
-	assets, err := PhotoAssetsForTarget(app, "trail", trailID, 1)
-	if err != nil {
-		return nil, err
-	}
-	if len(assets) == 0 {
-		return nil, nil
-	}
-	return assets[0], nil
-}
-
+// TrailThumbnailURLs picks the search thumbnail of each trail: its marked
+// photo, else its first one. A generated route preview stands in only for a
+// trail without a real photo, again the marked one before the first.
 func TrailThumbnailURLs(app core.App, trails []*core.Record, origin string) (map[string]string, error) {
 	urls := make(map[string]string, len(trails))
 	if len(trails) == 0 {
@@ -506,40 +475,66 @@ func TrailThumbnailURLs(app core.App, trails []*core.Record, origin string) (map
 		trailIDs = append(trailIDs, trail.Id)
 	}
 
-	fallbacks := map[string]string{}
-	thumbnailUpdatedAt := map[string]string{}
+	photos := map[string]*trailThumbnailCandidates{}
+	previews := map[string]*trailThumbnailCandidates{}
 	for _, chunk := range stringChunks(trailIDs, 200) {
 		rows, err := trailThumbnailRows(app, chunk)
 		if err != nil {
 			return nil, err
 		}
 		for _, row := range rows {
-			if row.AssetType != "photo" || isGeneratedRoutePreviewAssetFields(row) {
+			if row.AssetType != "photo" {
 				continue
 			}
 			url := assetPublicMediaURLFromFields(assetCollection.Id, row.AssetID, row.File, row.StorageMode, origin)
 			if url == "" {
 				continue
 			}
-			if fallbacks[row.TrailID] == "" {
-				fallbacks[row.TrailID] = url
+			candidates := photos
+			if isGeneratedRoutePreviewAssetFields(row) {
+				candidates = previews
 			}
-			if !row.IsThumbnail {
-				continue
+			if candidates[row.TrailID] == nil {
+				candidates[row.TrailID] = &trailThumbnailCandidates{}
 			}
-			if urls[row.TrailID] == "" || row.LinkUpdated > thumbnailUpdatedAt[row.TrailID] {
-				urls[row.TrailID] = url
-				thumbnailUpdatedAt[row.TrailID] = row.LinkUpdated
-			}
+			candidates[row.TrailID].add(row, url)
 		}
 	}
 
-	for trailID, fallback := range fallbacks {
+	for trailID, candidates := range photos {
+		urls[trailID] = candidates.url()
+	}
+	for trailID, candidates := range previews {
 		if urls[trailID] == "" {
-			urls[trailID] = fallback
+			urls[trailID] = candidates.url()
 		}
 	}
 	return urls, nil
+}
+
+// trailThumbnailCandidates are the usable photos of one kind on one trail. If
+// several links are marked, the one marked last wins.
+type trailThumbnailCandidates struct {
+	first         string
+	marked        string
+	markedUpdated string
+}
+
+func (c *trailThumbnailCandidates) add(row trailThumbnailRow, url string) {
+	if c.first == "" {
+		c.first = url
+	}
+	if row.IsThumbnail && (c.marked == "" || row.LinkUpdated > c.markedUpdated) {
+		c.marked = url
+		c.markedUpdated = row.LinkUpdated
+	}
+}
+
+func (c *trailThumbnailCandidates) url() string {
+	if c.marked != "" {
+		return c.marked
+	}
+	return c.first
 }
 
 type trailThumbnailRow struct {
@@ -592,25 +587,10 @@ func isGeneratedRoutePreviewAssetFields(row trailThumbnailRow) bool {
 	if raw := strings.TrimSpace(row.Metadata); raw != "" && raw != "null" {
 		_ = json.Unmarshal([]byte(raw), &metadata)
 	}
-	if AssetMetadataString(metadata, "generated", "kind") == "route-preview" {
-		return true
-	}
-	filename := strings.ToLower(assetFilenameFromFields(row, metadata))
-	hasLegacyGeneratedName := strings.HasPrefix(filename, "wanderer-route-preview") || routePreviewFilenamePattern.MatchString(filename)
-	return hasLegacyGeneratedName && row.ExternalProvider == "" && strings.TrimSpace(row.TakenAt) == ""
-}
-
-func assetFilenameFromFields(row trailThumbnailRow, metadata map[string]any) string {
-	if remoteFilename := AssetMetadataString(metadata, "remote", "filename"); remoteFilename != "" {
-		return remoteFilename
-	}
-	if sourceFile := AssetMetadataString(metadata, "source_file"); sourceFile != "" {
-		return sourceFile
-	}
-	if row.File != "" {
-		return row.File
-	}
-	return row.AssetID
+	// The row leaves out external_id: only assets with a provider have one,
+	// and those are never legacy previews.
+	filename := assetFilename(metadata, row.File, "", row.AssetID)
+	return isGeneratedRoutePreview(metadata, filename, row.ExternalProvider, strings.TrimSpace(row.TakenAt) != "")
 }
 
 func assetPublicMediaURLFromFields(collectionID string, assetID string, file string, storageMode string, origin string) string {
@@ -869,32 +849,17 @@ func AssetIDsForTrail(app core.App, trailID string) ([]string, error) {
 	return UniqueNonEmptyStrings(assetIDs), nil
 }
 
-func DeleteTrailAndOrphanedAssets(app core.App, trail *core.Record) error {
-	if trail == nil {
-		return nil
-	}
-	assetIDs, err := AssetIDsForTrail(app, trail.Id)
-	if err != nil {
-		return err
-	}
-	authorID := trail.GetString("author")
-	if err := app.Delete(trail); err != nil {
-		return err
-	}
-	return DeleteAssetsIfOrphanedByAuthor(app, assetIDs, authorID)
-}
-
+// DeleteAssetsIfOrphaned deletes those of the assets that nothing links to any
+// more, whoever their author. One failure does not stop the others; the errors
+// are reported together.
 func DeleteAssetsIfOrphaned(app core.App, assetIDs []string) error {
-	return DeleteAssetsIfOrphanedByAuthor(app, assetIDs, "")
-}
-
-func DeleteAssetsIfOrphanedByAuthor(app core.App, assetIDs []string, authorID string) error {
+	var errs []error
 	for _, assetID := range UniqueNonEmptyStrings(assetIDs) {
-		if _, err := DeleteAssetIfOrphanedByAuthor(app, assetID, authorID); err != nil {
-			return err
+		if _, err := DeleteAssetIfOrphaned(app, assetID); err != nil {
+			errs = append(errs, fmt.Errorf("asset %s: %w", assetID, err))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func DeleteAssetIfOrphaned(app core.App, assetID string) (bool, error) {

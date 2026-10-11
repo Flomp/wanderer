@@ -8,7 +8,10 @@ import { json, type RequestEvent } from '@sveltejs/kit';
  * /api/v1/trail/form:
  *   put:
  *     summary: Create trail with file upload
- *     description: Creates a new trail with file upload (GPX/photos) and date normalization
+ *     description: >
+ *       Creates a new trail with GPX file upload and date normalization.
+ *       This endpoint no longer accepts photo uploads and returns 400 `trail_photos_form_field_removed` for a `photos` part.
+ *       Upload and attach photos through `PUT /api/v1/assets` with the `trail` target field once the trail exists.
  *     tags:
  *       - Trails
  *     requestBody:

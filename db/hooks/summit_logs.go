@@ -8,12 +8,11 @@ import (
 	"pocketbase/federation"
 	"pocketbase/util"
 
-	pub "github.com/go-ap/activitypub"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func CreateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.RecordRequestEvent) error {
+func CreateSummitLogHandler(client meilisearch.ServiceManager, updates *FederationUpdates) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 		err := e.Next()
 		if err != nil {
@@ -33,16 +32,6 @@ func CreateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 			return err
 		}
 
-		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
-		if err != nil {
-			return err
-		}
-
-		ctx, err := util.GetSafeActorContext(e.Request, userActor)
-		if err != nil {
-			return err
-		}
-
 		trail, err := e.App.FindRecordById("trails", e.Record.GetString("trail"))
 		if err != nil {
 			return err
@@ -52,16 +41,14 @@ func CreateSummitLogHandler(client meilisearch.ServiceManager) func(e *core.Reco
 			return err
 		}
 
-		err = federation.CreateSummitLogActivity(e.App, ctx, e.Record, pub.CreateType)
-		if err != nil {
-			return err
-		}
-
+		// The photos are linked after the log is saved, so the Create waits
+		// for them and carries them.
+		updates.EnqueueCreate(e.Record)
 		return nil
 	}
 }
 
-func UpdateSummitLogHandler() func(e *core.RecordRequestEvent) error {
+func UpdateSummitLogHandler(updates *FederationUpdates) func(e *core.RecordRequestEvent) error {
 	return func(e *core.RecordRequestEvent) error {
 
 		err := e.Next()
@@ -69,32 +56,10 @@ func UpdateSummitLogHandler() func(e *core.RecordRequestEvent) error {
 			return err
 		}
 
-		userActor, err := e.App.FindFirstRecordByData("activitypub_actors", "user", e.Auth.Id)
-		if err != nil {
-			return err
-		}
-
-		ctx, err := util.GetSafeActorContext(e.Request, userActor)
-		if err != nil {
-			return err
-		}
-
-		err = federation.CreateSummitLogActivity(e.App, ctx, e.Record, pub.UpdateType)
-		if err != nil {
-			return err
-		}
+		// The photos are linked after the log is saved, so the Update waits
+		// for them and goes out once for the whole save.
+		updates.Enqueue(e.Record)
 		return nil
-	}
-}
-
-func DeleteSummitLogAssetCleanupHandler() func(e *core.RecordRequestEvent) error {
-	return func(e *core.RecordRequestEvent) error {
-		assetIDs, err := util.AssetIDsForLinkTarget(e.App, "summit_log_assets", "summit_log", e.Record.Id)
-		if err != nil {
-			return err
-		}
-
-		return deleteThenRemoveOrphanedAssets(e, assetIDs)
 	}
 }
 

@@ -6,10 +6,15 @@ const paramsSchema = z.object({
     id: z.string().min(1).max(256),
 });
 
+const searchParamsSchema = z.object({
+    thumb: z.string().regex(/^[0-9]+x[0-9]+[tbf]?$/).optional(),
+});
+
 export async function GET(event: RequestEvent) {
     const safeParams = paramsSchema.safeParse(event.params);
+    const safeSearchParams = searchParamsSchema.safeParse(Object.fromEntries(event.url.searchParams));
 
-    if (!safeParams.success) {
+    if (!safeParams.success || !safeSearchParams.success) {
         throw error(400, "Invalid asset plugin thumbnail request");
     }
 
@@ -23,8 +28,9 @@ export async function GET(event: RequestEvent) {
         headers["If-None-Match"] = ifNoneMatch;
     }
 
+    const query = safeSearchParams.data.thumb ? `?${new URLSearchParams({ thumb: safeSearchParams.data.thumb })}` : "";
     const thumbnailURL = event.locals.pb.buildURL(
-        `plugins/assets/${encodeURIComponent(safeParams.data.plugin)}/thumbnail/${encodeURIComponent(safeParams.data.id)}`,
+        `plugins/assets/${encodeURIComponent(safeParams.data.plugin)}/thumbnail/${encodeURIComponent(safeParams.data.id)}${query}`,
     );
     const response = await event.fetch(thumbnailURL, { headers });
 

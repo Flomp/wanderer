@@ -126,7 +126,8 @@
             metadata,
             latInput: metadata.coordinates ? formatCoordinate(metadata.coordinates.lat) : "",
             lonInput: metadata.coordinates ? formatCoordinate(metadata.coordinates.lon) : "",
-            takenAtInput: dateInputValue(metadata.takenAt),
+            // The day of the photo's own local time, as takenAt is UTC.
+            takenAtInput: metadata.takenOn ?? dateInputValue(metadata.takenAt),
             scanError,
         };
     }

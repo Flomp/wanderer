@@ -589,9 +589,20 @@ func summarizeAsset(info *assetInfo) AssetSummary {
 		Lat:              optionalFloat(record, "lat"),
 		Lon:              optionalFloat(record, "lon"),
 		OriginalFileName: util.AssetFilename(record, info.metadata),
-		ThumbnailURL:     util.AssetPublicMediaURL(record, ""),
+		ThumbnailURL:     assetThumbnailURL(record),
 		Links:            info.links,
 	}
+}
+
+// assetThumbnailURL asks for a thumbnail size that the assets file field
+// registers, and for the plugin's small thumbnail of a linked photo, so that
+// the duplicate list does not load every original.
+func assetThumbnailURL(record *core.Record) string {
+	mediaURL := util.AssetPublicMediaURL(record, "")
+	if mediaURL == "" {
+		return ""
+	}
+	return mediaURL + "?thumb=300x300"
 }
 
 func sortAssetInfos(infos []*assetInfo) {

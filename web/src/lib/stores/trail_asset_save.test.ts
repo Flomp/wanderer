@@ -26,8 +26,9 @@ afterEach(() => {
 describe("trail photo saves", () => {
     it("retries a partial update without uploading saved local files or relinking successful groups", async () => {
         const baseline = trail([photo("keep"), photo("remove")]);
-        const pending = trail([photo("keep")]);
-        pending._assetLinks = ["existing"];
+        // A photo picked from the wanderer library, as the editor adds it on save.
+        const pending = trail([photo("keep"), photo("existing")]);
+        pending._assetLinks = [assetId("existing")];
         pending._assetPluginLinks = [
             { pluginId: "first", assetIds: ["first-photo"] },
             { pluginId: "second", assetIds: ["second-photo"] },
@@ -76,8 +77,8 @@ describe("trail photo saves", () => {
         expect(files).toEqual([]);
         expect(pending._assetLinks).toBeUndefined();
         expect(pending._assetPluginLinks).toEqual([{ pluginId: "second", assetIds: ["second-photo"] }]);
-        expect(baseline.photos).toEqual([photo("keep"), photo("remove"), photo("local"), photo("existing"), photo("first")]);
-        expect(pending.photos).toEqual([photo("keep"), photo("local"), photo("existing"), photo("first")]);
+        expect(baseline.photos).toEqual([photo("keep"), photo("remove"), photo("existing"), photo("local"), photo("first")]);
+        expect(pending.photos).toEqual([photo("keep"), photo("existing"), photo("local"), photo("first")]);
         expect(deleted).toEqual([]);
 
         const result = await trails_update(baseline, pending, files);
@@ -94,10 +95,11 @@ describe("trail photo saves", () => {
             id: "waypoint-id", trail: "trail-id", author: "actor", lat: 47, lon: 8,
             photos: [photo("remove")],
         };
+        // Picks a photo from the wanderer library, as the waypoint dialog adds it.
         const pendingWaypoint: Waypoint = {
-            ...oldWaypoint, photos: [],
+            ...oldWaypoint, photos: [photo("existing")],
             _photos: [new File(["photo"], "photo.jpg", { type: "image/jpeg" })],
-            _assetLinks: ["existing"],
+            _assetLinks: [assetId("existing")],
             _assetPluginLinks: [{ pluginId: "immich", assetIds: ["remote"] }],
         };
         const baseline = trail();
@@ -144,7 +146,7 @@ describe("trail photo saves", () => {
         expect(pendingWaypoint._photos).toBeUndefined();
         expect(pendingWaypoint._assetLinks).toBeUndefined();
         expect(pendingWaypoint._assetPluginLinks).toBeUndefined();
-        expect(pendingWaypoint.photos).toEqual([photo("local"), photo("existing"), photo("remote")]);
+        expect(pendingWaypoint.photos).toEqual([photo("existing"), photo("local"), photo("remote")]);
         expect(baseline.expand!.waypoints_via_trail![0].photos).toContain(photo("remove"));
 
         const result = await trails_update(baseline, pending);

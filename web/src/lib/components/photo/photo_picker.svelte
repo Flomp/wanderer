@@ -1,6 +1,8 @@
 <script lang="ts">
+    import type { Asset } from "$lib/models/asset";
     import { assetFileCoordinatesFor, markAssetFileMetadata } from "$lib/stores/asset_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
+    import { assetIdFromPhotoURL, isGeneratedRoutePreviewAsset } from "$lib/util/asset_link_util";
     import { extractPhotoExifMetadata, type GPSCoordinates, type PhotoExifMetadata } from "$lib/util/exif_util";
     import { getFileURL, readAsDataURLAsync } from "$lib/util/file_util";
     import { _ } from "svelte-i18n";
@@ -46,6 +48,21 @@
 
     let photoPreviews: string[] = $state([]);
     let showSourceMenu = $state(false);
+
+    // A generated route preview is only the thumbnail of a trail without other
+    // photos (thumbnailPhotoIndex in asset_link_util.ts). While the editor
+    // holds a real photo, saved or pending, the preview is not offered as one.
+    let routePreviews = $derived(routePreviewPhotos(photos ?? [], parent.expand?.assets_via_trail ?? []));
+    let hasRealPhoto = $derived(
+        (photos ?? []).some((photo) => !routePreviews.has(photo)) ||
+            Boolean(photoFiles?.length) ||
+            assetPluginPreviews.length > 0,
+    );
+
+    function routePreviewPhotos(shown: string[], assets: Asset[]): Set<string> {
+        const previewIds = new Set(assets.filter((asset) => isGeneratedRoutePreviewAsset(asset)).map((asset) => asset.id));
+        return new Set(shown.filter((photo) => previewIds.has(assetIdFromPhotoURL(photo) ?? "")));
+    }
 
     $effect(() => fetchPhotos(photoFiles ?? []));
 
@@ -183,15 +200,17 @@
         onexif?.(fileIndex >= 0 ? src : getFileURL(parent, photos[index]), coordinates);
     }
 
+    // Pending library photos are shown as small cards, so they load a
+    // thumbnail rather than the original or the provider's preview.
     function assetThumbnailURL(preview: AssetPluginPreview): string {
         if (preview.thumbnailUrl) {
-            return preview.thumbnailUrl;
+            return getFileURL(parent, preview.thumbnailUrl, "300x300");
         }
         if (!preview.pluginId) {
             return "";
         }
         const plugin = encodeURIComponent(preview.pluginId);
-        return `/api/v1/plugins/assets/${plugin}/thumbnail/${encodeURIComponent(preview.assetId)}`;
+        return `/api/v1/plugins/assets/${plugin}/thumbnail/${encodeURIComponent(preview.assetId)}?thumb=300x300`;
     }
 
     function formatTakenAt(value?: string): string {
@@ -295,7 +314,7 @@
                     isThumbnail={thumbnail === i}
                     onthumbnail={() => makePhotoThumbnail(i)}
                     onexif={(src) => handlePhotoExif(i, src)}
-                    {showThumbnailControls}
+                    showThumbnailControls={showThumbnailControls && !(hasRealPhoto && routePreviews.has(photo))}
                     {showExifControls}
                 ></PhotoCard>
             </div>

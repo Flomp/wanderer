@@ -573,7 +573,7 @@ calls the same export with different `request.action` values:
 | `check` | Validate current auth/config and optionally return provider account metadata. |
 | `candidates` | Return matching external assets for a trail, coordinate, or waypoint context. |
 | `import` | Return `Photo` descriptors for selected asset IDs so the host can create asset records. |
-| `thumbnail` | Return a preview photo descriptor for one selected asset ID. |
+| `thumbnail` | Return a preview photo descriptor for one selected asset ID in the size class `request.thumbnailSize`. |
 
 Input shape:
 
@@ -620,6 +620,10 @@ time data. `takenAfter` and `takenBefore` are explicit search-window hints when
 the host or user provides them. For waypoint searches, the host may only provide
 `lat` and `lon`.
 
+Thumbnail calls also send `thumbnailSize`: `small` when the requested image is
+at most 300 px on its longest edge, otherwise `large`. Treat a missing value as
+`large`; returning the same media for both classes is allowed.
+
 Manual map searches additionally send `bounds: {west, south, east, north}` in
 degrees. Bounds replace the route/coordinate radius as the inclusion filter;
 track points can still supply nearest-point and route-distance metadata.
@@ -639,6 +643,7 @@ Candidate output:
       "assetId": "provider-asset-id",
       "originalFileName": "IMG_1234.jpg",
       "takenAt": "2026-06-23T10:18:00Z",
+      "capturedAt": "2026-06-23T10:18:00Z",
       "lat": 47.377,
       "lon": 8.542,
       "distance": 32.4,
@@ -666,6 +671,7 @@ Candidate output:
       "filename": "IMG_1234.jpg",
       "contentType": "image/jpeg",
       "takenAt": "2026-06-23T10:18:00Z",
+      "capturedAt": "2026-06-23T10:18:00Z",
       "lat": 47.377,
       "lon": 8.542,
       "source": {
@@ -682,6 +688,14 @@ Candidate output:
 }
 ```
 
+`capturedAt` is optional on candidates and photos. It is the time the photo was
+taken according to its own metadata, such as its EXIF capture date, as an RFC
+3339 time with an offset like `takenAt`. Set it only from that metadata and
+never from a file or upload time, which may still go into `takenAt`. A local
+time without a time zone counts as UTC, so send it with the `Z` offset. The host
+stores `capturedAt`, when present, as the photo time instead of `takenAt`.
+Trail imports ignore the field.
+
 The host owns storage behavior. In `copy` mode it downloads selected photos and
 stores PocketBase files. In `link_private` mode it stores remote metadata and
 fetches files on demand for non-public targets, copying them into wanderer when
@@ -691,9 +705,15 @@ anonymous viewers. Plugins should return stable `externalId` values so the host
 can deduplicate provider assets.
 
 When imported asset photos create new waypoints, the host merges nearby photos
-using the trail category's waypoint merge settings. It resolves waypoint names
-from nearby OpenStreetMap points of interest through Overpass and falls back to
-Nominatim reverse geocoding, then to the photo coordinate.
+using the trail category's waypoint merge settings. With `capturedAt`, it keeps
+nearby photos taken more than 15 minutes apart in separate waypoints and places
+a new waypoint on the pass of the track recorded at the time of its first photo
+when the track has timestamps that cover it. This keeps the outward and return
+photos of an out-and-back trail apart. Without `capturedAt`, photos are merged
+by distance alone and a new waypoint goes to the nearest track point. The host
+resolves waypoint names from nearby OpenStreetMap points of interest through
+Overpass and falls back to Nominatim reverse geocoding, then to the photo
+coordinate.
 
 ## Host config
 

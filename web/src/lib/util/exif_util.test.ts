@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractGPSCoordinatesAndTime } from "./exif_util";
+import { extractGPSCoordinatesAndTime, extractPhotoExifMetadata } from "./exif_util";
 
 interface ExifEntry {
     tag: number;
@@ -116,5 +116,55 @@ describe("extractGPSCoordinatesAndTime", () => {
         const photo = jpeg([ascii(0x9003, "2026:10:03 10:06:33"), ascii(0x9011, "-04:00")], []);
 
         expect(await extractGPSCoordinatesAndTime(photo)).toBeUndefined();
+    });
+});
+
+describe("extractPhotoExifMetadata", () => {
+    it("takes the GPS time as the time the photo was taken", async () => {
+        const photo = jpeg(
+            [ascii(0x9003, "2026:10:03 23:30:00"), ascii(0x9011, "+02:00")],
+            [...position, rationals(0x0007, [[21, 1], [30, 1], [5, 10]]), ascii(0x001d, "2026:10:03")],
+        );
+
+        expect(await extractPhotoExifMetadata(photo)).toMatchObject({
+            takenAt: "2026-10-03T21:30:00.500Z",
+            takenAtSource: "exif",
+            takenOn: "2026-10-03",
+        });
+    });
+
+    it("reads the original time in its offset", async () => {
+        const photo = jpeg([ascii(0x9003, "2026:10:03 10:06:33"), ascii(0x9011, "-04:00")], position);
+
+        expect(await extractPhotoExifMetadata(photo)).toMatchObject({
+            takenAt: "2026-10-03T14:06:33.000Z",
+            takenAtSource: "exif",
+        });
+    });
+
+    it("reads an original time without an offset as UTC", async () => {
+        const photo = jpeg([ascii(0x9003, "2026:10:03 23:30:00")], position);
+
+        expect(await extractPhotoExifMetadata(photo)).toMatchObject({
+            takenAt: "2026-10-03T23:30:00.000Z",
+            takenAtSource: "exif",
+            takenOn: "2026-10-03",
+        });
+    });
+
+    it("skips a GPS date that devices without a fix leave zero", async () => {
+        const photo = jpeg(
+            [ascii(0x9003, "2026:10:03 10:06:33")],
+            [...position, rationals(0x0007, [[0, 1], [0, 1], [0, 1]]), ascii(0x001d, "0000:00:00")],
+        );
+
+        expect((await extractPhotoExifMetadata(photo)).takenAt).toBe("2026-10-03T10:06:33.000Z");
+    });
+
+    it("lets the digitized time stand in without marking it as taken", async () => {
+        const metadata = await extractPhotoExifMetadata(jpeg([ascii(0x9004, "2026:10:03 10:06:33")], position));
+
+        expect(metadata.takenAt).toBe("2026-10-03T10:06:33.000Z");
+        expect(metadata.takenAtSource).toBeUndefined();
     });
 });

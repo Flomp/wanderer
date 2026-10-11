@@ -7,7 +7,9 @@ import { json, type RequestEvent } from '@sveltejs/kit';
  * /api/v1/summit-log/form:
  *   put:
  *     summary: Create summit log with file upload
- *     description: Creates a new summit log with file upload (photos/GPX) and date normalization
+ *     description: >
+ *       Creates a new summit log with GPX file upload and date normalization. A `photos` part is ignored.
+ *       Upload and attach photos through `PUT /api/v1/assets` with the `summit_log` target field once the summit log exists.
  *     tags:
  *       - Summit Logs
  *     requestBody:

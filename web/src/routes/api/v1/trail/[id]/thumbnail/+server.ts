@@ -9,6 +9,57 @@ const TrailThumbnailSchema = z.object({
     asset: RecordIdValueSchema.nullable().optional(),
 });
 
+/**
+ * @swagger
+ * /api/v1/trail/{id}/thumbnail:
+ *   patch:
+ *     summary: Set trail thumbnail
+ *     description: >
+ *       Marks the trail's link to the photo `asset` as thumbnail (`trail_assets.is_thumbnail`) and clears the mark on
+ *       its other photos. Without `asset`, or with `null`, all marks are cleared. Trail responses report the marked
+ *       photo's index in `photos` as `thumbnail`, or else the first photo's. A generated route preview counts only
+ *       when the trail has no other photo, even when it is marked.
+ *       Requires the trail's author or an edit share.
+ *     tags:
+ *       - Trails
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               asset:
+ *                 type: string
+ *                 nullable: true
+ *                 description: ID of a photo asset linked to the trail
+ *     responses:
+ *       200:
+ *         description: Thumbnail updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 acknowledged:
+ *                   type: boolean
+ *       400:
+ *         description: Invalid id or body, or the asset is not linked to the trail
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions for trail
+ *       404:
+ *         description: Trail not found
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function PATCH(event: RequestEvent) {
     try {
         if (!event.locals.user) {

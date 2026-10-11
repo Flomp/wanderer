@@ -3,6 +3,8 @@ package main
 import (
 	"math"
 	"sort"
+	"strings"
+	"time"
 )
 
 type immichConfig struct {
@@ -83,6 +85,7 @@ func candidateForAsset(asset immichAsset, req assetLibraryRequest, maxDistance f
 		AssetID:           asset.ID,
 		OriginalFileName:  asset.OriginalFileName,
 		TakenAt:           asset.FileCreatedAt,
+		CapturedAt:        captureTime(asset),
 		Lat:               lat,
 		Lon:               lon,
 		Distance:          bestDistance,
@@ -92,6 +95,28 @@ func candidateForAsset(asset immichAsset, req assetLibraryRequest, maxDistance f
 		City:              asset.ExifInfo.City,
 		Country:           asset.ExifInfo.Country,
 	}, true
+}
+
+// captureTime returns when the photo was taken by its EXIF date, as Immich
+// reports it in dateTimeOriginal. A local time without a time zone counts as
+// UTC, as for photos uploaded to wanderer: recent Immich versions store it like
+// that, older ones in the zone of the Immich server, and localDateTime holds
+// the local time as UTC in both. Without dateTimeOriginal, for example before
+// Immich has read the metadata, there is none. Immich also falls back to the
+// file time for photos without any EXIF date, which cannot be told apart here.
+func captureTime(asset immichAsset) string {
+	value := strings.TrimSpace(asset.ExifInfo.DateTimeOriginal)
+	if value == "" {
+		return ""
+	}
+	if strings.TrimSpace(asset.ExifInfo.TimeZone) == "" && strings.TrimSpace(asset.LocalDateTime) != "" {
+		value = strings.TrimSpace(asset.LocalDateTime)
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return ""
+	}
+	return parsed.UTC().Format(time.RFC3339)
 }
 
 func (bounds assetBounds) contains(lat, lon float64) bool {

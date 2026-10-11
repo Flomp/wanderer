@@ -31,7 +31,7 @@
                     return [];
                 }
                 const plugin = encodeURIComponent(candidate.pluginId);
-                return `/api/v1/plugins/assets/${plugin}/thumbnail/${encodeURIComponent(candidate.assetId)}`;
+                return `/api/v1/plugins/assets/${plugin}/thumbnail/${encodeURIComponent(candidate.assetId)}?thumb=300x300`;
             });
         const immediatePhotos = [...persistedPhotos, ...assetPluginPhotos];
 

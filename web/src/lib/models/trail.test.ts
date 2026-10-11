@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { assetIdFromPhotoURL } from "$lib/util/asset_link_util";
 import { TrailCreateSchema } from "./api/trail_schema";
 import type { AssetLink } from "./asset";
 import { SummitLog } from "./summit_log";
@@ -80,6 +81,35 @@ describe("Trail.from", () => {
             summitLog.expand?.summit_log_assets_via_summit_log?.[0].expand?.asset,
         ]);
         expect(duplicatedSummitLog.expand?.gpx_data).toBe(summitLog.expand?.gpx_data);
+    });
+
+    it("keeps the thumbnail on its photo when the copy leaves out the route preview", () => {
+        const original = originalTrail();
+        const links = [
+            assetLink("routepreview001", "route_abcdef1234.webp"),
+            ...original.expand!.trail_assets_via_trail!,
+            assetLink("trailasset00002", "summit.jpg"),
+        ];
+        original.expand!.trail_assets_via_trail = links;
+        original.photos = links.map((link) => `/api/v1/files/assetcollect001/${link.asset}/${link.expand!.asset!.file}`);
+
+        const cases: [string, number, string][] = [
+            ["a photo after the preview", 2, "trailasset00002"],
+            ["the first photo", 1, "trailasset00001"],
+            ["the route preview", 0, "trailasset00001"],
+            ["an index without a photo", 5, "trailasset00001"],
+        ];
+        for (const [name, thumbnail, want] of cases) {
+            original.thumbnail = thumbnail;
+
+            const duplicate = Trail.from(original, "targetactor1234", { trailPhotos: true });
+
+            expect(duplicate.photos.map(assetIdFromPhotoURL), name).toEqual(["trailasset00001", "trailasset00002"]);
+            expect(assetIdFromPhotoURL(duplicate.photos[duplicate.thumbnail!]), name).toBe(want);
+        }
+
+        original.thumbnail = 2;
+        expect(Trail.from(original, "targetactor1234").thumbnail).toBe(0);
     });
 
     it("normalizes duplicate photo options that depend on copied records", () => {

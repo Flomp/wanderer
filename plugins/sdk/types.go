@@ -138,6 +138,15 @@ type AssetSearchStats struct {
 	ScannedItems int `json:"scannedItems,omitempty"`
 }
 
+// Size classes a host sends as request.thumbnailSize in an asset thumbnail
+// call: small for tiles up to 300 pixels on their longest edge, large for
+// bigger previews. Return large media when the field is empty, as hosts
+// without size classes expect.
+const (
+	AssetThumbnailSizeSmall = "small"
+	AssetThumbnailSizeLarge = "large"
+)
+
 type ListInput struct {
 	Instance InstanceRef    `json:"instance"`
 	Auth     map[string]any `json:"auth,omitempty"`
@@ -219,6 +228,13 @@ type Photo struct {
 	Lat         *float64    `json:"lat,omitempty"`
 	Lon         *float64    `json:"lon,omitempty"`
 	Source      MediaSource `json:"source"`
+	// CapturedAt is when the photo was taken by its own metadata, such as
+	// EXIF, as an RFC 3339 time with an offset. Send a local time without a
+	// time zone as UTC with the Z offset: the host rejects output with a time
+	// that has no offset. Leave it empty when only a file or upload time is
+	// known. Asset library imports store it as the photo time and use it to
+	// tell apart the passes of a track that covers the same ground twice.
+	CapturedAt string `json:"capturedAt,omitempty"`
 }
 
 type MediaSource struct {

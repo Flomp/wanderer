@@ -44,6 +44,12 @@ New photo waypoints are merged using the trail category's waypoint merge radius.
 Their names come from nearby OpenStreetMap points of interest when possible,
 falling back to reverse geocoding and then the photo coordinate.
 
+Candidates and imported photos carry the capture time from the photo's EXIF
+date (`exifInfo.dateTimeOriginal`) as `capturedAt`; a local time without a time
+zone counts as UTC. wanderer only merges photos taken close together in time
+and places a new waypoint on the pass of the track recorded at that time, so
+the outward and return photos of an out-and-back trail stay apart.
+
 ## Actions
 
 The `asset_library.v1` export handles these actions:
@@ -53,7 +59,7 @@ The `asset_library.v1` export handles these actions:
 | `check` | Calls Immich `/api/users/me` and performs a tiny search to validate auth and connector settings. |
 | `candidates` | Searches Immich image assets with EXIF coordinates inside the provided map bounds, or within the configured radius of trail points or a coordinate when no bounds are provided. |
 | `import` | Returns `sdk.Photo` descriptors for selected Immich assets using the configured import size. |
-| `thumbnail` | Returns a connector-backed preview descriptor for one asset. |
+| `thumbnail` | Returns a connector-backed descriptor for one asset: Immich's small thumbnail when the host asks for `thumbnailSize: small`, otherwise its preview. |
 
 Candidate requests may include `bounds: {west, south, east, north}` in degrees.
 These bounds replace the search radius, including when `doubleRadius` is set.

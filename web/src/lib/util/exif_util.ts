@@ -14,6 +14,11 @@ export interface GPSCoordinatesWithTime extends GPSCoordinates {
 export interface PhotoExifMetadata {
     coordinates?: GPSCoordinates;
     takenAt?: string;
+    // "exif" when takenAt is when the photo was taken by its own metadata,
+    // not when it was scanned or last edited.
+    takenAtSource?: "exif";
+    // The day of the photo's local time, as YYYY-MM-DD.
+    takenOn?: string;
 }
 
 type ExifLoadOptions = {
@@ -38,6 +43,8 @@ const PHOTO_METADATA_OPTIONS: ExifLoadOptions = {
     includeTags: {
         gps: true,
         exif: [
+            "GPSDateStamp",
+            "GPSTimeStamp",
             "DateTimeOriginal",
             "DateTimeDigitized",
             "DateTime",
@@ -64,6 +71,9 @@ const GPS_TIME_OPTIONS: ExifLoadOptions = {
     },
     excludeTags: { mpf: true },
 };
+
+// EXIF dates are the camera's local time, "YYYY:MM:DD HH:MM:SS".
+const EXIF_DATE_TIME = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/;
 
 export async function extractGPSCoordinates(
     source: Blob | string | ArrayBuffer | SharedArrayBuffer,
@@ -100,7 +110,7 @@ export async function extractPhotoExifMetadata(
         const tags = await loadExifTags(source, PHOTO_METADATA_OPTIONS);
         return {
             coordinates: gpsCoordinatesFromExpandedTags(tags),
-            takenAt: takenAtFromExpandedTags(tags),
+            ...takenAtFromExpandedTags(tags),
         };
     } catch {
         return {};
@@ -134,20 +144,39 @@ function gpsCoordinatesFromExpandedTags(tags: ExpandedTags): GPSCoordinates | un
     return { lat, lon };
 }
 
-function takenAtFromExpandedTags(tags: ExpandedTags): string | undefined {
+// For photos added to the library, the time they were taken is the GPS time,
+// which is UTC, else DateTimeOriginal in its offset or, without one, as UTC.
+// The other dates can be when the photo was scanned or last edited, so they
+// only stand in for it.
+function takenAtFromExpandedTags(tags: ExpandedTags): Omit<PhotoExifMetadata, "coordinates"> {
+    const original = tagString(tags.exif?.DateTimeOriginal);
     const value =
-        tagString(tags.exif?.DateTimeOriginal) ??
+        original ??
         tagString(tags.exif?.DateTimeDigitized) ??
         tagString(tags.exif?.DateTime);
-    if (!value) {
-        return undefined;
-    }
-
     const offset =
         tagString(tags.exif?.OffsetTimeOriginal) ??
         tagString(tags.exif?.OffsetTimeDigitized) ??
         tagString(tags.exif?.OffsetTime);
-    return parseExifDate(value, offset);
+    const takenOn = value ? exifDay(value) : undefined;
+
+    const capturedAt =
+        gpsTimeFromExpandedTags(tags) ??
+        (original && EXIF_DATE_TIME.test(original) ? parseExifDate(original, offset) : undefined);
+    if (capturedAt) {
+        return { takenAt: capturedAt, takenAtSource: "exif", takenOn };
+    }
+    return { takenAt: value ? parseExifDate(value, offset) : undefined, takenOn };
+}
+
+// Devices without a GPS fix may leave the date zero.
+function gpsTimeFromExpandedTags(tags: ExpandedTags): string | undefined {
+    const dateStamp = tagString(tags.exif?.GPSDateStamp);
+    const date = dateStamp?.match(/^(\d{4}):(\d{2}):(\d{2})$/);
+    if (!date || !isExifDay(date[1], date[2], date[3])) {
+        return undefined;
+    }
+    return convertGPSTimestampToDate(dateStamp, gpsTimeStampValues(tags.exif?.GPSTimeStamp))?.toISOString();
 }
 
 function exactTimeFromExpandedTags(tags: ExpandedTags): Date | undefined {
@@ -194,30 +223,32 @@ function tagString(tag: { value?: unknown; description?: string } | undefined): 
 }
 
 function parseExifDate(value: string, offset?: string): string | undefined {
-    const match = value.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+    const match = value.match(EXIF_DATE_TIME);
     if (!match) {
         const fallback = new Date(value);
         return Number.isNaN(fallback.getTime()) ? undefined : fallback.toISOString();
     }
 
     const [, year, month, day, hour, minute, second] = match;
-    if (year === "0000" || month === "00" || day === "00") {
+    if (!isExifDay(year, month, day)) {
         return undefined;
     }
 
+    // Without an offset the local time counts as UTC, so that a photo gets the
+    // same time wherever it is read.
     const isoDate = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-    const normalizedOffset = normalizeExifOffset(offset);
-    const date = normalizedOffset
-        ? new Date(`${isoDate}${normalizedOffset}`)
-        : new Date(
-            Number(year),
-            Number(month) - 1,
-            Number(day),
-            Number(hour),
-            Number(minute),
-            Number(second),
-        );
+    const date = new Date(`${isoDate}${normalizeExifOffset(offset) ?? "Z"}`);
     return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function exifDay(value: string): string | undefined {
+    const match = value.match(EXIF_DATE_TIME);
+    return match && isExifDay(match[1], match[2], match[3]) ? `${match[1]}-${match[2]}-${match[3]}` : undefined;
+}
+
+// Cameras without a set clock write zeros.
+function isExifDay(year: string, month: string, day: string): boolean {
+    return year !== "0000" && month !== "00" && day !== "00";
 }
 
 function normalizeExifOffset(offset?: string): string | undefined {

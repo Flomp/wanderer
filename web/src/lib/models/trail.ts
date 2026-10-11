@@ -11,7 +11,7 @@ import type { TrailShare } from "./trail_share";
 import { Waypoint } from "./waypoint";
 import type { Asset, AssetLink } from "./asset";
 import type { PhotoLibraryPluginLink } from "./photo_library";
-import { assetPhotos, assetsFromLinks, linkableAssetLinks } from "$lib/util/asset_link_util";
+import { assetIdFromPhotoURL, assetPhotos, assetsFromLinks, linkableAssetLinks } from "$lib/util/asset_link_util";
 
 const defaultTrailDuplicateOptions: TrailDuplicateOptions = {
     waypoints: true,
@@ -152,7 +152,6 @@ class Trail {
             duration: orig.duration,
             elevation_gain: orig.elevation_gain,
             elevation_loss: orig.elevation_loss,
-            thumbnail: orig.thumbnail,
             lat: orig.lat,
             lon: orig.lon,
             location: orig.location,
@@ -176,6 +175,7 @@ class Trail {
         if (duplicateOptions.trailPhotos) {
             clonedTrail._assetLinks = linkedAssetIds(orig.expand?.trail_assets_via_trail);
             clonedTrail.photos = assetPhotosFromLinks(orig.expand?.trail_assets_via_trail);
+            clonedTrail.thumbnail = copiedThumbnailIndex(orig, clonedTrail.photos);
             if (clonedTrail.expand) {
                 clonedTrail.expand.assets_via_trail = assetsFromLinks(orig.expand?.trail_assets_via_trail);
             }
@@ -262,6 +262,16 @@ function assetPhotosFromLinks(links?: AssetLink[]): string[] {
         assetsFromLinks(links, { includeGeneratedRoutePreview: false }),
         { includeGeneratedRoutePreview: false },
     );
+}
+
+// The copy leaves out the route preview, so the original's thumbnail index
+// can point at another photo there. Looks the photo up by asset ID instead;
+// if the thumbnail was the preview, the copy starts with its first photo.
+function copiedThumbnailIndex(orig: Trail, photos: string[]): number {
+    const thumbnail = orig.photos?.at(orig.thumbnail ?? 0);
+    const assetId = thumbnail ? assetIdFromPhotoURL(thumbnail) : undefined;
+    const index = assetId ? photos.findIndex((photo) => assetIdFromPhotoURL(photo) === assetId) : -1;
+    return Math.max(index, 0);
 }
 
 interface TrailFilter {

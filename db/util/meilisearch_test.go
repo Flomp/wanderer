@@ -184,8 +184,8 @@ func TestUpdateTrailAuthor(t *testing.T) {
 }
 
 // Every path that writes a trail document takes the same thumbnail from the
-// trail's photo assets, skipping a generated route preview, so the nightly
-// repair finds the documents the hooks wrote current.
+// trail's photo assets, preferring a real photo over a generated route
+// preview, so the nightly repair finds the documents the hooks wrote current.
 func TestTrailDocumentsTakeThumbnailFromAssets(t *testing.T) {
 	app, author := setupTrailIndexApp(t)
 	trails, err := app.FindCollectionByNameOrId("trails")

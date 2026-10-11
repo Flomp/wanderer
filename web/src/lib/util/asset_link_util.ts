@@ -41,6 +41,15 @@ export function assetIdFromPhotoURL(photo: string): string | undefined {
     return fileMatch?.[1];
 }
 
+// A duplicate links its copied photos by ID, and removing one in the editor or
+// a photo dialog only takes it out of `photos`. So only the IDs whose photo is
+// still there are linked. The editor and the photo dialogs add the photos
+// picked from the wanderer library to `photos` on save, so these stay.
+export function shownAssetLinks(assetIds: string[] | undefined, photos: string[] | undefined): string[] | undefined {
+    const shown = new Set(photos?.map(assetIdFromPhotoURL));
+    return assetIds?.filter((id) => shown.has(id));
+}
+
 export function enrichTrailAssetExpands(trail: Trail, options?: AssetPhotoOptions) {
     if (!trail.expand) {
         trail.expand = {};
@@ -103,18 +112,24 @@ function linkedAssets(existing?: Asset[], links?: AssetLink[]): Asset[] {
     return linked.length || links ? linked : existing ?? [];
 }
 
+// Picks the thumbnail in the order search does (TrailThumbnailURLs in
+// db/util/assets.go): the marked photo, else the first one. A generated route
+// preview, even a marked one, is only used when the trail has no other photo.
 function thumbnailPhotoIndex(assets?: Asset[], links?: AssetLink[]): number | undefined {
     if (!assets?.length || !links?.length) {
         return undefined;
     }
-    const thumbnailAssetID = links.find((link) => link.is_thumbnail)?.asset;
-    if (!thumbnailAssetID) {
-        return undefined;
+    const markedAssetIDs = new Set(links.filter((link) => link.is_thumbnail).map((link) => link.asset));
+    const photos = assets.filter((asset) => isDisplayablePhotoAsset(asset));
+    const previews = photos.map((asset) => isGeneratedRoutePreviewAsset(asset));
+    for (const preview of [false, true]) {
+        const marked = photos.findIndex((asset, i) => previews[i] === preview && markedAssetIDs.has(asset.id));
+        const index = marked >= 0 ? marked : previews.indexOf(preview);
+        if (index >= 0) {
+            return index;
+        }
     }
-    const index = assets
-        .filter((asset) => isDisplayablePhotoAsset(asset))
-        .findIndex((asset) => asset.id === thumbnailAssetID);
-    return index >= 0 ? index : undefined;
+    return undefined;
 }
 
 function isDisplayablePhotoAsset(asset: Asset, options?: AssetPhotoOptions): boolean {
@@ -123,9 +138,44 @@ function isDisplayablePhotoAsset(asset: Asset, options?: AssetPhotoOptions): boo
         Boolean(asset.file || (asset.storage_mode && asset.storage_mode !== "copy"));
 }
 
+// PocketBase's name for a route preview that earlier versions uploaded as
+// "route". The asset migration keeps it as file and metadata.source_file.
+const legacyRoutePreviewFilename = /^route_[a-z0-9]{8,}\.(webp|png|jpe?g)$/;
+
+// Recognises the route preview the trail editor generates for a trail without
+// photos: by its metadata, or, for previews stored before that marker, by its
+// name on an asset that has neither a provider nor a capture time. The server
+// applies the same rule (isGeneratedRoutePreview in db/util/assets.go).
 export function isGeneratedRoutePreviewAsset(asset?: Asset): boolean {
-    const generated = asset?.metadata?.generated as { kind?: string } | undefined;
-    return generated?.kind === "route-preview";
+    if (!asset) {
+        return false;
+    }
+    if (assetMetadataString(asset.metadata, "generated", "kind") === "route-preview") {
+        return true;
+    }
+    const filename = assetFilename(asset).toLowerCase();
+    const hasLegacyGeneratedName = filename.startsWith("wanderer-route-preview")
+        || legacyRoutePreviewFilename.test(filename);
+    return hasLegacyGeneratedName && !asset.external_provider && !asset.taken_at;
+}
+
+function assetFilename(asset: Asset): string {
+    return assetMetadataString(asset.metadata, "remote", "filename")
+        || assetMetadataString(asset.metadata, "source_file")
+        || asset.file
+        || asset.external_id
+        || asset.id;
+}
+
+function assetMetadataString(metadata: Record<string, unknown> | undefined, ...path: string[]): string {
+    let value: unknown = metadata;
+    for (const key of path) {
+        if (!value || typeof value !== "object") {
+            return "";
+        }
+        value = (value as Record<string, unknown>)[key];
+    }
+    return typeof value === "string" ? value.trim() : "";
 }
 
 function withAssetAccessQuery(url: string, options?: AssetPhotoOptions): string {

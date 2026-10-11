@@ -4,7 +4,7 @@ import { get, writable, type Writable } from "svelte/store";
 import { currentUser } from "./user_store";
 import type { AuthRecord } from "pocketbase";
 import { assets_attach_to_target, assets_delete_removed, has_asset_attachments, type CompletedAssetAttachments, type AssetImportOmissionHandler } from "./asset_store";
-import { enrichWaypointAssetExpands } from "$lib/util/asset_link_util";
+import { assetIdFromPhotoURL, enrichWaypointAssetExpands, shownAssetLinks } from "$lib/util/asset_link_util";
 
 export const waypoint: Writable<Waypoint> = writable(new Waypoint(0, 0));
 
@@ -30,7 +30,7 @@ export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo 
     let model: Waypoint = await r.json();
     const attachments = {
         files: waypoint._photos,
-        assetIds: waypoint._assetLinks,
+        assetIds: shownAssetLinks(waypoint._assetLinks, waypoint.photos),
         pluginLinks: waypoint._assetPluginLinks,
         target: {
             trail: model.trail ?? waypoint.trail,
@@ -70,6 +70,16 @@ export async function waypoints_create(waypoint: Waypoint, f: (url: RequestInfo 
 
     return model;
 
+}
+
+// The attached photos start with those the form already had. The ones linked
+// by ID are saved only once linking completed: listed earlier, dropping one
+// before the retry would send a removal, and that deletes a library photo
+// without other links.
+function savedAttachedPhotos(attachedPhotos: string[], waypoint: Waypoint, error: unknown): string[] {
+    const linked = error instanceof APIError && error.detail?.completedAttachments?.assetIds;
+    const unlinked = new Set(linked ? [] : waypoint._assetLinks);
+    return attachedPhotos.filter((photo) => !unlinked.has(assetIdFromPhotoURL(photo) ?? ""));
 }
 
 function remainingWaypointAttachments(waypoint: Waypoint, error: unknown) {
@@ -130,7 +140,7 @@ export async function waypoints_update(oldWaypoint: Waypoint, newWaypoint: Waypo
     try {
         model.photos = await assets_attach_to_target({
             files: newWaypoint._photos,
-            assetIds: newWaypoint._assetLinks,
+            assetIds: shownAssetLinks(newWaypoint._assetLinks, newWaypoint.photos),
             pluginLinks: newWaypoint._assetPluginLinks,
             target: {
                 trail: model.trail ?? newWaypoint.trail,
@@ -141,7 +151,7 @@ export async function waypoints_update(oldWaypoint: Waypoint, newWaypoint: Waypo
         });
     } catch (importError) {
         const attachedPhotos: string[] = importError instanceof APIError ? importError.detail?.attachedPhotos ?? [] : [];
-        model.photos = [...new Set([...(oldWaypoint.photos ?? []), ...attachedPhotos])];
+        model.photos = [...new Set([...(oldWaypoint.photos ?? []), ...savedAttachedPhotos(attachedPhotos, newWaypoint, importError)])];
         throw new APIError(422, "asset_import_failed", {
             importError,
             savedWaypoint: model,

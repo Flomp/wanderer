@@ -4,6 +4,7 @@ import { MAP_MAX_POLYLINES } from "$lib/config/map";
 import { defaultTrailSearchAttributes, Trail, type TrailBoundingBox, type TrailFilter, type TrailFilterValues, type TrailSearchResult } from "$lib/models/trail";
 import type { Waypoint } from "$lib/models/waypoint";
 import { APIError } from "$lib/util/api_util";
+import { assetIdFromPhotoURL, shownAssetLinks } from "$lib/util/asset_link_util";
 import { deepEqual } from "$lib/util/deep_util";
 import { getFileURL, objectToFormData } from "$lib/util/file_util";
 import { noSubcategoryFilterCategory, trailFilterDateBoundary } from "$lib/util/trail_filter_util";
@@ -411,12 +412,13 @@ async function createTrailWithAssets(trail: Trail, photos: File[], gpx: File | B
     }
 
     let model: Trail = await r.json();
+    const existingPhotos = model.photos;
 
     try {
         try {
             model.photos = await assets_attach_to_target({
                 files: photos,
-                assetIds: trail._assetLinks,
+                assetIds: shownAssetLinks(trail._assetLinks, trail.photos),
                 pluginLinks: trail._assetPluginLinks,
                 target: { trail: model.id },
                 existingPhotos: model.photos,
@@ -424,13 +426,15 @@ async function createTrailWithAssets(trail: Trail, photos: File[], gpx: File | B
                 f,
             });
         } catch (error) {
-            rememberPartialTrailAttachments(model, trail, photos, error);
+            rememberPartialTrailAttachments(model, trail, photos, existingPhotos, error);
             throw error;
         }
+        const thumbnailAsset = chosenThumbnailAsset(trail, photos, existingPhotos, model.photos);
         trail.id = model.id;
         trail.photos = [...model.photos];
         trail._assetLinks = undefined;
         trail._assetPluginLinks = undefined;
+        keepThumbnailOn(trail, thumbnailAsset);
         photos.splice(0);
         model.expand ??= {};
 
@@ -462,7 +466,7 @@ async function createTrailWithAssets(trail: Trail, photos: File[], gpx: File | B
         if (refreshed.ok) {
             model = await refreshed.json();
         }
-        await assets_set_trail_thumbnail(model.id!, model.photos?.at(trail.thumbnail ?? 0), f);
+        await assets_set_trail_thumbnail(model.id!, savedPhotoOfAsset(model.photos, thumbnailAsset), f);
         model = await trails_show(model.id!, undefined, undefined, false, f);
         if (shouldPublish) model = await publishSavedTrail(model, f);
     } catch (error) {
@@ -509,12 +513,20 @@ async function reportTrailAssetImports<T>(save: (report: AssetImportOmissionHand
     }
 }
 
-function rememberPartialTrailAttachments(baseline: Trail, pending: Trail, files: File[] | undefined, error: unknown) {
+function rememberPartialTrailAttachments(baseline: Trail, pending: Trail, files: File[] | undefined, existingPhotos: string[] | undefined, error: unknown) {
     if (!(error instanceof APIError) || !error.detail?.completedAttachments) return;
-    rememberCompletedTrailAttachments(baseline, pending, files, error.detail.completedAttachments, error.detail.attachedPhotos ?? []);
+    const attachedPhotos: string[] = error.detail.attachedPhotos ?? [];
+    const thumbnailAsset = chosenThumbnailAsset(pending, files, existingPhotos, attachedPhotos);
+    rememberCompletedTrailAttachments(baseline, pending, files, error.detail.completedAttachments, attachedPhotos);
+    keepThumbnailOn(pending, thumbnailAsset);
 }
 
 function rememberCompletedTrailAttachments(baseline: Trail, pending: Trail, files: File[] | undefined, completed: CompletedAssetAttachments, attachedPhotos: string[]) {
+    // In an update, the attached photos start with the form's photos. One the
+    // form links by ID is the saved trail's only once linking completed:
+    // listed earlier, dropping it before the retry would send a removal, and
+    // that deletes a library photo without other links.
+    const unlinked = new Set(completed.assetIds ? [] : pending._assetLinks);
     if (completed.files) files?.splice(0);
     if (completed.assetIds) pending._assetLinks = undefined;
     pending._assetPluginLinks = pending._assetPluginLinks?.map((link) => ({
@@ -523,8 +535,49 @@ function rememberCompletedTrailAttachments(baseline: Trail, pending: Trail, file
             (savedLink) => savedLink.pluginId === link.pluginId && savedLink.assetIds.includes(assetId),
         )),
     })).filter((link) => link.assetIds.length);
-    baseline.photos = [...new Set([...(baseline.photos ?? []), ...attachedPhotos])];
+    baseline.photos = [...new Set([
+        ...(baseline.photos ?? []),
+        ...attachedPhotos.filter((photo) => !unlinked.has(assetIdFromPhotoURL(photo) ?? "")),
+    ])];
     pending.photos = [...new Set([...(pending.photos ?? []), ...attachedPhotos])];
+}
+
+// The editor's thumbnail index counts the photos PhotoPicker shows, then the
+// new uploads. The saved trail lists its photos in the order they were linked,
+// and a duplicate links its copied photos after the uploads, so the index is
+// resolved to an asset. Attaching returns the trail's photos first, then one
+// photo per upload in order.
+function chosenThumbnailAsset(trail: Trail, files: File[] | undefined, existingPhotos: string[] | undefined, attachedPhotos: string[]): string | undefined {
+    const uploaded = attachedPhotos
+        .filter((photo) => !existingPhotos?.includes(photo))
+        .slice(0, files?.length ?? 0);
+    const photo = shownTrailPhotos(trail).concat(uploaded)[trail.thumbnail ?? 0];
+    return photo ? assetIdFromPhotoURL(photo) : undefined;
+}
+
+// The photos PhotoPicker shows. On save, the editor also adds the photos
+// picked from the wanderer library to `photos`, but shows them as pending
+// cards until they are linked. They are the `_assetLinks` that are not yet
+// the trail's assets.
+export function shownTrailPhotos(trail: Trail): string[] {
+    const trailAssets = new Set(trail.expand?.assets_via_trail?.map((asset) => asset.id));
+    const picked = new Set(trail._assetLinks?.filter((id) => !trailAssets.has(id)));
+    return trail.photos.filter((photo) => !picked.has(assetIdFromPhotoURL(photo) ?? ""));
+}
+
+// Attaching rewrites `photos`: a new trail lists its uploads first, and linked
+// library photos become normal photos. The editor keeps this form when a later
+// step fails, so a chosen index follows its photo for the next attempt.
+function keepThumbnailOn(trail: Trail, assetId: string | undefined) {
+    if (trail.thumbnail === undefined || !assetId) return;
+    const index = shownTrailPhotos(trail).findIndex((photo) => assetIdFromPhotoURL(photo) === assetId);
+    if (index >= 0) trail.thumbnail = index;
+}
+
+// Marks only a photo the saved trail has. Otherwise the mark is cleared and
+// the trail shows its first photo, rather than the request failing.
+function savedPhotoOfAsset(photos: string[] | undefined, assetId: string | undefined): string | undefined {
+    return assetId ? photos?.find((photo) => assetIdFromPhotoURL(photo) === assetId) : undefined;
 }
 
 export function trailSaveErrorKey(error: unknown): string {
@@ -705,24 +758,26 @@ async function updateTrailWithAssets(oldTrail: Trail, newTrail: Trail, photos: F
     let model: Trail = await r.json();
 
     const photoSelectionChanged = !stringArraysEqual(oldTrail.photos, newTrail.photos);
+    const assetLinks = shownAssetLinks(newTrail._assetLinks, newTrail.photos);
     const shouldRefreshTrail = has_asset_attachments({
         files: photos,
-        assetIds: newTrail._assetLinks,
+        assetIds: assetLinks,
         pluginLinks: newTrail._assetPluginLinks,
     });
     try {
         model.photos = await assets_attach_to_target({
             files: photos,
-            assetIds: newTrail._assetLinks,
+            assetIds: assetLinks,
             pluginLinks: newTrail._assetPluginLinks,
             target: { trail: model.id },
             existingPhotos: newTrail.photos,
             onOmitted,
         });
     } catch (error) {
-        rememberPartialTrailAttachments(oldTrail, newTrail, photos, error);
+        rememberPartialTrailAttachments(oldTrail, newTrail, photos, newTrail.photos, error);
         throw error;
     }
+    const thumbnailAsset = chosenThumbnailAsset(newTrail, photos, newTrail.photos, model.photos);
     // Keep completed uploads consumed even if deleting old photos or refreshing
     // the trail fails afterwards. A retry must only send unfinished selections.
     rememberCompletedTrailAttachments(oldTrail, newTrail, photos, {
@@ -730,16 +785,20 @@ async function updateTrailWithAssets(oldTrail: Trail, newTrail: Trail, photos: F
         assetIds: true,
         pluginLinks: newTrail._assetPluginLinks ?? [],
     }, model.photos);
+    keepThumbnailOn(newTrail, thumbnailAsset);
     await assets_delete_removed(oldTrail.photos, newTrail.photos, { trail: newTrail.id! });
+    const thumbnailChanged = newTrail.thumbnail !== undefined && oldTrail.thumbnail !== newTrail.thumbnail;
+    const assetSelectionChanged = photoSelectionChanged || shouldRefreshTrail;
     oldTrail.photos = [...newTrail.photos];
+    // From here on a retry sees no photo change, so a mark that is still due
+    // must not look as if it had been sent already.
+    if (thumbnailChanged || assetSelectionChanged) oldTrail.thumbnail = undefined;
     if (shouldRefreshTrail) {
         model = await trails_show(model.id!, undefined, undefined, true);
     }
-    const thumbnailChanged = newTrail.thumbnail !== undefined && oldTrail.thumbnail !== newTrail.thumbnail;
-    const assetSelectionChanged = photoSelectionChanged || shouldRefreshTrail;
     const thumbnailCandidates = model.photos ?? newTrail.photos;
     if (thumbnailCandidates !== undefined && (thumbnailChanged || assetSelectionChanged)) {
-        await assets_set_trail_thumbnail(model.id!, thumbnailCandidates.at(newTrail.thumbnail ?? 0));
+        await assets_set_trail_thumbnail(model.id!, savedPhotoOfAsset(thumbnailCandidates, thumbnailAsset));
     }
     model = await trails_show(model.id!, undefined, undefined, true);
     if (shouldPublish) model = await publishSavedTrail(model);

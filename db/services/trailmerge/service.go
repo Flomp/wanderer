@@ -180,7 +180,13 @@ func SuggestGroups(app core.App, actorID string, request SuggestRequest) (*Sugge
 // Merge links a source trail into a target trail in a single transaction.
 // It moves or recreates trail-related content according to the provided
 // settings and keeps the target trail indexed and federated afterwards.
-func Merge(app core.App, client meilisearch.ServiceManager, ctx context.Context, actor *core.Record, sourceTrailID string, targetTrailID string, settings MergeSettings) error {
+//
+// The photo links it adds to the summit logs it creates run their hooks after
+// the commit, and those queue an Update of each log. announce hands the logs
+// to that queue (FederationUpdates.EnqueueCreate in the server), so that each
+// goes out as one Create with its photos. With a nil announce, Merge sends
+// their Creates right away.
+func Merge(app core.App, client meilisearch.ServiceManager, ctx context.Context, actor *core.Record, sourceTrailID string, targetTrailID string, settings MergeSettings, announce func(summitLog *core.Record)) error {
 	if actor == nil {
 		return ErrMissingActor
 	}
@@ -239,6 +245,10 @@ func Merge(app core.App, client meilisearch.ServiceManager, ctx context.Context,
 			return err
 		}
 
+		if announce != nil {
+			announce(record)
+			continue
+		}
 		if err := federation.CreateSummitLogActivity(app, ctx, record, pub.CreateType); err != nil {
 			return err
 		}
@@ -1205,7 +1215,7 @@ func mergeTrailIntoTarget(ctx mergeContext) (mergeSideEffects, error) {
 	}
 
 	if ctx.Settings.Delete {
-		if err := util.DeleteTrailAndOrphanedAssets(ctx.App, ctx.Source); err != nil {
+		if err := ctx.App.Delete(ctx.Source); err != nil {
 			return sideEffects, err
 		}
 	}

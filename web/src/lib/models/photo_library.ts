@@ -14,6 +14,10 @@ export interface PhotoLibraryCandidate {
     assetId: string;
     originalFileName: string;
     takenAt: string;
+    // Only set when the time comes from the photo's own metadata. Unlike
+    // takenAt, which can be a file or upload time, it can tell apart the
+    // passes of a track that covers the same ground twice.
+    capturedAt?: string;
     lat: number;
     lon: number;
     pointLat?: number;
@@ -32,6 +36,20 @@ export interface PhotoLibraryPluginLink {
 
 export function photoLibraryCandidateKey(candidate: PhotoLibraryCandidate): string {
     return `${candidate.source ?? "plugin"}:${candidate.providerId ?? candidate.pluginId ?? ""}:${candidate.assetId}`;
+}
+
+export function photoLibraryCaptureTime(candidate: PhotoLibraryCandidate): number | undefined {
+    const time = candidate.capturedAt ? Date.parse(candidate.capturedAt) : NaN;
+    return Number.isFinite(time) ? time : undefined;
+}
+
+// The earliest capture time of the photos of a new waypoint becomes its time,
+// which picks the pass of the track it lies on.
+export function earliestPhotoLibraryCaptureTime(candidates: PhotoLibraryCandidate[]): Date | undefined {
+    const times = candidates
+        .map(photoLibraryCaptureTime)
+        .filter((time): time is number => time !== undefined);
+    return times.length ? new Date(Math.min(...times)) : undefined;
 }
 
 export function photoLibraryPluginLinks(candidates: PhotoLibraryCandidate[]): PhotoLibraryPluginLink[] {

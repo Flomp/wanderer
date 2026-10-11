@@ -89,8 +89,9 @@ type pluginSystemSyncResult struct {
 
 // PluginSystemSyncConfigured is the cron entrypoint. It refreshes plugin
 // metadata, finds enabled instances, skips instances in backoff, and syncs each
-// configured import capability.
-func PluginSystemSyncConfigured(ctx context.Context, app core.App, client meilisearch.ServiceManager) error {
+// configured import capability. The summit logs an auto-merge of an imported
+// trail creates go to announceSummitLog; see trailmerge.Merge.
+func PluginSystemSyncConfigured(ctx context.Context, app core.App, client meilisearch.ServiceManager, announceSummitLog func(*core.Record)) error {
 	app.Logger().Info("plugin sync cron started")
 	manager := pluginsystem.NewManager(app, "")
 	if err := manager.SyncInstalledPlugins(ctx); err != nil {
@@ -122,7 +123,7 @@ func PluginSystemSyncConfigured(ctx context.Context, app core.App, client meilis
 				continue
 			}
 			app.Logger().Info("plugin instance sync started", "plugin", plugin.Manifest.ID, "instance", instance.Id)
-			result, err := syncPluginInstance(ctx, app, client, plugin, instance)
+			result, err := syncPluginInstance(ctx, app, client, plugin, instance, announceSummitLog)
 			if err != nil {
 				app.Logger().Warn("plugin instance sync failed", "plugin", plugin.Manifest.ID, "instance", instance.Id, "error", err)
 				syncErr = err
@@ -149,7 +150,7 @@ func pluginInstances(app core.App, pluginID string) ([]*core.Record, error) {
 // syncPluginInstance prepares one plugin instance for import: it resolves the
 // actor, creates the runtime, decrypts/refreshes auth, and dispatches every
 // enabled sync capability.
-func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.ServiceManager, plugin pluginsystem.LocalPlugin, instance *core.Record) (*pluginSystemSyncResult, error) {
+func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.ServiceManager, plugin pluginsystem.LocalPlugin, instance *core.Record, announceSummitLog func(*core.Record)) (*pluginSystemSyncResult, error) {
 	actor, err := app.FindFirstRecordByData("activitypub_actors", "user", instance.GetString("user"))
 	if err != nil {
 		setPluginInstanceStatus(app, instance, "error", "invalid_request", "activitypub actor not found")
@@ -217,7 +218,7 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 			return nil, err
 		}
 		app.Logger().Info("plugin capability sync started", "plugin", plugin.Manifest.ID, "instance", instance.Id, "capability", capability.Name, "version", capability.Version, "export", capability.Export)
-		capResult, err := syncPluginCapability(ctx, app, client, sessions, plugin, capability, detailCapability, instance, actor, auth, pluginConfig, hostConfig, defaultPublic, createSummitLog)
+		capResult, err := syncPluginCapability(ctx, app, client, sessions, plugin, capability, detailCapability, instance, actor, auth, pluginConfig, hostConfig, defaultPublic, createSummitLog, announceSummitLog)
 		if err != nil {
 			setPluginInstanceStatusForError(app, instance, err)
 			return nil, err
@@ -282,7 +283,7 @@ func (s *pluginSyncRuntimeSession) close(ctx context.Context) error {
 // syncPluginCapability calls one plugin export such as list_routes_v1, imports
 // the returned trail items, and carries transient page state only within this
 // sync run. The page cursor is intentionally not persisted across runs.
-func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.ServiceManager, sessions *pluginSyncRuntimeSession, plugin pluginsystem.LocalPlugin, capability pluginsystem.CapabilityManifest, detailCapability pluginsystem.CapabilityManifest, instance *core.Record, actor *core.Record, auth map[string]any, pluginConfig map[string]any, hostConfig map[string]any, defaultPublic bool, createSummitLog bool) (*capabilitySyncResult, error) {
+func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.ServiceManager, sessions *pluginSyncRuntimeSession, plugin pluginsystem.LocalPlugin, capability pluginsystem.CapabilityManifest, detailCapability pluginsystem.CapabilityManifest, instance *core.Record, actor *core.Record, auth map[string]any, pluginConfig map[string]any, hostConfig map[string]any, defaultPublic bool, createSummitLog bool, announceSummitLog func(*core.Record)) (*capabilitySyncResult, error) {
 	result := &capabilitySyncResult{}
 	state := map[string]any{}
 	hasMore := true
@@ -404,7 +405,7 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 				if autoMergeEnabled(hostConfig) {
 					settings := trailmerge.DefaultPluginAutoMergeSettings()
 					settings.Enabled = true
-					mergedTrailID, err := trailmerge.TryAutoMergeImportedTrail(app, client, ctx, actor, imported.TrailID, settings)
+					mergedTrailID, err := trailmerge.TryAutoMergeImportedTrail(app, client, ctx, actor, imported.TrailID, settings, announceSummitLog)
 					if err != nil {
 						app.Logger().Warn("unable to auto-merge imported plugin trail", "provider", item.Source.Provider, "external_id", item.Source.ExternalID, "trail", imported.TrailID, "error", err)
 					} else {

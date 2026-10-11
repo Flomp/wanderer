@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"pocketbase/util"
 	"sync"
 	"time"
@@ -135,6 +136,12 @@ func (d *trailReindexDebouncer) flush(app core.App, trailID string) {
 	delete(d.timers, trailID)
 	d.mu.Unlock()
 
+	defer func() {
+		if r := recover(); r != nil {
+			app.Logger().Error(fmt.Sprintf("Recovered from panic while reindexing trail %s: %v", trailID, r))
+		}
+	}()
+
 	trail, err := app.FindRecordById("trails", trailID)
 	if err != nil {
 		return
@@ -144,16 +151,71 @@ func (d *trailReindexDebouncer) flush(app core.App, trailID string) {
 	}
 }
 
-// deleteThenRemoveOrphanedAssets deletes the record and then the assets only it
-// used. Post-commit hooks report their errors through e.Next() after the record
-// is already gone, so the cleanup still runs in that case.
-func deleteThenRemoveOrphanedAssets(e *core.RecordRequestEvent, assetIDs []string) error {
-	nextErr := e.Next()
-	if nextErr == nil {
-		return util.DeleteAssetsIfOrphanedByAuthor(e.App, assetIDs, e.Record.GetString("author"))
+const deletedRecordAssetsKey = "__delete_assets"
+
+// CollectDeletedRecordAssetsHandler notes the assets linked to a trail,
+// waypoint or summit log before it is deleted, and keeps them on the record for
+// DeleteOrphanedAssetsHandler. The links are cascaded away with the record, so
+// afterwards is too late. When a trail goes, its waypoints and summit logs note
+// their own as the cascade reaches them.
+func CollectDeletedRecordAssetsHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		assetIDs, err := linkedAssetIDs(e.App, e.Record)
+		if err != nil {
+			e.App.Logger().Error(
+				"could not collect the photos of a deleted record",
+				"collection", e.Record.Collection().Name, "record", e.Record.Id, "error", err,
+			)
+		}
+		e.Record.Set(deletedRecordAssetsKey, assetIDs)
+		return e.Next()
 	}
-	if _, err := e.App.FindRecordById(e.Record.Collection(), e.Record.Id); !errors.Is(err, sql.ErrNoRows) {
-		return nextErr
+}
+
+func linkedAssetIDs(app core.App, record *core.Record) ([]string, error) {
+	switch record.Collection().Name {
+	case "trails":
+		return util.AssetIDsForLinkTarget(app, "trail_assets", "trail", record.Id)
+	case "waypoints":
+		return util.AssetIDsForLinkTarget(app, "waypoint_assets", "waypoint", record.Id)
+	case "summit_logs":
+		return util.AssetIDsForLinkTarget(app, "summit_log_assets", "summit_log", record.Id)
 	}
-	return errors.Join(nextErr, util.DeleteAssetsIfOrphanedByAuthor(e.App, assetIDs, e.Record.GetString("author")))
+	return nil, nil
+}
+
+// DeleteOrphanedAssetsHandler deletes the noted assets that nothing links to any
+// more, whoever added them: like the photo files they replaced, they go with
+// the record. It has to run before the other after-delete hooks, which stop at
+// their first error, and it only logs its own, as the record is gone already.
+func DeleteOrphanedAssetsHandler() func(e *core.RecordEvent) error {
+	return func(e *core.RecordEvent) error {
+		deleteOrphanedRecordAssets(e.App, e.Record)
+		return e.Next()
+	}
+}
+
+// DeleteOrphanedAssetsAfterErrorHandler covers a delete that went through and
+// still failed: the hooks its cascade runs after the commit report their errors
+// through it, and its own after-delete hooks are skipped then. Only outside a
+// transaction does a missing record prove that the delete went through.
+func DeleteOrphanedAssetsAfterErrorHandler() func(e *core.RecordErrorEvent) error {
+	return func(e *core.RecordErrorEvent) error {
+		if e.App.TxInfo() == nil {
+			if _, err := e.App.FindRecordById(e.Record.Collection(), e.Record.Id); errors.Is(err, sql.ErrNoRows) {
+				deleteOrphanedRecordAssets(e.App, e.Record)
+			}
+		}
+		return e.Next()
+	}
+}
+
+func deleteOrphanedRecordAssets(app core.App, record *core.Record) {
+	assetIDs, _ := record.GetRaw(deletedRecordAssetsKey).([]string)
+	if err := util.DeleteAssetsIfOrphaned(app, assetIDs); err != nil {
+		app.Logger().Error(
+			"could not delete the photos a deleted record left unlinked",
+			"collection", record.Collection().Name, "record", record.Id, "error", err,
+		)
+	}
 }

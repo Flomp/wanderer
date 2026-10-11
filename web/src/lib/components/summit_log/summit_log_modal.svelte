@@ -1,3 +1,64 @@
+<script module lang="ts">
+    import {
+        mergePhotoLibraryPluginLinks,
+        photoLibraryPluginLinks,
+        type PhotoLibraryCandidate,
+    } from "$lib/models/photo_library";
+    import type { SummitLog } from "$lib/models/summit_log";
+    import { assetIdFromPhotoURL } from "$lib/util/asset_link_util";
+
+    // Adds the photos picked from the library to the entry before it is saved.
+    // A duplicated entry links its copied photos through `_assetLinks` too, and
+    // an entry not saved yet may still wait for earlier picks, so the new picks
+    // are added to these.
+    export function applyPhotoLibrarySelection(
+        log: Pick<SummitLog, "photos" | "_assetLinks" | "_assetPluginLinks">,
+        candidates: PhotoLibraryCandidate[],
+    ) {
+        const pluginCandidates = candidates.filter((candidate) => candidate.source !== "wanderer");
+        const wandererCandidates = candidates.filter((candidate) => candidate.source === "wanderer");
+        log._assetLinks = Array.from(new Set([
+            ...(log._assetLinks ?? []),
+            ...wandererCandidates.map((candidate) => candidate.assetId),
+        ]));
+        log._assetPluginLinks = mergePhotoLibraryPluginLinks(
+            log._assetPluginLinks,
+            photoLibraryPluginLinks(pluginCandidates),
+        );
+        log.photos = Array.from(new Set([
+            ...(log.photos ?? []),
+            ...wandererCandidates
+                .map((candidate) => candidate.thumbnailUrl)
+                .filter((url): url is string => Boolean(url)),
+        ]));
+    }
+
+    // After a failed save the picks that are still pending stay as cards and
+    // are applied again on the next save. The entry keeps only the rest, so a
+    // pick is not shown twice, and a card removed before then is not saved.
+    export function removePendingPicks(
+        log: Pick<SummitLog, "photos" | "_assetPluginLinks">,
+        candidates: PhotoLibraryCandidate[],
+    ) {
+        const picked = new Set(
+            candidates.filter((candidate) => candidate.source === "wanderer").map((candidate) => candidate.assetId),
+        );
+        const pluginPicks = new Set(
+            candidates
+                .filter((candidate) => candidate.source !== "wanderer")
+                .map((candidate) => `${candidate.pluginId ?? candidate.providerId}/${candidate.assetId}`),
+        );
+        log.photos = log.photos?.filter((photo) => !picked.has(assetIdFromPhotoURL(photo) ?? ""));
+        log._assetPluginLinks = mergePhotoLibraryPluginLinks(
+            log._assetPluginLinks?.map((link) => ({
+                ...link,
+                assetIds: link.assetIds.filter((assetId) => !pluginPicks.has(`${link.pluginId}/${assetId}`)),
+            })),
+            undefined,
+        );
+    }
+</script>
+
 <script lang="ts">
     import { type Snippet } from "svelte";
 
@@ -17,13 +78,8 @@
     import PhotoPicker from "../photo/photo_picker.svelte";
     import PhotoLibraryPickerModal from "../photo/photo_library_picker_modal.svelte";
     import TrailPicker from "../trail/trail_picker.svelte";
-    import type { SummitLog } from "$lib/models/summit_log";
     import Editor from "../base/editor.svelte";
-    import {
-        photoLibraryCandidateKey,
-        photoLibraryPluginLinks,
-        type PhotoLibraryCandidate,
-    } from "$lib/models/photo_library";
+    import { photoLibraryCandidateKey } from "$lib/models/photo_library";
     import type { PluginProvider } from "$lib/models/plugin_provider";
     interface Props {
         children?: Snippet<[any]>;
@@ -77,8 +133,10 @@
         initialValues: $summitLog,
         extend: validator({ schema: ClientSummitLogCreateSchema }),
         onSubmit: async (form) => {
+            // A copied photo the user removed stays in `_assetLinks` but is not
+            // linked, so without photos nothing is linked by ID.
             if (
-                !has_asset_attachments({ files: form._photos, assetIds: form._assetLinks, pluginLinks: form._assetPluginLinks }) &&
+                !has_asset_attachments({ files: form._photos, pluginLinks: form._assetPluginLinks }) &&
                 !form.photos?.length &&
                 !pendingCandidates.length &&
                 form.expand?.gpx_data
@@ -99,22 +157,12 @@
             }
 
             if (pendingCandidates.length) {
-                const pluginCandidates = pendingCandidates.filter((candidate) => candidate.source !== "wanderer");
-                const wandererCandidates = pendingCandidates.filter((candidate) => candidate.source === "wanderer");
-                form._assetLinks = wandererCandidates.map((candidate) => candidate.assetId);
-                form._assetPluginLinks = photoLibraryPluginLinks(pluginCandidates);
-                form.photos = [
-                    ...(form.photos ?? []),
-                    ...wandererCandidates
-                        .map((candidate) => candidate.thumbnailUrl)
-                        .filter((url): url is string => Boolean(url)),
-                ];
+                applyPhotoLibrarySelection(form, pendingCandidates);
             }
 
             if ((await onsave?.(form)) === false) {
                 // The save callback keeps the server ID and remaining requests
                 // in this form. Retain their previews without resetting the dialog.
-                setFields(form);
                 pendingCandidates = pendingCandidates.filter((candidate) =>
                     candidate.source === "wanderer"
                         ? form._assetLinks?.includes(candidate.assetId)
@@ -123,6 +171,8 @@
                             link.assetIds.includes(candidate.assetId),
                         ),
                 );
+                removePendingPicks(form, pendingCandidates);
+                setFields(form);
                 return;
             }
             modal.closeModal!();

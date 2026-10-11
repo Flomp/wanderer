@@ -11,14 +11,12 @@ import (
 	"pocketbase/util"
 	"time"
 
-	"github.com/go-ap/activitypub"
-	pub "github.com/go-ap/activitypub"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func CreateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+func CreateTrailHandler(client meilisearch.ServiceManager, updates *FederationUpdates) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
 
@@ -58,16 +56,9 @@ func CreateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return nil
 		}
 
-		ctx, err := util.GetSafeActorContext(nil, userActor)
-
-		if err != nil {
-			return err
-		}
-
-		err = federation.CreateTrailActivity(e.App, ctx, e.Record, activitypub.CreateType)
-		if err != nil {
-			return err
-		}
+		// The photos are linked after the trail is saved, so the Create of a
+		// public trail waits for them and carries them.
+		updates.EnqueueCreate(e.Record)
 
 		_, err = util.InsertIntoFeed(e.App, userActor.Id, userActor.Id, record.Id, util.TrailFeed)
 		if err != nil {
@@ -99,7 +90,7 @@ func setTrailCompletedAt(record *core.Record, now time.Time) {
 	}
 }
 
-func UpdateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEvent) error {
+func UpdateTrailHandler(client meilisearch.ServiceManager, updates *FederationUpdates) func(e *core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		record := e.Record
 		userActor, err := e.App.FindRecordById("activitypub_actors", record.GetString(("author")))
@@ -129,17 +120,10 @@ func UpdateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
-		ctx, err := util.GetSafeActorContext(nil, userActor)
-
-		if err != nil {
-			return err
-		}
-
-		err = federation.CreateTrailActivity(e.App, ctx, e.Record, pub.UpdateType)
-		if err != nil {
-			return err
-		}
-
+		// The editor saves the photo links after the trail, so the activity
+		// waits for them and goes out once for the whole save. A trail that
+		// has just been made public goes out as a Create.
+		updates.EnqueueTrailSave(e.Record)
 		return nil
 	}
 }
@@ -251,17 +235,6 @@ func MaterializePrivateRemoteAssetOnPublicLink(app core.App, targetField string)
 			defer func() { e.App = originalApp }()
 			return e.Next()
 		})
-	}
-}
-
-func DeleteTrailAssetCleanupHandler() func(e *core.RecordRequestEvent) error {
-	return func(e *core.RecordRequestEvent) error {
-		assetIDs, err := util.AssetIDsForTrail(e.App, e.Record.Id)
-		if err != nil {
-			return err
-		}
-
-		return deleteThenRemoveOrphanedAssets(e, assetIDs)
 	}
 }
 

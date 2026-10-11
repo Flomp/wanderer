@@ -12,6 +12,8 @@ type assetLibraryRequest struct {
 	TakenBefore  string       `json:"takenBefore,omitempty"`
 	DoubleRadius bool         `json:"doubleRadius,omitempty"`
 	AssetIDs     []string     `json:"assetIds,omitempty"`
+	// ThumbnailSize is the host's size class for a thumbnail call.
+	ThumbnailSize string `json:"thumbnailSize,omitempty"`
 }
 
 type assetBounds struct {
@@ -32,6 +34,7 @@ type assetCandidate struct {
 	AssetID           string  `json:"assetId"`
 	OriginalFileName  string  `json:"originalFileName"`
 	TakenAt           string  `json:"takenAt"`
+	CapturedAt        string  `json:"capturedAt,omitempty"`
 	Lat               float64 `json:"lat"`
 	Lon               float64 `json:"lon"`
 	Distance          float64 `json:"distance"`
@@ -46,6 +49,7 @@ type immichAsset struct {
 	ID               string         `json:"id"`
 	OwnerID          string         `json:"ownerId"`
 	FileCreatedAt    string         `json:"fileCreatedAt"`
+	LocalDateTime    string         `json:"localDateTime"`
 	OriginalFileName string         `json:"originalFileName"`
 	ExifInfo         immichExifInfo `json:"exifInfo"`
 	Thumbhash        string         `json:"thumbhash,omitempty"`
@@ -54,9 +58,11 @@ type immichAsset struct {
 }
 
 type immichExifInfo struct {
-	Latitude    *float64 `json:"latitude"`
-	Longitude   *float64 `json:"longitude"`
-	City        string   `json:"city"`
-	Country     string   `json:"country"`
-	Description string   `json:"description"`
+	Latitude         *float64 `json:"latitude"`
+	Longitude        *float64 `json:"longitude"`
+	DateTimeOriginal string   `json:"dateTimeOriginal"`
+	TimeZone         string   `json:"timeZone"`
+	City             string   `json:"city"`
+	Country          string   `json:"country"`
+	Description      string   `json:"description"`
 }
