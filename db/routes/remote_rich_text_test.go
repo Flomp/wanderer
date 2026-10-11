@@ -64,6 +64,11 @@ func TestRemoteSyncExplicitlyBoundsRichText(t *testing.T) {
 	save(lists)
 	collection("waypoints", "description", 0)
 	collection("summit_logs", "text", 0)
+	for name, target := range map[string]string{"trail_assets": "trail", "waypoint_assets": "waypoint", "summit_log_assets": "summit_log"} {
+		links := core.NewBaseCollection(name)
+		links.Fields.Add(&core.TextField{Name: target}, &core.TextField{Name: "asset"})
+		save(links)
+	}
 
 	longText := `<p onclick="blocked()"><strong>Safe ` + strings.Repeat(`'"&山🚲`, 4000) + `</strong></p>`
 	assertStored := func(collection, id, field string, limit int) {

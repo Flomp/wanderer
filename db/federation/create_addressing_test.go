@@ -70,6 +70,8 @@ func setupAddressingTestApp(t *testing.T) *addressingFixture {
 	add("lists", append(text("iri", "name", "description"), &core.BoolField{Name: "public"}, rel("author", actors.Id))...)
 	add("comments", append(text("iri", "text"), rel("author", actors.Id), rel("trail", trails.Id))...)
 	add("summit_logs", append(text("iri", "text"), rel("author", actors.Id), rel("trail", trails.Id))...)
+	add("trail_assets", text("trail", "asset")...)
+	add("summit_log_assets", text("summit_log", "asset")...)
 	add("activitypub_activities", append(text("iri", "type", "actor", "published"),
 		&core.JSONField{Name: "to"}, &core.JSONField{Name: "cc"}, &core.JSONField{Name: "object"})...)
 

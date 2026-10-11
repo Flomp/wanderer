@@ -84,6 +84,10 @@ services:
       POCKETBASE_ENCRYPTION_KEY: <YOUR_ENCRYPTION_KEY_HERE>
       POCKETBASE_PROXY_SECRET: <YOUR_PROXY_KEY_HERE>
       ORIGIN: http://localhost:3000
+      OVERPASS_API_URL: https://overpass-api.de
+      NOMINATIM_URL: https://nominatim.openstreetmap.org
+      # Optional: trust private CAs for PocketBase/Go server-side API calls
+      # SSL_CERT_FILE: /etc/ssl/private-ca/ca.pem
     ports:
       - "8090:8090"
     networks:
@@ -92,6 +96,7 @@ services:
     volumes:
       - ./data/pb_data:/pb_data
       - ./data/plugins:/data/plugins
+      # - ./certs/ca.pem:/etc/ssl/private-ca/ca.pem:ro
     healthcheck:
       test: ["CMD", "/curl", "--fail", "http://localhost:8090/health"]
       interval: 15s
@@ -121,7 +126,7 @@ services:
       VALHALLA_URL: https://valhalla1.openstreetmap.de
       NOMINATIM_URL: https://nominatim.openstreetmap.org
       PUBLIC_MAP_MAX_POLYLINES: 100
-      # Optional: trust private CAs for server-side API calls
+      # Optional: trust private CAs for Node.js server-side API calls
       # NODE_EXTRA_CA_CERTS: /etc/ssl/private-ca/ca.pem
     volumes:
       - ./data/uploads:/app/uploads

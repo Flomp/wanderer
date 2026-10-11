@@ -174,17 +174,43 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordCreateRequest("user_subcategory_preferences").BindFunc(hooks.ValidateUserSubcategoryPreferenceHandler())
 	app.OnRecordUpdateRequest("user_subcategory_preferences").BindFunc(hooks.ValidateUserSubcategoryPreferenceHandler())
 
+	// Trail and summit log saves share their Creates and Updates with their photo links.
+	federationUpdates := hooks.NewFederationUpdates(app)
+
 	app.OnRecordCreateRequest("trails").BindFunc(hooks.ValidateTrailSubcategoryHandler())
+	app.OnRecordUpdateRequest("trails").BindFunc(hooks.UseTrailRequestContext)
 	app.OnRecordUpdateRequest("trails").BindFunc(hooks.ValidateTrailSubcategoryHandler())
 	app.OnRecordCreate("trails").BindFunc(hooks.SetTrailCompletedAtHandler())
 	app.OnRecordUpdate("trails").BindFunc(hooks.SetTrailCompletedAtHandler())
-	app.OnRecordAfterCreateSuccess("trails").BindFunc(hooks.CreateTrailHandler(client))
-	app.OnRecordAfterUpdateSuccess("trails").BindFunc(hooks.UpdateTrailHandler(client))
+	app.OnRecordUpdate("trails").BindFunc(hooks.MaterializePrivateRemoteAssetLinksBeforePublish(app))
+	app.OnRecordAfterCreateSuccess("trails").BindFunc(hooks.CreateTrailHandler(client, federationUpdates))
+
+	app.OnFileDownloadRequest("assets").BindFunc(hooks.AuthorizeAssetFileDownload())
+	app.OnRecordUpdate("assets").BindFunc(hooks.InvalidateAssetContentHashOnFileChange())
+	app.OnRecordAfterCreateSuccess("assets").BindFunc(hooks.ReindexTrailOnAssetChange(client))
+	app.OnRecordAfterUpdateSuccess("assets").BindFunc(hooks.ReindexTrailOnAssetChange(client))
+	app.OnRecordAfterDeleteSuccess("assets").BindFunc(hooks.ReindexTrailOnAssetChange(client))
+	assetLinkReindexHandler := hooks.ReindexTrailOnAssetLinkChange(client)
+	app.OnRecordAfterCreateSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkReindexHandler)
+	app.OnRecordAfterUpdateSuccess("trail_assets").BindFunc(assetLinkReindexHandler)
+	app.OnRecordAfterDeleteSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkReindexHandler)
+	assetLinkFederationHandler := hooks.FederateOnAssetLinkChange(federationUpdates)
+	app.OnRecordAfterCreateSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkFederationHandler)
+	app.OnRecordAfterUpdateSuccess("trail_assets").BindFunc(assetLinkFederationHandler)
+	app.OnRecordAfterDeleteSuccess("trail_assets", "waypoint_assets", "summit_log_assets").BindFunc(assetLinkFederationHandler)
+	app.OnRecordCreate("trail_assets").BindFunc(hooks.MaterializePrivateRemoteAssetOnPublicLink(app, "trail"))
+	app.OnRecordCreate("waypoint_assets").BindFunc(hooks.MaterializePrivateRemoteAssetOnPublicLink(app, "waypoint"))
+	app.OnRecordCreate("summit_log_assets").BindFunc(hooks.MaterializePrivateRemoteAssetOnPublicLink(app, "summit_log"))
+	// Ahead of the other delete hooks of these collections, which stop at their first error.
+	app.OnRecordDelete("trails", "waypoints", "summit_logs").BindFunc(hooks.CollectDeletedRecordAssetsHandler())
+	app.OnRecordAfterDeleteSuccess("trails", "waypoints", "summit_logs").BindFunc(hooks.DeleteOrphanedAssetsHandler())
+	app.OnRecordAfterDeleteError("trails", "waypoints", "summit_logs").BindFunc(hooks.DeleteOrphanedAssetsAfterErrorHandler())
+	app.OnRecordAfterUpdateSuccess("trails").BindFunc(hooks.UpdateTrailHandler(client, federationUpdates))
 	app.OnRecordDelete("trails").BindFunc(hooks.CollectTrailDeleteRecipientsHandler())
 	app.OnRecordAfterDeleteSuccess("trails").BindFunc(hooks.DeleteTrailHandler(client))
 
-	app.OnRecordCreateRequest("summit_logs").BindFunc(hooks.CreateSummitLogHandler(client))
-	app.OnRecordUpdateRequest("summit_logs").BindFunc(hooks.UpdateSummitLogHandler())
+	app.OnRecordCreateRequest("summit_logs").BindFunc(hooks.CreateSummitLogHandler(client, federationUpdates))
+	app.OnRecordUpdateRequest("summit_logs").BindFunc(hooks.UpdateSummitLogHandler(federationUpdates))
 	app.OnRecordAfterDeleteSuccess("summit_logs").BindFunc(hooks.DeleteSummitLogHandler(client))
 
 	app.OnRecordCreateRequest("waypoints").BindFunc(hooks.CreateWaypointHandler())
@@ -223,6 +249,7 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 	app.OnRecordAfterCreateSuccess("plugin_instances").BindFunc(hooks.CreateUpdatePluginInstanceSuccessHandler())
 	app.OnRecordUpdate("plugin_instances").BindFunc(hooks.UpdatePluginInstanceHandler())
 	app.OnRecordAfterUpdateSuccess("plugin_instances").BindFunc(hooks.CreateUpdatePluginInstanceSuccessHandler())
+	app.OnRecordDeleteRequest("plugin_instances").BindFunc(hooks.DeletePluginInstanceHandler())
 
 	app.OnRecordsListRequest("feed", "profile_feed").BindFunc(hooks.ListFeedHandler())
 
@@ -230,7 +257,7 @@ func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceMa
 
 	app.OnRecordValidate().BindFunc(util.SanitizeHTML())
 
-	app.OnServe().BindFunc(onBeforeServeHandler(client))
+	app.OnServe().BindFunc(onBeforeServeHandler(client, federationUpdates))
 
 	app.OnBootstrap().BindFunc(hooks.OnBootstrapHandler())
 }
@@ -239,10 +266,10 @@ func setupCommands(app *pocketbase.PocketBase) {
 	app.RootCmd.AddCommand(commands.Dedup(app))
 }
 
-func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.ServeEvent) error {
+func onBeforeServeHandler(client meilisearch.ServiceManager, federationUpdates *hooks.FederationUpdates) func(se *core.ServeEvent) error {
 	return func(se *core.ServeEvent) error {
-		registerRoutes(se, client)
-		registerCronJobs(se.App, client)
+		registerRoutes(se, client, federationUpdates)
+		registerCronJobs(se.App, client, federationUpdates)
 		initData(se.App, client)
 
 		return se.Next()
@@ -250,7 +277,7 @@ func onBeforeServeHandler(client meilisearch.ServiceManager) func(se *core.Serve
 
 }
 
-func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
+func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager, federationUpdates *hooks.FederationUpdates) {
 	se.Router.GET("/health", routes.Health)
 
 	se.Router.POST("/auth/token", routes.AuthToken)
@@ -259,9 +286,15 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.POST("/tags/lookup", routes.TagLookup)
 	se.Router.POST("/category-preferences/reorder", routes.CategoryPreferencesReorder)
 	se.Router.POST("/subcategory-preferences/reorder", routes.SubcategoryPreferencesReorder)
+	se.Router.GET("/geocoding/reverse", routes.GeocodingReverse)
+	se.Router.GET("/geocoding/search", routes.GeocodingSearch)
 
 	se.Router.POST("/trail-merge/suggest", routes.TrailMergeSuggest)
-	se.Router.POST("/trail-merge", routes.TrailMerge(client))
+	se.Router.POST("/trail-merge", routes.TrailMerge(client, federationUpdates.EnqueueCreate))
+	se.Router.POST("/trails/{id}/publication", routes.TrailPublicationStart)
+	se.Router.GET("/trails/{id}/publication", routes.TrailPublicationStatus)
+	se.Router.POST("/asset-merge/suggest", routes.AssetMergeSuggest)
+	se.Router.POST("/asset-merge", routes.AssetMerge)
 
 	se.Router.GET("/search/token", routes.SearchToken(client))
 
@@ -270,9 +303,28 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.POST("/plugins/auth/validate", routes.PluginSystemSessionAuthValidate)
 	se.Router.POST("/plugins/category-remap/preview", routes.PluginSystemCategoryRemapPreview)
 	se.Router.POST("/plugins/category-remap/apply", routes.PluginSystemCategoryRemapApply)
+	se.Router.POST("/plugins/assets/auto-attach", routes.PluginSystemAssetAutoAttach)
+	se.Router.GET("/plugins/assets/maintenance/trails", routes.PluginSystemAssetMaintenanceTrails)
+	se.Router.POST("/plugins/assets/maintenance/attach", routes.PluginSystemAssetMaintenanceAttach)
+	se.Router.POST("/plugins/assets/{plugin}/check", routes.PluginSystemAssetCheck)
+	se.Router.POST("/plugins/assets/{plugin}/candidates", routes.PluginSystemAssetCandidates)
+	se.Router.POST("/plugins/assets/{plugin}/import", routes.PluginSystemAssetImport)
+	se.Router.POST("/plugins/assets/{plugin}/import-to-waypoint", routes.PluginSystemAssetImportToWaypoint)
+	se.Router.POST("/plugins/assets/{plugin}/import-to-target", routes.PluginSystemAssetImportToTarget)
+	se.Router.GET("/plugins/assets/{plugin}/thumbnail/{asset}", routes.PluginSystemAssetThumbnail)
+	se.Router.GET("/plugins/assets/{plugin}/remote-assets-summary", routes.PluginSystemAssetRemoteAssetsSummary)
+	se.Router.POST("/plugins/assets/{plugin}/materialize-all", routes.PluginSystemAssetMaterializeAll)
+	se.Router.POST("/plugins/assets/{plugin}/repair-remote-assets", routes.PluginSystemAssetRepairRemoteAssets)
+	se.Router.POST("/plugins/assets/{plugin}/delete-remote-assets", routes.PluginSystemAssetDeleteRemoteAssets)
+	se.Router.GET("/plugins/assets/jobs/materialize/{id}", routes.PluginSystemAssetMaterializeStatus)
 	se.Router.POST("/plugins/oauth/start", routes.PluginSystemOAuthStart)
 	se.Router.POST("/plugins/oauth/callback", routes.PluginSystemOAuthCallback)
 	se.Router.POST("/plugins/oauth/revoke", routes.PluginSystemOAuthRevoke)
+
+	se.Router.POST("/assets/library", routes.AssetLibraryCandidates)
+	se.Router.DELETE("/assets/orphans", routes.AssetOrphansDelete)
+	se.Router.DELETE("/assets/{id}", routes.AssetDelete)
+	se.Router.GET("/assets/{id}/file", routes.AssetFile)
 
 	se.Router.POST("/activitypub/activity/process", routes.ActivitypubActivityProcess)
 	se.Router.GET("/activitypub/actor", routes.ActivitypubActor)
@@ -289,14 +341,14 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 
 }
 
-func registerCronJobs(app core.App, client meilisearch.ServiceManager) {
+func registerCronJobs(app core.App, client meilisearch.ServiceManager, federationUpdates *hooks.FederationUpdates) {
 	schedule := os.Getenv("POCKETBASE_CRON_SYNC_SCHEDULE")
 	if len(schedule) == 0 {
 		schedule = "0 2 * * *"
 	}
 
 	app.Cron().MustAdd("plugin-sync", schedule, func() {
-		if err := routes.PluginSystemSyncConfigured(context.Background(), app, client); err != nil {
+		if err := routes.PluginSystemSyncConfigured(context.Background(), app, client, federationUpdates.EnqueueCreate); err != nil {
 			warning := fmt.Sprintf("Error syncing with WASM plugins: %v", err)
 			fmt.Println(warning)
 			app.Logger().Error(warning)

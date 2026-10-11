@@ -48,6 +48,24 @@ describe("file_util", () => {
                 "/api/v1/files/e864strfxo14pm4/253ac8164a00ad3/mp4-comparison.png?thumb=600x0",
             );
         });
+
+        it("appends thumb query parameter to asset file paths and wanderer file URLs", () => {
+            expect(getFileURL(dummyRecord, "/api/v1/files/c/r/photo.jpg", "600x0")).toBe(
+                "/api/v1/files/c/r/photo.jpg?thumb=600x0",
+            );
+            expect(getFileURL(dummyRecord, "https://wanderer.example/api/v1/files/c/r/photo.jpg", "600x0")).toBe(
+                "https://wanderer.example/api/v1/files/c/r/photo.jpg?thumb=600x0",
+            );
+        });
+
+        it("does not append thumb query parameter to video asset file paths or URLs", () => {
+            expect(getFileURL(dummyRecord, "/api/v1/files/c/r/clip.mp4", "600x0")).toBe(
+                "/api/v1/files/c/r/clip.mp4",
+            );
+            expect(getFileURL(dummyRecord, "https://wanderer.example/api/v1/files/c/r/clip.webm", "600x0")).toBe(
+                "https://wanderer.example/api/v1/files/c/r/clip.webm",
+            );
+        });
     });
 
     describe("isURL", () => {

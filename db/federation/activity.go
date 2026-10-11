@@ -25,8 +25,56 @@ import (
 
 var httpClient = &http.Client{Timeout: 10 * time.Second}
 
+// deliveries counts the activities PostActivity is still delivering in the
+// background, so that a shutdown can wait for them rather than end them with
+// the process. Unlike a WaitGroup, it may be added to while it is waited for.
+var deliveries struct {
+	mu      sync.Mutex
+	running int
+	// idle is closed when the last running delivery finishes.
+	idle chan struct{}
+}
+
+func startDelivery() {
+	deliveries.mu.Lock()
+	defer deliveries.mu.Unlock()
+	if deliveries.running == 0 {
+		deliveries.idle = make(chan struct{})
+	}
+	deliveries.running++
+}
+
+func finishDelivery() {
+	deliveries.mu.Lock()
+	defer deliveries.mu.Unlock()
+	deliveries.running--
+	if deliveries.running == 0 {
+		close(deliveries.idle)
+	}
+}
+
+// WaitForDeliveries waits until the activities PostActivity is delivering
+// have reached their inboxes or failed to, or until ctx is done. The
+// deliveries run in the background and end with the process.
+func WaitForDeliveries(ctx context.Context) error {
+	deliveries.mu.Lock()
+	running, idle := deliveries.running, deliveries.idle
+	deliveries.mu.Unlock()
+	if running == 0 {
+		return nil
+	}
+	select {
+	case <-idle:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 func PostActivity(app core.App, actor *core.Record, activity *pub.Activity, recipients []string) error {
+	startDelivery()
 	go func() {
+		defer finishDelivery()
 		defer func() {
 			if r := recover(); r != nil {
 				app.Logger().Error(fmt.Sprintf("Recovered from panic in PostActivity: %v", r))

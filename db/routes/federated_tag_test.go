@@ -67,6 +67,9 @@ func setupFederatedTagImport(t *testing.T) (*pbtests.TestApp, *core.Collection, 
 		&core.BoolField{Name: "full_sync_completed"},
 	)
 	save(trails)
+	trailAssets := core.NewBaseCollection("trail_assets")
+	trailAssets.Fields.Add(&core.TextField{Name: "trail"}, &core.TextField{Name: "asset"})
+	save(trailAssets)
 	// Relations to duplicate and empty historical IDs must remain untouched.
 	historical := core.NewRecord(trails)
 	historical.Set("tags", []string{federatedTagOtherID, empty.Id})

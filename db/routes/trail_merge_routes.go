@@ -48,7 +48,9 @@ func TrailMergeSuggest(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, response)
 }
 
-func TrailMerge(client meilisearch.ServiceManager) func(e *core.RequestEvent) error {
+// TrailMerge hands the summit logs a merge creates to announceSummitLog, so
+// that each goes out with its photos; see trailmerge.Merge.
+func TrailMerge(client meilisearch.ServiceManager, announceSummitLog func(*core.Record)) func(e *core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		if e.Auth == nil {
 			return apis.NewUnauthorizedError("trail_merge_auth_required", nil)
@@ -79,7 +81,7 @@ func TrailMerge(client meilisearch.ServiceManager) func(e *core.RequestEvent) er
 
 		ctx, err := util.GetSafeActorContext(e.Request, userActor)
 
-		if err := trailmerge.Merge(e.App, client, ctx, userActor, request.SourceTrailID, request.TargetTrailID, request.Settings); err != nil {
+		if err := trailmerge.Merge(e.App, client, ctx, userActor, request.SourceTrailID, request.TargetTrailID, request.Settings, announceSummitLog); err != nil {
 			return apis.NewBadRequestError(err.Error(), err)
 		}
 

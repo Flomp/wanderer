@@ -1,4 +1,5 @@
 import type { Trail } from '$lib/models/trail';
+import { enrichTrailResponse, withTrailAssetExpands } from '$lib/server/trail_response_util';
 import { Collection, handleError, uploadCreate } from '$lib/util/api_util';
 import { json, type RequestEvent } from '@sveltejs/kit';
 
@@ -7,7 +8,10 @@ import { json, type RequestEvent } from '@sveltejs/kit';
  * /api/v1/trail/form:
  *   put:
  *     summary: Create trail with file upload
- *     description: Creates a new trail with file upload (GPX/photos) and date normalization
+ *     description: >
+ *       Creates a new trail with GPX file upload and date normalization.
+ *       This endpoint no longer accepts photo uploads and returns 400 `trail_photos_form_field_removed` for a `photos` part.
+ *       Upload and attach photos through `PUT /api/v1/assets` with the `trail` target field once the trail exists.
  *     tags:
  *       - Trails
  *     requestBody:
@@ -29,8 +33,18 @@ import { json, type RequestEvent } from '@sveltejs/kit';
  *         description: Internal Server Error
  */
 export async function PUT(event: RequestEvent) {
-    try {        
-        const r = await uploadCreate<Trail>(event, Collection.trails)
+    try {
+        const formData = await event.request.clone().formData();
+        if (formData.has("photos")) {
+            return json({ message: "trail_photos_form_field_removed" }, { status: 400 });
+        }
+
+        let r = await uploadCreate<Trail>(event, Collection.trails)
+        r = await event.locals.pb.collection(Collection.trails).getOne<Trail>(r.id!, {
+            expand: withTrailAssetExpands({
+                expand: event.url.searchParams.get("expand") ?? undefined,
+            }).expand,
+        });
         enrichRecord(r);
         return json(r);
     } catch (e) {
@@ -39,8 +53,5 @@ export async function PUT(event: RequestEvent) {
 }
 
 function enrichRecord(r: Trail) {
-    r.date = r.date?.substring(0, 10) ?? "";
-    for (const log of r.expand?.summit_logs_via_trail ?? []) {
-        log.date = log.date.substring(0, 10);
-    }
+    enrichTrailResponse(r);
 }

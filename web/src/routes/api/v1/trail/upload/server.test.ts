@@ -25,6 +25,7 @@ function request(hits: unknown[] = [], options: { force?: boolean; authenticated
             user: options.authenticated === false ? null : { id: "uploader", actor: "own-actor" },
             settings: { privacy: { trails: "private" } },
             ms: { index },
+            pb: { send: vi.fn() },
         },
         fetch: vi.fn(),
     } as unknown as RequestEvent;

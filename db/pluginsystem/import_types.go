@@ -61,6 +61,11 @@ type Photo struct {
 	Lat         *float64    `json:"lat,omitempty"`
 	Lon         *float64    `json:"lon,omitempty"`
 	Source      MediaSource `json:"source"`
+	// CapturedAt is when the photo was taken by its own metadata, such as
+	// EXIF, unlike a file or upload time in TakenAt. Asset library imports
+	// store it as the photo time and use it to tell apart the passes of a
+	// track that covers the same ground twice.
+	CapturedAt *time.Time `json:"capturedAt,omitempty"`
 }
 
 type MediaSource struct {
@@ -76,4 +81,11 @@ type MediaRef struct {
 	Path      string       `json:"path,omitempty"`
 	Query     []QueryParam `json:"query,omitempty"`
 	AssetID   string       `json:"assetId,omitempty"`
+}
+
+type RemotePhotoAsset struct {
+	PluginID    string      `json:"pluginId"`
+	Filename    string      `json:"filename,omitempty"`
+	ContentType string      `json:"contentType,omitempty"`
+	Source      MediaSource `json:"source"`
 }

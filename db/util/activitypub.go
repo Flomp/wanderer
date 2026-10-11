@@ -20,7 +20,6 @@ import (
 	pub "github.com/go-ap/activitypub"
 	"github.com/go-fed/httpsig"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/security"
 )
 
@@ -349,6 +348,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 		return nil, err
 	}
 
+	photos := []FederatedPhoto{}
 	if t.Attachment != nil {
 
 		attachments, err := pub.ToItemCollection(t.Attachment)
@@ -356,7 +356,6 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 			return nil, err
 		}
 
-		photoURLs := []string{}
 		gpxURL := ""
 		for _, a := range attachments.Collection() {
 			attachment, err := pub.ToObject(a)
@@ -366,25 +365,22 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 			if attachment.Type == pub.DocumentType && attachment.MediaType == "application/xml+gpx" {
 				gpxURL = attachment.URL.GetLink().String()
 			} else if attachment.Type == pub.ImageType {
-				photoURLs = append(photoURLs, attachment.URL.GetLink().String())
-			}
-		}
-
-		if len(photoURLs) > 0 {
-			photos := []*filesystem.File{}
-			for _, purl := range photoURLs {
-				photo, err := filesystem.NewFileFromURL(context.Background(), purl)
-				if err != nil {
-					continue
+				photoURL := attachment.URL.GetLink().String()
+				// older instances federate photos without a stable id; the
+				// URL still dedups repeated deliveries of the same asset
+				canonicalID := attachment.ID.String()
+				if canonicalID == "" {
+					canonicalID = photoURL
 				}
-				photos = append(photos, photo)
+				photos = append(photos, FederatedPhoto{
+					CanonicalID: canonicalID,
+					FileURL:     photoURL,
+				})
 			}
-
-			record.Set("photos", photos)
 		}
 
 		if gpxURL != "" {
-			gpx, err := filesystem.NewFileFromURL(context.Background(), gpxURL)
+			gpx, err := FetchPublicFile(context.Background(), gpxURL, "activitypub-trail.gpx", DefaultPluginMediaMaxBytes)
 			if err != nil {
 				return nil, err
 			}
@@ -394,7 +390,15 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 	}
 
 	SanitizeHTMLFieldsWithLimits(record)
-	return record, app.Save(record)
+	if err := app.Save(record); err != nil {
+		return nil, err
+	}
+
+	if err := ReconcileFederatedPhotoAssets(app, context.Background(), "trail", record.Id, actor.Id, photos); err != nil {
+		return nil, err
+	}
+
+	return record, nil
 }
 
 type trailActivityCategoryMetadata struct {
@@ -558,22 +562,30 @@ func ObjectFromTrail(app core.App, trail *core.Record, mentions *pub.ItemCollect
 		tags.Append(hashtag)
 	}
 
-	photos := trail.GetStringSlice("photos")
+	photoAssets, err := PhotoAssetsForTarget(app, "trail", trail.Id, 3)
+	if err != nil {
+		return nil, err
+	}
 
 	gpx := ""
 	if trail.GetString("gpx") != "" {
 		gpx = fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, trail.GetString("gpx"))
 	}
 
-	attachments := make(pub.ItemCollection, max(len(photos), 2))
-	for i := range min(len(photos), 3) {
-		iri := fmt.Sprintf("%s/api/v1/files/trails/%s/%s", origin, trail.Id, photos[i])
-
-		attachments[i] = pub.Image{
+	attachments := make(pub.ItemCollection, 0, len(photoAssets)+1)
+	for _, asset := range photoAssets {
+		photoURL := AssetPublicMediaURL(asset, origin)
+		if photoURL == "" {
+			continue
+		}
+		attachments.Append(pub.Image{
+			// stable identity so receiving instances can reconcile photos
+			// across repeated update activities instead of duplicating them
+			ID:        pub.ID(CanonicalFederatedAssetID(asset, origin)),
 			Type:      pub.ImageType,
 			MediaType: "image/jpeg",
-			URL:       pub.IRI(iri),
-		}
+			URL:       pub.IRI(photoURL),
+		})
 	}
 	if gpx != "" {
 		attachments.Append(pub.Document{
@@ -679,7 +691,7 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) (
 		}
 
 		if avatarURL != "" {
-			avatar, err := filesystem.NewFileFromURL(context.Background(), avatarURL)
+			avatar, err := FetchPublicFile(context.Background(), avatarURL, "activitypub-avatar", DefaultPluginMediaMaxBytes)
 
 			if err != nil {
 				return nil, err
@@ -710,13 +722,13 @@ func ObjectFromList(app core.App, list *core.Record) (*pub.Object, error) {
 		avatar = fmt.Sprintf("%s/api/v1/files/lists/%s/%s", origin, list.Id, list.GetString("avatar"))
 	}
 
-	attachments := make(pub.ItemCollection, 2)
+	attachments := make(pub.ItemCollection, 0, 1)
 	if avatar != "" {
-		attachments[0] = pub.Image{
+		attachments.Append(pub.Image{
 			Type:      pub.ImageType,
 			MediaType: "image/jpeg",
 			URL:       pub.IRI(avatar),
-		}
+		})
 	}
 
 	activityURL := fmt.Sprintf("%s/lists/@%s/%s", origin, listAuthor.GetString("preferred_username"), list.Id)

@@ -35,6 +35,8 @@
     import emptyStateTrailLight from "$lib/assets/svgs/empty_states/empty_state_trail_light.svg";
     import { theme } from "$lib/stores/theme_store";
     import { show_toast } from "$lib/stores/toast_store.svelte";
+    import { APIError } from "$lib/util/api_util";
+    import type { AssetImportOmission } from "$lib/stores/asset_store";
     import * as M from "maplibre-gl";
     import "photoswipe/style.css";
     import { onMount, untrack } from "svelte";
@@ -46,11 +48,12 @@
     import EmptyStateComment from "../empty_states/empty_state_comment.svelte";
     import EmptyStateDescription from "../empty_states/empty_state_description.svelte";
     import EmptyStatePhotos from "../empty_states/empty_state_photos.svelte";
-    import PhotoGallery from "../photo_gallery.svelte";
+    import PhotoGallery from "../photo/photo_gallery.svelte";
     import ShareInfo from "../share_info.svelte";
     import SummitLogTable from "../summit_log/summit_log_table.svelte";
     import MapWithElevationMaplibre from "./map_with_elevation_maplibre.svelte";
     import TrailTimeline from "./trail_timeline.svelte";
+    import TrailPublicationProgress from "./trail_publication_progress.svelte";
     import {
         summit_logs_create,
         summit_logs_delete,
@@ -69,9 +72,11 @@
     import {
         trails_update,
         trails_update_metadata,
+        trailSaveErrorKey,
     } from "$lib/stores/trail_store";
     import Combobox, { type ComboboxItem } from "../base/combobox.svelte";
     import { tags_index } from "$lib/stores/tag_store";
+    import type { PluginProvider } from "$lib/models/plugin_provider";
     import { withShareToken } from "$lib/util/url_util";
     import { normalizeNewTagName } from "$lib/util/tag_name";
 
@@ -81,6 +86,8 @@
         mode?: "overview" | "map" | "list";
         markers?: M.Marker[];
         activeTab?: number;
+        assetPluginIds?: string[];
+        assetPluginProviders?: PluginProvider[];
     }
 
     let {
@@ -89,6 +96,8 @@
         mode = "map",
         markers = [],
         activeTab = 0,
+        assetPluginIds = [],
+        assetPluginProviders = [],
     }: Props = $props();
 
     let summitLogModal: SummitLogModal;
@@ -96,6 +105,7 @@
     let markTrailAsCompletedModal: ConfirmModal;
 
     let trail = $state(untrack(() => initTrail));
+    let trailPhotos = $derived(trail.photos ?? []);
 
     function trailCategoryIcon() {
         if (trail.expand?.subcategory) {
@@ -240,8 +250,8 @@
     }
 
     function getHeaderPhotos() {
-        if (trail.photos.length) {
-            return trail.photos.slice(0, 3).map((p) => getFileURL(trail, p, "600x0"));
+        if (trailPhotos.length) {
+            return trailPhotos.slice(0, 3).map((p) => getFileURL(trail, p, "600x0"));
         } else {
             return $theme === "light"
                 ? [emptyStateTrailLight]
@@ -288,31 +298,62 @@
         summitLogModal.openModal();
     }
 
-    async function saveSummitLog(log: SummitLog) {
+    async function saveSummitLog(log: SummitLog): Promise<boolean> {
         summitLogCreateLoading = true;
-        if (log.id) {
-            let oldLogIndex = $summitLogs.findIndex((l) => l.id === log.id);
-            if (oldLogIndex < 0) {
-                return;
+        const omissions: AssetImportOmission[] = [];
+        const onOmitted = (items: AssetImportOmission[]) => { omissions.push(...items); };
+        let failed = false;
+        try {
+            if (log.id) {
+                let oldLogIndex = $summitLogs.findIndex((l) => l.id === log.id);
+                if (oldLogIndex < 0) {
+                    return false;
+                }
+                const updatedLog = await summit_logs_update(
+                    $summitLogs[oldLogIndex],
+                    log,
+                    onOmitted,
+                );
+                $summitLogs[oldLogIndex] = updatedLog;
+            } else {
+                log.trail = trail.id;
+                const newLog = await summit_logs_create(log, undefined, undefined, onOmitted);
+                summitLogs.set([...$summitLogs, newLog]);
+                if (
+                    $summitLogs.length == 1 &&
+                    trail.author == $currentUser?.actor &&
+                    !trail.completed
+                ) {
+                    markTrailAsCompletedModal.openModal();
+                }
             }
-            const updatedLog = await summit_logs_update(
-                $summitLogs[oldLogIndex],
-                log,
-            );
-            $summitLogs[oldLogIndex] = updatedLog;
-        } else {
-            log.trail = trail.id;
-            const newLog = await summit_logs_create(log);
-            summitLogs.set([...$summitLogs, newLog]);
-            if (
-                $summitLogs.length == 1 &&
-                trail.author == $currentUser?.actor &&
-                !trail.completed
-            ) {
-                markTrailAsCompletedModal.openModal();
+            return true;
+        } catch (error) {
+            failed = true;
+            const saved = error instanceof APIError ? error.detail?.savedSummitLog as SummitLog | undefined : undefined;
+            if (saved?.id) {
+                summitLogs.set([
+                    ...$summitLogs.filter((entry) => entry.id !== saved.id),
+                    saved,
+                ]);
+            }
+            const errorKey = trailSaveErrorKey(error);
+            const errorText = $_(errorKey === "error-saving-trail" ? "error-saving-summit-log" : errorKey);
+            const omittedText = omissions.length
+                ? ` ${$_("asset-import-partial-warning", { values: { n: omissions.length } })}`
+                : "";
+            show_toast({ type: "error", icon: "close", text: `${errorText}${omittedText}` });
+            return false;
+        } finally {
+            summitLogCreateLoading = false;
+            if (omissions.length && !failed) {
+                show_toast({
+                    type: "warning",
+                    icon: "exclamation-triangle",
+                    text: $_("asset-import-partial-warning", { values: { n: omissions.length } }),
+                }, 8000);
             }
         }
-        summitLogCreateLoading = false;
     }
 
     function beforeConfirmModalOpen(currentSummitLog: SummitLog) {
@@ -507,7 +548,7 @@
                     : 'grid-cols-1'} h-80 rounded-t-3xl overflow-hidden cursor-pointer"
             >
                 <PhotoGallery
-                    photos={trail.photos.map((p) => getFileURL(trail, p))}
+                    photos={trailPhotos.map((p) => getFileURL(trail, p))}
                     bind:this={gallery}
                 ></PhotoGallery>
                 {#each headerPhotos as photo, i}
@@ -515,7 +556,7 @@
                         <!-- svelte-ignore a11y_media_has_caption -->
                         <video
                             class="object-cover h-full w-full"
-                            onclick={trail.photos.length
+                            onclick={trailPhotos.length
                                 ? () => gallery.openGallery(i)
                                 : null}
                             loop
@@ -526,7 +567,7 @@
                         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                         <img
                             class="object-cover h-full w-full"
-                            onclick={trail.photos.length
+                            onclick={trailPhotos.length
                                 ? () => gallery.openGallery(i)
                                 : null}
                             class:row-span-2={i == 0 && headerPhotos.length > 2}
@@ -728,6 +769,10 @@
                     {/if}
                     <TrailDropdown
                         trails={new Set<Trail>([trail])}
+                        onUpdate={(updated) => {
+                            const saved = updated?.find((item) => item.id === trail.id);
+                            if (saved) trail = mergeTrailUpdate(trail, saved);
+                        }}
                         onDelete={() =>
                             history.length ? history.back() : goto("/trails")}
                         onMerge={handleTrailMerge}
@@ -736,6 +781,14 @@
                 </div>
             </div>
         </section>
+        {#if canEditTrail}
+            <TrailPublicationProgress
+                trailId={trail.id}
+                name={trail.name}
+                publicTrail={trail.public}
+                onpublished={(saved) => { trail = mergeTrailUpdate(trail, saved); }}
+            />
+        {/if}
         <section
             class="grid grid-cols-2 sm:grid-cols-5 gap-y-4 py-4 border-b border-input-border px-3"
         >
@@ -921,14 +974,14 @@
                     </div>
                 {/if}
                 {#if activeTab == 1}
-                    {#if trail.photos.length}
+                    {#if trailPhotos.length}
                         <div
                             id="photo-gallery"
                             class="grid grid-cols-1 {mode == 'overview'
                                 ? 'sm:grid-cols-2 md:grid-cols-3'
                                 : ''} gap-4"
                         >
-                            {#each trail.photos ?? [] as photo, i}
+                            {#each trailPhotos as photo, i}
                                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                                 {#if isVideoURL(photo)}
@@ -1043,7 +1096,14 @@
     </section>
 </div>
 
-<SummitLogModal bind:this={summitLogModal} onsave={(log) => saveSummitLog(log)}
+<SummitLogModal
+    bind:this={summitLogModal}
+    onsave={(log) => saveSummitLog(log)}
+    {assetPluginIds}
+    {assetPluginProviders}
+    trailId={trail.id ?? ""}
+    trailData={trail.expand?.gpx_data}
+    trailPolyline={trail.polyline}
 ></SummitLogModal>
 
 <ConfirmModal

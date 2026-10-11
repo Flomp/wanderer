@@ -102,8 +102,50 @@ type RefreshSessionOutput struct {
 }
 
 type SyncLimits struct {
-	MaxItems int `json:"maxItems,omitempty"`
+	MaxItems              int `json:"maxItems,omitempty"`
+	MaxPhotosPerTrail     int `json:"maxPhotosPerTrail,omitempty"`
+	MaxPhotosPerWaypoint  int `json:"maxPhotosPerWaypoint,omitempty"`
+	MaxPhotosPerSummitLog int `json:"maxPhotosPerSummitLog,omitempty"`
 }
+
+// PhotoImportLimits are host-enforced write limits advertised to an asset
+// capability. Candidate search budgets belong in AssetSearchLimits instead.
+type PhotoImportLimits struct {
+	MaxPhotosPerTrail     int `json:"maxPhotosPerTrail,omitempty"`
+	MaxPhotosPerWaypoint  int `json:"maxPhotosPerWaypoint,omitempty"`
+	MaxPhotosPerSummitLog int `json:"maxPhotosPerSummitLog,omitempty"`
+}
+
+// AssetSearchLimits bounds a single asset-candidate search call. MaxItems
+// limits returned candidates, MaxScannedItems limits inspected provider items,
+// and MaxProviderRequests is the plugin's cooperative outbound-request budget.
+type AssetSearchLimits struct {
+	MaxItems            int `json:"maxItems,omitempty"`
+	MaxScannedItems     int `json:"maxScannedItems,omitempty"`
+	MaxProviderRequests int `json:"maxProviderRequests,omitempty"`
+}
+
+// OmittedAsset describes an explicitly requested asset that a plugin could not
+// convert into an importable photo.
+type OmittedAsset struct {
+	AssetID string `json:"assetId"`
+	Reason  string `json:"reason"`
+}
+
+// AssetSearchStats contains plugin-reported observability data. Hosts must not
+// use it to enforce limits because it is not independently trustworthy.
+type AssetSearchStats struct {
+	ScannedItems int `json:"scannedItems,omitempty"`
+}
+
+// Size classes a host sends as request.thumbnailSize in an asset thumbnail
+// call: small for tiles up to 300 pixels on their longest edge, large for
+// bigger previews. Return large media when the field is empty, as hosts
+// without size classes expect.
+const (
+	AssetThumbnailSizeSmall = "small"
+	AssetThumbnailSizeLarge = "large"
+)
 
 type ListInput struct {
 	Instance InstanceRef    `json:"instance"`
@@ -124,6 +166,7 @@ type DetailInput struct {
 	Instance InstanceRef    `json:"instance"`
 	Auth     map[string]any `json:"auth,omitempty"`
 	Options  map[string]any `json:"options,omitempty"`
+	Limits   SyncLimits     `json:"limits,omitempty"`
 	Summary  TrailSummary   `json:"summary"`
 }
 
@@ -181,9 +224,17 @@ type Photo struct {
 	ExternalID  string      `json:"externalId,omitempty"`
 	Filename    string      `json:"filename,omitempty"`
 	ContentType string      `json:"contentType,omitempty"`
+	TakenAt     string      `json:"takenAt,omitempty"`
 	Lat         *float64    `json:"lat,omitempty"`
 	Lon         *float64    `json:"lon,omitempty"`
 	Source      MediaSource `json:"source"`
+	// CapturedAt is when the photo was taken by its own metadata, such as
+	// EXIF, as an RFC 3339 time with an offset. Send a local time without a
+	// time zone as UTC with the Z offset: the host rejects output with a time
+	// that has no offset. Leave it empty when only a file or upload time is
+	// known. Asset library imports store it as the photo time and use it to
+	// tell apart the passes of a track that covers the same ground twice.
+	CapturedAt string `json:"capturedAt,omitempty"`
 }
 
 type MediaSource struct {

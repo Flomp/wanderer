@@ -22,24 +22,14 @@ var SearchWriteOptions = &meilisearch.DocumentOptions{PrimaryKey: meilisearch.St
 // and list documents in full but actor documents by preferred_username only,
 // so a change to any other actor field is only picked up through a bump.
 var SearchDocumentVersions = map[string]int{
-	"trails": 1,
+	"trails": 2,
 	"lists":  1,
 	"actors": 1,
 }
 
-func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares bool) (map[string]interface{}, error) {
+func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares bool, thumbnail string) (map[string]interface{}, error) {
 	if author == nil {
 		return nil, fmt.Errorf("trail %s has missing author reference %q", r.Id, r.GetString("author"))
-	}
-
-	photos := r.GetStringSlice("photos")
-	thumbnail := ""
-	if len(photos) > 0 {
-		thumbnailIndex := r.GetInt("thumbnail")
-		if thumbnailIndex >= len(photos) {
-			thumbnailIndex = 0
-		}
-		thumbnail = photos[thumbnailIndex]
 	}
 
 	tagRecords := r.ExpandedAll("tags")
@@ -243,14 +233,19 @@ func documentFromActorRecord(r *core.Record) (map[string]any, error) {
 var trailSearchExpands = []string{"tags", "category", "trail_share_via_trail", "trail_like_via_trail", "author"}
 
 // TrailSearchDocuments builds the full search documents of a page of trails,
-// expanding their relations together. documents[i] is nil when errs[i] says
-// why record i could not be indexed.
+// expanding their relations and looking up their thumbnails together.
+// documents[i] is nil when errs[i] says why record i could not be indexed.
 func TrailSearchDocuments(app core.App, records []*core.Record) (documents []map[string]any, errs []error) {
-	return searchDocumentsOf(app, records, trailSearchExpands,
-		func(r *core.Record) (map[string]any, error) {
-			return documentFromTrailRecord(r, r.ExpandedOne("author"), true)
-		},
-		func(r *core.Record) (map[string]any, error) { return TrailSearchDocument(app, r) })
+	thumbnails, err := TrailThumbnailURLs(app, records, "")
+	build := func(r *core.Record) (map[string]any, error) {
+		return documentFromTrailRecord(r, r.ExpandedOne("author"), true, thumbnails[r.Id])
+	}
+	buildAlone := func(r *core.Record) (map[string]any, error) { return TrailSearchDocument(app, r) }
+	// A failed thumbnail lookup is reported per trail, as a failed expand is.
+	if err != nil {
+		build = buildAlone
+	}
+	return searchDocumentsOf(app, records, trailSearchExpands, build, buildAlone)
 }
 
 // listSearchExpands are the relations a list's full search document reads.
@@ -294,6 +289,16 @@ func searchDocumentsOf(app core.App, records []*core.Record, expands []string, b
 // TrailSearchDocument builds the full search document of a trail, as a
 // rebuild indexes it.
 func TrailSearchDocument(app core.App, r *core.Record) (map[string]any, error) {
+	thumbnails, err := TrailThumbnailURLs(app, []*core.Record{r}, "")
+	if err != nil {
+		return nil, err
+	}
+	return trailSearchDocument(app, r, thumbnails[r.Id])
+}
+
+// trailSearchDocument is TrailSearchDocument for a trail whose thumbnail was
+// looked up together with others.
+func trailSearchDocument(app core.App, r *core.Record, thumbnail string) (map[string]any, error) {
 	errs := app.ExpandRecord(r, []string{"tags"}, nil)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("failed to expand tags: %v", errs)
@@ -315,14 +320,18 @@ func TrailSearchDocument(app core.App, r *core.Record) (map[string]any, error) {
 		return nil, fmt.Errorf("failed to expand author: %v", errs)
 	}
 
-	return documentFromTrailRecord(r, r.ExpandedOne("author"), true)
+	return documentFromTrailRecord(r, r.ExpandedOne("author"), true, thumbnail)
 }
 
 func IndexTrails(app core.App, trails []*core.Record, client meilisearch.ServiceManager) error {
 	documents := make([]map[string]any, len(trails))
+	thumbnails, err := TrailThumbnailURLs(app, trails, "")
+	if err != nil {
+		return err
+	}
 
 	for i, r := range trails {
-		doc, err := TrailSearchDocument(app, r)
+		doc, err := trailSearchDocument(app, r, thumbnails[r.Id])
 		if err != nil {
 			return err
 		}
@@ -347,7 +356,11 @@ func UpdateTrail(app core.App, r *core.Record, author *core.Record, client meili
 		return fmt.Errorf("meilisearch update trail: failed to expand category: %v", errs)
 	}
 
-	doc, err := documentFromTrailRecord(r, author, false)
+	thumbnail := ""
+	if thumbnails, err := TrailThumbnailURLs(app, []*core.Record{r}, ""); err == nil {
+		thumbnail = thumbnails[r.Id]
+	}
+	doc, err := documentFromTrailRecord(r, author, false, thumbnail)
 	if err != nil {
 		return err
 	}

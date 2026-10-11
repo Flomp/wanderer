@@ -81,7 +81,7 @@ describe.skipIf(!host || !apiKey)("duplicate search against Meilisearch", () => 
         form.set("file", new File(["<gpx/>"], "upload.gpx"));
         const event = {
             request: new Request("http://localhost/api/v1/trail/upload", { method: "PUT", body: form }),
-            locals: { user: { id: "uploader" }, settings: { privacy: { trails: "private" } }, ms: { index: () => ({ search }) } },
+            locals: { user: { id: "uploader" }, settings: { privacy: { trails: "private" } }, ms: { index: () => ({ search }) }, pb: { send: vi.fn() } },
             fetch: vi.fn(),
         } as unknown as RequestEvent;
         const response = await PUT(event);

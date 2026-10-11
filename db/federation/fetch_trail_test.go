@@ -45,6 +45,11 @@ func TestFetchTrailAttributesToTrailAuthor(t *testing.T) {
 	if err := app.Save(trails); err != nil {
 		t.Fatal(err)
 	}
+	trailAssets := core.NewBaseCollection("trail_assets")
+	trailAssets.Fields.Add(&core.TextField{Name: "trail"}, &core.TextField{Name: "asset"})
+	if err := app.Save(trailAssets); err != nil {
+		t.Fatal(err)
+	}
 	for _, name := range []string{"tags", "feed"} {
 		c := core.NewBaseCollection(name)
 		c.Fields.Add(&core.TextField{Name: "name"}, &core.TextField{Name: "item"})

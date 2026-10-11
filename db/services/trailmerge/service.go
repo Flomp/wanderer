@@ -16,6 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 
 	"pocketbase/federation"
+	assetservice "pocketbase/services/assets"
 	"pocketbase/util"
 )
 
@@ -87,6 +88,7 @@ type SuggestGroupsResponse struct {
 type mergeContext struct {
 	App      core.App
 	Client   meilisearch.ServiceManager
+	Context  context.Context
 	Actor    *core.Record
 	ActorID  string
 	Target   *core.Record
@@ -178,7 +180,13 @@ func SuggestGroups(app core.App, actorID string, request SuggestRequest) (*Sugge
 // Merge links a source trail into a target trail in a single transaction.
 // It moves or recreates trail-related content according to the provided
 // settings and keeps the target trail indexed and federated afterwards.
-func Merge(app core.App, client meilisearch.ServiceManager, ctx context.Context, actor *core.Record, sourceTrailID string, targetTrailID string, settings MergeSettings) error {
+//
+// The photo links it adds to the summit logs it creates run their hooks after
+// the commit, and those queue an Update of each log. announce hands the logs
+// to that queue (FederationUpdates.EnqueueCreate in the server), so that each
+// goes out as one Create with its photos. With a nil announce, Merge sends
+// their Creates right away.
+func Merge(app core.App, client meilisearch.ServiceManager, ctx context.Context, actor *core.Record, sourceTrailID string, targetTrailID string, settings MergeSettings, announce func(summitLog *core.Record)) error {
 	if actor == nil {
 		return ErrMissingActor
 	}
@@ -203,6 +211,7 @@ func Merge(app core.App, client meilisearch.ServiceManager, ctx context.Context,
 		mergeCtx := mergeContext{
 			App:      txApp,
 			Client:   client,
+			Context:  ctx,
 			Actor:    actor,
 			ActorID:  actor.Id,
 			Target:   target,
@@ -236,6 +245,10 @@ func Merge(app core.App, client meilisearch.ServiceManager, ctx context.Context,
 			return err
 		}
 
+		if announce != nil {
+			announce(record)
+			continue
+		}
 		if err := federation.CreateSummitLogActivity(app, ctx, record, pub.CreateType); err != nil {
 			return err
 		}
@@ -359,7 +372,11 @@ func buildTargetSelectionStats(
 
 	geometryCentralityScore := trailGeometryCentralityScore(trail, groupTrails, referenceTrails, coordsByTrailID)
 	hasDescription := strings.TrimSpace(trail.GetString("description")) != ""
-	photoCount := len(trail.GetStringSlice("photos"))
+	assets, err := util.PhotoAssetsForTarget(app, "trail", trail.Id, -1)
+	if err != nil {
+		return targetSelectionStats{}, err
+	}
+	photoCount := len(assets)
 	tagCount := len(trail.GetStringSlice("tags"))
 	priorityClass := targetPriorityClass(summitLogCount, externalReferenceCount, commentCount, photoCount, hasDescription)
 
@@ -1191,6 +1208,12 @@ func mergeTrailIntoTarget(ctx mergeContext) (mergeSideEffects, error) {
 		return sideEffects, err
 	}
 
+	if ctx.Settings.Photos {
+		if err := reassignTrailAssets(ctx); err != nil {
+			return sideEffects, err
+		}
+	}
+
 	if ctx.Settings.Delete {
 		if err := ctx.App.Delete(ctx.Source); err != nil {
 			return sideEffects, err
@@ -1198,6 +1221,26 @@ func mergeTrailIntoTarget(ctx mergeContext) (mergeSideEffects, error) {
 	}
 
 	return sideEffects, nil
+}
+
+func reassignTrailAssets(ctx mergeContext) error {
+	links, err := ctx.App.FindRecordsByFilter(
+		"trail_assets",
+		"trail={:trail}",
+		"",
+		-1,
+		0,
+		dbx.Params{"trail": ctx.Source.Id},
+	)
+	if err != nil {
+		return err
+	}
+	for _, link := range links {
+		if _, err := assetservice.EnsurePublicTrailSafeAssetLink(ctx.Context, ctx.App, "trail_assets", "trail", ctx.Target.Id, link.GetString("asset")); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func createTrailSummitLog(ctx mergeContext) (string, error) {
@@ -1222,16 +1265,6 @@ func createTrailSummitLog(ctx mergeContext) (string, error) {
 		return "", err
 	} else if gpxFile != nil {
 		record.Set("gpx", gpxFile)
-	}
-
-	if ctx.Settings.Photos {
-		photos, err := cloneRecordFiles(ctx.App, ctx.Source, "photos")
-		if err != nil {
-			return "", err
-		}
-		if len(photos) > 0 {
-			record.Set("photos", photos)
-		}
 	}
 
 	// Trail descriptions can be longer than the generated summit-log field.
@@ -1285,21 +1318,39 @@ func mergeExistingSummitLogs(ctx mergeContext) ([]string, error) {
 			record.Set("gpx", gpxFile)
 		}
 
-		photos, err := cloneRecordFiles(ctx.App, sourceLog, "photos")
-		if err != nil {
-			return nil, err
-		}
-		if len(photos) > 0 {
-			record.Set("photos", photos)
-		}
-
 		if err := ctx.App.Save(record); err != nil {
 			return nil, err
 		}
+
+		if err := reassignSummitLogAssets(ctx, sourceLog.Id, record.Id); err != nil {
+			return nil, err
+		}
+
 		createdIDs = append(createdIDs, record.Id)
 	}
 
 	return createdIDs, nil
+}
+
+func reassignSummitLogAssets(ctx mergeContext, sourceSummitLogID, targetSummitLogID string) error {
+	links, err := ctx.App.FindRecordsByFilter(
+		"summit_log_assets",
+		"summit_log={:sl}",
+		"",
+		-1,
+		0,
+		dbx.Params{"sl": sourceSummitLogID},
+	)
+	if err != nil {
+		return err
+	}
+	for _, link := range links {
+		assetID := link.GetString("asset")
+		if _, err := assetservice.EnsurePublicTrailSafeAssetLink(ctx.Context, ctx.App, "summit_log_assets", "summit_log", targetSummitLogID, assetID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func isPrimaryTrailSummitLog(source *core.Record, sourceLog *core.Record) bool {
@@ -1528,22 +1579,6 @@ func buildMergedCommentText(app core.App, comment *core.Record) string {
 
 	createdDate := comment.GetDateTime("created").Time().Format("2006-01-02")
 	return fmt.Sprintf("%s (%s)\n\n%s", authorHandle, createdDate, comment.GetString("text"))
-}
-
-func cloneRecordFiles(app core.App, record *core.Record, field string) ([]*filesystem.File, error) {
-	fileNames := record.GetStringSlice(field)
-	files := make([]*filesystem.File, 0, len(fileNames))
-	for _, name := range fileNames {
-		file, err := cloneRecordFileByName(app, record, name)
-		if err != nil {
-			return nil, err
-		}
-		if file != nil {
-			files = append(files, file)
-		}
-	}
-
-	return files, nil
 }
 
 func cloneRecordFile(app core.App, record *core.Record, field string) (*filesystem.File, error) {
