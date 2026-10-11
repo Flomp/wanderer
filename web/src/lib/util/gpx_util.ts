@@ -25,6 +25,10 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, correc
     if (gpx instanceof Error) {
         throw gpx;
     }
+
+    // GaiaGPS and similar planners export saved routes as <rte> with no <trk>.
+    // Treat them as tracks so metrics, the map and export work (#1356).
+    gpx.convertRoutesToTracks();
     if (correctElevation) {
         try {
             await gpx.correctElevation(f)
