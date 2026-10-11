@@ -984,7 +984,7 @@ export class ElevationProfile {
                     if (marker.dataset.thumbLoaded === "1") {
                         return;
                     }
-                    const allMedia = getWaypointPopupMedia(waypoint, "100x0");
+                    const allMedia = getWaypointPopupMedia(waypoint, "600x0");
                     const first = allMedia[0];
                     revokeWaypointPopupMedia(allMedia.slice(1));
                     if (!first) {
