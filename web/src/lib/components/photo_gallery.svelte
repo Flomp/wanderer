@@ -12,16 +12,11 @@
         open?: (idx: number) => void;
     }
 
-    type SlideItem = {
-        src?: string;
-        type?: string;
-        videoSrc?: string;
-        width?: number;
-        height?: number;
-    };
-
     let { photos }: Props = $props();
 
+    export function openGallery(idx: number = 0) {
+        lightbox.loadAndOpen(idx, lightboxDataSource);
+    }
     let lightbox: PhotoSwipeLightbox;
     let lightboxDataSource: DataSource;
 
@@ -45,91 +40,6 @@
         }
     });
 
-    function hasDimensions(item: SlideItem) {
-        return (
-            typeof item.width === "number" &&
-            item.width > 0 &&
-            typeof item.height === "number" &&
-            item.height > 0
-        );
-    }
-
-    function loadItemDimensions(item: SlideItem): Promise<void> {
-        if (hasDimensions(item)) {
-            return Promise.resolve();
-        }
-
-        if (item.type === "video") {
-            return new Promise((resolve) => {
-                const v = document.createElement("video");
-                const finish = () => {
-                    if (v.videoWidth > 0 && v.videoHeight > 0) {
-                        item.width = v.videoWidth;
-                        item.height = v.videoHeight;
-                    }
-                    resolve();
-                };
-                v.addEventListener("loadedmetadata", finish, { once: true });
-                v.addEventListener("error", () => resolve(), { once: true });
-                v.preload = "metadata";
-                v.src = item.videoSrc as string;
-            });
-        }
-
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                item.width = img.naturalWidth;
-                item.height = img.naturalHeight;
-                resolve();
-            };
-            img.onerror = () => resolve();
-            img.src = item.src as string;
-        });
-    }
-
-    function ensureSlideDimensions(
-        ds: SlideItem[],
-        preferIdx?: number,
-        refresh?: ((idx: number) => void) | null,
-    ) {
-        const order = [...ds.keys()];
-        if (
-            typeof preferIdx === "number" &&
-            preferIdx >= 0 &&
-            preferIdx < order.length
-        ) {
-            order.splice(preferIdx, 1);
-            order.unshift(preferIdx);
-        }
-
-        for (const idx of order) {
-            const item = ds[idx];
-            void loadItemDimensions(item).then(() => {
-                if (hasDimensions(item) && refresh) {
-                    refresh(idx);
-                }
-            });
-        }
-    }
-
-    export async function openGallery(idx: number = 0) {
-        if (!lightbox || !Array.isArray(lightboxDataSource)) {
-            return;
-        }
-
-        const items = lightboxDataSource as SlideItem[];
-        const current = items[idx];
-        if (current) {
-            await loadItemDimensions(current);
-        }
-
-        // Warm the rest in the background so swipe does not stretch.
-        ensureSlideDimensions(items, idx);
-
-        lightbox.loadAndOpen(idx, lightboxDataSource);
-    }
-
     onMount(() => {
         lightboxDataSource = photos.map((p) => {
             if (isVideoURL(p)) {
@@ -145,7 +55,6 @@
         lightbox = new PhotoSwipeLightbox({
             dataSource: lightboxDataSource,
             pswpModule: async () => await import("photoswipe"),
-            padding: { top: 20, bottom: 40, left: 20, right: 20 },
         });
         const videoPlugin = new PhotoSwipeVideoPlugin(lightbox);
 
@@ -162,11 +71,30 @@
             const ds = pswp?.options?.dataSource;
 
             if (Array.isArray(ds)) {
-                ensureSlideDimensions(
-                    ds as SlideItem[],
-                    pswp?.currIndex,
-                    (i) => pswp?.refreshSlideContent(i),
-                );
+                for (let idx = 0, len = ds.length; idx < len; idx++) {
+                    const item = ds[idx];                    
+                    if (item.type === "video") {
+                        const v = document.createElement("video");
+                        v.addEventListener(
+                            "loadedmetadata",
+                            function () {
+                                item.width = this.videoWidth;
+                                item.height = this.videoHeight;
+                                pswp?.refreshSlideContent(idx);                                
+                            },
+                            false,
+                        );
+                        v.src = item.videoSrc as string
+                    } else {
+                        const img = new Image();
+                        img.onload = () => {
+                            item.width = img.naturalWidth;
+                            item.height = img.naturalHeight;
+                            pswp?.refreshSlideContent(idx);
+                        };
+                        img.src = item.src as string;
+                    }
+                }
             }
         });
 
