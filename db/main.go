@@ -247,6 +247,12 @@ func registerRoutes(se *core.ServeEvent, client meilisearch.ServiceManager) {
 	se.Router.POST("/tags/lookup", routes.TagLookup)
 	se.Router.POST("/category-preferences/reorder", routes.CategoryPreferencesReorder)
 	se.Router.POST("/subcategory-preferences/reorder", routes.SubcategoryPreferencesReorder)
+	se.Router.GET("/map-viewer-prefs/account", routes.MapViewerPrefsAccountGet)
+	se.Router.PUT("/map-viewer-prefs/account", routes.MapViewerPrefsAccountPut)
+	se.Router.GET("/map-viewer-prefs/trail/{id}", routes.MapViewerPrefsTrailGet)
+	se.Router.PUT("/map-viewer-prefs/trail/{id}", routes.MapViewerPrefsTrailPut)
+	se.Router.GET("/map-viewer-prefs/list/{id}", routes.MapViewerPrefsListGet)
+	se.Router.PUT("/map-viewer-prefs/list/{id}", routes.MapViewerPrefsListPut)
 
 	se.Router.POST("/trail-merge/suggest", routes.TrailMergeSuggest)
 	se.Router.POST("/trail-merge", routes.TrailMerge(client))

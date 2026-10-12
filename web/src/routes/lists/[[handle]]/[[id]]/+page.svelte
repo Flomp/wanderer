@@ -391,6 +391,7 @@
             }}
             showInfoPopup={true}
             showTerrain={true}
+            viewerListId={selectedList?.id ?? null}
         ></MapWithElevationMaplibre>
     </div>
 

@@ -18,7 +18,10 @@
     import { CaretLayer } from "$lib/vendor/maplibre-layer-manager/caret-layer";
     import { ClusterLayer } from "$lib/vendor/maplibre-layer-manager/cluster-layer";
     import { baseMapStyles } from "$lib/vendor/maplibre-layer-manager/layers";
-    import { LayerManager } from "$lib/vendor/maplibre-layer-manager/maplibre-layer-manager";
+    import {
+        LayerManager,
+        viewerPrefsScope
+    } from "$lib/vendor/maplibre-layer-manager/maplibre-layer-manager";
     import type { OverpassPopupActionFactory } from "$lib/vendor/maplibre-layer-manager/overpass-layer";
     import { PreviewLayer } from "$lib/vendor/maplibre-layer-manager/preview-layer";
     import { TerrainLayer } from "$lib/vendor/maplibre-layer-manager/terrain-layer";
@@ -64,6 +67,7 @@
         onselect?: (trail: Trail) => void;
         onunselect?: (trail: Trail) => void;
         onfullscreen?: () => void;
+        viewerListId?: string | null;
         onmoveend?: (map: M.Map) => void;
         onzoom?: (map: M.Map) => void;
         onclick?: (event: M.MapMouseEvent & Object) => void;
@@ -110,6 +114,7 @@
         oninit,
         autoGeolocateOnDrawing = false,
         buildPoiAnchorAction = undefined,
+        viewerListId = null,
     }: Props = $props();
 
     let mapContainer: HTMLDivElement;
@@ -902,7 +907,13 @@
         };
         map = new M.Map(finalMapOptions);
 
-        layerManager = new LayerManager(map, { overpassActionFactory: buildPoiAnchorAction });
+        layerManager = new LayerManager(map, {
+            overpassActionFactory: buildPoiAnchorAction,
+            scope: viewerPrefsScope(trails.map((trail) => trail.id), viewerListId)
+        });
+        layerManager.refresh().catch(() => {
+            // Offline or anonymous: the viewer keeps browser-local prefs.
+        });
 
         elevationMarker = new FontawesomeMarker(
             {
