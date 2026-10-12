@@ -78,6 +78,32 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, correc
     return { gpx: gpx, trail: trail }
 }
 
+export function joinContiguousTrackSegments(gpx: GPX) {
+    for (const track of gpx.trk ?? []) {
+        const joined: TrackSegment[] = [];
+
+        for (const segment of track.trkseg ?? []) {
+            const points = segment.trkpt ?? [];
+            if (points.length === 0) {
+                continue;
+            }
+
+            const current = joined.at(-1);
+            const last = current?.trkpt?.at(-1);
+            const first = points[0];
+            const meets = last != null && Number(last.$.lat) === Number(first.$.lat) && Number(last.$.lon) === Number(first.$.lon);
+
+            if (current?.trkpt && !current.extensions && !segment.extensions && meets) {
+                current.trkpt.push(...points.slice(1));
+            } else {
+                joined.push(segment);
+            }
+        }
+
+        track.trkseg = joined;
+    }
+}
+
 export async function trail2gpx(trail: Trail, user?: AuthRecord) {
     let gpxTrail = trail;
 
@@ -130,6 +156,8 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
         gpxWpt.name = wp.name
         gpxWpt.sym = wp.icon
     }
+
+    joinContiguousTrackSegments(gpx);
 
     return gpx.toString();
 }
