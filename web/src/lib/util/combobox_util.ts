@@ -8,5 +8,9 @@ export function visibleComboboxItems(
     value: string | ComboboxItem[] | undefined,
     multiple: boolean,
 ): ComboboxItem[] {
-    return items;
+    if (!multiple || !Array.isArray(value)) {
+        return items;
+    }
+    const selected = new Set(value.map((i) => i.text));
+    return items.filter((i) => !selected.has(i.text));
 }
