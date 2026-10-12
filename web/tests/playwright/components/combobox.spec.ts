@@ -58,6 +58,26 @@ for (const dev of [true, false]) {
             expect(errors).toEqual([]);
         });
 
+        test('hides selected suggestions in multiple mode only', async ({ page }) => {
+            const errors = await mount(page, ['wildflowers', 'wild camping', 'winter']);
+            const multiple = page.getByTestId('multiple');
+            const single = page.getByTestId('single');
+            const input = multiple.locator('input');
+            await input.fill('wi');
+            await expect(multiple.locator('.menu-item p')).toHaveText(['wildflowers', 'wild camping', 'winter']);
+            await multiple.locator('.menu-item').nth(0).click();
+            await input.fill('wi');
+            await expect(multiple.locator('.menu-item p')).toHaveText(['wild camping', 'winter']);
+            await multiple.locator('.menu-item').nth(0).click();
+            await input.fill('wi');
+            await multiple.locator('.menu-item').nth(0).click();
+            await input.fill('wi');
+            await expect(multiple.locator('.menu-item')).toHaveCount(0);
+            await single.locator('input').fill('wi');
+            await expect(single.locator('.menu-item p')).toHaveText(['wildflowers', 'wild camping', 'winter']);
+            expect(errors).toEqual([]);
+        });
+
         test('highlights regex metacharacters as literal text without runtime errors', async ({ page }) => {
             const errors = await mount(page, ['Grüezi [route].* (🌍) \\ $']);
             const single = page.getByTestId('single');
