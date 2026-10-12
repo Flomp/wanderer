@@ -38,7 +38,6 @@ describe("visibleComboboxItems", () => {
             true,
         );
         expect(result).toEqual([]);
-        expect(result.length > 0).toBe(false);
     });
 
     it("does not filter in single mode", () => {

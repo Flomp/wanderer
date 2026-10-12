@@ -67,12 +67,16 @@ for (const dev of [true, false]) {
             await expect(multiple.locator('.menu-item p')).toHaveText(['wildflowers', 'wild camping', 'winter']);
             await multiple.locator('.menu-item').nth(0).click();
             await input.fill('wi');
+            await expect(multiple.locator('ul.menu')).toHaveCount(1);
             await expect(multiple.locator('.menu-item p')).toHaveText(['wild camping', 'winter']);
             await multiple.locator('.menu-item').nth(0).click();
             await input.fill('wi');
             await multiple.locator('.menu-item').nth(0).click();
             await input.fill('wi');
-            await expect(multiple.locator('.menu-item')).toHaveCount(0);
+            // Every match is selected: the input keeps focus and its text, but the menu itself is not rendered.
+            await expect(input).toBeFocused();
+            await expect(input).toHaveValue('wi');
+            await expect(multiple.locator('ul.menu')).toHaveCount(0);
             await single.locator('input').fill('wi');
             await expect(single.locator('.menu-item p')).toHaveText(['wildflowers', 'wild camping', 'winter']);
             expect(errors).toEqual([]);

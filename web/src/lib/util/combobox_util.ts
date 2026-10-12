@@ -2,7 +2,7 @@ import type { ComboboxItem } from "$lib/components/base/combobox.svelte";
 
 // Suggestions the combobox should offer. In multiple mode, items that are
 // already selected are left out (matched by text, like the component does when
-// adding an item). Single mode is unchanged.
+// adding an item). In single mode all items are returned.
 export function visibleComboboxItems(
     items: ComboboxItem[],
     value: string | ComboboxItem[] | undefined,
