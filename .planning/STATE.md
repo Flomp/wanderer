@@ -5,10 +5,10 @@ current_phase: 39
 current_phase_name: unified-tile-model
 status: executing
 stopped_at: Phase 40 context gathered
-last_updated: "2026-10-06T10:40:32.654Z"
+last_updated: "2026-10-14T15:40:27.744Z"
 last_activity: 2026-10-05
 last_activity_desc: "Completed quick task 261005-pwz: Sync status banner on the trail detail screen"
-state_head: f35d4286e6091ae0f274737de732dd80be56d761
+state_head: 2ffb6b401b9238669fd2d74d10582b39845fca63
 progress:
   total_phases: 6
   completed_phases: 5
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-08-07)
 Phase: 39 (unified-tile-model) — EXECUTING
 Plan: 9 of 9
 Status: Ready to execute
-Last activity: 2026-10-05 - Completed quick task 261005-pwz: Sync status banner on the trail detail screen
+Last activity: 2026-10-14 - Completed quick task 261014-nqn: Namespace-based route anchors: web stores drawn routes as one marked segment (PR #1377), app mirrors it
 
 ## v1.8 Phases — SHIPPED 2026-08-07
 
@@ -540,6 +540,7 @@ Recent decisions affecting current work:
 | 261005-grz | Persist ended recordings as local drafts: new `draft` TrailSyncState (appended, index 4) excluded from the upload drain and manual retry; ending a recording writes the draft row before clearing the active-nav session (and stops the persist timer); edit-form save promotes draft → pending on the same row; "Draft" chip. Fixes recordings lost when the OS kills the app before Save. CTA/"Upload as is" deferred to round 2. flutter test green except pre-existing settings_screen_test; not verified on device. | 2026-10-05 | c2ca3503d,a8a8ccde6,7f435bce4 (l10n key landed in 741fb36b2) | Needs Review | [261005-grz-…](./quick/261005-grz-persist-ended-recordings-as-local-drafts/) |
 | 261005-pwz | Sync status section on the trail detail screen (round 2 of recording drafts): shared per-state colors for chip + section (amber draft, red failed, neutral pending/uploading); section below the stat chips replaces the detail-screen chip — draft: Upload / Discard (confirm), pending: Upload now (retry, online only), uploading: spinner, failed: Retry. Owner-scoped promoteDraftToPending + discardDraft. DESIGN.md note on disk only (file is gitignored). flutter test green except pre-existing settings_screen_test; not verified on device. | 2026-10-05 | 341f40830,17b8abd65,25ee4dce4,c29f4114d | Needs Review | [261005-pwz-…](./quick/261005-pwz-sync-status-banner-on-the-trail-detail-s/) |
 | 261005-kif | Android: trust user-installed CA certificates in dart:io (#1255). MainActivity method channel returns `user:` certs from AndroidCAStore; main() adds them to SecurityContext.defaultContext before any HTTP client. Read at launch only. 15 new tests green; Kotlin not compiled, not verified on device. | 2026-10-05 | e582380fd,3cf73e73d | Needs Review | [261005-kif-…](./quick/261005-kif-android-trust-user-installed-ca-certific/) |
+| 261014-nqn | Namespace-based route anchors: web stores drawn routes as one marked segment (PR #1377), app mirrors it | 2026-10-14 | 2ffb6b401 | — | [261014-nqn-namespace-based-route-anchors-web-save-t](./quick/261014-nqn-namespace-based-route-anchors-web-save-t/) |
 
 ## Deferred Items
 
