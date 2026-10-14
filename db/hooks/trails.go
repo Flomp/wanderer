@@ -137,7 +137,7 @@ func UpdateTrailHandler(client meilisearch.ServiceManager) func(e *core.RecordEv
 			return err
 		}
 
-		return nil
+		return announceTrailMadePrivate(e)
 	}
 }
 

@@ -55,6 +55,15 @@ func (c *inboxCounter) url() string {
 	return c.server.URL + "/inbox"
 }
 
+// pathURL is a second inbox on this counter's server. Every POST counts,
+// whichever path it arrives on.
+func (c *inboxCounter) pathURL(path string) string {
+	if path == "" || path[0] != '/' {
+		path = "/" + path
+	}
+	return c.server.URL + path
+}
+
 // waitForHits polls until the inbox has seen at least want deliveries or the
 // deadline passes, then returns the count. Delivery is asynchronous, so a
 // "nothing arrived" assertion has to give it time to be wrong.

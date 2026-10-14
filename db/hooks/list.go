@@ -94,7 +94,7 @@ func UpdateListHandler(client meilisearch.ServiceManager) func(e *core.RecordEve
 			return err
 		}
 
-		return nil
+		return announceListMadePrivate(e)
 	}
 }
 
