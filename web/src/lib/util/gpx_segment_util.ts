@@ -1,10 +1,10 @@
-import type GPX from "$lib/models/gpx/gpx";
+import GPX from "$lib/models/gpx/gpx";
 import TrackSegment from "$lib/models/gpx/track-segment";
 import GPXWaypoint from "$lib/models/gpx/waypoint";
 
 // The route editor takes its anchors from the boundaries between track
-// segments. When segments are joined for export, the point where two of them
-// met is marked with this extension so the editor can split the track again.
+// segments. When a drawn route is saved or exported, the point where two
+// segments met is marked with this extension so the editor can split it again.
 export const routeAnchorNamespace = "https://wanderer.to/xmlns/gpx/1";
 const routeAnchorElement = "wanderer:anchor";
 
@@ -98,4 +98,10 @@ export function splitTrackSegmentsAtAnchors(gpx: GPX) {
     }
 
     delete (gpx.$ as Record<string, string>)["xmlns:wanderer"];
+}
+
+export function routeToStoredGpx(gpx: GPX): string {
+    const stored = GPX.parse(gpx.toString());
+    joinContiguousTrackSegments(stored);
+    return stored.toString();
 }
