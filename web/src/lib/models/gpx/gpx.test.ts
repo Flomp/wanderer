@@ -258,6 +258,12 @@ describe("GPX.parse", () => {
         expect(gpx.features.elevationGain).toBeGreaterThan(0);
     });
 
+    it("reads a route with a single point (#1356)", () => {
+        const gpx = GPX.parse(`<gpx version="1.1" creator="x" xmlns="${GPX_NS}"><rte><rtept lat="47" lon="11"/></rte></gpx>`);
+
+        expect(gpx.rte?.[0].rtept?.map((point) => [point.$.lat, point.$.lon])).toEqual([[47, 11]]);
+    });
+
     it("leaves a file that already has a track untouched", () => {
         const gpx = GPX.parse(
             `<gpx version="1.1" creator="x" xmlns="${GPX_NS}">${route(2)}${track("")}</gpx>`

@@ -170,9 +170,9 @@ export default class GPX {
    * route-only file imports with zero distance, elevation and duration.
    * Planners such as GaiaGPS export saved routes this way (open-wanderer/wanderer#1356).
    */
-  convertRoutesToTracks() {
+  convertRoutesToTracks(): boolean {
     if ((this.trk?.length ?? 0) > 0 || !this.rte?.length) {
-      return;
+      return false;
     }
 
     this.trk = this.rte.map(route => {
@@ -193,6 +193,7 @@ export default class GPX {
 
     this.rte = undefined;
     this._features = undefined;
+    return true;
   }
 
   flatten() {

@@ -27,8 +27,8 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, correc
         throw gpx;
     }
 
-    // GaiaGPS and similar planners export saved routes as <rte> with no <trk>.
-    // Treat them as tracks so metrics, the map and export work (#1356).
+    // Files are converted when they are imported (see fromFile). This covers
+    // route-only files that were stored before that.
     gpx.convertRoutesToTracks();
     if (correctElevation) {
         try {
@@ -182,6 +182,11 @@ export async function applyGpxToForm(data: FormData, fields: readonly (typeof tr
     }
 }
 
+// A cheap check on the raw text, so that ordinary track files are not parsed twice.
+function isRouteOnlyGPX(content: string) {
+    return /<(?:[\w.-]+:)?rte[\s>]/.test(content) && !/<(?:[\w.-]+:)?trk[\s>]/.test(content);
+}
+
 export async function fromFile(file: File | Blob) {
     let gpxData = "";
     let gpxFile: Blob;
@@ -207,6 +212,15 @@ export async function fromFile(file: File | Blob) {
         });
     } else if (fileContent.includes("TrainingCenterDatabase")) {
         gpxData = fromTCX(fileContent);
+        gpxFile = new Blob([gpxData], {
+            type: "application/gpx+xml",
+        });
+    } else if (isRouteOnlyGPX(fileContent)) {
+        // GaiaGPS and similar planners export saved routes as <rte> with no
+        // <trk>. Store them as tracks so metrics, the map and export work (#1356).
+        const gpx = GPX.parse(fileContent);
+        gpx.convertRoutesToTracks();
+        gpxData = gpx.toString();
         gpxFile = new Blob([gpxData], {
             type: "application/gpx+xml",
         });
