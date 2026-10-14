@@ -121,6 +121,64 @@ func TestConfigureOIDCScopes(t *testing.T) {
 	}
 }
 
+func TestOIDCTrustedProviders(t *testing.T) {
+	scenarios := []struct {
+		name     string
+		env      map[string]string
+		expected map[string]bool
+	}{
+		{
+			name:     "unset trusts nothing",
+			env:      map[string]string{},
+			expected: map[string]bool{"oidc": false, "oidc2": false, "oidc3": false, "google": false},
+		},
+		{
+			name:     "single slot",
+			env:      map[string]string{"OIDC_TRUST_EMAIL": "true"},
+			expected: map[string]bool{"oidc": true, "oidc2": false, "oidc3": false, "google": false},
+		},
+		{
+			name:     "each slot has its own switch",
+			env:      map[string]string{"OIDC2_TRUST_EMAIL": "true", "OIDC3_TRUST_EMAIL": "1"},
+			expected: map[string]bool{"oidc": false, "oidc2": true, "oidc3": true, "google": false},
+		},
+		{
+			name:     "false and surrounding whitespace",
+			env:      map[string]string{"OIDC_TRUST_EMAIL": "false", "OIDC2_TRUST_EMAIL": " TRUE "},
+			expected: map[string]bool{"oidc": false, "oidc2": true, "oidc3": false, "google": false},
+		},
+		{
+			name:     "invalid values trust nothing",
+			env:      map[string]string{"OIDC_TRUST_EMAIL": "yes", "OIDC2_TRUST_EMAIL": "oidc2"},
+			expected: map[string]bool{"oidc": false, "oidc2": false, "oidc3": false, "google": false},
+		},
+		{
+			name:     "built-in providers cannot be enabled",
+			env:      map[string]string{"OIDC_TRUST_EMAIL": "true", "GOOGLE_TRUST_EMAIL": "true"},
+			expected: map[string]bool{"oidc": true, "google": false},
+		},
+	}
+
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			for _, env := range oidcTrustEmailEnv {
+				t.Setenv(env, s.env[env])
+			}
+			for env, value := range s.env {
+				t.Setenv(env, value)
+			}
+
+			trusted := oidcTrustedProviders()
+
+			for provider, expected := range s.expected {
+				if got := trusted(provider); got != expected {
+					t.Fatalf("%s: expected %v, got %v", provider, expected, got)
+				}
+			}
+		})
+	}
+}
+
 // searchInitPageSize matches the trails page size in initMeilisearchDocuments.
 const searchInitPageSize int64 = 100
 

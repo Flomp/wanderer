@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/meilisearch/meilisearch-go"
@@ -127,6 +128,44 @@ func parseScopes(raw string) []string {
 	return scopes
 }
 
+// oidcTrustEmailEnv maps each OIDC provider slot to the environment variable
+// that opts it into trusting its email and name claims.
+var oidcTrustEmailEnv = map[string]string{
+	"oidc":  "OIDC_TRUST_EMAIL",
+	"oidc2": "OIDC2_TRUST_EMAIL",
+	"oidc3": "OIDC3_TRUST_EMAIL",
+}
+
+// oidcTrustedProviders returns a lookup for the OIDC provider slots whose
+// OIDC_TRUST_EMAIL, OIDC2_TRUST_EMAIL or OIDC3_TRUST_EMAIL is set to true.
+//
+// Generic OIDC providers such as Cloudflare Access may send an email without an
+// email_verified claim, which PocketBase would ignore, and no username. Taking
+// those values over is only safe if the administrator knows the provider
+// vouches for them, so it is off for every slot unless enabled, and never
+// applies to the built-in providers (Google, Microsoft, ...).
+func oidcTrustedProviders() func(provider string) bool {
+	trusted := map[string]bool{}
+	for name, env := range oidcTrustEmailEnv {
+		raw := strings.TrimSpace(os.Getenv(env))
+		if raw == "" {
+			continue
+		}
+
+		enabled, err := strconv.ParseBool(raw)
+		if err != nil {
+			log.Printf("%s must be true or false, got %q; ignoring it", env, raw)
+			continue
+		}
+
+		trusted[name] = enabled
+	}
+
+	return func(provider string) bool {
+		return trusted[provider]
+	}
+}
+
 func registerMigrations(app *pocketbase.PocketBase) {
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Dir:         "migrations",
@@ -135,8 +174,9 @@ func registerMigrations(app *pocketbase.PocketBase) {
 }
 
 func setupEventHandlers(app *pocketbase.PocketBase, client meilisearch.ServiceManager) {
-	app.OnRecordAuthWithOAuth2Request().BindFunc(hooks.OAuth2UsernameHandler())
-	app.OnRecordAuthWithOAuth2Request().BindFunc(hooks.OAuth2EmailHandler())
+	trustedOIDC := oidcTrustedProviders()
+	app.OnRecordAuthWithOAuth2Request().BindFunc(hooks.OAuth2UsernameHandler(trustedOIDC))
+	app.OnRecordAuthWithOAuth2Request().BindFunc(hooks.OAuth2EmailHandler(trustedOIDC))
 
 	app.OnRecordAfterCreateSuccess("users").BindFunc(hooks.CreateUserHandler(client))
 	app.OnRecordAfterUpdateSuccess("users").BindFunc(hooks.UpdateUserHandler(client))
