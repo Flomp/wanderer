@@ -4,6 +4,10 @@ import type { RequestEvent } from "@sveltejs/kit";
 
 const NOMINATIM_RATE_LIMIT_MS = 1000;
 const NOMINATIM_MAX_RETRIES = 2;
+// Requests are serialized, so a slow response or a long Retry-After holds up
+// every other caller. Bound both.
+const NOMINATIM_TIMEOUT_MS = 10_000;
+const NOMINATIM_MAX_RETRY_AFTER_MS = 30_000;
 let lastNominatimCall = 0;
 let nominatimRequestQueue: Promise<void> = Promise.resolve();
 
@@ -82,18 +86,25 @@ export async function fetchNominatim(event: RequestEvent, path: string, params: 
         while (true) {
             await waitForNominatimSlot(baseUrl);
 
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), NOMINATIM_TIMEOUT_MS);
             try {
                 const response = await event.fetch(url.toString(), {
                     method: "GET",
                     headers: {
                         "User-Agent": `wanderer/${version}`,
                     },
+                    signal: controller.signal,
                 });
 
                 if (response.status === 429 && attempt < NOMINATIM_MAX_RETRIES) {
-                    attempt++;
-                    await waitTimer(retryAfterMs(response.headers.get("Retry-After"), attempt));
-                    continue;
+                    const delay = retryAfterMs(response.headers.get("Retry-After"), attempt + 1);
+                    if (delay <= NOMINATIM_MAX_RETRY_AFTER_MS) {
+                        await response.body?.cancel();
+                        attempt++;
+                        await waitTimer(delay);
+                        continue;
+                    }
                 }
 
                 return response;
@@ -103,6 +114,8 @@ export async function fetchNominatim(event: RequestEvent, path: string, params: 
                     continue;
                 }
                 throw new Error(`Nominatim fetch failed for ${url.toString()}`, { cause: error });
+            } finally {
+                clearTimeout(timeout);
             }
         }
     });
