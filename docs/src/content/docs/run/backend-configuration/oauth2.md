@@ -23,7 +23,7 @@ In the tab `OAuth2`, add your provider and fill in the Client ID and Client Secr
 
 ### OAuth with a self-signed certificate (Docker)
 
-To enable OAuth with a self-signed certificate for Wanderer in Docker, add a global variable under the `db container`:
+To enable OAuth with a self-signed certificate for <span class="-tracking-[0.075em]">wanderer</span> in Docker, add the followiing configuration under the `db` container:
 
 ```
 environment:
