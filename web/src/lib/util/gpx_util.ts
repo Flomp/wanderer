@@ -15,6 +15,7 @@ import type { Feature, FeatureCollection, GeoJsonProperties, Position } from 'ge
 import JSZip from "jszip";
 import { ClientResponseError, type AuthRecord } from "pocketbase";
 import { handleFromRecordWithIRI } from "./activitypub_util";
+import { joinContiguousTrackSegments } from "./gpx_segment_util";
 import { icons } from "./icon_util";
 
 
@@ -76,32 +77,6 @@ export async function gpx2trail(gpxString: string, fallbackName?: string, correc
     trail.distance = totals.distance
 
     return { gpx: gpx, trail: trail }
-}
-
-export function joinContiguousTrackSegments(gpx: GPX) {
-    for (const track of gpx.trk ?? []) {
-        const joined: TrackSegment[] = [];
-
-        for (const segment of track.trkseg ?? []) {
-            const points = segment.trkpt ?? [];
-            if (points.length === 0) {
-                continue;
-            }
-
-            const current = joined.at(-1);
-            const last = current?.trkpt?.at(-1);
-            const first = points[0];
-            const meets = last != null && Number(last.$.lat) === Number(first.$.lat) && Number(last.$.lon) === Number(first.$.lon);
-
-            if (current?.trkpt && !current.extensions && !segment.extensions && meets) {
-                current.trkpt.push(...points.slice(1));
-            } else {
-                joined.push(segment);
-            }
-        }
-
-        track.trkseg = joined;
-    }
 }
 
 export async function trail2gpx(trail: Trail, user?: AuthRecord) {

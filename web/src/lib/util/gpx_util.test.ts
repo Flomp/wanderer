@@ -5,7 +5,8 @@ import TrackSegment from "$lib/models/gpx/track-segment";
 import GPXWaypoint from "$lib/models/gpx/waypoint";
 import { Trail } from "$lib/models/trail";
 import { trails_show } from "$lib/stores/trail_store";
-import { joinContiguousTrackSegments, trail2gpx } from "./gpx_util";
+import { trail2gpx } from "./gpx_util";
+import { joinContiguousTrackSegments, routeAnchorNamespace, splitTrackSegmentsAtAnchors } from "./gpx_segment_util";
 
 vi.mock("$lib/stores/trail_store", () => ({ trails_show: vi.fn() }));
 
@@ -138,6 +139,90 @@ describe("joinContiguousTrackSegments", () => {
         joinContiguousTrackSegments(gpx);
 
         expect(coordinates(gpx)).toEqual([[[[1, 1], [2, 2], [3, 3]]]]);
+    });
+});
+
+function anchors(gpx: GPX) {
+    return (gpx.trk ?? []).map((track) =>
+        (track.trkseg ?? []).flatMap((seg) =>
+            (seg.trkpt ?? []).flatMap((point, index) =>
+                point.extensions && typeof point.extensions === "object" && "wanderer:anchor" in point.extensions ? [index] : [],
+            ),
+        ),
+    );
+}
+
+describe("route anchors", () => {
+    it("marks the points where legs were joined", () => {
+        const gpx = GPX.parse(multiLegGpx);
+
+        joinContiguousTrackSegments(gpx);
+
+        expect(anchors(gpx)).toEqual([[2, 3]]);
+        expect((gpx.$ as Record<string, string>)["xmlns:wanderer"]).toBe(routeAnchorNamespace);
+    });
+
+    it("does not mark anything when no segments were joined", () => {
+        const gpx = new GPX({
+            trk: [new Track({ trkseg: [segment([pt(1, 1), pt(2, 2)]), segment([pt(3, 3), pt(4, 4)])] })],
+        });
+
+        joinContiguousTrackSegments(gpx);
+
+        expect(anchors(gpx)).toEqual([[]]);
+        expect((gpx.$ as Record<string, string>)["xmlns:wanderer"]).toBeUndefined();
+    });
+
+    it("keeps other extensions on a junction point", () => {
+        const gpx = GPX.parse(`<gpx xmlns:ns3="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk>` +
+            `<trkseg><trkpt lat="1" lon="1"/><trkpt lat="2" lon="2"><extensions><ns3:hr>90</ns3:hr></extensions></trkpt></trkseg>` +
+            `<trkseg><trkpt lat="2" lon="2"/><trkpt lat="3" lon="3"/></trkseg>` +
+            `</trk></gpx>`);
+
+        joinContiguousTrackSegments(gpx);
+        const exported = GPX.parse(gpx.toString());
+
+        expect(exported.trk?.[0].trkseg).toHaveLength(1);
+        expect(exported.trk?.[0].trkseg?.[0].trkpt?.[1].extensions).toEqual({ "ns3:hr": "90", "wanderer:anchor": "" });
+
+        splitTrackSegmentsAtAnchors(exported);
+
+        expect(exported.trk?.[0].trkseg?.[0].trkpt?.[1].extensions).toEqual({ "ns3:hr": "90" });
+    });
+
+    it("restores the legs of an exported route", () => {
+        const gpx = GPX.parse(multiLegGpx);
+        joinContiguousTrackSegments(gpx);
+        const imported = GPX.parse(gpx.toString());
+
+        splitTrackSegmentsAtAnchors(imported);
+
+        expect(coordinates(imported)).toEqual(coordinates(GPX.parse(multiLegGpx)));
+        expect(anchors(imported)).toEqual([[]]);
+        expect((imported.$ as Record<string, string>)["xmlns:wanderer"]).toBeUndefined();
+        const legs = imported.trk![0].trkseg!;
+        expect(legs[1].trkpt![0]).not.toBe(legs[0].trkpt!.at(-1));
+    });
+
+    it("leaves a track without anchors unchanged", () => {
+        const gpx = GPX.parse(multiLegGpx);
+
+        splitTrackSegmentsAtAnchors(gpx);
+
+        expect(coordinates(gpx)).toEqual(coordinates(GPX.parse(multiLegGpx)));
+    });
+
+    it("ignores anchors on the ends of a segment", () => {
+        const gpx = GPX.parse(`<gpx><trk><trkseg>` +
+            `<trkpt lat="1" lon="1"><extensions><wanderer:anchor/></extensions></trkpt>` +
+            `<trkpt lat="2" lon="2"/>` +
+            `<trkpt lat="3" lon="3"><extensions><wanderer:anchor/></extensions></trkpt>` +
+            `</trkseg></trk></gpx>`);
+
+        splitTrackSegmentsAtAnchors(gpx);
+
+        expect(coordinates(gpx)).toEqual([[[[1, 1], [2, 2], [3, 3]]]]);
+        expect(anchors(gpx)).toEqual([[]]);
     });
 });
 
