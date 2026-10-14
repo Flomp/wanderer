@@ -65,6 +65,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { cropGPX, fromFile, gpx2trail } from "$lib/util/gpx_util";
+    import { splitTrackSegmentsAtAnchors } from "$lib/util/gpx_segment_util";
 
     import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
@@ -415,6 +416,7 @@
                     gpx.rte = undefined;
                 }
 
+                splitTrackSegmentsAtAnchors(gpx);
                 setRoute(gpx);
                 initRouteAnchors(gpx);
 
@@ -535,6 +537,7 @@
                 ];
                 parseResult.gpx.rte = undefined;
             }
+            splitTrackSegmentsAtAnchors(parseResult.gpx);
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);
             replacingRoute = false;
