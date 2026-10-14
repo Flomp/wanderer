@@ -19,7 +19,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "de": [
@@ -53,7 +57,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "eu": [
@@ -76,7 +84,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "fr": [
@@ -99,7 +111,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "hu": [
@@ -122,7 +138,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "it": [
@@ -145,7 +165,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "nl": [
@@ -168,7 +192,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "no": [
@@ -191,7 +219,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "pl": [
@@ -214,7 +246,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "pt": [
@@ -237,7 +273,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "ru": [
@@ -260,7 +300,11 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ],
 
   "zh": [
@@ -283,6 +327,10 @@
     "sync_section_pending_offline_body",
     "sync_section_retry",
     "sync_section_upload",
-    "sync_section_upload_now"
+    "sync_section_upload_now",
+    "server_incompatible_title",
+    "server_incompatible",
+    "server_incompatible_version",
+    "server_incompatible_docs"
   ]
 }

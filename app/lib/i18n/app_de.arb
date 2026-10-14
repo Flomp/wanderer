@@ -397,6 +397,10 @@
     "description": "Sentence fragment on the welcome screen, followed by the untranslated product name: 'Welcome to wanderer'. Keep it as a fragment; the brand name is appended in code and must not be included in the translation."
   },
   "wrong_username_or_password": "Falscher Nutzername oder falsches Passwort",
+  "server_incompatible_title": "Server nicht unterstützt",
+  "server_incompatible": "Auf diesem Server läuft eine wanderer-Version, die die App nicht unterstützt. Anmelden ist möglich, sobald er aktualisiert wurde.",
+  "server_incompatible_version": "Serverversion: {version}",
+  "server_incompatible_docs": "Server aktualisieren",
   "you_have_arrived": "Angekommen",
   "settings_categories_confirm_disable_title": "Diese Kategorie trotzdem ausblenden?",
   "settings_categories_confirm_disable_subcategory_title": "Diese Unterkategorie trotzdem ausblenden?",

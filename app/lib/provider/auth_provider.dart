@@ -14,9 +14,11 @@ import 'package:wanderer/provider/cookie_jar_provider.dart';
 import 'package:wanderer/provider/objectbox_store_provider.dart';
 import 'package:wanderer/provider/settings_provider.dart';
 import 'package:wanderer/provider/welcome/recent_servers_provider.dart';
+import 'package:wanderer/provider/welcome/server_compatibility_provider.dart';
 import 'package:wanderer/provider/welcome/server_selection_provider.dart';
 import 'package:wanderer/store/account_data_purge.dart';
 import 'package:wanderer/store/avatar_cache.dart';
+import 'package:wanderer/util/server_compatibility.dart';
 
 part 'auth_provider.g.dart';
 
@@ -142,13 +144,13 @@ class Auth extends _$Auth {
 
   /// Records the currently selected instance as "last used", best-effort.
   ///
-  /// Called only from inside `login()`'s and `loginWithOAuth()`'s
-  /// `AsyncValue.guard` bodies, immediately after `_updateUserEntity`
+  /// Called only from `_passwordSignIn()` and `loginWithOAuth()`'s
+  /// `AsyncValue.guard` body, immediately after `_updateUserEntity`
   /// returns — i.e. only once sign-in has fully succeeded. Deliberately NOT
   /// called from `_updateUserEntity` itself (shared by `refresh()` and
   /// `_validateInBackground()`, neither of which is a login), nor from
-  /// `register()` directly (it signs in through `login()`, which already
-  /// calls this).
+  /// `register()` directly (it signs in through `_passwordSignIn()`, which
+  /// already calls this).
   ///
   /// `serverSelectionProvider` is read, never watched or listened to: `Auth`
   /// is keepAlive and `serverSelectionProvider` is autoDispose, so a
@@ -164,6 +166,40 @@ class Auth extends _$Auth {
       ref.read(recentServersProvider.notifier).record(selected);
     } catch (_) {
       // Best-effort — see doc comment above.
+    }
+  }
+
+  /// Backstop for the screens' block on an incompatible server: a sign-in
+  /// started before the check for the selected server had answered waits for
+  /// it here, sharing that same request.
+  ///
+  /// An undecided answer (the server was unreachable when selected) is asked
+  /// again, since being online now is what makes sign-in possible at all.
+  /// Invalidating rather than calling the check directly also brings up the
+  /// screens' alert if the fresh answer is "incompatible".
+  Future<void> _ensureSelectedServerCompatible() async {
+    final url = ref.read(serverSelectionProvider).value?.selectedServer?.url;
+    if (url == null) return;
+
+    final provider = serverCompatibilityProvider(url);
+    // Listened to rather than read: the provider is auto-dispose, and the
+    // screens watching it may unmount while this awaits.
+    Future<ServerCompatibility> check() async {
+      final sub = ref.listen(provider.future, (_, _) {});
+      try {
+        return await sub.read();
+      } finally {
+        sub.close();
+      }
+    }
+
+    var result = await check();
+    if (result.isCompatible == null) {
+      ref.invalidate(provider);
+      result = await check();
+    }
+    if (result.isIncompatible) {
+      throw IncompatibleServerException(result.serverVersion);
     }
   }
 
@@ -184,6 +220,9 @@ class Auth extends _$Auth {
 
     // register
     state = await AsyncValue.guard(() async {
+      // Before the PUT, so an incompatible server never gets an account
+      // created on it that the app then cannot sign in to.
+      await _ensureSelectedServerCompatible();
       await ref
           .read(apiProvider)
           .put(
@@ -195,7 +234,7 @@ class Auth extends _$Auth {
               'passwordConfirm': password,
             },
           );
-      return await login(username, password);
+      return await _passwordSignIn(username, password);
     });
     return state.value;
   }
@@ -213,26 +252,35 @@ class Auth extends _$Auth {
 
     // Login
     state = await AsyncValue.guard(() async {
-      final loginResponse = await ref
-          .read(apiProvider)
-          .post(
-            '/auth/login',
-            data: {'username': username, 'password': password},
-          );
-      final authData = AuthResponse.fromJson(loginResponse.data);
-
-      // Fetch user data with expanded actor
-      final userEntity = await _updateUserEntity(authData.record.id);
-      _recordLastUsedServer();
-      return userEntity;
+      await _ensureSelectedServerCompatible();
+      return _passwordSignIn(username, password);
     });
     return state.value;
+  }
+
+  Future<UserEntity?> _passwordSignIn(String username, String password) async {
+    final loginResponse = await ref
+        .read(apiProvider)
+        .post(
+          '/auth/login',
+          data: {'username': username, 'password': password},
+        );
+    final authData = AuthResponse.fromJson(loginResponse.data);
+
+    // Fetch user data with expanded actor
+    final userEntity = await _updateUserEntity(authData.record.id);
+    _recordLastUsedServer();
+    return userEntity;
   }
 
   Future<UserEntity?> loginWithOAuth(OAuthProvider provider) async {
     state = const AsyncLoading();
 
     state = await AsyncValue.guard(() async {
+      // Before the browser opens: an incompatible server would otherwise
+      // take the user through the whole provider sign-in only to fail after.
+      await _ensureSelectedServerCompatible();
+
       final authUrl = Uri.parse(provider.url);
       final launchUrl = authUrl.replace(
         queryParameters: {

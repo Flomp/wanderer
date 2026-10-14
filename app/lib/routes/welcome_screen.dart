@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:wanderer/components/base/wanderer_button.dart';
 import 'package:wanderer/components/welcome/oauth_provider_buttons.dart';
+import 'package:wanderer/components/welcome/server_compatibility_alert.dart';
 import 'package:wanderer/components/welcome/server_selctor.dart';
 import 'package:wanderer/components/welcome/topography_background.dart';
 import 'package:wanderer/i18n/app_localizations.dart';
 import 'package:wanderer/provider/auth_methods_provider.dart';
 import 'package:wanderer/provider/auth_provider.dart';
 import 'package:wanderer/provider/router_provider.dart';
+import 'package:wanderer/provider/welcome/server_compatibility_provider.dart';
 import 'package:wanderer/provider/welcome/server_selection_provider.dart';
 
 class WelcomeScreen extends ConsumerWidget {
@@ -18,6 +20,9 @@ class WelcomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final serverSelection = ref.watch(serverSelectionProvider);
     final authState = ref.watch(authProvider);
+    final isServerIncompatible = ref.watch(selectedServerIncompatibleProvider);
+    final canSignIn =
+        serverSelection.value?.selectedServer != null && !isServerIncompatible;
 
     final router = ref.watch(routerProvider);
 
@@ -60,6 +65,10 @@ class WelcomeScreen extends ConsumerWidget {
                   const Spacer(flex: 2),
 
                   ServerSelector(),
+                  if (isServerIncompatible) ...[
+                    const SizedBox(height: 12),
+                    const ServerCompatibilityAlert(),
+                  ],
                   const SizedBox(height: 24),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,7 +78,7 @@ class WelcomeScreen extends ConsumerWidget {
                             ? null
                             : () => {router.push('/login')},
                         primary: true,
-                        disabled: serverSelection.value?.selectedServer == null,
+                        disabled: !canSignIn,
                         child: Text(AppLocalizations.of(context)!.login),
                       ),
                       if (!signupDisabled) ...[
@@ -79,8 +88,7 @@ class WelcomeScreen extends ConsumerWidget {
                               ? null
                               : () => {router.push('/register')},
                           secondary: true,
-                          disabled:
-                              serverSelection.value?.selectedServer == null,
+                          disabled: !canSignIn,
                           child: Text(AppLocalizations.of(context)!.register),
                         ),
                       ],

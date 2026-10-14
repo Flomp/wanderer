@@ -1562,6 +1562,30 @@ abstract class AppLocalizations {
   /// **'Wrong username or password'**
   String get wrong_username_or_password;
 
+  /// No description provided for @server_incompatible_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Server not supported'**
+  String get server_incompatible_title;
+
+  /// No description provided for @server_incompatible.
+  ///
+  /// In en, this message translates to:
+  /// **'This server runs a version of wanderer that the app does not support. Signing in becomes possible once it is updated.'**
+  String get server_incompatible;
+
+  /// No description provided for @server_incompatible_version.
+  ///
+  /// In en, this message translates to:
+  /// **'Server version: {version}'**
+  String server_incompatible_version(String version);
+
+  /// No description provided for @server_incompatible_docs.
+  ///
+  /// In en, this message translates to:
+  /// **'How to update the server'**
+  String get server_incompatible_docs;
+
   /// No description provided for @you_have_arrived.
   ///
   /// In en, this message translates to:

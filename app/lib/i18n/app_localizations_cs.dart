@@ -865,6 +865,21 @@ class AppLocalizationsCs extends AppLocalizations {
       'Nesprávné uživatelské jméno nebo heslo';
 
   @override
+  String get server_incompatible_title => 'Server not supported';
+
+  @override
+  String get server_incompatible =>
+      'This server runs a version of wanderer that the app does not support. Signing in becomes possible once it is updated.';
+
+  @override
+  String server_incompatible_version(String version) {
+    return 'Server version: $version';
+  }
+
+  @override
+  String get server_incompatible_docs => 'How to update the server';
+
+  @override
   String get you_have_arrived => 'Dorazili jste';
 
   @override

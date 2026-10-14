@@ -853,6 +853,21 @@ class AppLocalizationsNo extends AppLocalizations {
   String get wrong_username_or_password => 'Feil brukernavn eller passord';
 
   @override
+  String get server_incompatible_title => 'Server not supported';
+
+  @override
+  String get server_incompatible =>
+      'This server runs a version of wanderer that the app does not support. Signing in becomes possible once it is updated.';
+
+  @override
+  String server_incompatible_version(String version) {
+    return 'Server version: $version';
+  }
+
+  @override
+  String get server_incompatible_docs => 'How to update the server';
+
+  @override
   String get you_have_arrived => 'You\'ve arrived';
 
   @override

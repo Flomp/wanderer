@@ -865,6 +865,21 @@ class AppLocalizationsDe extends AppLocalizations {
       'Falscher Nutzername oder falsches Passwort';
 
   @override
+  String get server_incompatible_title => 'Server nicht unterstützt';
+
+  @override
+  String get server_incompatible =>
+      'Auf diesem Server läuft eine wanderer-Version, die die App nicht unterstützt. Anmelden ist möglich, sobald er aktualisiert wurde.';
+
+  @override
+  String server_incompatible_version(String version) {
+    return 'Serverversion: $version';
+  }
+
+  @override
+  String get server_incompatible_docs => 'Server aktualisieren';
+
+  @override
   String get you_have_arrived => 'Angekommen';
 
   @override
