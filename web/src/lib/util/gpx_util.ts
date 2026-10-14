@@ -15,6 +15,7 @@ import type { Feature, FeatureCollection, GeoJsonProperties, Position } from 'ge
 import JSZip from "jszip";
 import { ClientResponseError, type AuthRecord } from "pocketbase";
 import { handleFromRecordWithIRI } from "./activitypub_util";
+import { joinContiguousTrackSegments } from "./gpx_segment_util";
 import { icons } from "./icon_util";
 
 
@@ -134,6 +135,8 @@ export async function trail2gpx(trail: Trail, user?: AuthRecord) {
         gpxWpt.name = wp.name
         gpxWpt.sym = wp.icon
     }
+
+    joinContiguousTrackSegments(gpx);
 
     return gpx.toString();
 }
