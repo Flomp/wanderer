@@ -27,10 +27,15 @@ func TestProviderCategoryBackfillQueriesAboveFilterLimit(t *testing.T) {
 	if err := app.Save(collection); err != nil {
 		t.Fatal(err)
 	}
-	ids := make([]string, 0, 227)
+	opaqueIDs := []string{"abc", " abc", "abc ", " ", "  "}
+	ids := make([]string, 0, 225+len(opaqueIDs)+6)
 	for i := range 225 {
-		id := fmt.Sprintf("remote-%d", i)
-		ids = append(ids, id)
+		if i == 149 {
+			ids = append(ids, opaqueIDs...)
+		}
+		ids = append(ids, fmt.Sprintf("remote-%d", i))
+	}
+	for i, id := range ids {
 		record := core.NewRecord(collection)
 		record.Load(map[string]any{"user": "user", "provider": "provider", "external_id": id})
 		if i == 0 {
@@ -43,9 +48,31 @@ func TestProviderCategoryBackfillQueriesAboveFilterLimit(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	ids = append(ids, ids[0], "")
+	for _, fields := range []map[string]any{
+		{"user": "user", "provider": "provider", "external_id": "alias"},
+		{"user": "other-user", "provider": "provider", "external_id": "foreign"},
+		{"user": "user", "provider": "other-provider", "external_id": "foreign"},
+	} {
+		record := core.NewRecord(collection)
+		record.Load(fields)
+		if err := app.Save(record); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ids = append(ids, ids[0], " abc", " ", "", " alias ", "foreign")
 	candidates, err := providerCategoryBackfillCandidatesForSync(app, "user", "provider", ids, 300)
-	if err != nil || len(candidates) != 223 || candidates["remote-0"] != nil || candidates["remote-1"] != nil {
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range opaqueIDs {
+		if candidates[id] == nil || candidates[id].GetString("external_id") != id {
+			t.Errorf("opaque backfill candidate %q was not found exactly", id)
+		}
+	}
+	if candidates["alias"] != nil || candidates[" alias "] != nil || candidates["foreign"] != nil {
+		t.Error("backfill matched an unrequested ID or another user/provider")
+	}
+	if len(candidates) != 223+len(opaqueIDs) || candidates["remote-0"] != nil || candidates["remote-1"] != nil {
 		t.Fatalf("large backfill query: %d candidates, error=%v", len(candidates), err)
 	}
 	limited, err := providerCategoryBackfillCandidatesForSync(app, "user", "provider", ids, 10)

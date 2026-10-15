@@ -47,18 +47,28 @@ func TestExistingExternalReferencesAboveFilterLimit(t *testing.T) {
 	}
 	actor := save(app, "activitypub_actors", map[string]any{"user": "references-user"})
 	const count = 225
-	ids := make([]string, 0, count+4)
+	opaqueIDs := []string{"abc", " abc", "abc ", " ", "  "}
+	ids := make([]string, 0, count+len(opaqueIDs)+7)
+	for i := range count {
+		if i == 149 {
+			// Put distinct opaque IDs on both sides of the 150-value chunk boundary.
+			ids = append(ids, opaqueIDs...)
+		}
+		ids = append(ids, fmt.Sprintf("remote-%d", i))
+	}
 	if err := app.RunInTransaction(func(tx core.App) error {
-		for i := range count {
+		for i, id := range ids {
 			trail := save(tx, "trails", map[string]any{"name": fmt.Sprintf("Trail %d", i), "author": actor.Id})
-			id := fmt.Sprintf("remote-%d", i)
-			ids = append(ids, id)
 			if err := EnsureTrailExternalReference(tx, trail.Id, "test-provider", id, "plugin", ""); err != nil {
 				return err
 			}
 		}
 		return nil
 	}); err != nil {
+		t.Fatal(err)
+	}
+	aliasTrail := save(app, "trails", map[string]any{"name": "Unrequested alias", "author": actor.Id})
+	if err := EnsureTrailExternalReference(app, aliasTrail.Id, "test-provider", "alias", "plugin", ""); err != nil {
 		t.Fatal(err)
 	}
 	stale := save(app, "trail_external_reference", map[string]any{
@@ -70,9 +80,20 @@ func TestExistingExternalReferencesAboveFilterLimit(t *testing.T) {
 	foreignProvider := save(app, "trail_external_reference", map[string]any{
 		"user": "references-user", "provider": "other-provider", "external_id": "missing", "trail": "missing-trail",
 	})
-	ids = append(ids, ids[0], "", "missing", "stale")
+	ids = append(ids, ids[0], " abc", " ", "", "missing", "stale", " alias ")
 	existing, err := FindExistingExternalReferenceIDsForUser(app, "references-user", "test-provider", ids)
-	if err != nil || len(existing) != count || existing["missing"] || existing["stale"] {
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range opaqueIDs {
+		if !existing[id] {
+			t.Errorf("opaque external reference %q was not found exactly", id)
+		}
+	}
+	if existing["alias"] || existing[" alias "] {
+		t.Error("lookup invented a match by trimming an external ID")
+	}
+	if len(existing) != count+len(opaqueIDs) || existing["missing"] || existing["stale"] {
 		t.Fatalf("lookup above expression limit: %d IDs, error=%v", len(existing), err)
 	}
 	for i := range count {
