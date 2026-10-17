@@ -159,6 +159,13 @@ func ActivitypubActivityProcess(e *core.RequestEvent) error {
 	case pub.LikeType:
 		err = federation.ProcessLikeActivity(e.App, actor, activity)
 	}
+	if err != nil {
+		message := "ActivityPub activity could not be processed"
+		if errors.Is(err, util.ErrNotificationEmailDelivery) {
+			message = "ActivityPub notification email could not be delivered"
+		}
+		e.App.Logger().Warn(message, "type", activity.Type, "actor", actor.Id, "recipient", recipient.Id, "error", err)
+	}
 	return e.JSON(http.StatusOK, err)
 }
 
