@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '../../fixtures';
 
-for (const [locale, language] of [['de-CH', 'de'], ['ja-JP', 'en']] as const) {
+// New accounts start with "en", so the unsupported ja-JP fallback is only
+// distinguishable from a skipped save by the settings write itself.
+for (const [locale, language] of [['de-CH', 'de'], ['fr-FR', 'fr'], ['ja-JP', 'en']] as const) {
     test.describe(`registration with ${locale}`, () => {
         test.use({ locale, storageState: { cookies: [], origins: [] } });
 
@@ -18,10 +20,17 @@ for (const [locale, language] of [['de-CH', 'de'], ['ja-JP', 'en']] as const) {
                     new URL(response.url()).pathname === '/api/v1/user'
                     && response.request().method() === 'PUT',
                 );
+                const savedLanguage = page.waitForResponse(response =>
+                    new URL(response.url()).pathname.startsWith('/api/v1/settings/')
+                    && response.request().method() === 'POST',
+                );
                 await page.locator('#submit').click();
                 const response = await created;
                 expect(response.ok(), 'Registration creates the account').toBeTruthy();
                 userId = (await response.json()).id;
+                const write = await savedLanguage;
+                expect(write.ok(), 'Registration saves the language').toBeTruthy();
+                expect(write.request().postDataJSON().language).toBe(language);
                 await page.waitForURL('/');
                 await expect(page.getByLabel('Open user menu')).toBeVisible();
                 expect((await page.context().cookies()).some(cookie => cookie.name === 'pb_auth')).toBe(true);
