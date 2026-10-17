@@ -403,19 +403,7 @@
             $formData.id ??= cryptoRandomString({ length: 15 });
             const gpx = GPX.parse(initialGpxData);
             if (!(gpx instanceof Error)) {
-                if (gpx.rte && !gpx.trk) {
-                    gpx.trk = [
-                        new Track({
-                            trkseg: [
-                                new TrackSegment({
-                                    trkpt: gpx.rte?.at(0)?.rtept,
-                                }),
-                            ],
-                        }),
-                    ];
-                    gpx.rte = undefined;
-                }
-
+                gpx.convertRoutesToTracks();
                 splitTrackSegmentsAtAnchors(gpx);
                 setRoute(gpx);
                 initRouteAnchors(gpx);
@@ -525,18 +513,6 @@
 
             // $formData.expand!.summit_logs?.push(log);
 
-            if (parseResult.gpx.rte?.length && !parseResult.gpx.trk) {
-                parseResult.gpx.trk = [
-                    new Track({
-                        trkseg: [
-                            new TrackSegment({
-                                trkpt: parseResult.gpx.rte?.at(0)?.rtept,
-                            }),
-                        ],
-                    }),
-                ];
-                parseResult.gpx.rte = undefined;
-            }
             splitTrackSegmentsAtAnchors(parseResult.gpx);
             setRoute(parseResult.gpx);
             initRouteAnchors(parseResult.gpx);

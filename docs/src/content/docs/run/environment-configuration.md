@@ -38,6 +38,9 @@ Since we use an unmodified installation of meilisearch you can use all variables
 | OIDC_SCOPES                    | Comma-separated OIDC scopes for the `oidc` provider. Only needed for providers that reject the defaults, such as OpenStreetMap (`openid`). See [Auth providers](/run/backend-configuration/auth-providers) | openid,profile,email |
 | OIDC2_SCOPES                   | Same as `OIDC_SCOPES`, for the `oidc2` provider                                                                   | openid,profile,email |
 | OIDC3_SCOPES                   | Same as `OIDC_SCOPES`, for the `oidc3` provider                                                                   | openid,profile,email |
+| OIDC_TRUST_EMAIL               | Set to `true` to trust the email and display name of the `oidc` provider when it sends an email without an `email_verified` claim and no username, as Cloudflare Access does. See [Auth providers](/run/backend-configuration/auth-providers#providers-that-do-not-send-email_verified) | false                |
+| OIDC2_TRUST_EMAIL              | Same as `OIDC_TRUST_EMAIL`, for the `oidc2` provider                                                              | false                |
+| OIDC3_TRUST_EMAIL              | Same as `OIDC_TRUST_EMAIL`, for the `oidc3` provider                                                              | false                |
 | REGION_ARCHIVE_CRON_SCHEDULE   | Valid cron expression (UTC). Sets when offline [region archives](/run/backend-configuration/region-catalogue) are rebuilt | 0 3 * * *             |
 | REGION_ARCHIVE_EXTRACT_TIMEOUT | Maximum duration a single region archive extraction may take, as a Go duration string (e.g. `45m`)                | 30m                   |
 
