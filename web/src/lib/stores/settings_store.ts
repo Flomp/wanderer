@@ -15,6 +15,20 @@ export async function settings_show(userId: string, f: (url: RequestInfo | URL, 
     return response
 }
 
+export async function settings_for_user(userId: string): Promise<Settings> {
+    const r = await fetch(`/api/v1/user/${userId}?expand=settings_via_user`);
+    if (!r.ok) {
+        const response = await r.json();
+        throw new APIError(r.status, response.message, response.detail);
+    }
+    const user = await r.json();
+    const settings: Settings[] | undefined = user.expand?.settings_via_user;
+    if (!Array.isArray(settings) || settings.length !== 1 || !settings[0]?.id || settings[0].user !== userId) {
+        throw new APIError(404, 'Settings not found', undefined);
+    }
+    return settings[0];
+}
+
 export async function settings_create(settings: Settings) {
     const r = await fetch('/api/v1/settings', {
         method: 'PUT',
