@@ -351,7 +351,7 @@ func TrailFromActivity(activity pub.Activity, app core.App, actor *core.Record) 
 
 	if t.Attachment != nil {
 
-		attachments, err := pub.ToItemCollection(t.Attachment)
+		attachments, err := ActivityPubAttachmentItems(t.Attachment)
 		if err != nil {
 			return nil, err
 		}
@@ -605,7 +605,7 @@ func ObjectFromTrail(app core.App, trail *core.Record, mentions *pub.ItemCollect
 	trailObject.URL = pub.IRI(activityURL)
 
 	trailObject.StartTime = trail.GetDateTime("date").Time()
-	trailObject.Attachment = attachments
+	trailObject.Attachment = ActivityPubAttachmentArray(attachments)
 
 	trailObject.Tag = tags
 	return trailObject, nil
@@ -663,7 +663,7 @@ func ListFromActivity(activity pub.Activity, app core.App, actor *core.Record) (
 	if l.Attachment != nil {
 
 		avatarURL := ""
-		attachments, err := pub.ToItemCollection(l.Attachment)
+		attachments, err := ActivityPubAttachmentItems(l.Attachment)
 		if err != nil {
 			return nil, err
 		}
@@ -730,7 +730,7 @@ func ObjectFromList(app core.App, list *core.Record) (*pub.Object, error) {
 	listObject.Published = list.GetDateTime("created").Time()
 	listObject.ID = pub.IRI(list.GetString("iri"))
 	listObject.URL = pub.IRI(activityURL)
-	listObject.Attachment = attachments
+	listObject.Attachment = ActivityPubAttachmentArray(attachments)
 	return listObject, nil
 }
 

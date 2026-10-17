@@ -65,7 +65,7 @@
         formatTimeHHMM,
     } from "$lib/util/format_util";
     import { cropGPX, fromFile, gpx2trail } from "$lib/util/gpx_util";
-    import { splitTrackSegmentsAtAnchors } from "$lib/util/gpx_segment_util";
+    import { routeToStoredGpx, splitTrackSegmentsAtAnchors } from "$lib/util/gpx_segment_util";
 
     import { page } from "$app/state";
     import emptyStateTrailDark from "$lib/assets/svgs/empty_states/empty_state_trail_dark.svg";
@@ -308,7 +308,7 @@
                     photoFiles = [new File([blob], "route")];
                 }
 
-                form.expand!.gpx_data = valhallaStore.route.toString();
+                form.expand!.gpx_data = routeToStoredGpx(valhallaStore.route);
                 if (
                     form.expand!.gpx_data &&
                     (overwriteGPX || (isNewTrail && !savedAtLeastOnce && !gpxFile && routeHasTrackPoints()))

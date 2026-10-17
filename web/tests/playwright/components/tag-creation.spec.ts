@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 import { buildTrailModalFixture, mountTrailModalFixture } from './trail-modal-fixture';
 
 // Use the real tag field, normalization callback, model and strict API schema.

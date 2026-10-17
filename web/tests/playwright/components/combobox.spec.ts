@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 import { buildTrailModalFixture } from './trail-modal-fixture';
 
 const source = `
