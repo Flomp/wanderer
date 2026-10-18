@@ -320,7 +320,7 @@ func CreateSummitLogActivity(app core.App, ctx context.Context, summitLog *core.
 	logObject.Tag = tags
 
 	logObject.StartTime = summitLog.GetDateTime("date").Time()
-	logObject.Attachment = attachments
+	logObject.Attachment = util.ActivityPubAttachmentArray(attachments)
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, logObject)
 	activity.Actor = pub.IRI(summitLogAuthor.GetString("iri"))
@@ -673,7 +673,7 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	record.Set("iri", logObject.ID.String())
 
 	if logObject.Attachment != nil {
-		attachments, err := pub.ToItemCollection(logObject.Attachment)
+		attachments, err := util.ActivityPubAttachmentItems(logObject.Attachment)
 		if err != nil {
 			return err
 		}

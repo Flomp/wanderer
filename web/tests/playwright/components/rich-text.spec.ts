@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 import { buildTrailModalFixture, mountTrailModalFixture } from './trail-modal-fixture';
 
 // Exercise a production rich-text sink with browser DOMPurify, rather than

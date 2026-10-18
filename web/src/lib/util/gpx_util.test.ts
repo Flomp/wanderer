@@ -5,8 +5,8 @@ import TrackSegment from "$lib/models/gpx/track-segment";
 import GPXWaypoint from "$lib/models/gpx/waypoint";
 import { Trail } from "$lib/models/trail";
 import { trails_show } from "$lib/stores/trail_store";
-import { trail2gpx } from "./gpx_util";
-import { joinContiguousTrackSegments, routeAnchorNamespace, splitTrackSegmentsAtAnchors } from "./gpx_segment_util";
+import { fromFile, trail2gpx } from "./gpx_util";
+import { joinContiguousTrackSegments, routeAnchorNamespace, routeToStoredGpx, splitTrackSegmentsAtAnchors } from "./gpx_segment_util";
 
 vi.mock("$lib/stores/trail_store", () => ({ trails_show: vi.fn() }));
 
@@ -226,6 +226,97 @@ describe("route anchors", () => {
     });
 });
 
+describe("routeToStoredGpx", () => {
+    it("stores contiguous legs as one marked segment", () => {
+        const stored = routeToStoredGpx(GPX.parse(multiLegGpx));
+        const parsed = GPX.parse(stored);
+
+        expect(parsed.trk).toHaveLength(1);
+        expect(parsed.trk?.[0].trkseg).toHaveLength(1);
+        expect(coordinates(parsed)).toEqual([[
+            [[47, 11], [47.1, 11.1], [47.2, 11.2], [47.3, 11.3], [47.4, 11.4], [47, 11]],
+        ]]);
+        expect(anchors(parsed)).toEqual([[2, 3]]);
+        expect(stored).toContain(`xmlns:wanderer="${routeAnchorNamespace}"`);
+        expect((parsed.$ as Record<string, string>)["xmlns:wanderer"]).toBe(routeAnchorNamespace);
+    });
+
+    it("restores the legs when the stored route is loaded again", () => {
+        const loaded = GPX.parse(routeToStoredGpx(GPX.parse(multiLegGpx)));
+
+        splitTrackSegmentsAtAnchors(loaded);
+
+        expect(coordinates(loaded)).toEqual(coordinates(GPX.parse(multiLegGpx)));
+        expect(anchors(loaded)).toEqual([[]]);
+        expect((loaded.$ as Record<string, string>)["xmlns:wanderer"]).toBeUndefined();
+    });
+
+    it("does not mutate the route it serializes", () => {
+        const input = GPX.parse(multiLegGpx);
+        const before = input.toString();
+
+        routeToStoredGpx(input);
+
+        expect(input.trk?.[0].trkseg).toHaveLength(3);
+        expect(anchors(input)).toEqual([[]]);
+        expect((input.$ as Record<string, string>)["xmlns:wanderer"]).toBeUndefined();
+        expect(coordinates(input)).toEqual(coordinates(GPX.parse(multiLegGpx)));
+        expect(input.toString()).toBe(before);
+    });
+
+    it("serializes legs built in memory without touching them", () => {
+        const input = new GPX({
+            trk: [new Track({
+                trkseg: [
+                    segment([pt(1, 1), pt(2, 2)]),
+                    segment([pt(2, 2), pt(3, 3)]),
+                    segment([pt(3, 3), pt(4, 4)]),
+                ],
+            })],
+        });
+
+        const parsed = GPX.parse(routeToStoredGpx(input));
+
+        expect(parsed.trk?.[0].trkseg).toHaveLength(1);
+        expect(anchors(parsed)).toEqual([[1, 2]]);
+        expect(input.trk?.[0].trkseg).toHaveLength(3);
+    });
+
+    it("keeps legs apart when their endpoints differ", () => {
+        const input = new GPX({
+            trk: [new Track({
+                trkseg: [
+                    segment([pt(1, 1), pt(2, 2)]),
+                    segment([pt(2, 2), pt(3, 3)]),
+                    segment([pt(3.0001, 3), pt(4, 4)]),
+                ],
+            })],
+        });
+
+        const parsed = GPX.parse(routeToStoredGpx(input));
+
+        expect(parsed.trk?.[0].trkseg).toHaveLength(2);
+        expect(coordinates(parsed)).toEqual([[
+            [[1, 1], [2, 2], [3, 3]],
+            [[3.0001, 3], [4, 4]],
+        ]]);
+        expect(anchors(parsed)).toEqual([[1]]);
+
+        splitTrackSegmentsAtAnchors(parsed);
+
+        expect(coordinates(parsed)).toEqual(coordinates(input));
+    });
+
+    it("serializes an empty route", () => {
+        const stored = routeToStoredGpx(new GPX({ trk: [new Track({ trkseg: [] })] }));
+
+        const parsed = GPX.parse(stored);
+
+        expect(coordinates(parsed).flat(2)).toEqual([]);
+        expect(stored).not.toContain("xmlns:wanderer");
+    });
+});
+
 describe("trail2gpx", () => {
     it("exports a multi-leg route as one segment without fetching", async () => {
         const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected fetch"));
@@ -242,5 +333,59 @@ describe("trail2gpx", () => {
         expect(trails_show).not.toHaveBeenCalled();
         expect(fetchSpy).not.toHaveBeenCalled();
         fetchSpy.mockRestore();
+    });
+});
+
+describe("fromFile", () => {
+    const routeOnlyGpx = `<?xml version="1.0"?><gpx version="1.1" creator="GaiaGPS" xmlns="http://www.topografix.com/GPX/1/1">` +
+        `<metadata><name>Tinker Cliffs</name></metadata>` +
+        `<rte><name>Tinker Cliffs</name>` +
+        `<rtept lat="37.4" lon="-80.0"><ele>400</ele></rtept>` +
+        `<rtept lat="37.41" lon="-80.01"><ele>450</ele></rtept>` +
+        `<rtept lat="37.42" lon="-80.02"><ele>520</ele></rtept>` +
+        `</rte></gpx>`;
+
+    it("stores a route-only file as a track", async () => {
+        const original = new Blob([routeOnlyGpx]);
+
+        const { gpxData, gpxFile } = await fromFile(original);
+
+        expect(gpxFile).not.toBe(original);
+        expect(await gpxFile.text()).toBe(gpxData);
+        const stored = GPX.parse(gpxData);
+        expect(stored.rte).toBeUndefined();
+        expect(stored.trk?.[0].name).toBe("Tinker Cliffs");
+        expect(coordinates(stored)).toEqual([[[[37.4, -80], [37.41, -80.01], [37.42, -80.02]]]]);
+        expect(stored.trk?.[0].trkseg?.[0].trkpt?.map((point) => Number(point.ele))).toEqual([400, 450, 520]);
+        expect(stored.metadata?.name).toBe("Tinker Cliffs");
+        expect(stored.features.distance).toBeGreaterThan(0);
+    });
+
+    it("converts a route that uses a GPX namespace prefix", async () => {
+        const prefixed = `<g:gpx xmlns:g="http://www.topografix.com/GPX/1/1"><g:rte>` +
+            `<g:rtept lat="1" lon="1"/><g:rtept lat="2" lon="2"/></g:rte></g:gpx>`;
+
+        const { gpxData } = await fromFile(new Blob([prefixed]));
+
+        expect(coordinates(GPX.parse(gpxData))).toEqual([[[[1, 1], [2, 2]]]]);
+    });
+
+    it("keeps a file with a track as uploaded", async () => {
+        const original = new Blob([multiLegGpx]);
+
+        const { gpxData, gpxFile } = await fromFile(original);
+
+        expect(gpxFile).toBe(original);
+        expect(gpxData).toBe(multiLegGpx);
+    });
+
+    it("keeps a file with both a route and a track as uploaded", async () => {
+        const content = `<gpx><rte><rtept lat="1" lon="1"/><rtept lat="2" lon="2"/></rte>` +
+            `<trk><trkseg><trkpt lat="3" lon="3"/><trkpt lat="4" lon="4"/></trkseg></trk></gpx>`;
+        const original = new Blob([content]);
+
+        const { gpxFile } = await fromFile(original);
+
+        expect(gpxFile).toBe(original);
     });
 });

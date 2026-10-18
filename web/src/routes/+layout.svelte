@@ -15,9 +15,11 @@
     import { getPb } from "$lib/pocketbase";
     import { currentUser } from "$lib/stores/user_store";
     import { load_plugin_data_once } from "$lib/stores/plugin_store";
+    import { show_toast } from "$lib/stores/toast_store.svelte";
     import { isRouteProtected } from "$lib/util/authorization_util";
     import { onMount, type Snippet } from "svelte";
     import { slide } from "svelte/transition";
+    import { _ } from "svelte-i18n";
     import "../css/app.css";
     import "../css/components.css";
     import "../css/theme.css";
@@ -38,6 +40,15 @@
     });
 
     onMount(() => {
+        try {
+            const settingsSaveFailed = sessionStorage.getItem("registration-settings-save-failed");
+            sessionStorage.removeItem("registration-settings-save-failed");
+            if (settingsSaveFailed === "1") {
+                show_toast({ icon: "close", type: "error", text: $_("error-saving-settings") });
+            }
+        } catch {
+            // The notice is optional when browser storage is disabled.
+        }
         if (page.data.origin != location.origin) {
             showWarning = true;
         }
