@@ -1,6 +1,6 @@
 <script lang="ts">
     import { browser } from "$app/environment";
-    import { beforeNavigate, pushState, replaceState } from "$app/navigation";
+    import { pushState, replaceState } from "$app/navigation";
     import { page } from "$app/state";
     import TrailSearchBar from "$lib/components/trail/trail_search_bar.svelte";
     import TrailList from "$lib/components/trail/trail_list.svelte";
@@ -17,32 +17,11 @@
     import { searchPositionForView } from "$lib/models/search_layout";
     import { loadSearchLayout, searchLayout, updateSearchLayout } from "$lib/stores/search_layout_store";
 
-    const FILTER_STORAGE_KEY = "trailListFilter";
-    const BOUNDS_STORAGE_KEY = "trailSearchBounds";
     const VIEW_STORAGE_KEY = "trailSearchView";
     const PAGE_SIZE = 48;
     const views = ["cards", "list", "table", "map"];
     type SearchSnapshot = { filter: TrailFilter; bounds?: TrailSearchBounds; viewport?: TrailSearchBounds };
 
-    function hasLinkFilter() {
-        return ["category", "subcategory", "author"].some(key => page.url.searchParams.has(key));
-    }
-    function restoreFilter(): TrailFilter {
-        if (!browser || hasLinkFilter()) return page.data.filter;
-        try {
-            const value = localStorage.getItem(FILTER_STORAGE_KEY);
-            return value ? sanitizeTrailFilter(JSON.parse(value), page.data.filter) : page.data.filter;
-        } catch { return page.data.filter; }
-    }
-    function restoreBounds(): TrailSearchBounds | undefined {
-        const linked = trailSearchBoundsFromUrl(page.url.searchParams);
-        if (linked || !browser || hasLinkFilter()) return linked;
-        if (page.url.searchParams.has("lat") || page.url.searchParams.has("lon")) return;
-        try {
-            const value = JSON.parse(localStorage.getItem(BOUNDS_STORAGE_KEY) ?? "null");
-            return isTrailSearchBounds(value) ? value : undefined;
-        } catch { return; }
-    }
     function placeKey(value: TrailFilter) {
         return Number.isFinite(value.near.lat) && Number.isFinite(value.near.lon)
             ? `${value.near.lat},${value.near.lon},${value.near.radius}` : "";
@@ -55,8 +34,10 @@
     }
 
     const mapCenter = untrack(linkedCenter);
-    let filter: TrailFilter = $state(restoreFilter());
-    let bounds = $state<TrailSearchBounds | undefined>(restoreBounds());
+    // Fresh entries use URL defaults. Snapshots restore criteria for this tab
+    // and history entry without sharing them through localStorage.
+    let filter: TrailFilter = $state(page.data.filter);
+    let bounds = $state<TrailSearchBounds | undefined>(trailSearchBoundsFromUrl(page.url.searchParams));
     let mapBounds = $state<TrailSearchBounds | undefined>(untrack(() => bounds));
     let currentDisplayMode = $state(views.includes(page.url.searchParams.get("view") ?? "") ? page.url.searchParams.get("view")! : "cards");
     let activeDisplayMode: string | undefined;
@@ -160,17 +141,6 @@
         });
     });
 
-    beforeNavigate(({ to }) => {
-        if (!browser || !to?.url || to.url.pathname === "/trails" || to.url.pathname === "/map") return;
-        localStorage.removeItem(FILTER_STORAGE_KEY);
-        localStorage.removeItem(BOUNDS_STORAGE_KEY);
-    });
-
-    function persistSearch() {
-        localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filter));
-        if (bounds) localStorage.setItem(BOUNDS_STORAGE_KEY, JSON.stringify(bounds));
-        else localStorage.removeItem(BOUNDS_STORAGE_KEY);
-    }
     function syncUrl(replace = false, clearLinkFilters = false) {
         if (!routerReady) return;
         const url = new URL(window.location.href);
@@ -249,7 +219,6 @@
             searchError = false;
         }
         moreError = false;
-        persistSearch();
         if (reset && loadMapData) void refreshMapData(options.preservePages);
         try {
             const result = reset
@@ -301,7 +270,6 @@
             // The camera is retained independently. Only a viewport that leaves
             // matching trails outside becomes a filter in the other views.
             bounds = data.hasOutsideBounds === false ? undefined : currentBounds;
-            persistSearch();
             syncUrl(true);
             ensureResults(preservePages);
         } catch {
@@ -361,7 +329,6 @@
         const focusOnPlace = Boolean(place && (place !== appliedPlace || resetBounds));
         appliedPlace = place;
         if (focusOnPlace || (resetBounds && currentDisplayMode !== "map")) { bounds = undefined; mapBounds = undefined; }
-        persistSearch();
         cancelScheduledMap();
         syncUrl(true, true);
         if (focusOnPlace && currentDisplayMode === "map") {
