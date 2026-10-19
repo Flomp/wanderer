@@ -11,7 +11,9 @@ import 'package:wanderer/models/category.dart';
 import 'package:wanderer/models/navigate_response.dart';
 import 'package:wanderer/models/trail.dart';
 import 'package:wanderer/models/waypoint.dart';
+import 'package:wanderer/provider/auth_methods_provider.dart';
 import 'package:wanderer/provider/auth_provider.dart';
+import 'package:wanderer/provider/welcome/server_selection_provider.dart';
 import 'package:wanderer/routes/global_search_screen.dart';
 import 'package:wanderer/routes/home_screen.dart';
 import 'package:wanderer/routes/library_screen.dart';
@@ -118,6 +120,21 @@ Listenable routerListenable(Ref ref) {
 
 @riverpod
 class Router extends _$Router {
+  /// Whether the selected server is known to refuse signups. Only consults
+  /// sign-in options already fetched by the welcome screen, so the redirect
+  /// never starts a request of its own.
+  bool _signupDisabled() {
+    final serverUrl = ref
+        .read(serverSelectionProvider)
+        .value
+        ?.selectedServer
+        ?.url;
+    if (serverUrl == null) return false;
+    final provider = authMethodsProvider(serverUrl);
+    if (!ref.exists(provider)) return false;
+    return ref.read(provider).value?.signupDisabled ?? false;
+  }
+
   @override
   GoRouter build() {
     final refreshListenable = ref.watch(routerListenableProvider);
@@ -160,6 +177,9 @@ class Router extends _$Router {
 
         if (!loggedIn) {
           if (isAtSplash || !isAtAuthRoute) {
+            return '/welcome';
+          }
+          if (location == '/register' && _signupDisabled()) {
             return '/welcome';
           }
           return null; // Stay on login/register/etc.

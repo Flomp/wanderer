@@ -9,7 +9,7 @@ import 'package:wanderer/components/base/wanderer_button.dart';
 import 'package:wanderer/i18n/app_localizations.dart';
 import 'package:wanderer/models/api_error.dart';
 import 'package:wanderer/provider/auth_provider.dart';
-import 'package:wanderer/provider/oauth_providers_provider.dart';
+import 'package:wanderer/provider/auth_methods_provider.dart';
 import 'package:wanderer/provider/toast_provider.dart';
 
 /// Renders an "or" divider followed by one button per OAuth2 provider
@@ -34,7 +34,7 @@ class _OAuthProviderButtonsState extends ConsumerState<OAuthProviderButtons> {
 
   @override
   Widget build(BuildContext context) {
-    final providers = ref.watch(oauthProvidersProvider(widget.serverUrl));
+    final authMethods = ref.watch(authMethodsProvider(widget.serverUrl));
     final authState = ref.watch(authProvider);
 
     ref.listen(authProvider, (previous, next) {
@@ -67,8 +67,9 @@ class _OAuthProviderButtonsState extends ConsumerState<OAuthProviderButtons> {
       );
     });
 
-    return providers.when(
-      data: (list) {
+    return authMethods.when(
+      data: (methods) {
+        final list = methods.oauthProviders;
         if (list.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'oauth_providers_provider.dart';
+part of 'auth_methods_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -8,7 +8,7 @@ part of 'oauth_providers_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Fetches the OAuth2 providers configured on the currently selected server.
+/// Fetches the sign-in options of the currently selected server.
 ///
 /// Keyed by [serverUrl] so switching servers (and re-triggering a login after
 /// a failed/cancelled attempt) naturally refetches: `state`/`codeVerifier` are
@@ -18,10 +18,10 @@ part of 'oauth_providers_provider.dart';
 /// Assumes [apiProvider]'s base URL has already been pointed at [serverUrl]
 /// (done by [ServerSelector]/server selection before this is watched).
 
-@ProviderFor(oauthProviders)
-final oauthProvidersProvider = OauthProvidersFamily._();
+@ProviderFor(authMethods)
+final authMethodsProvider = AuthMethodsFamily._();
 
-/// Fetches the OAuth2 providers configured on the currently selected server.
+/// Fetches the sign-in options of the currently selected server.
 ///
 /// Keyed by [serverUrl] so switching servers (and re-triggering a login after
 /// a failed/cancelled attempt) naturally refetches: `state`/`codeVerifier` are
@@ -31,17 +31,15 @@ final oauthProvidersProvider = OauthProvidersFamily._();
 /// Assumes [apiProvider]'s base URL has already been pointed at [serverUrl]
 /// (done by [ServerSelector]/server selection before this is watched).
 
-final class OauthProvidersProvider
+final class AuthMethodsProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<OAuthProvider>>,
-          List<OAuthProvider>,
-          FutureOr<List<OAuthProvider>>
+          AsyncValue<AuthMethods>,
+          AuthMethods,
+          FutureOr<AuthMethods>
         >
-    with
-        $FutureModifier<List<OAuthProvider>>,
-        $FutureProvider<List<OAuthProvider>> {
-  /// Fetches the OAuth2 providers configured on the currently selected server.
+    with $FutureModifier<AuthMethods>, $FutureProvider<AuthMethods> {
+  /// Fetches the sign-in options of the currently selected server.
   ///
   /// Keyed by [serverUrl] so switching servers (and re-triggering a login after
   /// a failed/cancelled attempt) naturally refetches: `state`/`codeVerifier` are
@@ -50,42 +48,42 @@ final class OauthProvidersProvider
   ///
   /// Assumes [apiProvider]'s base URL has already been pointed at [serverUrl]
   /// (done by [ServerSelector]/server selection before this is watched).
-  OauthProvidersProvider._({
-    required OauthProvidersFamily super.from,
+  AuthMethodsProvider._({
+    required AuthMethodsFamily super.from,
     required String super.argument,
   }) : super(
          retry: null,
-         name: r'oauthProvidersProvider',
+         name: r'authMethodsProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$oauthProvidersHash();
+  String debugGetCreateSourceHash() => _$authMethodsHash();
 
   @override
   String toString() {
-    return r'oauthProvidersProvider'
+    return r'authMethodsProvider'
         ''
         '($argument)';
   }
 
   @$internal
   @override
-  $FutureProviderElement<List<OAuthProvider>> $createElement(
+  $FutureProviderElement<AuthMethods> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<OAuthProvider>> create(Ref ref) {
+  FutureOr<AuthMethods> create(Ref ref) {
     final argument = this.argument as String;
-    return oauthProviders(ref, argument);
+    return authMethods(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is OauthProvidersProvider && other.argument == argument;
+    return other is AuthMethodsProvider && other.argument == argument;
   }
 
   @override
@@ -94,9 +92,9 @@ final class OauthProvidersProvider
   }
 }
 
-String _$oauthProvidersHash() => r'860d442d460f1f6c1f98d0a0a5cd47eeb5d1c7d1';
+String _$authMethodsHash() => r'cf3fd3d3a6d681dedb8e7f40da5d9c0ba32448cc';
 
-/// Fetches the OAuth2 providers configured on the currently selected server.
+/// Fetches the sign-in options of the currently selected server.
 ///
 /// Keyed by [serverUrl] so switching servers (and re-triggering a login after
 /// a failed/cancelled attempt) naturally refetches: `state`/`codeVerifier` are
@@ -106,18 +104,18 @@ String _$oauthProvidersHash() => r'860d442d460f1f6c1f98d0a0a5cd47eeb5d1c7d1';
 /// Assumes [apiProvider]'s base URL has already been pointed at [serverUrl]
 /// (done by [ServerSelector]/server selection before this is watched).
 
-final class OauthProvidersFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<OAuthProvider>>, String> {
-  OauthProvidersFamily._()
+final class AuthMethodsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<AuthMethods>, String> {
+  AuthMethodsFamily._()
     : super(
         retry: null,
-        name: r'oauthProvidersProvider',
+        name: r'authMethodsProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  /// Fetches the OAuth2 providers configured on the currently selected server.
+  /// Fetches the sign-in options of the currently selected server.
   ///
   /// Keyed by [serverUrl] so switching servers (and re-triggering a login after
   /// a failed/cancelled attempt) naturally refetches: `state`/`codeVerifier` are
@@ -127,9 +125,9 @@ final class OauthProvidersFamily extends $Family
   /// Assumes [apiProvider]'s base URL has already been pointed at [serverUrl]
   /// (done by [ServerSelector]/server selection before this is watched).
 
-  OauthProvidersProvider call(String serverUrl) =>
-      OauthProvidersProvider._(argument: serverUrl, from: this);
+  AuthMethodsProvider call(String serverUrl) =>
+      AuthMethodsProvider._(argument: serverUrl, from: this);
 
   @override
-  String toString() => r'oauthProvidersProvider';
+  String toString() => r'authMethodsProvider';
 }
