@@ -35,6 +35,8 @@ describe("API token authentication", () => {
                 res.end(JSON.stringify({ token, record: user }));
             } else if (req.url?.startsWith("/api/collections/settings/records")) {
                 res.end(JSON.stringify({ items: [{ id: "settings", user: user.id }] }));
+            } else if (req.method === "POST" && req.url === "/api/collections/users/records") {
+                res.end(body);
             } else if (req.url?.startsWith("/api/collections/activitypub_actors/records")) {
                 res.end(JSON.stringify({ items: [{ id: "actor", user: user.id }] }));
             } else {
@@ -150,6 +152,35 @@ describe("API token authentication", () => {
         expect(requests.every(({ headers }) => headers["x-real-ip"] === undefined)).toBe(true);
         expect(requests.at(-1)?.headers["x-caller"]).toBe("preserved");
         expect(callerFetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ cache: "no-store" }));
+    });
+
+    it("keeps SDK-managed headers and JSON bodies intact when forwarding", async () => {
+        status = 200;
+        const { event } = request("/api/v1/user", true, "Bearer wanderer_key_valid");
+        vi.mocked(event.cookies.get).mockReturnValue("");
+        const record = { username: "Test", email: "test@test.de" };
+        await handle({ event, resolve: async () => {
+            await event.locals.pb.collection("users").create(record);
+            return new Response("resolved");
+        } });
+
+        const created = requests.find(({ path }) => path === "/api/collections/users/records");
+        expect(created?.body).toBe(JSON.stringify(record));
+        expect(created?.headers).toMatchObject({
+            "content-type": "application/json",
+            "authorization": token,
+            "accept-language": expect.any(String),
+            "x-forwarded-for": "192.0.2.1",
+        });
+
+        // The SDK reads headers by plain-object key after beforeSend.
+        const { options } = await event.locals.pb.beforeSend!("http://pb", {
+            headers: { "Content-Type": "application/json", Authorization: token, "X-FORWARDED-FOR": "198.51.100.1" },
+        });
+        expect(Object.getPrototypeOf(options?.headers)).toBe(Object.prototype);
+        expect(options?.headers).toEqual({
+            "Content-Type": "application/json", Authorization: token, "X-Forwarded-For": "192.0.2.1",
+        });
     });
 
     it("preserves server errors when the backend cannot be reached", async () => {
