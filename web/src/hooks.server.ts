@@ -54,6 +54,11 @@ function isFormContentType(request: Request) {
 
 const auth: Handle = async ({ event, resolve }) => {
   const pb = new PocketBase(envPub.PUBLIC_POCKETBASE_URL)
+  pb.beforeSend = (url, options) => {
+    const headers = new Headers(options.headers)
+    headers.set('X-Forwarded-For', event.getClientAddress())
+    return { url, options: { ...options, headers } }
+  }
   const url = new URL(event.request.url);
 
   // Handle API token based auth for API requests
