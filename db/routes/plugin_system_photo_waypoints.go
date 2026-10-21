@@ -35,8 +35,11 @@ func movePhotosToWaypoints(app core.App, item *pluginsystem.TrailImport, mapping
 func groupPhotosIntoWaypoints(item *pluginsystem.TrailImport, settings waypointMergeSettings) {
 	trailPhotos := []pluginsystem.Photo{item.Photos[0]}
 	clusterPhotos := []waypointClusterPhoto{}
+	// Clustering compares every photo with every cluster, and no more photos
+	// than this can be kept on waypoints, so the rest stay on the trail.
+	maxClusterPhotos := (maxPhotoWaypointsPerTrail + len(item.Waypoints)) * util.DefaultPluginMaxMediaItemsPerEntity
 	for i, photo := range item.Photos[1:] {
-		if photo.Lat == nil || photo.Lon == nil || *photo.Lat < -90 || *photo.Lat > 90 || *photo.Lon < -180 || *photo.Lon > 180 {
+		if photo.Lat == nil || photo.Lon == nil || *photo.Lat < -90 || *photo.Lat > 90 || *photo.Lon < -180 || *photo.Lon > 180 || len(clusterPhotos) >= maxClusterPhotos {
 			trailPhotos = append(trailPhotos, photo)
 			continue
 		}
