@@ -370,14 +370,23 @@ func testPluginInstance(id string, pluginID string) *core.Record {
 	return record
 }
 
-type panickingWriteCloser struct{}
+// panickingWriteCloser panics on its first write only, so a second write shows
+// the session was used again.
+type panickingWriteCloser struct{ writes int }
 
-func (panickingWriteCloser) Write([]byte) (int, error) { panic("write failed") }
-func (panickingWriteCloser) Close() error              { return nil }
+func (w *panickingWriteCloser) Write(p []byte) (int, error) {
+	w.writes++
+	if w.writes == 1 {
+		panic("write failed")
+	}
+	return len(p), nil
+}
+func (*panickingWriteCloser) Close() error { return nil }
 
 func TestWorkerCallPanicEndsTheSession(t *testing.T) {
+	stdin := &panickingWriteCloser{}
 	session := &workerRuntimeSession{
-		stdin:           panickingWriteCloser{},
+		stdin:           stdin,
 		stdout:          io.NopCloser(strings.NewReader("")),
 		requestMaxBytes: defaultWorkerRequestMaxBytes,
 		exportTimeout:   time.Minute,
@@ -386,7 +395,8 @@ func TestWorkerCallPanicEndsTheSession(t *testing.T) {
 	if !IsRuntimeSessionFatalError(err) {
 		t.Fatalf("panic in the worker call: %v", err)
 	}
-	if _, err := session.Call(context.Background(), "list_routes_v1", []byte("{}")); !IsRuntimeSessionFatalError(err) {
-		t.Fatalf("session still used after a panic: %v", err)
+	_, err = session.Call(context.Background(), "list_routes_v1", []byte("{}"))
+	if !IsRuntimeSessionFatalError(err) || !strings.Contains(err.Error(), "worker session is invalid") || stdin.writes != 1 {
+		t.Fatalf("session still used after a panic: writes=%d, err=%v", stdin.writes, err)
 	}
 }

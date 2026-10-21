@@ -196,6 +196,100 @@ func TestSyncCapabilityHandlesSessionAndSwitchOff(t *testing.T) {
 			t.Fatalf("sync went on after the plugin was switched off: %v", err)
 		}
 	})
+	refs := core.NewBaseCollection("trail_external_reference")
+	refs.Fields.Add(&core.TextField{Name: "user"}, &core.TextField{Name: "provider"}, &core.TextField{Name: "external_id"})
+	if err := f.app.Save(refs); err != nil {
+		t.Fatal(err)
+	}
+	for name, remove := range map[string]func(*pluginInstanceFixture, string) error{
+		"switched off": func(f *pluginInstanceFixture, id string) error {
+			record, err := f.app.FindRecordById("plugin_instances", id)
+			if err != nil {
+				return err
+			}
+			record.Set("enabled", false)
+			return f.app.Save(record)
+		},
+		"deleted": func(f *pluginInstanceFixture, id string) error {
+			record, err := f.app.FindRecordById("plugin_instances", id)
+			if err != nil {
+				return err
+			}
+			return f.app.Delete(record)
+		},
+	} {
+		t.Run("stops before the next item when "+name+" mid-batch", func(t *testing.T) {
+			id := f.instance(t, true, time.Time{})
+			list, _ := json.Marshal(pluginSystemListOutput{Items: []pluginsystem.TrailSummary{
+				{Source: pluginsystem.TrailImportSource{ExternalID: "a"}},
+				{Source: pluginsystem.TrailImportSource{ExternalID: "b"}},
+				{Source: pluginsystem.TrailImportSource{ExternalID: "c"}},
+			}})
+			details := 0
+			session := syncLimitTestSession{call: func(_ context.Context, export string, _ []byte) ([]byte, error) {
+				if export == "list_routes_v1" {
+					return list, nil
+				}
+				details++
+				// The first detail call fails, so no trail is imported.
+				if err := remove(f, id); err != nil {
+					t.Fatal(err)
+				}
+				return nil, errors.New("detail failed")
+			}}
+			_, err := syncPluginCapability(t.Context(), f.app, nil, &pluginSyncRuntimeSession{session: session}, pluginsystem.LocalPlugin{},
+				pluginsystem.CapabilityManifest{Export: "list_routes_v1"}, pluginsystem.CapabilityManifest{Export: "get_route_detail_v1"}, f.stored(t, id), nil,
+				nil, nil, nil, false, false)
+			if !errors.Is(err, errPluginInstanceSwitchedOff) || details != 1 {
+				t.Fatalf("sync went on after the plugin was %s: %d detail calls, err=%v", name, details, err)
+			}
+		})
+	}
+}
+
+func TestSyncKeepsErrorFieldsUntouchedWhenSwitchedOffDuringTheSync(t *testing.T) {
+	f := newPluginInstanceFixture(t)
+	actors := core.NewBaseCollection("activitypub_actors")
+	actors.Fields.Add(&core.TextField{Name: "user"})
+	if err := f.app.Save(actors); err != nil {
+		t.Fatal(err)
+	}
+	actor := core.NewRecord(actors)
+	actor.Set("user", f.ownerID)
+	if err := f.app.Save(actor); err != nil {
+		t.Fatal(err)
+	}
+	instanceID := f.instance(t, true, time.Time{})
+	empty, _ := json.Marshal(pluginSystemListOutput{})
+	// The user switches the plugin off while the plugin is listing.
+	session := syncLimitTestSession{call: func(context.Context, string, []byte) ([]byte, error) {
+		record := f.stored(t, instanceID)
+		record.Set("enabled", false)
+		if err := f.app.Save(record); err != nil {
+			t.Fatal(err)
+		}
+		return empty, nil
+	}}
+	original := pluginRuntimeFor
+	pluginRuntimeFor = func(pluginsystem.LocalPlugin) (pluginsystem.Runtime, error) {
+		return &reopenTestRuntime{session: session}, nil
+	}
+	t.Cleanup(func() { pluginRuntimeFor = original })
+	plugin := pluginsystem.LocalPlugin{}
+	plugin.Manifest.ID = "komoot"
+	plugin.Manifest.Capabilities = []pluginsystem.CapabilityManifest{
+		{Name: "list_routes", Version: "v1", Export: "list_routes_v1"},
+		{Name: "get_route_detail", Version: "v1", Export: "get_route_detail_v1"},
+	}
+
+	_, err := syncPluginInstance(t.Context(), f.app, nil, plugin, f.stored(t, instanceID))
+	if !errors.Is(err, errPluginInstanceSwitchedOff) {
+		t.Fatalf("sync of a switched-off plugin: %v", err)
+	}
+	stored := f.stored(t, instanceID)
+	if len(pluginsystem.JSONMapFromRecord(stored, "last_error")) != 0 || !stored.GetDateTime("retry_not_before").IsZero() {
+		t.Fatalf("switch-off recorded as an error: last_error=%v, retry_not_before=%v", stored.Get("last_error"), stored.GetDateTime("retry_not_before"))
+	}
 }
 
 func TestResetInterruptedPluginSyncs(t *testing.T) {

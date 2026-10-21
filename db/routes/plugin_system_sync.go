@@ -164,8 +164,14 @@ func pluginInstances(app core.App, pluginID string) ([]*core.Record, error) {
 }
 
 // runPluginInstanceSync is syncPluginInstance. Tests replace it to check the
-// locking and status handling around a sync without a plugin runtime.
+// status handling around a sync without a plugin runtime.
 var runPluginInstanceSync = syncPluginInstance
+
+// pluginRuntimeFor picks the runtime for a plugin. Tests replace it to run
+// syncPluginInstance without a worker process.
+var pluginRuntimeFor = func(plugin pluginsystem.LocalPlugin) (pluginsystem.Runtime, error) {
+	return pluginsystem.NewRuntimeRegistry().RuntimeFor(plugin)
+}
 
 // syncFreshPluginInstance re-reads the instance before syncing it, since the
 // caller's copy may predate a change the user or another sync made. skipped is
@@ -221,7 +227,7 @@ func syncPluginInstance(ctx context.Context, app core.App, client meilisearch.Se
 	hostConfig := pluginHostConfig(config)
 	defaultPublic := userDefaultPublic(app, instance.GetString("user"))
 	createSummitLog := boolOption(hostConfig, "createSummitLogForCompleted", true)
-	runtime, err := pluginsystem.NewRuntimeRegistry().RuntimeFor(plugin)
+	runtime, err := pluginRuntimeFor(plugin)
 	if err != nil {
 		setPluginInstanceStatusForError(app, instance, err)
 		return nil, err
@@ -419,6 +425,10 @@ func syncPluginCapability(ctx context.Context, app core.App, client meilisearch.
 		for _, summary := range summaries {
 			if summary.Source.ExternalID == "" {
 				continue
+			}
+			// A batch can take minutes, so check again before each item's calls.
+			if pluginInstanceSwitchedOff(app, instance.Id) {
+				return nil, errPluginInstanceSwitchedOff
 			}
 			if existingIDsByProvider[summary.Source.Provider][summary.Source.ExternalID] {
 				result.Skipped++
