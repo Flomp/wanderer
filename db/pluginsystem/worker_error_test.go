@@ -12,7 +12,12 @@ import (
 
 func TestPluginErrorForResult(t *testing.T) {
 	callErr := errors.New("exit_code: 1")
-	oversized := `{"code":"auth_failed","message":"` + strings.Repeat("x", 64*1024) + `"}`
+	// structuredOfLen builds a valid structured error that is n bytes long.
+	structuredOfLen := func(n int) string {
+		const head, tail = `{"code":"auth_failed","message":"`, `"}`
+		return head + strings.Repeat("x", n-len(head)-len(tail)) + tail
+	}
+	oversized := structuredOfLen(64*1024 + 34)
 	tests := []struct {
 		name     string
 		code     uint32
@@ -29,6 +34,8 @@ func TestPluginErrorForResult(t *testing.T) {
 		{"empty error is fatal", 1, "", callErr, ""},
 		{"json without code is fatal", 1, `{"message":"boom"}`, callErr, ""},
 		{"oversized error is fatal", 1, oversized, callErr, ""},
+		{"error of exactly 64 KiB is accepted", 1, structuredOfLen(64 * 1024), callErr, "auth_failed"},
+		{"error of 64 KiB plus one byte is fatal", 1, structuredOfLen(64*1024 + 1), callErr, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -123,14 +130,16 @@ func TestHandleCallExportGuestError(t *testing.T) {
 		})
 	}
 	t.Run("plain text is fatal", func(t *testing.T) {
-		if _, err := callFailingPlugin(t, "boom"); err == nil {
-			t.Fatal("expected fatal error")
+		_, err := callFailingPlugin(t, "boom")
+		if err == nil || !strings.Contains(err.Error(), "call run:") {
+			t.Fatalf("expected fatal call error, got %v", err)
 		}
 	})
 	t.Run("oversized is fatal", func(t *testing.T) {
 		raw := `{"code":"auth_failed","message":"` + strings.Repeat("x", 64*1024) + `"}`
-		if _, err := callFailingPlugin(t, raw); err == nil {
-			t.Fatal("expected fatal error")
+		_, err := callFailingPlugin(t, raw)
+		if err == nil || !strings.Contains(err.Error(), "call run:") {
+			t.Fatalf("expected fatal call error, got %v", err)
 		}
 	})
 }
