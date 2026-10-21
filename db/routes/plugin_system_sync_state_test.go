@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -104,6 +105,9 @@ func TestPluginSyncPanicBecomesAnError(t *testing.T) {
 	_, skipped, err := syncFreshPluginInstance(t.Context(), f.app, nil, pluginsystem.LocalPlugin{}, instanceID)
 	if skipped || err == nil {
 		t.Fatalf("panic not reported: skipped=%v, err=%v", skipped, err)
+	}
+	if strings.Contains(err.Error(), "bad plugin item") {
+		t.Fatalf("error carries the panic value: %v", err)
 	}
 	stored := f.stored(t, instanceID)
 	if stored.GetString("status") != "error" || pluginsystem.JSONMapFromRecord(stored, "last_error")["code"] != "internal_error" {

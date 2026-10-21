@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	extism "github.com/extism/go-sdk"
 	"github.com/pocketbase/pocketbase/core"
@@ -366,4 +368,25 @@ func testPluginInstance(id string, pluginID string) *core.Record {
 	record.Id = id
 	record.Set("plugin_id", pluginID)
 	return record
+}
+
+type panickingWriteCloser struct{}
+
+func (panickingWriteCloser) Write([]byte) (int, error) { panic("write failed") }
+func (panickingWriteCloser) Close() error              { return nil }
+
+func TestWorkerCallPanicEndsTheSession(t *testing.T) {
+	session := &workerRuntimeSession{
+		stdin:           panickingWriteCloser{},
+		stdout:          io.NopCloser(strings.NewReader("")),
+		requestMaxBytes: defaultWorkerRequestMaxBytes,
+		exportTimeout:   time.Minute,
+	}
+	_, err := session.Call(context.Background(), "list_routes_v1", []byte("{}"))
+	if !IsRuntimeSessionFatalError(err) {
+		t.Fatalf("panic in the worker call: %v", err)
+	}
+	if _, err := session.Call(context.Background(), "list_routes_v1", []byte("{}")); !IsRuntimeSessionFatalError(err) {
+		t.Fatalf("session still used after a panic: %v", err)
+	}
 }

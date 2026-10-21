@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -186,10 +185,11 @@ func syncFreshPluginInstance(ctx context.Context, app core.App, client meilisear
 	}
 	app.Logger().Info("plugin instance sync started", "plugin", plugin.Manifest.ID, "instance", instanceID)
 	defer func() {
-		if recovered := recover(); recovered != nil {
-			app.Logger().Error("plugin instance sync panicked", "plugin", plugin.Manifest.ID, "instance", instanceID, "panic", fmt.Sprint(recovered), "stack", string(debug.Stack()))
+		// The panic value and stack can hold plugin data, so neither is logged.
+		if recover() != nil {
+			app.Logger().Error("plugin instance sync panicked", "plugin", plugin.Manifest.ID, "instance", instanceID)
 			setPluginInstanceStatus(app, instance, "error", "internal_error", "the sync stopped on an internal error")
-			result, skipped, err = nil, false, fmt.Errorf("plugin sync panicked: %v", recovered)
+			result, skipped, err = nil, false, errors.New("plugin sync panicked")
 		}
 	}()
 	result, err = runPluginInstanceSync(ctx, app, client, plugin, instance)

@@ -138,33 +138,28 @@ func ImportTrail(ctx context.Context, app core.App, item pluginsystem.TrailImpor
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if err := app.Save(record); err != nil {
+	// The trail and its external reference are saved together, so a trail never
+	// exists without the reference that stops later syncs from importing it
+	// again. The trail's after-create hooks run once this commits; if one of
+	// them fails, the error is returned but both records stay.
+	err = app.RunInTransaction(func(txApp core.App) error {
+		if err := txApp.Save(record); err != nil {
+			return err
+		}
+		return util.EnsureTrailExternalReference(txApp, record.Id, item.Source.Provider, item.Source.ExternalID, opts.Manifest.ID, ProviderCategoryFromImport(item))
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	err = func() error {
-		if err := util.EnsureTrailExternalReference(app, record.Id, item.Source.Provider, item.Source.ExternalID, opts.Manifest.ID, ProviderCategoryFromImport(item)); err != nil {
-			return err
-		}
-		if err := createWaypoints(ctx, app, item.Waypoints, opts, mediaBudget, record.Id, trackIndex, mediaContext); err != nil {
-			return err
-		}
-		// Waypoint photos are dropped the same way on cancellation.
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if opts.CreateSummitLogForCompleted && item.Kind == "completed" {
-			return createSummitLog(app, record.Id, opts.ActorID, date, metrics)
-		}
-		return nil
-	}()
-	if err != nil {
-		// Deleting the trail also deletes its external reference, so the next
-		// sync imports it again instead of skipping an incomplete trail.
-		if deleteErr := app.Delete(record); deleteErr != nil {
-			app.Logger().Warn("unable to remove incompletely imported plugin trail", "trail", record.Id, "error", deleteErr)
-		}
+	if err := createWaypoints(ctx, app, item.Waypoints, opts, mediaBudget, record.Id, trackIndex, mediaContext); err != nil {
 		return nil, err
+	}
+
+	if opts.CreateSummitLogForCompleted && item.Kind == "completed" {
+		if err := createSummitLog(app, record.Id, opts.ActorID, date, metrics); err != nil {
+			return nil, err
+		}
 	}
 
 	return &Result{TrailID: record.Id, Created: true}, nil
