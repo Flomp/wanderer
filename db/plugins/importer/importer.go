@@ -133,22 +133,38 @@ func ImportTrail(ctx context.Context, app core.App, item pluginsystem.TrailImpor
 	}
 
 	util.SanitizeHTMLFieldsWithLimits(record)
+	// photoFiles drops the remaining photos once the sync is cancelled. Saving
+	// then would keep a trail that later syncs skip as already imported.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if err := app.Save(record); err != nil {
 		return nil, err
 	}
 
-	if err := util.EnsureTrailExternalReference(app, record.Id, item.Source.Provider, item.Source.ExternalID, opts.Manifest.ID, ProviderCategoryFromImport(item)); err != nil {
-		return nil, err
-	}
-
-	if err := createWaypoints(ctx, app, item.Waypoints, opts, mediaBudget, record.Id, trackIndex, mediaContext); err != nil {
-		return nil, err
-	}
-
-	if opts.CreateSummitLogForCompleted && item.Kind == "completed" {
-		if err := createSummitLog(app, record.Id, opts.ActorID, date, metrics); err != nil {
-			return nil, err
+	err = func() error {
+		if err := util.EnsureTrailExternalReference(app, record.Id, item.Source.Provider, item.Source.ExternalID, opts.Manifest.ID, ProviderCategoryFromImport(item)); err != nil {
+			return err
 		}
+		if err := createWaypoints(ctx, app, item.Waypoints, opts, mediaBudget, record.Id, trackIndex, mediaContext); err != nil {
+			return err
+		}
+		// Waypoint photos are dropped the same way on cancellation.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if opts.CreateSummitLogForCompleted && item.Kind == "completed" {
+			return createSummitLog(app, record.Id, opts.ActorID, date, metrics)
+		}
+		return nil
+	}()
+	if err != nil {
+		// Deleting the trail also deletes its external reference, so the next
+		// sync imports it again instead of skipping an incomplete trail.
+		if deleteErr := app.Delete(record); deleteErr != nil {
+			app.Logger().Warn("unable to remove incompletely imported plugin trail", "trail", record.Id, "error", deleteErr)
+		}
+		return nil, err
 	}
 
 	return &Result{TrailID: record.Id, Created: true}, nil
