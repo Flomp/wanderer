@@ -64,6 +64,32 @@ bundles and configuring self-hosted connector trust settings.
 | UPLOAD_USER             | Username for the account with which <span class="-tracking-[0.075em]">wanderer</span> auto-uploads trails                 |                                     |
 | UPLOAD_PASSWORD         | Password for the account with which <span class="-tracking-[0.075em]">wanderer</span> auto-uploads trails                 |                                     |
 
+### Visitor IP addresses
+
+These settings are provided by [SvelteKit adapter-node](https://svelte.dev/docs/kit/adapter-node#ADDRESS_HEADER-and-XFF_DEPTH).
+
+For a direct deployment, leave `ADDRESS_HEADER` unset. SvelteKit's Node adapter
+uses the connection's socket address, which the web service forwards to
+PocketBase. Behind a reverse proxy, configure these variables on the `web`
+service only when the proxy is controlled and direct access to the web service
+is blocked. The proxy must overwrite public forwarding headers with an
+authoritative address or a controlled proxy chain.
+
+| Environment Variable | Description | Default |
+| -------------------- | ----------- | ------- |
+| ADDRESS_HEADER | Trusted header used by adapter-node to resolve the client address, for example `X-Forwarded-For` | Unset (socket address) |
+| XFF_DEPTH | When `ADDRESS_HEADER=X-Forwarded-For`, number of trusted proxy hops, counted from the right of the header | 1 |
+
+For one controlled reverse proxy that overwrites `X-Forwarded-For` with the
+visitor's address, set `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1`.
+For multiple proxies, match `XFF_DEPTH` to the trusted chain; do not trust an
+arbitrary leftmost address supplied by the visitor. Misconfiguration lets
+visitors forge the address used for rate limiting.
+
+Configure PocketBase's [User IP proxy headers](/run/backend-configuration#visitor-ip-addresses)
+and restrict access to the backend as described there. `POCKETBASE_PROXY_SECRET`
+protects federation delivery only and does not authenticate these IP headers.
+
 ## Map tiles & assets
 
 These variables configure where the mobile app loads map vector tiles, fonts (glyphs), and sprites from. They are set on the `web` service. See [Custom map tiles & assets](/run/backend-configuration/map-tiles) for details.

@@ -2,6 +2,65 @@
 title: Changelog
 description: What changed in the last patch?
 ---
+## v0.21.1
+
+### Upgrade Notes
+- The Hammerhead plugin is now at version 0.1.2 and fixes the elevation profiles of imported Dashboard activities. To update, replace the plugin bundle, restart the backend, and check the version in the plugin settings, as described in the [plugin documentation](/run/installation/plugins). Activities that were imported before keep their wrong profile. (PR #1316, thanks @slothful-vassal)
+- The web service now forwards the visitor's IP address to PocketBase. To use it for PocketBase's IP rate limits and logs, set **User IP proxy headers** to `X-Forwarded-For` in the PocketBase settings, and make sure the `db` service is no longer reachable from outside, as described in the [backend configuration](/run/backend-configuration). If you set `ADDRESS_HEADER`, requests that reach the web service without that header now fail. (PR #1421, thanks @mvanhorn)
+- On the first start, migrations clean stored rich text and tag names. Rich text that is longer than its field allows after cleaning is shortened, and a downgrade does not restore it. (PR #1320, #1323, thanks @slothful-vassal)
+
+### Features
+- The photo lightbox now closes with the browser's back button or the back gesture on mobile. (PR #1264, thanks @hellofrancois)
+
+### Security
+- Rich text from imports, federation, and profile summaries is now sanitized before it is stored, and a migration cleans existing records. (PR #1320, thanks @slothful-vassal)
+- Users who may edit a record can no longer change its owner or move it to another trail. This also prevents taking over trails and lists that were shared for editing. (PR #1319, thanks @slothful-vassal)
+- Fixed a stored XSS in combobox suggestions. (PR #1318, thanks @slothful-vassal)
+- Comments on private trails are no longer federated, and a migration removes the activities already stored for them. (PR #1348)
+
+### Performance
+- The backend no longer rebuilds every search index on start, only indexes that changed. A new nightly `search-repair` job writes missing or outdated search documents and removes stale ones. Set its schedule with `POCKETBASE_CRON_SEARCH_REPAIR_SCHEDULE` (default `0 4 * * *`). (PR #1335)
+- Opening long tracks no longer freezes the browser. (PR #1289, #1291, #1269, thanks @hellofrancois)
+- Follower lists of remote accounts now load each page with a single request. (PR #1292)
+
+### Bug Fixes
+- Posts from wanderer now reach GoToSocial. (PR #1285, thanks @huggenknubbel)
+- Incoming federation no longer fails behind reverse proxies that send `Connection: upgrade`. (PR #1286, thanks @huggenknubbel)
+- Attachments are now always sent as an array, and single attachment objects from other servers are accepted. (PR #1382, thanks @slothful-vassal)
+- Failures while processing incoming activities or sending notification emails are now logged. (PR #1380, thanks @slothful-vassal)
+- Notifications no longer disappear from October through February. (PR #1384, thanks @SomSamantray)
+- Hammerhead imports now keep Dashboard elevations in metres instead of dividing them by 1,000. (PR #1316, thanks @slothful-vassal)
+- Strava syncing no longer stops when the access token expires. Revoking a plugin connection now removes its tokens, and a completed OAuth login can no longer be reused. (PR #1317, thanks @slothful-vassal)
+- Plugin syncs reject oversized batches with a clear error message. (PR #1381, thanks @slothful-vassal)
+- Deleting a trail with a summit log from a Komoot or Strava import no longer fails. (PR #1350, thanks @developerjillur)
+- Invalid or revoked API tokens now return `401` instead of `500`. (PR #1314, thanks @snowyukitty)
+- New accounts from OIDC providers that send neither `email_verified` nor `preferred_username`, such as Cloudflare Access, now keep their email address (unverified) and display name. (PR #1346)
+- OIDC login in Safari no longer shows an `invalid_grant` error. (PR #1332)
+- A profile's trails page no longer fails for signed-out visitors, which also broke viewing remote users' trails. (PR #1333)
+- GPX files that contain only routes now import with distance, elevation, and duration. (PR #1363, thanks @ryanchou1994)
+- Drawn routes are now stored and exported as one continuous track segment, so devices such as Garmin Explore show the whole route. (PR #1370, thanks @mvanhorn, #1377)
+- Waypoint distances are now stored in metres for users with imperial units. (PR #1344)
+- Photo waypoints on out-and-back tracks are now placed on the right pass. (PR #1345)
+- Reverse geocoding with the public Nominatim service now respects its rate limit during bulk imports and retries when it is rate limited. (PR #1367, thanks @jay23606)
+- Tag names no longer keep control characters, and entering an existing tag name reuses that tag. (PR #1323, thanks @slothful-vassal)
+- The list editor's trail search no longer comes up empty when the top matches are already in the list. (PR #1417, thanks @simonvanlierde)
+- Multi-select fields no longer suggest items that are already selected. (PR #1372, thanks @developerjillur)
+- Menus on trail cards, such as delete and duplicate, now act on their own card instead of the first one in the list, and scrolling works again after closing a dialog. (PR #1303, thanks @mrhard9090, #1307, thanks @slothful-vassal)
+- A failed profile image upload now shows an error. (PR #1304, thanks @mrhard9090)
+- The browser language chosen at signup is now saved. (PR #1379, thanks @slothful-vassal)
+- Deleted lists no longer reappear in the overview, and a failing search index no longer stops the backend when a trail or account is deleted. (PR #1326, #1327, thanks @slothful-vassal)
+
+### Documentation
+- The Docker installation guide now explains the three required secrets more clearly. (PR #1287, thanks @erikvanoosten)
+- Added instructions for OAuth with self-signed certificates. (PR #1368, thanks @indevd)
+- The mobile app pages now explain that the app's map needs `PROTOMAPS_API_KEY` or `TILE_SERVER_URL`, and that login fails on instances without the `-app` images. (PR #1330, #1331)
+- Added instructions for updating a plugin. (PR #1316, thanks @slothful-vassal)
+
+### Maintenance
+- Translation updates via Crowdin. (PR #1295)
+- Updated web, docs, and Docker dependencies.
+- Build and CI fixes. (PR #1362, #1324, #1322, #1281, thanks @slothful-vassal)
+
 ## v0.21.0
 
 ### Mobile app beta
