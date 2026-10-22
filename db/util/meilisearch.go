@@ -22,7 +22,8 @@ var SearchWriteOptions = &meilisearch.DocumentOptions{PrimaryKey: meilisearch.St
 // and list documents in full but actor documents by preferred_username only,
 // so a change to any other actor field is only picked up through a bump.
 var SearchDocumentVersions = map[string]int{
-	"trails": 1,
+	// 2: moving_duration
+	"trails": 2,
 	"lists":  1,
 	"actors": 1,
 }
@@ -93,6 +94,7 @@ func documentFromTrailRecord(r *core.Record, author *core.Record, includeShares 
 		"elevation_gain":             r.GetFloat("elevation_gain"),
 		"elevation_loss":             r.GetFloat("elevation_loss"),
 		"duration":                   r.GetFloat("duration"),
+		"moving_duration":            r.GetFloat("moving_duration"),
 		"difficulty":                 difficultyToNumber(r.GetString("difficulty")),
 		"category":                   category,
 		"category_id":                categoryIDValue,
