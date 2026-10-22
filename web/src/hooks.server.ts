@@ -14,6 +14,7 @@ import { handleError } from '$lib/util/api_util'
 import { apiErrorsAsJson, isApiRequest } from '$lib/server/api_errors'
 
 const SEARCH_TOKEN_VERSION = 1;
+const HEALTH_PATH = "/api/v1/health";
 
 function csrf(allowedPaths: string[]): Handle {
   return async ({ event, resolve }) => {
@@ -69,6 +70,14 @@ const auth: Handle = async ({ event, resolve }) => {
     return { url, options: { ...options, headers } }
   }
   const url = new URL(event.request.url);
+
+  // The health probe reports whether PocketBase is reachable, so it must not
+  // depend on the token checks and search-token fetch below: those fail with
+  // a 500 while PocketBase is down, and clients only treat 503 as offline.
+  if (url.pathname === HEALTH_PATH) {
+    event.locals.pb = pb
+    return resolve(event)
+  }
 
   // Handle API token based auth for API requests
   if (event.request.headers.has("Authorization") && url.pathname.startsWith("/api")) {
