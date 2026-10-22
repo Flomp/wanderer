@@ -154,6 +154,28 @@ describe("API token authentication", () => {
         expect(callerFetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ cache: "no-store" }));
     });
 
+    it("omits X-Forwarded-For when getClientAddress throws", async () => {
+        status = 200;
+        const { event, resolve } = request("/api/v1/api-token", true, "Bearer wanderer_key_valid");
+        event.getClientAddress = () => {
+            throw new Error("ADDRESS_HEADER was specified, but the incoming request does not include a x-forwarded-for header");
+        };
+        vi.mocked(event.cookies.get).mockReturnValue("");
+        const response = await handle({ event, resolve });
+
+        expect(response.status).toBe(200);
+        expect(await response.text()).toBe("resolved");
+        expect(resolve).toHaveBeenCalledOnce();
+        expect(requests.every(({ headers }) => headers["x-forwarded-for"] === undefined)).toBe(true);
+
+        const { options } = await event.locals.pb.beforeSend!("http://pb", {
+            headers: { "Content-Type": "application/json", Authorization: token, "X-Forwarded-For": "198.51.100.1" },
+        });
+        expect(options?.headers).toEqual({
+            "Content-Type": "application/json", Authorization: token,
+        });
+    });
+
     it("keeps SDK-managed headers and JSON bodies intact when forwarding", async () => {
         status = 200;
         const { event } = request("/api/v1/user", true, "Bearer wanderer_key_valid");

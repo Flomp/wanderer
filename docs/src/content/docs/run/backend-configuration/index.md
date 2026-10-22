@@ -26,10 +26,12 @@ visitor address instead of the web service address. See PocketBase's
 [reverse proxy guidance](https://pocketbase.io/docs/going-to-production/#using-reverse-proxy).
 
 Where PocketBase trusts this header, restrict backend access to the web service
-and other trusted proxies using private networking or firewall rules. Any proxy
-that accepts public requests must overwrite untrusted forwarding headers with
-an authoritative client address. A publicly reachable backend that trusts
-caller-supplied headers allows callers to spoof their rate-limit identity.
+and other trusted proxies using private networking or firewall rules. The
+default `docker-compose.yml` publishes `8090:8090`; remove or firewall that
+port before enabling **User IP proxy headers**. Any proxy that accepts public
+requests must overwrite untrusted forwarding headers with an authoritative
+client address. A publicly reachable backend that trusts caller-supplied
+headers allows callers to spoof their rate-limit identity.
 
 For the web service's own reverse proxy configuration, see
 [Visitor IP addresses](/run/environment-configuration#visitor-ip-addresses).

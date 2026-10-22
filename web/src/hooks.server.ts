@@ -61,7 +61,11 @@ const auth: Handle = async ({ event, resolve }) => {
     for (const [key, value] of Object.entries(options.headers ?? {})) {
       if (key.toLowerCase() !== 'x-forwarded-for') headers[key] = value
     }
-    headers['X-Forwarded-For'] = event.getClientAddress()
+    try {
+      headers['X-Forwarded-For'] = event.getClientAddress()
+    } catch {
+      // ADDRESS_HEADER is set but this request has none (e.g. a healthcheck).
+    }
     return { url, options: { ...options, headers } }
   }
   const url = new URL(event.request.url);
