@@ -3,11 +3,10 @@ import { parseGpxXml } from './parse-xml';
 import Metadata from './metadata';
 import Route from './route';
 import Track from './track';
+import TrackSegment from './track-segment';
 import { allDatesToISOString, haversineDistance, removeEmpty } from './utils';
 import Waypoint from './waypoint';
 import GpxMetricsComputation from './gpx-metrics-computation';
-//@ts-ignore
-import geohash from "ngeohash"
 import { encodePolyline } from '$lib/util/polyline_util';
 import { APIError } from '$lib/util/api_util';
 import type { ValhallaHeightResponse } from '../valhalla';
@@ -31,7 +30,7 @@ type GPXFeature = {
   elevationGain?: number;
   elevationLoss?: number;
   duration: number;
-  hash: string; // MinHash or Geohash for track shape
+  hash?: string;
 };
 
 export default class GPX {
@@ -47,7 +46,18 @@ export default class GPX {
   wpt?: Waypoint[];
   rte?: Route[];
   trk?: Track[];
-  features: GPXFeature
+  private _features?: GPXFeature;
+
+  get features(): GPXFeature {
+    if (!this._features) {
+      this._features = this.getTotals();
+    }
+    return this._features;
+  }
+
+  set features(value: GPXFeature | undefined) {
+    this._features = value;
+  }
 
   constructor(object: {
     $?: {
@@ -89,8 +99,6 @@ export default class GPX {
       }
       this.trk = object.trk.filter(trk => typeof trk === 'object').map(trk => new Track(trk))
     }
-
-    this.features = this.getTotals();
 
     removeEmpty(this);
   }
@@ -152,9 +160,40 @@ export default class GPX {
       cumulativeDistance: metrics.cumulativeDistance,
       elevationGain: totalElevationGain,
       elevationLoss: totalElevationLoss,
-      duration: Math.abs(totalDuration),
-      hash: this.generateMinHash(allPoints)
+      duration: Math.abs(totalDuration)
     }
+  }
+
+  /**
+   * Converts a route-only file (one or more `<rte>` and no `<trk>`) into tracks.
+   * Totals, the map and GPX export all operate on `<trk>`, so without this a
+   * route-only file imports with zero distance, elevation and duration.
+   * Planners such as GaiaGPS export saved routes this way (open-wanderer/wanderer#1356).
+   */
+  convertRoutesToTracks(): boolean {
+    if ((this.trk?.length ?? 0) > 0 || !this.rte?.length) {
+      return false;
+    }
+
+    this.trk = this.rte.map(route => {
+      const track = new Track({
+        name: route.name,
+        cmt: route.cmt,
+        desc: route.desc,
+        src: route.src,
+        number: route.number,
+        type: route.type,
+        extensions: route.extensions,
+      });
+      const segment = new TrackSegment({});
+      segment.trkpt = route.rtept;
+      track.trkseg = [segment];
+      return track;
+    });
+
+    this.rte = undefined;
+    this._features = undefined;
+    return true;
   }
 
   flatten() {
@@ -169,11 +208,6 @@ export default class GPX {
     });
 
     return points;
-  }
-
-  private generateMinHash(points: Waypoint[]): string {
-    const hashes = points.map(pt => geohash.encode(pt.$.lat, pt.$.lon));
-    return hashes.sort().join('').slice(0, 10);
   }
 
   async correctElevation(f: (url: RequestInfo | URL, config?: RequestInit) => Promise<Response> = fetch) {

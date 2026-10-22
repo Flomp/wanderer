@@ -72,6 +72,9 @@ func CreateTrailActivity(app core.App, ctx context.Context, trail *core.Record, 
 	activity.Actor = pub.IRI(trailAuthor.GetString("iri"))
 	activity.To = pub.ItemCollection{pub.IRI(to)}
 	activity.CC = cc
+	// GoToSocial reads visibility from the object's to/cc.
+	trailObject.To = activity.To
+	trailObject.CC = activity.CC
 	activity.Published = time.Now()
 
 	record := core.NewRecord(collection)
@@ -113,6 +116,9 @@ func CreateCommentActivity(app core.App, ctx context.Context, comment *core.Reco
 	commentTrail, err := app.FindRecordById("trails", comment.GetString("trail"))
 	if err != nil {
 		return err
+	}
+	if !commentTrail.GetBool("public") {
+		return nil
 	}
 	commentTrailAuthor, err := app.FindRecordById("activitypub_actors", commentTrail.GetString("author"))
 	if err != nil {
@@ -156,6 +162,9 @@ func CreateCommentActivity(app core.App, ctx context.Context, comment *core.Reco
 	activity.Actor = pub.IRI(author)
 	activity.To = pub.ItemCollection{pub.IRI(to)}
 	activity.CC = cc
+	// GoToSocial reads visibility from the object's to/cc.
+	commentObject.To = activity.To
+	commentObject.CC = activity.CC
 	activity.Published = time.Now()
 	activity.Object = commentObject
 
@@ -311,12 +320,15 @@ func CreateSummitLogActivity(app core.App, ctx context.Context, summitLog *core.
 	logObject.Tag = tags
 
 	logObject.StartTime = summitLog.GetDateTime("date").Time()
-	logObject.Attachment = attachments
+	logObject.Attachment = util.ActivityPubAttachmentArray(attachments)
 
 	activity := pub.ActivityNew(pub.IRI(id), typ, logObject)
 	activity.Actor = pub.IRI(summitLogAuthor.GetString("iri"))
 	activity.To = to
 	activity.CC = cc
+	// GoToSocial reads visibility from the object's to/cc.
+	logObject.To = activity.To
+	logObject.CC = activity.CC
 	activity.Published = time.Now()
 
 	inboxes, err := followerInboxes(app, summitLogAuthor.Id)
@@ -379,6 +391,9 @@ func CreateListActivity(app core.App, list *core.Record, typ pub.ActivityVocabul
 	activity.Actor = pub.IRI(author)
 	activity.To = pub.ItemCollection{pub.IRI(to)}
 	activity.CC = pub.ItemCollection{pub.IRI(cc)}
+	// GoToSocial reads visibility from the object's to/cc.
+	listObject.To = activity.To
+	listObject.CC = activity.CC
 	activity.Published = time.Now()
 	activity.Object = listObject
 
@@ -528,6 +543,7 @@ func processCreateOrUpdateCommentActivity(activity pub.Activity, app core.App, a
 	record.Set("author", actor.Id)
 	record.Set("trail", trail.Id)
 
+	util.SanitizeHTMLFieldsWithLimits(record)
 	err = app.Save(record)
 	if err != nil {
 		return err
@@ -657,7 +673,7 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 	record.Set("iri", logObject.ID.String())
 
 	if logObject.Attachment != nil {
-		attachments, err := pub.ToItemCollection(logObject.Attachment)
+		attachments, err := util.ActivityPubAttachmentItems(logObject.Attachment)
 		if err != nil {
 			return err
 		}
@@ -703,6 +719,7 @@ func processCreateOrUpdateSummitLogActivity(activity pub.Activity, app core.App,
 		}
 	}
 
+	util.SanitizeHTMLFieldsWithLimits(record)
 	err = app.Save(record)
 	if err != nil {
 		return err
