@@ -54,6 +54,20 @@ function isFormContentType(request: Request) {
 
 const auth: Handle = async ({ event, resolve }) => {
   const pb = new PocketBase(envPub.PUBLIC_POCKETBASE_URL)
+  pb.beforeSend = (url, options) => {
+    // Keep a plain object: the SDK reads headers by key after beforeSend
+    // (e.g. to JSON-serialize the body), which a Headers instance breaks.
+    const headers: Record<string, string> = {}
+    for (const [key, value] of Object.entries(options.headers ?? {})) {
+      if (key.toLowerCase() !== 'x-forwarded-for') headers[key] = value
+    }
+    try {
+      headers['X-Forwarded-For'] = event.getClientAddress()
+    } catch {
+      // ADDRESS_HEADER is set but this request has none (e.g. a healthcheck).
+    }
+    return { url, options: { ...options, headers } }
+  }
   const url = new URL(event.request.url);
 
   // Handle API token based auth for API requests
