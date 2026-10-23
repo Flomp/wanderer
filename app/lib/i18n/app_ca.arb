@@ -1,38 +1,38 @@
 {
   "@@locale": "ca",
-  "about": "About",
+  "about": "Quant a",
   "@about": {
     "description": "Standalone heading used in three places: the 'About' tab on the trail detail panel (about the trail), prefixed to a username as 'About <username>' on the account screen, and the settings entry and title of the screen about the app itself. Needs to read as a section heading in all of them."
   },
-  "about_changelog": "What's new",
+  "about_changelog": "Novetats",
   "@about_changelog": {
     "description": "About screen: link to the wanderer changelog website."
   },
-  "about_discord_subtitle": "Chat with the community",
+  "about_discord_subtitle": "Xateja amb la comunitat",
   "@about_discord_subtitle": {
     "description": "About screen: subtitle under the 'Discord' link."
   },
-  "about_github_subtitle": "Source code, issues and contributions",
+  "about_github_subtitle": "Codi font, incidències i contribucions",
   "@about_github_subtitle": {
     "description": "About screen: subtitle under the 'GitHub' link."
   },
-  "about_license": "License",
+  "about_license": "Llicència",
   "@about_license": {
     "description": "About screen: link to wanderer's own license on GitHub. Singular, as opposed to 'about_licenses' (the libraries' licenses)."
   },
-  "about_licenses": "Open source licenses",
+  "about_licenses": "Llicències de codi obert",
   "@about_licenses": {
     "description": "About screen: opens the list of licenses of the libraries the app uses."
   },
-  "about_privacy_policy": "Privacy policy",
+  "about_privacy_policy": "Política de privadesa",
   "@about_privacy_policy": {
     "description": "About screen: link to the privacy policy website."
   },
-  "about_report_bug": "Report a bug",
+  "about_report_bug": "Informa d'un error",
   "@about_report_bug": {
     "description": "About screen: opens the app bug report form on GitHub."
   },
-  "about_version": "Version {version}",
+  "about_version": "Versió {version}",
   "@about_version": {
     "description": "About screen: the installed app version below the logo. {version} is e.g. '0.1.0 (10)', the number in brackets being the build.",
     "placeholders": {
@@ -41,43 +41,43 @@
       }
     }
   },
-  "appearance": "Appearance",
-  "account": "Account",
-  "account_delete_confirm": "You are about to delete your account. All your trails will also be deleted. Do you want to proceed?",
-  "account_privacy": "Account privacy",
-  "add_bio": "Add Bio",
-  "add_waypoint": "Add Waypoint",
-  "adjust_track": "Adjust track",
-  "after": "After",
+  "appearance": "Aparença",
+  "account": "Compte",
+  "account_delete_confirm": "Esteu a punt d'eliminar el vostre compte. També s'eliminaran tots els vostres senders. Voleu continuar?",
+  "account_privacy": "Privadesa del compte",
+  "add_bio": "Afegeix biografia",
+  "add_waypoint": "Afegeix punt de ruta",
+  "adjust_track": "Ajusta el traçat",
+  "after": "Després de",
   "@after": {
     "description": "Used two ways. (1) Label above the date picker that filters for trails dated after the chosen day. (2) Prefixed to a distance on the waypoint sheet as 'After 2.4 km', meaning how far along the trail the waypoint sits. Pick wording that works for both a date and a distance."
   },
-  "all": "All",
+  "all": "Tot",
   "@all": {
     "description": "Filter chip in global search meaning 'all result categories' (trails, lists, places and users together), as opposed to one specific category."
   },
-  "altitude": "Altitude",
-  "author": "Author",
+  "altitude": "Altitud",
+  "author": "Autor",
   "@author": {
     "description": "Noun. Heading and input placeholder for the filter that narrows trails to a specific author's username."
   },
-  "average_speed": "Avg. Speed",
-  "background_location_body": "wanderer collects location data in the background so your trail keeps recording when the screen is off or the app is closed. Your recorded track stays on your device until you choose to save the trail.\n\nAndroid only offers this in system settings: open Permissions → Location and choose \"Allow all the time\".",
-  "background_location_confirm": "Open settings",
-  "background_location_title": "Keep recording in the background",
-  "basic_info": "Basic Info",
-  "before": "Before",
+  "average_speed": "Velocitat mitjana",
+  "background_location_body": "wanderer recull dades d'ubicació en segon pla perquè el teu sender es continuï enregistrant quan la pantalla està apagada o l'aplicació està tancada. El traçat enregistrat es queda al teu dispositiu fins que decideixis desar el sender.\n\nAndroid només ofereix aquesta opció a la configuració del sistema: obre Permisos → Ubicació i tria «Permet-ho sempre».",
+  "background_location_confirm": "Obre la configuració",
+  "background_location_title": "Continua enregistrant en segon pla",
+  "basic_info": "Informació bàsica",
+  "before": "Abans de",
   "@before": {
     "description": "Label above the date picker that filters for trails dated before the chosen day. Pairs with the 'after' string."
   },
-  "by": "by",
+  "by": "per",
   "@by": {
     "description": "Byline preposition, rendered lowercase and immediately followed by a username: 'by alice'. Appears on trail cards, list cards and summit log entries. Not the standalone word 'by' in any other sense."
   },
-  "cancel": "Cancel",
-  "discard": "Discard",
-  "discard_trail_confirm": "Discard this trail and its changes?",
-  "card": "{n, plural, =1 {Card} other {Cards}}",
+  "cancel": "Cancel·la",
+  "discard": "Descarta",
+  "discard_trail_confirm": "Voleu descartar aquest sender i els seus canvis?",
+  "card": "{n, plural, =1 {Targeta} other {Targetes}}",
   "@card": {
     "placeholders": {
       "n": {
@@ -87,12 +87,12 @@
     }
   },
   "categories": "Categories",
-  "category": "Category",
-  "change_email": "Change email",
-  "change_password": "Change password",
-  "clear_all": "Clear all",
-  "close": "Close",
-  "comment": "{n, plural, =1 {Comment} other {Comments}}",
+  "category": "Categoria",
+  "change_email": "Canvia el correu electrònic",
+  "change_password": "Canvia la contrasenya",
+  "clear_all": "Esborra-ho tot",
+  "close": "Tanca",
+  "comment": "{n, plural, =1 {Comentari} other {Comentaris}}",
   "@comment": {
     "placeholders": {
       "n": {
@@ -101,95 +101,95 @@
       }
     }
   },
-  "completed": "Completed",
-  "completion_status": "Completion Status",
-  "confirm_deletion": "Confirm Deletion",
-  "couldnt_start_navigation": "Couldn't start navigation. Check your connection and try again.",
-  "location_services_disabled": "Location services are disabled. Please enable GPS to use navigation.",
-  "location_permission_denied": "Location permission is required for navigation.",
-  "location_permission_permanently_denied": "Location permission is permanently denied. Please enable it in Settings.",
-  "location_unavailable": "Unable to determine your location. Please try again.",
-  "copy_link": "Copy Link",
-  "create_waypoint": "Create waypoint",
-  "creation_date": "Creation date",
-  "current_password": "Current password",
-  "danger_zone": "Danger zone",
-  "date": "Date",
+  "completed": "Completat",
+  "completion_status": "Estat de finalització",
+  "confirm_deletion": "Confirma l'eliminació",
+  "couldnt_start_navigation": "No s'ha pogut iniciar la navegació. Comprova la connexió i torna-ho a provar.",
+  "location_services_disabled": "Els serveis d'ubicació estan desactivats. Activa el GPS per utilitzar la navegació.",
+  "location_permission_denied": "Cal el permís d'ubicació per a la navegació.",
+  "location_permission_permanently_denied": "El permís d'ubicació està denegat permanentment. Activa'l a la configuració.",
+  "location_unavailable": "No s'ha pogut determinar la teva ubicació. Torna-ho a provar.",
+  "copy_link": "Copia l'enllaç",
+  "create_waypoint": "Crea un punt de ruta",
+  "creation_date": "Data de creació",
+  "current_password": "Contrasenya actual",
+  "danger_zone": "Zona de perill",
+  "date": "Data",
   "@date": {
     "description": "Noun. Used as a sort option ('sort trails by date'), as the heading of the date-range filter sheet, and as the label of the date field in the trail form. A single neutral noun is needed for all three."
   },
-  "delete": "Delete",
-  "not_now": "Not now",
-  "open": "Open",
+  "delete": "Elimina",
+  "not_now": "Ara no",
+  "open": "Obre",
   "@open": {
     "description": "Verb. Menu action that opens a downloaded trail from the library. Not the adjective 'open' and not the opposite of 'closed'."
   },
-  "delete_account": "Delete Account",
-  "delete_trail_confirm": "Do you really want to delete this trail? This action cannot be undone.",
-  "delete_blocked_while_uploading": "This trail is uploading right now. Wait for the upload to finish, then try again.",
-  "delete_unsynced_trail_confirm": "Delete this trail? It hasn't been uploaded yet, so this can't be undone.",
-  "delete_needs_connection": "This trail is already on the server. Connect to the internet to delete it.",
-  "description": "Description",
-  "difficult": "Difficult",
-  "difficulty": "Difficulty",
-  "directions": "Directions",
-  "distance": "Distance",
-  "download": "Download",
-  "duration": "Duration",
-  "easy": "Easy",
-  "edit": "Edit",
-  "edit_needs_connection": "Editing works on the server copy of this trail. Connect to the internet to edit it.",
-  "edit_waypoint": "Edit Waypoint",
-  "edited": "edited",
+  "delete_account": "Elimina el compte",
+  "delete_trail_confirm": "Segur que voleu eliminar aquest sender? Aquesta acció no es pot desfer.",
+  "delete_blocked_while_uploading": "Aquest sender s'està carregant ara mateix. Espera que acabi la pujada i torna-ho a provar.",
+  "delete_unsynced_trail_confirm": "Voleu eliminar aquest sender? Encara no s'ha pujat, així que això no es pot desfer.",
+  "delete_needs_connection": "Aquest sender ja és al servidor. Connecteu-vos a internet per eliminar-lo.",
+  "description": "Descripció",
+  "difficult": "Difícil",
+  "difficulty": "Dificultat",
+  "directions": "Indicacions",
+  "distance": "Distància",
+  "download": "Baixa",
+  "duration": "Durada",
+  "easy": "Fàcil",
+  "edit": "Edita",
+  "edit_needs_connection": "L'edició funciona sobre la còpia del sender que hi ha al servidor. Connecteu-vos a internet per editar-lo.",
+  "edit_waypoint": "Edita el punt de ruta",
+  "edited": "editat",
   "@edited": {
     "description": "Adjective appended in parentheses after a comment's timestamp to mark that the comment was changed after posting: '2 hours ago (edited)'. Rendered lowercase."
   },
-  "elevation_gain": "Elevation Gain",
-  "elevation_loss": "Elevation Loss",
-  "elevation_profile": "Elevation Profile",
-  "email": "Email",
-  "email_not_unique": "This email address is already in use.",
-  "email_updated": "Email updated",
-  "error_deleting_trail": "Error deleting trail",
-  "error_reading_file": "Error reading file",
-  "error_saving_settings": "Error saving settings",
-  "error_saving_trail": "Error saving trail",
-  "error_updating_password": "Error updating password",
-  "explore": "Explore",
-  "exit_navigation": "Exit",
-  "stop_navigation_confirm": "Stop navigation and return to the trail?",
-  "stop_recording": "Stop recording",
-  "stop_recording_confirm": "Stop recording?",
-  "search_this_area": "Search this area",
-  "filter_tags": "Filter tags",
-  "filter_trails": "Filter trails",
-  "finish": "Finish",
+  "elevation_gain": "Desnivell positiu",
+  "elevation_loss": "Desnivell negatiu",
+  "elevation_profile": "Perfil d'elevació",
+  "email": "Correu electrònic",
+  "email_not_unique": "Aquesta adreça de correu electrònic ja està en ús.",
+  "email_updated": "Correu electrònic actualitzat",
+  "error_deleting_trail": "Error en eliminar el sender",
+  "error_reading_file": "Error en llegir el fitxer",
+  "error_saving_settings": "Error en desar la configuració",
+  "error_saving_trail": "Error en desar el sender",
+  "error_updating_password": "Error en actualitzar la contrasenya",
+  "explore": "Explora",
+  "exit_navigation": "Surt",
+  "stop_navigation_confirm": "Voleu aturar la navegació i tornar al sender?",
+  "stop_recording": "Atura l'enregistrament",
+  "stop_recording_confirm": "Voleu aturar l'enregistrament?",
+  "search_this_area": "Cerca en aquesta zona",
+  "filter_tags": "Filtra les etiquetes",
+  "filter_trails": "Filtra els senders",
+  "finish": "Final",
   "@finish": {
     "description": "Used two ways. (1) Noun: label of the last row in the trail's waypoint timeline, marking the end of the trail. (2) Tooltip on the route planner's confirm action, meaning 'finish planning this route'. Prefer wording that carries both, or the noun sense if it must be one."
   },
-  "finish_disabled_hint": "Add at least 2 anchors to finish your route.",
-  "follow": "Follow",
-  "followers": "Followers",
-  "following": "Following",
-  "from_photos": "From Photos",
-  "help": "Help",
-  "hiking": "Hiking",
-  "home": "Home",
-  "icon": "Icon",
+  "finish_disabled_hint": "Afegeix com a mínim 2 àncores per acabar la ruta.",
+  "follow": "Segueix",
+  "followers": "Seguidors",
+  "following": "Seguint",
+  "from_photos": "Des de fotos",
+  "help": "Ajuda",
+  "hiking": "Senderisme",
+  "home": "Inici",
+  "icon": "Icona",
   "@icon": {
     "description": "Noun. Label of the icon picker field in the waypoint form — which symbol to show for this waypoint on the map."
   },
   "imperial": "Imperial",
-  "joined": "Joined",
-  "language": "Language",
-  "latitude": "Latitude",
-  "like_status": "Like Status",
-  "liked": "Liked",
+  "joined": "Es va unir",
+  "language": "Idioma",
+  "latitude": "Latitud",
+  "like_status": "Estat del m'agrada",
+  "liked": "Agradat",
   "@liked": {
     "description": "Adjective. Filter toggle that narrows the list to trails you have liked."
   },
-  "likes": "Likes",
-  "list": "{n, plural, =1 {List} other {Lists}}",
+  "likes": "M'agrada",
+  "list": "{n, plural, =1 {Llista} other {Llistes}}",
   "@list": {
     "placeholders": {
       "n": {
@@ -198,12 +198,12 @@
       }
     }
   },
-  "location": "Location",
-  "locations": "Locations",
-  "center_on_my_location": "Center on my location",
+  "location": "Ubicació",
+  "locations": "Ubicacions",
+  "center_on_my_location": "Centra a la meva ubicació",
   "location_tracking_notification_title": "wanderer",
-  "location_tracking_notification_text": "Recording your trail",
-  "location_tracking_notification_text_navigating": "Navigating {trail}",
+  "location_tracking_notification_text": "S'està enregistrant el teu sender",
+  "location_tracking_notification_text_navigating": "Navegant per {trail}",
   "@location_tracking_notification_text_navigating": {
     "placeholders": {
       "trail": {
@@ -211,14 +211,14 @@
       }
     }
   },
-  "login": "Login",
-  "logout": "Logout",
-  "longitude": "Longitude",
-  "map": "Map",
-  "metric": "Metric",
-  "moderate": "Moderate",
-  "my_account": "My Account",
-  "in_distance": "in {distance}",
+  "login": "Inicia sessió",
+  "logout": "Tanca la sessió",
+  "longitude": "Longitud",
+  "map": "Mapa",
+  "metric": "Mètric",
+  "moderate": "Moderat",
+  "my_account": "El meu compte",
+  "in_distance": "en {distance}",
   "@in_distance": {
     "placeholders": {
       "distance": {
@@ -226,50 +226,50 @@
       }
     }
   },
-  "name": "Name",
+  "name": "Nom",
   "@name": {
     "description": "Noun. Used as a sort option ('sort by name') and as the label of the trail name field in the trail form."
   },
-  "navigate": "Navigate",
-  "new_password": "New password",
-  "new_password_success": "The new password has been set",
-  "new_trail": "New Trail",
-  "trail_source_planner": "Open trail planner",
-  "trail_source_planner_description": "Draw a new route on the map, waypoint by waypoint.",
-  "trail_source_record": "Record trail",
-  "trail_source_record_description": "Track your live coordinates and log your journey in real-time.",
-  "trail_source_import": "Import file",
-  "trail_source_import_description": "Upload GPX, KML, KMZ, TCX or FIT files directly from your device storage.",
-  "trail_source_import_error": "Could not import file",
-  "trail_source_offline_import_error": "Only GPX files can be imported offline",
+  "navigate": "Navega",
+  "new_password": "Contrasenya nova",
+  "new_password_success": "S'ha establert la contrasenya nova",
+  "new_trail": "Sender nou",
+  "trail_source_planner": "Obre el planificador de rutes",
+  "trail_source_planner_description": "Dibuixa una ruta nova al mapa, punt de ruta a punt de ruta.",
+  "trail_source_record": "Enregistra un sender",
+  "trail_source_record_description": "Segueix les teves coordenades en directe i registra el teu recorregut en temps real.",
+  "trail_source_import": "Importa un fitxer",
+  "trail_source_import_description": "Puja fitxers GPX, KML, KMZ, TCX o FIT directament des de l'emmagatzematge del teu dispositiu.",
+  "trail_source_import_error": "No s'ha pogut importar el fitxer",
+  "trail_source_offline_import_error": "Només es poden importar fitxers GPX sense connexió",
   "@trail_source_offline_import_error": {
     "description": "Shown when the user picks a non-GPX file for import while offline. Names the formats that need a connection and points at GPX as the offline-capable alternative."
   },
-  "no_comments_so_far": "No comments so far",
-  "no_data": "No data",
-  "no_description_for_now": "No description for now",
-  "no_gps_data_in_image": "No GPS data found in this photo.",
-  "no_preference": "No preference",
-  "no_trails_found": "No trails found",
-  "not_completed": "Not completed",
-  "notifications": "Notifications",
-  "only_me": "Only me",
-  "or": "or",
+  "no_comments_so_far": "Encara no hi ha comentaris",
+  "no_data": "Sense dades",
+  "no_description_for_now": "Encara no hi ha descripció",
+  "no_gps_data_in_image": "No s'han trobat dades GPS en aquesta foto.",
+  "no_preference": "Sense preferència",
+  "no_trails_found": "No s'ha trobat cap sender",
+  "not_completed": "No completat",
+  "notifications": "Notificacions",
+  "only_me": "Només jo",
+  "or": "o",
   "@or": {
     "description": "Divider word between the email login form and the OAuth provider buttons on the login screen."
   },
-  "own_trails_empty_body": "Trails you record or save offline appear here, and upload automatically once you're back online.",
-  "own_trails_empty_title": "Nothing saved yet",
-  "own_trails_offline_banner": "Offline — showing only trails on this device.",
-  "trails_on_device": "Trails (on device)",
+  "own_trails_empty_body": "Els senders que enregistris o desis sense connexió apareixeran aquí, i es pujaran automàticament quan tornis a estar en línia.",
+  "own_trails_empty_title": "Encara no hi ha res desat",
+  "own_trails_offline_banner": "Sense connexió: només es mostren els senders d'aquest dispositiu.",
+  "trails_on_device": "Senders (al dispositiu)",
   "@trails_on_device": {
     "description": "Label of the profile trail count card when the count comes from local storage (unsynced captures plus downloaded trails) because the device is offline."
   },
-  "pause": "Pause",
-  "password": "Password",
-  "password_confirm": "Confirm password",
-  "passwords_must_match": "Passwords must match",
-  "photo_copy_failed_toast": "{count, plural, =1 {Trail saved, but 1 photo couldn't be saved.} other {Trail saved, but {count} photos couldn't be saved.}}",
+  "pause": "Pausa",
+  "password": "Contrasenya",
+  "password_confirm": "Confirma la contrasenya",
+  "passwords_must_match": "Les contrasenyes han de coincidir",
+  "photo_copy_failed_toast": "{count, plural, =1 {Sender desat, però 1 foto no s'ha pogut desar.} other {Sender desat, però {count} fotos no s'han pogut desar.}}",
   "@photo_copy_failed_toast": {
     "placeholders": {
       "count": {
@@ -278,8 +278,8 @@
       }
     }
   },
-  "photos": "Photos & Videos",
-  "photos_skipped_no_gps": "{count, plural, =1 {1 photo skipped — no GPS data} other {{count} photos skipped — no GPS data}}",
+  "photos": "Fotos i vídeos",
+  "photos_skipped_no_gps": "{count, plural, =1 {1 foto omesa: no té dades GPS} other {{count} fotos omeses: no tenen dades GPS}}",
   "@photos_skipped_no_gps": {
     "placeholders": {
       "count": {
@@ -288,19 +288,19 @@
       }
     }
   },
-  "privacy": "Privacy",
-  "private": "Private",
-  "profile": "Profile",
-  "public": "Public",
-  "reached_end_of_trail": "You've reached the end of the trail.",
-  "register": "Register",
-  "reorder_photos_hint": "Long-press and drag to reorder photos.",
-  "reset": "Reset",
+  "privacy": "Privadesa",
+  "private": "Privat",
+  "profile": "Perfil",
+  "public": "Públic",
+  "reached_end_of_trail": "Has arribat al final del sender.",
+  "register": "Registra't",
+  "reorder_photos_hint": "Mantén premut i arrossega per reordenar les fotos.",
+  "reset": "Restableix",
   "@reset": {
     "description": "Verb. Button that clears every active filter back to its default. Not 'restart' and not 'reset password'."
   },
-  "resume": "Resume",
-  "resume_navigation_prompt": "Resume navigation on {trail}?",
+  "resume": "Reprèn",
+  "resume_navigation_prompt": "Voleu reprendre la navegació a {trail}?",
   "@resume_navigation_prompt": {
     "placeholders": {
       "trail": {
@@ -308,8 +308,8 @@
       }
     }
   },
-  "resume_recording_prompt": "Resume recording?",
-  "route": "{n, plural, =1 {Route} other {Routes}}",
+  "resume_recording_prompt": "Voleu reprendre l'enregistrament?",
+  "route": "{n, plural, =1 {Ruta} other {Rutes}}",
   "@route": {
     "placeholders": {
       "n": {
@@ -318,40 +318,40 @@
       }
     }
   },
-  "follow_roads": "Follow roads",
-  "follow_roads_description": "Snap the recorded path to the nearest roads and trails.",
-  "recalculate_heights": "Recalculate heights",
-  "recalculate_heights_description": "Replace recorded GPS elevation with more accurate values from the map.",
-  "save": "Save",
-  "save_recording_options": "Save recording",
-  "save_track": "Save track",
-  "search": "Search",
-  "search_for_trails_places": "Search for trails, lists, places",
-  "select_date": "Select date",
-  "settings": "Settings",
-  "settings_notification_comment_mention": "Someone mentioned you in a comment",
-  "settings_notification_list_share": "Someone shared a list with you",
-  "settings_notification_new_follower": "You have a new follower",
-  "settings_notification_summit_log_create": "Someone created a summit log on your trail",
-  "settings_notification_summit_log_mention": "Someone mentioned you in a summit log",
-  "settings_notification_trail_comment": "Someone left a comment on your trail",
-  "settings_notification_trail_like": "Someone liked your trail",
-  "settings_notification_trail_mention": "Someone mentioned you in a trail",
-  "settings_notification_trail_share": "Someone shared a trail with you",
-  "settings_privacy_account_private": "Only you can see your profile. You will not appear in search results. Other users cannot follow you or share trails with you. You can still publish trails or lists.",
-  "settings_privacy_account_public": "Everyone can see your profile. You appear in search results. Other users can follow you and share trails with you.",
-  "settings_privacy_lists_private": "Your lists are private by default. No one except you will be able to see them. You can change this setting at any point for individual lists.",
-  "settings_privacy_lists_public": "Your lists are public by default. Everyone will be able to see them. You can change this setting at any point for individual lists.",
-  "settings_privacy_trails_private": "Your trails are private by default. No one except you will be able to see them. You can change this setting at any point for individual trails.",
-  "settings_privacy_trails_public": "Your trails are public by default. Everyone will be able to see them. You can change this setting at any point for individual trails.",
-  "share": "Share",
-  "share_profile": "Share profile",
-  "shared": "Shared",
+  "follow_roads": "Segueix les carreteres",
+  "follow_roads_description": "Ajusta el traçat enregistrat a les carreteres i camins més propers.",
+  "recalculate_heights": "Recalcula les altituds",
+  "recalculate_heights_description": "Substitueix l'elevació enregistrada pel GPS per valors més precisos del mapa.",
+  "save": "Desa",
+  "save_recording_options": "Desa l'enregistrament",
+  "save_track": "Desa el traçat",
+  "search": "Cerca",
+  "search_for_trails_places": "Cerca senders, llistes, llocs",
+  "select_date": "Selecciona una data",
+  "settings": "Configuració",
+  "settings_notification_comment_mention": "Algú t'ha mencionat en un comentari",
+  "settings_notification_list_share": "Algú ha compartit una llista amb tu",
+  "settings_notification_new_follower": "Tens un seguidor nou",
+  "settings_notification_summit_log_create": "Algú ha creat un llibre de cims al teu sender",
+  "settings_notification_summit_log_mention": "Algú t'ha mencionat en un llibre de cims",
+  "settings_notification_trail_comment": "Algú ha deixat un comentari al teu sender",
+  "settings_notification_trail_like": "A algú li agrada el teu sender",
+  "settings_notification_trail_mention": "Algú t'ha mencionat en un sender",
+  "settings_notification_trail_share": "Algú ha compartit un sender amb tu",
+  "settings_privacy_account_private": "Només tu pots veure el teu perfil. No apareixeràs als resultats de cerca. Els altres usuaris no et poden seguir ni compartir senders amb tu. Encara pots publicar senders o llistes.",
+  "settings_privacy_account_public": "Tothom pot veure el teu perfil. Apareixes als resultats de cerca. Els altres usuaris et poden seguir i compartir senders amb tu.",
+  "settings_privacy_lists_private": "Les teves llistes són privades per defecte. Ningú excepte tu no les podrà veure. Pots canviar aquesta configuració en qualsevol moment per a llistes individuals.",
+  "settings_privacy_lists_public": "Les teves llistes són públiques per defecte. Tothom les podrà veure. Pots canviar aquesta configuració en qualsevol moment per a llistes individuals.",
+  "settings_privacy_trails_private": "Els teus senders són privats per defecte. Ningú excepte tu no els podrà veure. Pots canviar aquesta configuració en qualsevol moment per a senders individuals.",
+  "settings_privacy_trails_public": "Els teus senders són públics per defecte. Tothom els podrà veure. Pots canviar aquesta configuració en qualsevol moment per a senders individuals.",
+  "share": "Comparteix",
+  "share_profile": "Comparteix el perfil",
+  "shared": "Compartit",
   "@shared": {
     "description": "Adjective. Filter toggle that narrows the list to trails other users have shared with you."
   },
-  "show_on_map": "Show on map",
-  "signout_unsynced_warning": "{count, plural, =1 {You have 1 trail not uploaded yet. Signing out won't delete it — it'll be here when you sign back in — but it won't upload until then.} other {You have {count} trails not uploaded yet. Signing out won't delete them — they'll be here when you sign back in — but they won't upload until then.}}",
+  "show_on_map": "Mostra al mapa",
+  "signout_unsynced_warning": "{count, plural, =1 {Tens 1 sender que encara no s'ha pujat. Tancar la sessió no l'eliminarà — serà aquí quan tornis a iniciar sessió —, però no es pujarà fins llavors.} other {Tens {count} senders que encara no s'han pujat. Tancar la sessió no els eliminarà — seran aquí quan tornis a iniciar sessió —, però no es pujaran fins llavors.}}",
   "@signout_unsynced_warning": {
     "placeholders": {
       "count": {
@@ -360,16 +360,16 @@
       }
     }
   },
-  "slogan": "Your trails. Your data. Your server.",
-  "sort": "Sort",
+  "slogan": "Els teus senders. Les teves dades. El teu servidor.",
+  "sort": "Ordena",
   "@sort": {
     "description": "Button label that opens the sort options for a trail or list collection. Verb or noun, whichever reads better as a short button."
   },
-  "speed": "Speed",
+  "speed": "Velocitat",
   "@speed": {
     "description": "Noun. Label of the current-speed readout on the live navigation screen."
   },
-  "start": "Start",
+  "start": "Inici",
   "@start": {
     "description": "Noun. Label of the first row in the trail's waypoint timeline, marking the trailhead. Not the verb 'to start'."
   },
@@ -377,28 +377,28 @@
   "@subcategories": {
     "description": "Label for the subcategories filter section"
   },
-  "summit_book": "Summit Book",
-  "sync_discard_draft_confirm": "Delete this recording? It hasn't been uploaded anywhere.",
-  "sync_draft": "Draft",
-  "sync_failed": "Upload failed · Tap to retry",
-  "sync_pending": "Waiting to upload",
-  "sync_section_failed_body": "The upload didn't go through. Try again.",
-  "sync_section_pending_online_body": "Uploads automatically in a moment.",
-  "sync_section_uploading_body": "Sending this trail to your server.",
-  "sync_section_draft_body": "This recording is only on this device.",
-  "sync_section_draft_title": "Not uploaded yet",
-  "sync_section_failed_title": "Upload failed",
-  "sync_section_pending_offline_body": "Uploads when you're back online",
-  "sync_section_retry": "Retry",
-  "sync_section_upload": "Upload",
-  "sync_section_upload_now": "Upload now",
-  "sync_uploading": "Uploading…",
-  "tags": "Tags",
-  "theme_dark": "Dark",
-  "theme_light": "Light",
-  "theme_system": "Follow system",
-  "time_in_motion": "Time in Motion",
-  "trail": "{n, plural, =1 {Trail} other {Trails}}",
+  "summit_book": "Llibre de cims",
+  "sync_discard_draft_confirm": "Voleu eliminar aquest enregistrament? No s'ha pujat enlloc.",
+  "sync_draft": "Esborrany",
+  "sync_failed": "La pujada ha fallat · Toca per tornar-ho a provar",
+  "sync_pending": "Pendent de pujar",
+  "sync_section_failed_body": "La pujada no s'ha completat. Torna-ho a provar.",
+  "sync_section_pending_online_body": "Es pujarà automàticament d'aquí a un moment.",
+  "sync_section_uploading_body": "S'està enviant aquest sender al teu servidor.",
+  "sync_section_draft_body": "Aquest enregistrament només és en aquest dispositiu.",
+  "sync_section_draft_title": "Encara no s'ha pujat",
+  "sync_section_failed_title": "La pujada ha fallat",
+  "sync_section_pending_offline_body": "Es pujarà quan tornis a estar en línia",
+  "sync_section_retry": "Torna-ho a provar",
+  "sync_section_upload": "Puja",
+  "sync_section_upload_now": "Puja-ho ara",
+  "sync_uploading": "S'està pujant…",
+  "tags": "Etiquetes",
+  "theme_dark": "Fosc",
+  "theme_light": "Clar",
+  "theme_system": "Segueix el sistema",
+  "time_in_motion": "Temps en moviment",
+  "trail": "{n, plural, =1 {Sender} other {Senders}}",
   "@trail": {
     "placeholders": {
       "n": {
@@ -407,20 +407,20 @@
       }
     }
   },
-  "trail_saved_successfully": "Trail saved successfully",
-  "trail_not_on_this_device": "This trail is no longer on this device.",
-  "trail_uploaded_reopen_to_edit": "This trail finished uploading. Re-open it from your trails to keep editing.",
-  "some_waypoints_failed_to_save": "Trail saved, but some waypoints failed to save",
-  "units": "Units",
-  "users": "Users",
-  "username": "Username",
-  "username_not_unique": "This username is already taken. Please try another.",
-  "visibilty_status": "Visibility status",
+  "trail_saved_successfully": "Sender desat correctament",
+  "trail_not_on_this_device": "Aquest sender ja no és en aquest dispositiu.",
+  "trail_uploaded_reopen_to_edit": "Aquest sender s'ha acabat de pujar. Torna'l a obrir des dels teus senders per continuar editant-lo.",
+  "some_waypoints_failed_to_save": "Sender desat, però alguns punts de ruta no s'han pogut desar",
+  "units": "Unitats",
+  "users": "Usuaris",
+  "username": "Nom d'usuari",
+  "username_not_unique": "Aquest nom d'usuari ja està en ús. Prova'n un altre.",
+  "visibilty_status": "Estat de visibilitat",
   "web": "Web",
   "@web": {
     "description": "Noun naming a notification delivery channel: notifications shown in the web app, as opposed to push notifications on the phone. Appears as a toggle label under each notification type."
   },
-  "waypoints": "{n, plural, =1 {Waypoint} other {Waypoints}}",
+  "waypoints": "{n, plural, =1 {Punt de ruta} other {Punts de ruta}}",
   "@waypoints": {
     "placeholders": {
       "n": {
@@ -429,14 +429,14 @@
       }
     }
   },
-  "welcome_to": "Welcome to",
+  "welcome_to": "Benvingut a",
   "@welcome_to": {
     "description": "Sentence fragment on the welcome screen, followed by the untranslated product name: 'Welcome to wanderer'. Keep it as a fragment; the brand name is appended in code and must not be included in the translation."
   },
-  "wrong_username_or_password": "Wrong username or password",
-  "server_incompatible_title": "Server not supported",
-  "server_incompatible": "This server runs a version of wanderer that the app does not support. Signing in becomes possible once it is updated.",
-  "server_incompatible_version": "Server version: {version}",
+  "wrong_username_or_password": "Nom d'usuari o contrasenya incorrectes",
+  "server_incompatible_title": "Servidor no compatible",
+  "server_incompatible": "Aquest servidor executa una versió de wanderer que l'aplicació no admet. Iniciar sessió serà possible un cop s'actualitzi.",
+  "server_incompatible_version": "Versió del servidor: {version}",
   "@server_incompatible_version": {
     "placeholders": {
       "version": {
@@ -444,11 +444,11 @@
       }
     }
   },
-  "server_incompatible_docs": "How to update the server",
-  "you_have_arrived": "You've arrived",
-  "settings_categories_confirm_disable_title": "Hide this category?",
-  "settings_categories_confirm_disable_subcategory_title": "Hide this subcategory?",
-  "settings_categories_confirm_disable_body": "{count} of your trails use this category. They will stay published but this filter will be hidden.",
+  "server_incompatible_docs": "Com actualitzar el servidor",
+  "you_have_arrived": "Has arribat",
+  "settings_categories_confirm_disable_title": "Voleu amagar aquesta categoria?",
+  "settings_categories_confirm_disable_subcategory_title": "Voleu amagar aquesta subcategoria?",
+  "settings_categories_confirm_disable_body": "{count} dels teus senders utilitzen aquesta categoria. Continuaran publicats, però aquest filtre quedarà amagat.",
   "@settings_categories_confirm_disable_body": {
     "placeholders": {
       "count": {
@@ -456,34 +456,34 @@
       }
     }
   },
-  "settings_categories_confirm_view_trails": "View trails",
-  "settings_categories_confirm_disable_confirm": "Disable anyway",
-  "settings_categories_empty_title": "No subcategories",
-  "settings_categories_empty_body": "This category has no subcategories to configure.",
-  "settings_categories_reorder_hint": "Categories control which trail types you see and in what order. Turn one off to hide it as a filter — your trails stay published, they just won't appear under that category. Tap a category to manage its subcategories individually.\n\nTo change the order, press and hold a row, then drag it to a new position. The order you set here is reflected everywhere categories are shown.",
-  "something_went_wrong": "Something went wrong",
-  "technical_details": "Technical Details",
-  "link": "Link",
+  "settings_categories_confirm_view_trails": "Mostra els senders",
+  "settings_categories_confirm_disable_confirm": "Desactiva-ho de totes maneres",
+  "settings_categories_empty_title": "Sense subcategories",
+  "settings_categories_empty_body": "Aquesta categoria no té subcategories per configurar.",
+  "settings_categories_reorder_hint": "Les categories controlen quins tipus de senders veus i en quin ordre. Desactiva'n una per amagar-la com a filtre: els teus senders continuaran publicats, simplement no apareixeran sota aquesta categoria. Toca una categoria per gestionar-ne les subcategories individualment.\n\nPer canviar l'ordre, mantén premuda una fila i arrossega-la a una posició nova. L'ordre que estableixis aquí es reflecteix a tots els llocs on es mostren categories.",
+  "something_went_wrong": "Alguna cosa ha anat malament",
+  "technical_details": "Detalls tècnics",
+  "link": "Enllaç",
   "url": "URL",
-  "open_in_new_tab": "Open in new tab",
-  "remove": "Remove",
-  "remove_download_confirm_body": "This removes the downloaded copy from this device. The trail itself is not deleted — you'll need to download it again to use it offline.",
-  "apply": "Apply",
+  "open_in_new_tab": "Obre en una pestanya nova",
+  "remove": "Elimina",
+  "remove_download_confirm_body": "Això elimina la còpia baixada d'aquest dispositiu. El sender en si no s'elimina: hauràs de tornar-lo a baixar per utilitzar-lo sense connexió.",
+  "apply": "Aplica",
   "@apply": {
     "description": "Verb. Confirm button in the rich text editor's link dialog — applies the entered link to the selected text."
   },
-  "add_at_least_2_anchors_hint": "Add at least 2 anchors to see the elevation profile.",
-  "reverse_direction": "Reverse direction",
-  "delete_all": "Delete all",
-  "auto_routing": "Auto-routing",
-  "auto_routing_hint": "Automatically follow roads and paths between anchors.",
-  "travel_profile": "Travel profile",
-  "no_track_data": "No track data",
-  "available_offline": "Available offline",
-  "no_lists_found": "No lists found",
-  "search_lists": "Search lists…",
-  "search_for_a_location": "Search for a location",
-  "no_results_for_query": "No results for \"{query}\"",
+  "add_at_least_2_anchors_hint": "Afegeix com a mínim 2 àncores per veure el perfil d'elevació.",
+  "reverse_direction": "Inverteix la direcció",
+  "delete_all": "Elimina-ho tot",
+  "auto_routing": "Encaminament automàtic",
+  "auto_routing_hint": "Segueix automàticament carreteres i camins entre les àncores.",
+  "travel_profile": "Perfil de desplaçament",
+  "no_track_data": "Sense dades de traçat",
+  "available_offline": "Disponible sense connexió",
+  "no_lists_found": "No s'ha trobat cap llista",
+  "search_lists": "Cerca llistes…",
+  "search_for_a_location": "Cerca una ubicació",
+  "no_results_for_query": "No hi ha resultats per a «{query}»",
   "@no_results_for_query": {
     "placeholders": {
       "query": {
@@ -492,11 +492,11 @@
       }
     }
   },
-  "filter": "Filter",
+  "filter": "Filtra",
   "@filter": {
     "description": "Button label that opens the filter options for a trail collection. Verb or noun, whichever reads better as a short button."
   },
-  "no_label_yet": "No {label} yet.",
+  "no_label_yet": "Encara no hi ha cap {label}.",
   "@no_label_yet": {
     "placeholders": {
       "label": {
@@ -505,22 +505,22 @@
       }
     }
   },
-  "no_lists_yet": "No lists yet.",
-  "no_bio_yet": "No bio yet.",
-  "show_more": "Show more",
+  "no_lists_yet": "Encara no hi ha llistes.",
+  "no_bio_yet": "Encara no hi ha biografia.",
+  "show_more": "Mostra'n més",
   "@show_more": {
     "description": "Button label that expands a truncated profile bio to its full text"
   },
-  "show_less": "Show less",
+  "show_less": "Mostra'n menys",
   "@show_less": {
     "description": "Button label that collapses an expanded profile bio back to its truncated form"
   },
-  "feed": "Feed",
-  "profile_feed_empty_own": "You have no activity yet.",
+  "feed": "Canal",
+  "profile_feed_empty_own": "Encara no tens cap activitat.",
   "@profile_feed_empty_own": {
     "description": "Shown under the Feed heading on your own profile when it has no activity yet. A New Trail button follows it."
   },
-  "profile_feed_empty_other": "{username} has no activity yet.",
+  "profile_feed_empty_other": "{username} encara no té cap activitat.",
   "@profile_feed_empty_other": {
     "description": "Shown under the Feed heading on another user profile when it has no activity yet.",
     "placeholders": {
@@ -530,12 +530,12 @@
       }
     }
   },
-  "no_trails_yet": "No trails yet.",
-  "library_empty_title": "No downloaded trails",
-  "library_empty_body": "Trails you download are kept here so you can open them offline.",
-  "library_empty_search_body": "Try a different search term or clear your filters.",
-  "search_location": "Search location",
-  "no_servers_match_query": "No servers match \"{query}\"",
+  "no_trails_yet": "Encara no hi ha senders.",
+  "library_empty_title": "No hi ha senders baixats",
+  "library_empty_body": "Els senders que baixis es guarden aquí perquè els puguis obrir sense connexió.",
+  "library_empty_search_body": "Prova un altre terme de cerca o esborra els filtres.",
+  "search_location": "Cerca una ubicació",
+  "no_servers_match_query": "No hi ha cap servidor que coincideixi amb «{query}»",
   "@no_servers_match_query": {
     "placeholders": {
       "query": {
@@ -544,13 +544,13 @@
       }
     }
   },
-  "use_custom_url_instead": "Use custom URL instead",
-  "select_instance": "Select Instance",
-  "enter_server_url_hint": "Enter server URL (e.g. wanderer.to)",
-  "last_used": "Last used",
-  "community_instances": "Community instances",
-  "search_library": "Search library…",
-  "language_and_units": "{language} & {units}",
+  "use_custom_url_instead": "Utilitza una URL personalitzada",
+  "select_instance": "Selecciona una instància",
+  "enter_server_url_hint": "Introdueix l'URL del servidor (p. ex. wanderer.to)",
+  "last_used": "Últim ús",
+  "community_instances": "Instàncies de la comunitat",
+  "search_library": "Cerca a la biblioteca…",
+  "language_and_units": "{language} i {units}",
   "@language_and_units": {
     "placeholders": {
       "language": {
@@ -563,26 +563,26 @@
       }
     }
   },
-  "edit_route": "Edit route",
-  "undo": "Undo",
-  "redo": "Redo",
-  "bold": "Bold",
-  "italic": "Italic",
-  "underline": "Underline",
-  "bullet_list": "Bullet list",
-  "ordered_list": "Ordered list",
-  "blockquote": "Blockquote",
-  "library": "Library",
-  "settings_offline_regions_title": "Offline Maps/Regions",
-  "regions_search_hint": "Search regions",
-  "regions_dem_toggle_label": "Download elevation data (DEM)",
-  "regions_dem_toggle_caption": "Adds hillshading; increases download size",
-  "regions_update_available": "Update available",
-  "regions_update_action": "Update",
-  "regions_retry": "Retry",
-  "regions_not_yet_available": "Not yet available",
-  "regions_build_failed": "Build failed",
-  "regions_delete_confirm_title": "Delete {name}?",
+  "edit_route": "Edita la ruta",
+  "undo": "Desfés",
+  "redo": "Refés",
+  "bold": "Negreta",
+  "italic": "Cursiva",
+  "underline": "Subratllat",
+  "bullet_list": "Llista amb pics",
+  "ordered_list": "Llista numerada",
+  "blockquote": "Citació",
+  "library": "Biblioteca",
+  "settings_offline_regions_title": "Mapes/regions sense connexió",
+  "regions_search_hint": "Cerca regions",
+  "regions_dem_toggle_label": "Baixa dades d'elevació (DEM)",
+  "regions_dem_toggle_caption": "Afegeix ombrejat del relleu; augmenta la mida de la baixada",
+  "regions_update_available": "Actualització disponible",
+  "regions_update_action": "Actualitza",
+  "regions_retry": "Torna-ho a provar",
+  "regions_not_yet_available": "Encara no disponible",
+  "regions_build_failed": "La compilació ha fallat",
+  "regions_delete_confirm_title": "Voleu eliminar {name}?",
   "@regions_delete_confirm_title": {
     "placeholders": {
       "name": {
@@ -590,9 +590,9 @@
       }
     }
   },
-  "regions_delete_confirm_body": "This removes the downloaded map and elevation data for this region. You'll need to download it again to use it offline.",
-  "regions_delete_confirm_action": "Delete",
-  "regions_disk_usage_summary": "{size} used across {count} downloaded region(s)",
+  "regions_delete_confirm_body": "Això elimina el mapa baixat i les dades d'elevació d'aquesta regió. Hauràs de tornar-los a baixar per utilitzar-los sense connexió.",
+  "regions_delete_confirm_action": "Elimina",
+  "regions_disk_usage_summary": "{size} en ús en {count} regió/regions baixades",
   "@regions_disk_usage_summary": {
     "placeholders": {
       "size": {
@@ -603,19 +603,19 @@
       }
     }
   },
-  "regions_empty_search_title": "No matching regions",
-  "regions_empty_search_body": "Try a different search term.",
-  "regions_empty_catalog_title": "No offline regions available",
-  "regions_empty_catalog_body": "Ask your Wanderer instance administrator to configure downloadable regions.",
+  "regions_empty_search_title": "No hi ha regions coincidents",
+  "regions_empty_search_body": "Prova un altre terme de cerca.",
+  "regions_empty_catalog_title": "No hi ha regions sense connexió disponibles",
+  "regions_empty_catalog_body": "Demana a l'administrador de la teva instància de Wanderer que configuri regions per baixar.",
   "regions_vector_tile_title": "Vector",
-  "regions_dem_tile_title": "Elevation data",
-  "regions_download_failed": "Download failed",
-  "regions_dem_locked_subtitle": "Download map data first",
-  "regions_offline_unavailable_title": "Can't load regions",
-  "regions_offline_unavailable_body": "Connect to the internet to browse and manage downloadable regions.",
-  "regions_map_geometry_failed": "Could not load region outline",
-  "regions_map_back_label": "Back to regions",
-  "regions_group_expand_label": "Expand {name}",
+  "regions_dem_tile_title": "Dades d'elevació",
+  "regions_download_failed": "La baixada ha fallat",
+  "regions_dem_locked_subtitle": "Baixa primer les dades del mapa",
+  "regions_offline_unavailable_title": "No es poden carregar les regions",
+  "regions_offline_unavailable_body": "Connecta't a internet per explorar i gestionar les regions que es poden baixar.",
+  "regions_map_geometry_failed": "No s'ha pogut carregar el contorn de la regió",
+  "regions_map_back_label": "Torna a les regions",
+  "regions_group_expand_label": "Desplega {name}",
   "@regions_group_expand_label": {
     "placeholders": {
       "name": {
@@ -623,7 +623,7 @@
       }
     }
   },
-  "regions_group_collapse_label": "Collapse {name}",
+  "regions_group_collapse_label": "Replega {name}",
   "@regions_group_collapse_label": {
     "placeholders": {
       "name": {
@@ -631,33 +631,33 @@
       }
     }
   },
-  "offline_title": "You're offline",
+  "offline_title": "Estàs sense connexió",
   "@offline_title": {
     "description": "Title shown by the shared offline takeover state (map, list, profile) when the backend is unreachable."
   },
-  "offline_try_again": "Try again",
+  "offline_try_again": "Torna-ho a provar",
   "@offline_try_again": {
     "description": "Retry button label on the shared offline takeover state."
   },
-  "offline_map_body": "Connect to the internet to load the map. Downloaded trails are still available.",
+  "offline_map_body": "Connecta't a internet per carregar el mapa. Els senders baixats encara estan disponibles.",
   "@offline_map_body": {
     "description": "Body copy for the map screen's offline takeover."
   },
-  "offline_list_body": "Connect to the internet to load lists.",
+  "offline_list_body": "Connecta't a internet per carregar les llistes.",
   "@offline_list_body": {
     "description": "Body copy for the list screen's offline takeover."
   },
-  "offline_profile_body": "Connect to the internet to load your full profile.",
+  "offline_profile_body": "Connecta't a internet per carregar el teu perfil complet.",
   "@offline_profile_body": {
     "description": "Body copy for the profile screen's offline takeover of network-only sections."
   },
-  "offline_settings_banner": "You're offline. Settings are read-only until you reconnect.",
-  "offline_action_unavailable": "You're offline — try again once you're back online.",
-  "offline_categories_body": "Connect to the internet to manage categories.",
+  "offline_settings_banner": "Esteu sense connexió. La configuració és només de lectura fins que us torneu a connectar.",
+  "offline_action_unavailable": "Estàs sense connexió: torna-ho a provar quan tornis a estar en línia.",
+  "offline_categories_body": "Connecta't a internet per gestionar les categories.",
   "@offline_categories_body": {
     "description": "Body copy for the categories and subcategories settings screens' offline state."
   },
-  "offline_trail_search_body": "Connect to the internet to search for trails. Downloaded trails are still available.",
+  "offline_trail_search_body": "Connecta't a internet per cercar senders. Els senders baixats encara estan disponibles.",
   "@offline_trail_search_body": {
     "description": "Body copy shown inside the map screen's draggable trail-results sheet when offline."
   }
